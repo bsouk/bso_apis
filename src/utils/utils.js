@@ -1,0 +1,483 @@
+const mongoose = require('mongoose')
+const requestIp = require('request-ip')
+const { validationResult } = require('express-validator')
+const { admin } = require("../config/firebase")
+const moment = require("moment")
+const { capitalizeFirstLetter } = require("./helpers")
+const path = require("path")
+const crypto = require('crypto')
+const secret = process.env.JWT_SECRET
+const algorithm = 'aes-256-cbc'
+const key = crypto.scryptSync(secret, 'salt', 32)
+const iv = Buffer.alloc(16, 0) // Initialization crypto vector
+var bcrypt = require('bcrypt');
+const axios = require('axios');
+const {
+  uploadVideo,
+} = require("./helpers");
+
+const fs = require("fs")
+const sharp = require("sharp")
+const Notification = require("../models/notification")
+const FCMDevice = require("../models/fcm_devices")
+const
+  ffmpegPath = require("@ffmpeg-installer/ffmpeg").path,
+  ffprobePath = require("@ffprobe-installer/ffprobe").path,
+  ffmpeg = require("fluent-ffmpeg");
+
+ffmpeg.setFfprobePath(ffprobePath);
+ffmpeg.setFfmpegPath(ffmpegPath);
+
+
+const xlsx = require("xlsx")
+const csv = require("csvtojson");
+/**
+ * Removes extension from file
+ * @param {string} file - filename
+ */
+exports.removeExtensionFromFile = file => {
+  return file
+    .split('.')
+    .slice(0, -1)
+    .join('.')
+    .toString()
+}
+
+/**
+ * Gets IP from user
+ * @param {*} req - request object
+ */
+exports.getIP = req => requestIp.getClientIp(req)
+
+/**
+ * Gets browser info from user
+ * @param {*} req - request object
+ */
+exports.getBrowserInfo = req => req.headers['user-agent']
+
+/**
+ * Gets country from user using CloudFlare header 'cf-ipcountry'
+ * @param {*} req - request object
+ */
+exports.getCountry = req =>
+  req.headers['cf-ipcountry'] ? req.headers['cf-ipcountry'] : 'XX'
+
+/**
+ * Handles error by printing to console in development env and builds and sends an error response
+ * @param {Object} res - response object
+ * @param {Object} err - error object
+ */
+exports.handleError = (res, err) => {
+  // Prints error in console
+  if (process.env.NODE_ENV === 'development') {
+    console.log(err)
+  }
+  // Sends error to user
+
+  function getValidCode(code) {
+    code = parseInt(code);
+    const isValid = code >= 100 && code < 600;
+    return isValid ? code : 500
+  }
+
+  res.status(getValidCode(err?.code)).json({
+    errors: {
+      msg: err.message
+    },
+    code: getValidCode(err?.code)
+  })
+}
+
+/**
+ * Builds error object
+ * @param {number} code - error code
+ * @param {string} message - error text
+ */
+
+exports.buildErrObject = (code, message) => {
+  return {
+    code,
+    message
+  }
+}
+
+/**
+ * Builds error for validation files
+ * @param {Object} req - request object
+ * @param {Object} res - response object
+ * @param {Object} next - next object
+ */
+exports.validationResult = (req, res, next) => {
+  try {
+    validationResult(req).throw()
+    if (req.body.email) {
+      req.body.email = req.body.email.toLowerCase()
+    }
+    return next()
+  } catch (err) {
+    return this.handleError(res, this.buildErrObject(422, err.array()))
+  }
+}
+
+/**
+ * Builds success object
+ * @param {string} message - success text
+ */
+exports.buildSuccObject = message => {
+  return {
+    msg: message
+  }
+}
+
+/**
+ * Checks if given ID is good for MongoDB
+ * @param {string} id - id to check
+ */
+exports.isIDGood = async id => {
+  return new Promise((resolve, reject) => {
+    const goodID = mongoose.Types.ObjectId.isValid(id)
+    return goodID
+      ? resolve(id)
+      : reject(this.buildErrObject(422, 'ID_MALFORMED'))
+  })
+}
+
+/**
+ * Item not found
+ * @param {Object} err - error object
+ * @param {Object} item - item result object
+ * @param {Object} reject - reject object
+ * @param {string} message - message
+ */
+exports.itemNotFound = (err, item, reject, message) => {
+  if (err) {
+    reject(this.buildErrObject(422, err.message))
+  }
+  if (!item) {
+    reject(this.buildErrObject(404, message))
+  }
+}
+
+/**
+ * Item already exists
+ * @param {Object} err - error object
+ * @param {Object} item - item result object
+ * @param {Object} reject - reject object
+ * @param {string} message - message
+ */
+exports.itemAlreadyExists = (err, item, reject, message) => {
+  console.log(item);
+  if (err) {
+    reject(this.buildErrObject(422, err.message))
+  }
+  if (item) {
+    reject(this.buildErrObject(422, message))
+  }
+}
+
+exports.itemExists = (err, item, reject, message) => {
+  if (err) {
+    reject(this.buildErrObject(422, err.message))
+  }
+  if (!item) {
+    reject(this.buildErrObject(422, message))
+  }
+}
+
+exports.objectToQueryString = async obj => {
+  return new Promise((resolve, reject) => {
+    const searchParams = new URLSearchParams();
+    const params = obj;
+    Object.keys(params).forEach(key => searchParams.append(key, params[key]));
+    resolve(searchParams.toString())
+  })
+}
+
+/**
+ * Fetch country code from data
+ * @param {Object} obj - Country Info
+ */
+exports.getCountryCode = obj => {
+  return {
+    country_code: obj.country
+  }
+}
+
+/**
+ * Notification 
+ */
+
+
+
+exports.sendPushNotification = async (
+  notificaiton,
+  create = true,
+  push = true
+) => {
+  try {
+
+    if (create) {
+      const notificationForSeller = new Notification(notificaiton);
+      await notificationForSeller.save();
+    }
+
+    const fcm_device = await FCMDevice.findOne({ user_id: new mongoose.Types.ObjectId(notificaiton.receiver_id) });
+    const token = fcm_device?.token ?? ""
+
+    // if (push && token) {
+    //   const notificationData = {
+    //     title: notificaiton.title,
+    //     body: notificaiton.description,
+    //   };
+    //   var message = {
+    //     notification: notificationData,
+    //     tokens: [token],
+    //   };
+
+    //   admin
+    //     .messaging()
+    //     .sendMulticast(message)
+    //     .then((response) => {
+    //       console.log("response",response.responses[0].error)
+    //       if (response.failureCount > 0) {
+    //         console.log("Failed notification count" ,response.failureCount)
+    //       }else{
+    //         console.log("Notification sent successfully")
+    //       }
+    //     })
+    //     .catch((error) => {
+    //       console.log("Error sending message:", error);
+    //     });
+
+    // }
+
+  } catch (err) {
+    console.log(err);
+    return false;
+  }
+};
+
+/**
+ * Checks is password matches
+ * @param {string} password - password
+ * @param {Object} user - user object
+ * @returns {boolean}
+ */
+
+exports.checkPassword = async (password, user) => {
+  return new Promise((resolve, reject) => {
+    user.comparePassword(password, (err, isMatch) => {
+      if (err) {
+        console.log('err---->', err);
+        reject(this.buildErrObject(422, err.message))
+      }
+      console.log('isMatch--xxxxxxxxx-------->', isMatch);
+      if (!isMatch) {
+        resolve(false)
+      }
+      resolve(true)
+    })
+  })
+}
+
+/**
+ * Encrypts text
+ * @param {string} text - text to encrypt
+*/
+
+exports.encrypt = (text) => {
+  const cipher = crypto.createCipheriv(algorithm, key, iv)
+  let encrypted = cipher.update(text, 'utf8', 'hex')
+  encrypted += cipher.final('hex')
+  return encrypted
+}
+
+/**
+ * Decrypts text
+ * @param {string} text - text to decrypt
+*/
+
+exports.decrypt = (text) => {
+  const decipher = crypto.createDecipheriv(algorithm, key, iv)
+  try {
+    let decrypted = decipher.update(text, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+    return decrypted
+  } catch (err) {
+    return err
+  }
+}
+
+exports.generateOTP = () => {
+  return Math.floor(1000 + Math.random() * 9000);
+}
+
+
+exports.generateThumbnail = async (videoPath, outputLocation) => {
+  videoPath = encodeURI(videoPath)
+  console.log("vidoePath", videoPath)
+  return new Promise((resolve, reject) => {
+    const thumbnailFilename = Date.now() + 'thumbnail.png';
+    const outputDirectory = `${process.env.SERVER_STORAGE_PATH}/${outputLocation}`;
+    ffmpeg(videoPath)
+      .on('end', async () => {
+
+        //comment for s3
+        // resolve(path.join(outputLocation, thumbnailFilename));
+        //comment for s3
+
+        //uncomment for s3
+        const filePath = path.join(outputDirectory, thumbnailFilename)
+        const thumbnailBuffer = fs.readFileSync(filePath)
+        fs.unlinkSync(filePath);
+
+        const file = {
+          name: thumbnailFilename,
+          data: thumbnailBuffer,
+          mimetype: "image/webp"
+        };
+
+        const basePath = `${process.env.STORAGE_PATH}/post`;
+
+        let media = await uploadVideo({
+          file: file,
+          path: basePath,
+        });
+
+        resolve(`post/${media}`)
+        //uncomment for s3
+      })
+      .on('error', (err) => {
+        reject(err);
+      })
+      .screenshots({
+        timestamps: ['50%'],
+        filename: thumbnailFilename,
+        size: '320x240',
+        folder: outputDirectory
+      });
+  });
+
+}
+
+function removeExtensionFromFile(file) {
+  return file
+    .split('.')
+    .slice(0, -1)
+    .join('.')
+    .toString()
+}
+
+
+function changeNameToWebpExtention(name) {
+  let nameWithoutExtention = removeExtensionFromFile(name);
+  const nameWithWebpExtention = nameWithoutExtention + ".webp";
+  return nameWithWebpExtention;
+}
+
+// async function uploadFile(object) {
+//   return new Promise(async (resolve, reject) => {
+//     var file = object.file;
+//     var filename = Date.now() + file.name;
+//     const params = {
+//       Bucket: Bucket,
+//       Key: object.path + "/" + filename,
+//       Body: file.data,
+//       ContentType: file.mimetype,
+//     };
+//     return bucket.upload(params, function (err, data) {
+//       if (err) {
+//         console.log("----err----", err);
+//         reject({ message: err.message, code: 400 });
+//       }
+//       console.log("data", data);
+//       resolve(filename);
+//     });
+//   });
+// }
+
+
+async function uploadFile(object) {
+  return new Promise((resolve, reject) => {
+    var obj = object.file;
+    var name = Date.now() + obj.name;
+    obj.mv(object.path + "/" + name, function (err) {
+      if (err) {
+        console.log(err)
+        reject(err);
+      }
+      resolve(name);
+    });
+  });
+}
+
+exports.uploadImage = async (object) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      var obj = object.file;
+      const nameWithWebpExtention = changeNameToWebpExtention(obj.name);
+      const imageDataBuffer = obj.data;
+      const webpBuffer = await sharp(imageDataBuffer)
+        .toFormat("webp", { lossless: false })
+        .toBuffer();
+
+      object.file.name = nameWithWebpExtention;
+      object.file.data = webpBuffer;
+      const name = await uploadFile(object);
+      resolve(name);
+    } catch (conversionError) {
+      console.error("Error converting image to WebP:", conversionError);
+      reject(conversionError);
+    }
+  });
+}
+
+
+
+
+exports.jsonConverterFromExcel = (categoryFileData) => {
+  const workbook = xlsx.read(categoryFileData, { type: "buffer" });
+
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: "" });
+  return jsonData;
+}
+
+
+exports.jsonConverterFromCsv = async (categoryFileData) => {
+  const jsonData = await csv().fromString(categoryFileData.toString());
+  return jsonData;
+}
+
+
+exports.validateColumns = (jsonData, requiredColumns) => {
+
+  return new Promise((resolve, reject) => {
+    try {
+      if (jsonData.length === 0) {
+        return reject({ message: "Excel file is empty", code: 400 })
+      }
+
+      const missingColumns = [];
+
+      for (const column of requiredColumns) {
+        if (!jsonData[0].hasOwnProperty(column)) {
+          missingColumns.push(column)
+        }
+      }
+
+      if (missingColumns.length === 0) {
+        return resolve(true)
+      } else {
+        const errorMessage = missingColumns.length === 1
+          ? `The following coloumn is missing: ${missingColumns[0]}`
+          : `The following coloumns are missing: ${missingColumns.join(', ')}`;
+        return reject({ message: errorMessage, code: 400 });
+      }
+
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
