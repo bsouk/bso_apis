@@ -9,7 +9,7 @@ const CMSSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['privacy_policy', 'terms_and_conditions', 'about_us' , "cookie_policy"],
+      enum: ['privacy_policy', 'terms_and_conditions', 'about_us' , "support"],
       required: true
     },
     images : {
