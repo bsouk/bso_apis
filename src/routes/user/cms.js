@@ -33,4 +33,10 @@ router.get(
     controller.getContactUsDetails
 )
 
+router.get(
+    "/getWalkthrough",
+    trimRequest.all,
+    controller.getWalkthrough
+)
+
 module.exports = router

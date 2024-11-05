@@ -1,7 +1,8 @@
 const FAQ = require("../../models/faq");
 const CMS = require("../../models/cms");
 const SupportDetail = require("../../models/support_details")
-const ContactUs = require('../../models/contact_us')
+const ContactUs = require('../../models/contact_us');
+const Walkthrough = require("../../models/walkthrough")
 
 const utils = require("../../utils/utils");
 
@@ -69,3 +70,12 @@ exports.contactUs = async (req, res) => {
     utils.handleError(res, error);
   }
 }
+
+exports.getWalkthrough = async (req, res) => {
+  try {
+    const data = await Walkthrough.findOne({}).sort({ createdAt: -1 });
+    res.json({ data: data, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};

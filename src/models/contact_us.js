@@ -4,10 +4,6 @@ const validator = require("validator");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
 const UserSchema = new mongoose.Schema({
-  // user_id: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "Users"
-  // },
   email: {
     type: String,
     validate: {

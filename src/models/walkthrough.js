@@ -8,42 +8,18 @@ const walkthroughSchema = new mongoose.Schema(
             type : String,
             require : true
         },
-        description : {
-            type : String,
-            required : true
-        },
-        image : {
-            type : String,
-            required : true
-        }
     },
     second_screen : {
         title : {
             type : String,
             require : true
         },
-        description : {
-            type : String,
-            required : true
-        },
-        image : {
-            type : String,
-            required : true
-        }
     },
     third_screen : {
         title : {
             type : String,
             require : true
         },
-        description : {
-            type : String,
-            required : true
-        },
-        image : {
-            type : String,
-            required : true
-        }
     },
   },
   {
