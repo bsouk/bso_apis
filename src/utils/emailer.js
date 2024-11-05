@@ -275,10 +275,9 @@ module.exports = {
   async sendEmail(locale, mailOptions, template) {
     mailOptions.website_url = process.env.FRONTEND_PROD_URL;
     console.log("mailOptions", mailOptions)
-    console.log("template", template)
+    
     locale = locale == null ? "" : `${locale}/`
 
-    console.log("`${locale}${template}`", `${locale}${template}`)
     app.mailer.send(
       `${locale}${template}`,
       mailOptions,

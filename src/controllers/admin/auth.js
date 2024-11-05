@@ -77,6 +77,7 @@ exports.forgotPassword = async (req, res) => {
     if (!user) return utils.handleError(res, { message: "No account found with the provided information", code: 400 });
 
     const token = uuid.v4();
+    console.log('token: ', token);
 
     const tokenExpirationDuration = 15 * 60;
     const resetInstance = new ResetPassword({
@@ -85,6 +86,8 @@ exports.forgotPassword = async (req, res) => {
       used: false,
       exp_time: new Date(Date.now() + tokenExpirationDuration * 1000)
     });
+
+    console.log("resetInstance",resetInstance)
 
     //Save the resetInstance to the database
     await resetInstance.save();
@@ -114,6 +117,7 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
     const reset = await ResetPassword.findOne({ token: token });
+    console.log('reset: ', reset);
 
     // Check if the reset token exists and if it's flagged as used
     if (!reset || reset.used) {
