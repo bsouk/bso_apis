@@ -23,6 +23,20 @@ router.post(
 )
 
 router.post(
+    "/sendOtpForSignup",
+    trimRequest.all,
+    controller.sendOtpForSignup,
+)
+
+router.post(
+    "/verifyOtpForSignup",
+    trimRequest.all,
+    controller.verifyOtpForSignup,
+)
+
+
+
+router.post(
     "/verifyOTP",
     trimRequest.all,
     controller.verifyOTP,
@@ -32,12 +46,6 @@ router.post(
     '/login',
     trimRequest.all,
     controller.login
-)
-
-router.post(
-    '/social/login',
-    trimRequest.all,
-    controller.socialLogin
 )
 
 router.post(
@@ -57,18 +65,6 @@ router.post(
     trimRequest.all,
     requireAuth,
     controller.changePassword
-)
-
-router.post(
-    "/forgotPasswordForWeb",
-    trimRequest.all,
-    controller.forgotPasswordForWeb
-)
-
-router.post(
-    "/resetPasswordForWeb",
-    trimRequest.all,
-    controller.resetPasswordForWeb
 )
 
 

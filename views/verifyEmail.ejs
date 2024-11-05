@@ -35,7 +35,7 @@
 				<td height="20"></td>
 			</tr>
 			<tr>
-				<td style="padding: 0 40px;font-size: 17px;text-align: center;line-height: 25px; "><b>Dear <%= name%></b>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; "><b>Hello,</b>
 				</td>
 			</tr>
 			<tr>
@@ -43,7 +43,7 @@
 			</tr>
 			<tr>
 				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; "> 
-					We received a request to verify the backup email address, please click the button below to verify your backup email address
+					Thank you for registering with <%= app_name %>! To complete your registration, please verify your email address by entering the One-Time Password (OTP) below:
 				</td>
 			</tr>
 			<tr>
@@ -51,11 +51,7 @@
 			</tr>
 			<tr>
 				<td style="padding: 0 40px;font-size: 17px;text-align: center;line-height: 25px;">
-					<div style="text-align: center;">
-						<a href="<%= link %>" style="background-color: #0000FF; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 17px; margin: 4px 2px; cursor: pointer; border-radius: 8px;">
-							Verify
-						</a>
-					</div>
+					<b><%= otp%></b>
 				</td>
 			</tr>
 			<tr>

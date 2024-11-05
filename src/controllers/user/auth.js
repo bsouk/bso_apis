@@ -3,6 +3,9 @@ const utils = require("../../utils/utils");
 const UserAccess = require("../../models/userAccess");
 const ResetPassword = require("../../models/reset_password")
 const OTP = require("../../models/otp");
+const EmailOrPhoneVerifiedStatus = require("../../models/email_or_phone_verified_status");
+
+
 const emailer = require("../../utils/emailer");
 const jwt = require("jsonwebtoken");
 const uuid = require('uuid');
@@ -62,6 +65,250 @@ exports.checkEmailExist = async (req, res) => {
   }
 };
 
+
+exports.sendOtpForSignup = async (req, res) => {
+  try {
+    const { email, signup_by, phone_number_code, phone_number } = req.body;
+    if (!["email", "phone_number"].includes(signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
+    const otp = utils.generateOTP();
+
+    if (signup_by == "email") {
+      const otpData = await EmailOrPhoneVerifiedStatus.findOne({ email: email });
+      const data = {
+        email: email,
+        otp,
+        exp_time: new Date(Date.now() + 1000 * 60 * 10),
+        is_used: false,
+        verified: false,
+      };
+      if (otpData) {
+        await EmailOrPhoneVerifiedStatus.findByIdAndUpdate(otpData._id, data);
+      } else {
+        const saveOTP = new EmailOrPhoneVerifiedStatus(data);
+        await saveOTP.save();
+      }
+
+      const mailOptions = {
+        to: email,
+        subject: "Verify Your Email Address",
+        app_name: process.env.APP_NAME,
+        otp: otp
+      };
+      emailer.sendEmail(null, mailOptions, "verifyEmail");
+      res.json({ code: 200, message: "OTP sent successfully" });
+    } else {
+      const otpData = await EmailOrPhoneVerifiedStatus.findOne({ phone_number: phone_number });
+      const data = {
+        phone_number: phone_number,
+        otp,
+        exp_time: new Date(Date.now() + 1000 * 60 * 10),
+        is_used: false,
+        verified: false,
+      };
+      if (otpData) {
+        await EmailOrPhoneVerifiedStatus.findByIdAndUpdate(otpData._id, data);
+      } else {
+        const saveOTP = new EmailOrPhoneVerifiedStatus(data);
+        await saveOTP.save();
+      }
+
+      res.json({ code: 200, message: "OTP sent successfully", otp: otp });
+    }
+
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+exports.verifyOtpForSignup = async (req, res) => {
+  try {
+    const { otp, email, signup_by, phone_number } = req.body;
+    if (!["email", "phone_number"].includes(signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
+
+
+    if (signup_by === "email") {
+      const condition = {
+        otp,
+        email: email
+      };
+
+      const otpData = await EmailOrPhoneVerifiedStatus.findOne(condition);
+
+      if (!otpData || otpData.otp !== otp) return utils.handleError(res, { message: "The OTP you entered is incorrect. Please try again", code: 400 });
+      if (otpData.verified == true) return res.json({ code: 200, message: "Otp verified successfully" });
+
+      if (otpData.exp_time < new Date()) return utils.handleError(res, { message: "The OTP you entered has expired. Please request a new one", code: 400 });
+
+      otpData.verified = true;
+      otpData.is_used = true;
+      await otpData.save();
+
+      res.json({ code: 200, message: "Otp verified successfully" });
+    } else {
+      const condition = {
+        otp,
+        phone_number: phone_number
+      };
+
+      const otpData = await EmailOrPhoneVerifiedStatus.findOne(condition);
+
+      if (!otpData || otpData.otp !== otp) return utils.handleError(res, { message: "The OTP you entered is incorrect. Please try again", code: 400 });
+      if (otpData.verified == true) return res.json({ code: 200, message: "Otp verified successfully" });
+
+      if (otpData.exp_time < new Date()) return utils.handleError(res, { message: "The OTP you entered has expired. Please request a new one", code: 400 });
+
+      otpData.verified = true;
+      otpData.is_used = true;
+      await otpData.save();
+
+      res.json({ code: 200, message: "Otp verified successfully" });
+    }
+
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+exports.signup = async (req, res) => {
+  try {
+    const data = req.body;
+    if (!["email", "phone_number"].includes(data.signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
+
+    if (data.signup_by == "email") {
+      const doesEmailExists = await emailer.emailExists(data.email);
+      if (doesEmailExists) return utils.handleError(res, { message: "", code: 400 })
+    }
+
+    if (!user) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400, });
+
+    const isPasswordMatch = await utils.checkPassword(data.password, user);
+    if (!isPasswordMatch) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400 });
+
+    if (user.status !== "active") return utils.handleError(res, { message: "Your account has been deactivated", code: 400, });
+    // if (user.is_deleted === true) return utils.handleError(res, { message: "Your account has been deleted", code: 400 });
+
+    const token = await saveUserAccessAndReturnToken(req, user);
+    user.last_login = new Date();
+
+    await user.save();
+    user = user.toJSON();
+
+    delete user.password;
+    res.status(200).json({ code: 200, data: { user: user, token: token } });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+
+async function checkEmailVerified(email) {
+  try {
+    const otpData = await EmailOrPhoneVerifiedStatus.findOne({ email });
+    if (!otpData || otpData.verified !== true) return false;
+    return true;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+}
+
+async function checkPhoneNumberVerified(phone_number) {
+  try {
+    const otpData = await EmailOrPhoneVerifiedStatus.findOne({ phone_number });
+    if (!otpData || otpData.verified !== true) return false;
+    return true;
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+}
+
+exports.signup = async (req, res) => {
+  try {
+    const data = req.body;
+    if (!["email", "phone_number"].includes(data.signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
+
+    if (data.signup_by == "email") {
+      const doesEmailExists = await emailer.emailExists(data.email);
+      if (doesEmailExists)
+        return utils.handleError(res, {
+          message: "This email is already registered with us",
+          code: 400,
+        });
+    }
+
+
+    if (data.signup_by == "phone_number") {
+      const doesPhoneNumberExist = await emailer.checkMobileExists(
+        data.phone_number
+      );
+      if (doesPhoneNumberExist)
+        return utils.handleError(res, {
+          message: "This phone number is already registered with us",
+          code: 400,
+        });
+    }
+    if (data.signup_by == "phone_number") {
+      const isPhoneNumberVerified = await checkPhoneNumberVerified(
+        data.phone_number
+      );
+
+      if (!isPhoneNumberVerified)
+        return utils.handleError(res, {
+          message: "Phone number is verified yet",
+          code: 400,
+        });
+    }
+
+
+    if (data.signup_by == "email") {
+      const isPhoneNumberVerified = await checkEmailVerified(
+        data.phone_number
+      );
+
+      if (!isPhoneNumberVerified)
+        return utils.handleError(res, {
+          message: "Email is verified yet",
+          code: 400,
+        });
+    }
+
+
+    data.step_completed = 1;
+
+    console.log("data", data);
+    let user = await registerUser(data);
+    const token = await saveUserAccessAndReturnToken(req, user);
+
+    await utils.createCustomer(user)
+    user = user.toJSON();
+    delete user.password;
+
+
+    const notificaitonData = {
+      receiver_id: user._id,
+      title: "Account Created",
+      description: `Your account has been created successfully. Welcome to Heii!`,
+      finnish_title: "Tili luotu",
+      finnish_description: `Tilisi luominen onnistui. Tervetuloa Heiille!`,
+      type: "account_creation",
+      related_to: user._id,
+    };
+
+    await utils.sendPushNotification(notificaitonData);
+
+
+    // const notification = new Notification(notificaitonData);
+
+    // await notification.save();
+
+    res.status(200).json({ code: 200, data: { user: user, token: token } });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+
 exports.login = async (req, res) => {
   try {
     const data = req.body;
@@ -87,53 +334,6 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.socialLogin = async (req, res) => {
-  try {
-    const data = req.body;
-    const userExists = await User.findOne({ $or: [{ email: data.email }, { social_id: data.social_id, social_type: data.social_type }] });
-
-    if (!userExists) {
-      const userData = {
-        email: data.email,
-        social_id: data.social_id,
-        social_type: data.social_type,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        user_type: data.user_type,
-        password: "12345678",
-        step_completed: 1,
-      };
-
-      let user = new User(userData);
-      await user.save();
-
-      const token = await saveUserAccessAndReturnToken(req, user);
-      user = user.toJSON();
-      delete user.password;
-      res.status(200).json({ code: 200, data: { user: user, token: token } });
-    } else {
-      if (userExists.status !== "active")
-        return utils.handleError(res, {
-          message: "Your account has been deactivated",
-          code: 400,
-        });
-      if (userExists.is_deleted === true)
-        return utils.handleError(res, {
-          message: "Your account has been deleted",
-          code: 400,
-        });
-
-      userExists.last_sign_in = new Date();
-
-      const token = await saveUserAccessAndReturnToken(req, userExists);
-      const user = userExists.toJSON();
-      delete user.password;
-      res.status(200).json({ code: 200, data: { user: user, token: token } });
-    }
-  } catch (error) {
-    utils.handleError(res, error);
-  }
-};
 
 
 exports.forgetPassword = async (req, res) => {
@@ -249,80 +449,5 @@ exports.changePassword = async (req, res) => {
 
   } catch (error) {
     utils.handleError(res, error);
-  }
-};
-
-exports.forgotPasswordForWeb = async (req, res) => {
-
-  try {
-    const { email, production } = req.body;
-
-    let user = await User.findOne({ email });
-    if (!user) return utils.handleError(res, { message: "No account found with the entered email", code: 400 });
-
-    const token = uuid.v4();
-
-    const tokenExpirationDuration = 15 * 60;
-    const resetInstance = new ResetPassword({
-      email: email,
-      token: token,
-      used: false,
-      exp_time: new Date(Date.now() + tokenExpirationDuration * 1000)
-    });
-
-    await resetInstance.save();
-    const mailOptions = {
-      to: user.email,
-      subject: "Password Reset Request",
-      name: user.full_name,
-      email: user.email,
-      reset_link: production === false ? `${process.env.LOCAL_FRONTEND_URL}resetPassword/${token}` : `${process.env.PRODUCTION_FRONTEND_URL}resetPassword/${token}`
-    }
-
-    emailer.sendEmail(null, mailOptions, "forgotPasswordWithLink");
-
-    return res.json({
-      code: 200,
-      message: "Reset link has been sent to your email",
-    });
-
-  } catch (err) {
-    console.log(err)
-    utils.handleError(res, err)
-  }
-
-}
-
-
-exports.resetPasswordForWeb = async (req, res) => {
-  try {
-    const { token, password } = req.body;
-    const reset = await ResetPassword.findOne({ token: token });
-
-    if (!reset || reset.used) {
-      return utils.handleError(res, { message: 'Invalid or expired reset password token', code: 400 })
-    }
-
-    // Check if the token has expired
-    if (reset.exp_time < new Date()) {
-      return utils.handleError(res, { message: 'Reset password token has expired', code: 400 })
-    }
-
-    // Find the user associated with the reset token
-    const user = await User.findOne({ email: reset.email });
-
-    user.password = password;
-    user.decoded_password = password;
-    await user.save();
-
-    // Reset the token flag and time
-    reset.used = true;
-    reset.time = undefined;
-    await reset.save();
-
-    res.json({ message: 'Your password has been successfully reset', code: 200 });
-  } catch (err) {
-    console.error(err);
-    utils.handleError(res, err)
   }
 };
