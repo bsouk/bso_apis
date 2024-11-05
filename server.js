@@ -37,7 +37,7 @@ app.use(
 
 // Routes
 app.get("/", (req, res) => {
-  return res.send("Welcome to Italiano");
+  return res.send("Welcome to bso");
 });
 
 app.use(require("./src/routes/user"));

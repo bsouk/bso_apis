@@ -23,7 +23,7 @@ const {
 } = require("./utils");
 
 mailer.extend(app, {
-  from: "nodeteamemail@gmail.com",
+  from: '"Support" <nodeteamemail@gmail.com>',
   host: "smtp.gmail.com",
   secureConnection: true,
   port: 465,
