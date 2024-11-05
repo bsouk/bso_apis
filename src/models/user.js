@@ -5,17 +5,16 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 
 const UserSchema = new mongoose.Schema(
   {
-    unique_user_id: {
-      type: String,
-      required: true
-    },
     profile_image: {
       type: String,
     },
-    full_name: {
+    first_name: {
       type: String,
     },
-    company_name: {
+    last_name: {
+      type: String,
+    },
+    full_name: {
       type: String,
     },
     email: {
@@ -26,6 +25,9 @@ const UserSchema = new mongoose.Schema(
       },
       lowercase: true,
       required: true,
+    },
+    phone_number_code: {
+      type: String,
     },
     phone_number: {
       type: String,
@@ -49,8 +51,12 @@ const UserSchema = new mongoose.Schema(
     },
     user_type: {
       type: String,
-      enum: ["user"],
+      enum: ["buyer", "supplier", "logistics", "resource"],
       required: true,
+    },
+    is_company_approved: {
+      type: Boolean,
+      default: false
     },
     status: {
       type: String,
