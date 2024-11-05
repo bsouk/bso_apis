@@ -11,6 +11,10 @@ const CMSSchema = new mongoose.Schema(
       type: String,
       enum: ['privacy_policy', 'terms_and_conditions', 'about_us' , "cookie_policy"],
       required: true
+    },
+    images : {
+      type : [String],
+      default : []
     }
   },
   {

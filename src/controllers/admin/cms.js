@@ -20,12 +20,17 @@ exports.addFaq = async (req, res) => {
 
 exports.getFaqList = async (req, res) => {
   try {
-    const { limit = 10, offset = 0 } = req.query;
-    const faqs = await FAQ.find({})
+    const { limit = 10, offset = 0, search = "" } = req.query;
+    const condition = {
+      question: { $regex: search, $options: "i" },
+      answer: { $regex: search, $options: "i" }
+    }
+
+    const faqs = await FAQ.find(condition)
       .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit);
-    const count = await FAQ.countDocuments({});
+    const count = await FAQ.countDocuments(condition);
 
     res.json({ data: faqs, count: count, code: 200 });
   } catch (error) {
@@ -75,7 +80,7 @@ exports.editFaq = async (req, res) => {
 
 exports.addCMS = async (req, res) => {
   try {
-    const { type, content } = req.body;
+    const { type, content, images } = req.body;
 
     if (!["privacy_policy", "terms_and_conditions", "about_us", "cookie_policy"].includes(type))
       return utils.handleError(res, {
@@ -86,11 +91,12 @@ exports.addCMS = async (req, res) => {
     const cmsResp = await CMS.findOne({ type });
 
     if (cmsResp) {
-      await CMS.findByIdAndUpdate(cmsResp._id, { content: content });
+      await CMS.findByIdAndUpdate(cmsResp._id, { content: content, images: images });
     } else {
       const data = {
         type: type,
         content: content,
+        images: images
       };
 
       const cms = new CMS(data);
@@ -108,7 +114,7 @@ exports.getCMS = async (req, res) => {
   try {
     const { type } = req.query;
 
-    if (!["privacy_policy", "terms_and_conditions", "about_us", "cookie_policy"].includes(type))
+    if (!["privacy_policy", "terms_and_conditions", "about_us",].includes(type))
       return utils.handleError(res, {
         message: "Please provide valid type",
         code: 400,
