@@ -96,7 +96,7 @@ exports.forgotPassword = async (req, res) => {
       subject : "Password Reset Request",
       name: user.full_name,
       email: user.email,
-      reset_link: production === false ? `${process.env.LOCAL_ADMIN_URL}pages/ResetPassword/${token}` : `${process.env.PRODUCTION_ADMIN_URL}pages/ResetPassword/${token}`
+      reset_link: production === false ? `${process.env.LOCAL_ADMIN_URL}reset-password/${token}` : `${process.env.PRODUCTION_ADMIN_URL}reset-password/${token}`
     }
 
     emailer.sendEmail(null, mailOptions, "forgotPasswordWithLink");

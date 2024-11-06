@@ -19,66 +19,68 @@ router.post(
   controller.uploadMedia
 );
 router.post(
-  "/addUser",
+  "/addCustomer",
   trimRequest.all,
   requireAuth,
-  validator(validation.addUser),
-  controller.addUser
+  controller.addCustomer
 );
 
-router.get("/users", trimRequest.all, requireAuth, controller.users);
+router.get("/getCustomerList", trimRequest.all, requireAuth, controller.getCustomerList);
 
-router.get("/user/:id", trimRequest.all, requireAuth, controller.singleUser);
+router.get("/getCustomer/:id", trimRequest.all, requireAuth, controller.getCustomer);
 
 router.patch(
-  "/editUser/:id",
+  "/editCustomer/:id",
   trimRequest.all,
   requireAuth,
-  controller.editUser
+  controller.editCustomer
 );
 
 router.delete(
-  "/deleteUser/:id",
+  "/deleteCustomer/:id",
   trimRequest.all,
   requireAuth,
-  controller.deleteUser
+  controller.deleteCustomer
 )
-
-router.post(
-  "/activeSelectedUsers",
-  trimRequest.all,
-  requireAuth,
-  controller.activeSelectedUsers
-)
-
-
-router.post(
-  "/inactiveSelectedUsers",
-  trimRequest.all,
-  requireAuth,
-  controller.inactiveSelectedUsers
-)
-
 
 router.delete(
-  "/deleteSelectedUsers",
+  "/deleteSelectedCustomer",
   trimRequest.all,
   requireAuth,
-  controller.deleteSelectedUsers
+  controller.deleteSelectedCustomer
 )
 
 router.post(
-  "/shareCrendentials",
+  "/addResource",
   trimRequest.all,
   requireAuth,
-  controller.shareCrendentials
+  controller.addResource
 )
 
-router.post(
-  "/bulkUploadUserWithExcel",
+
+router.get("/getResourceList", trimRequest.all, requireAuth, controller.getResourceList);
+
+router.get("/getResource/:id", trimRequest.all, requireAuth, controller.getResource);
+
+router.patch(
+  "/editResource/:id",
   trimRequest.all,
   requireAuth,
-  controller.bulkUploadUserWithExcel
+  controller.editResource
+);
+
+router.delete(
+  "/deleteResource/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteResource
+)
+
+router.delete(
+  "/deleteSelectedResource",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSelectedResource
 )
 
 module.exports = router;

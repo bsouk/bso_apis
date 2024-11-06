@@ -32,13 +32,6 @@ const UserSchema = new mongoose.Schema(
     phone_number: {
       type: String,
     },
-    social_id: {
-      type: String,
-    },
-    social_type: {
-      type: String,
-      enum: ["google", "facebook", "apple"],
-    },
     password: {
       type: String,
       required: true,
@@ -54,7 +47,14 @@ const UserSchema = new mongoose.Schema(
       enum: ["buyer", "supplier", "logistics", "resource"],
       required: true,
     },
+    joining_date: {
+      type: Date
+    },
     is_company_approved: {
+      type: Boolean,
+      default: false
+    },
+    is_user_approved_by_admin: {
       type: Boolean,
       default: false
     },
@@ -74,7 +74,33 @@ const UserSchema = new mongoose.Schema(
     last_login: {
       type: Date,
       default: null
-    }
+    },
+
+    //
+    experience_in_year: {
+      type: Number,
+      default: 0
+    },
+    profile_description: {
+      type: String
+    },
+    skills: {
+      type: [String],
+    },
+    rate_per_hour: {
+      type: Number
+    },
+    availability_status: {
+      type: String,
+      enum: ["open_to_work", "hired"],
+      default: "open_to_work"
+    },
+    portfolio: {
+      type: [String],
+    },
+    certifications: {
+      type: [String],
+    },
   },
   {
     timestamps: true,
@@ -102,7 +128,13 @@ const genSalt = (user, SALT_FACTOR, next) => {
 
 UserSchema.pre("save", function (next) {
   const that = this;
-  const SALT_FACTOR = 5
+  const SALT_FACTOR = 5;
+
+  if (that.type === "buyer") {
+    if (that.isModified("first_name") || that.isModified("last_name")) {
+      that.full_name = `${that.first_name} ${that.last_name}`;
+    }
+  }
 
   if (!that.isModified("password")) {
     return next();

@@ -35,13 +35,13 @@ const addressSchema = new mongoose.Schema(
                 default: "",
             },
         },
-        location : {
-            type : {
-                type : String,
-                enum : ["Point"]
+        location: {
+            type: {
+                type: String,
+                enum: ["Point"]
             },
-            coordinates : {
-                type : [Number]
+            coordinates: {
+                type: [Number]
             }
         },
         default_address: {
