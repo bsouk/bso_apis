@@ -3,7 +3,8 @@ const CMS = require("../../models/cms");
 const utils = require("../../utils/utils");
 const Walkthrough = require("../../models/walkthrough");
 const ContactUs = require("../../models/contact_us");
-const SupportDetails = require("../../models/support_details")
+const SupportDetails = require("../../models/support_details");
+const { response } = require("express");
 
 exports.addFaq = async (req, res) => {
   try {
@@ -214,7 +215,46 @@ exports.getContactUs = async (req, res) => {
     utils.handleError(res, error);
   }
 };
-
+exports.queryReply = async (req,res)=>{
+  try{
+    const data= await ContactUs.findById(req.body.id);
+    if(!data) return res.json({ message: "Query not found", code: 404 });
+    await data.updateOne({$set:{reply:req.body.reply,status:'Replied'}});
+    await data.save();
+    return res.json({code:200, message:'Your reply for query has been sent successfully'})
+  }catch(error){
+    utils.handleError(res, error);
+  }
+};
+exports.deleteQuery=async(req,res)=>{
+  try{
+    await ContactUs.findByIdAndDelete(req.params.id);
+    return res.json({ message: "Query deleted successfully", code: 200 });
+  }catch(error){
+    utils.handleError(res, error);
+  }
+}
+exports.changeQueryStatus=async(req,res)=>{
+  try{
+    const data= await ContactUs.findByIdAndUpdate(req.body.id,{
+      $set:{
+        status:req.body.status
+      }
+    });
+   if(!data){
+    return utils.handleError(res, {
+      message: "Query Not Found",
+      code: 404,
+    });
+   }
+   return res.status(200).json({
+    message: "Status updated successfully",
+    code: 200
+   })
+  }catch(error){
+    utils.handleError(res, error);
+  }
+}
 exports.getContactUsDetails = async (req, res) => {
   try {
     const data = await SupportDetails.findOne({});

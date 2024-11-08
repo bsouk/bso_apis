@@ -16,10 +16,18 @@ const UserSchema = new mongoose.Schema({
   full_name: {
     type: String
   },
+  status:{
+    type: String,
+    default:'Pending',
+    enum:['Hold','Replied','Read','Pending']
+  },
   message: {
     type: String,
     required: true
   },
+  reply:{
+    type: String
+  }
 },
   {
     versionKey: false,

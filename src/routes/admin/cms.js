@@ -95,5 +95,7 @@ router.post(
   trimRequest.all,
   controller.addContactUsDetails
 )
-
+router.post("/query-reply",trimRequest.all,requireAuth,controller.queryReply);
+router.patch("/change-query-status",trimRequest.all,requireAuth,controller.changeQueryStatus);
+router.delete("/delete-query/:id",trimRequest.all,requireAuth,controller.deleteQuery)
 module.exports = router
