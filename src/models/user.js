@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt-nodejs");
 const validator = require("validator");
 const mongoosePaginate = require("mongoose-paginate-v2");
+const { string } = require("i/lib/util");
 
 const UserSchema = new mongoose.Schema(
   {
@@ -34,12 +35,12 @@ const UserSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      // required: true,
       select: false,
     },
     decoded_password: {
       type: String,
-      required: true,
+      // required: true,
       select: false,
     },
     user_type: {
@@ -101,6 +102,52 @@ const UserSchema = new mongoose.Schema(
     certifications: {
       type: [String],
     },
+
+  
+
+    business_name:{
+       type:String
+    },
+    categories_id : {
+      type : mongoose.Schema.Types.ObjectId
+    },
+    sub_categories_id:{
+      type : mongoose.Schema.Types.ObjectId
+
+    },
+    // bank_details:{
+    //   type:String
+    // },
+    certification:{
+      type:String
+    },
+    health_and_saftey_procedures:{
+      type:String
+    },
+    quality_procedures:{
+      type:String
+    },
+    anti_correcuptin_procedures:{
+      type:String
+    },
+    business_document:{
+      type:String
+    },
+
+    //bank details
+
+    account_holder_name:{
+      type:String
+    },
+    bank_account_name:{
+      type:String
+    },
+    bank_name:{
+      type:String
+    },
+    swift_code:{
+      type:String
+    }
   },
   {
     timestamps: true,

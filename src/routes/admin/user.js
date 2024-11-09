@@ -83,4 +83,31 @@ router.delete(
   controller.deleteSelectedResource
 )
 
+// addSupplier
+router.post(
+  "/addSupplier",
+  trimRequest.all,
+  requireAuth,
+  controller.addSupplier
+);
+
+router.patch(
+  "/editSupplier/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.editSupplier
+);
+// deleteSupplier
+router.delete(
+  "/deleteSupplier/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSupplier
+)
+
+// getSupplierList
+
+router.get("/getSupplierList", trimRequest.all, requireAuth, controller.getSupplierList);
+
+router.get("/getSupplier/:id", trimRequest.all, requireAuth, controller.getSupplier);
 module.exports = router;
