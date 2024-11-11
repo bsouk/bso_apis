@@ -25,9 +25,19 @@ router.post(
   controller.addCustomer
 );
 
-router.get("/getCustomerList", trimRequest.all, requireAuth, controller.getCustomerList);
+router.get(
+  "/getCustomerList",
+  trimRequest.all,
+  requireAuth,
+  controller.getCustomerList
+);
 
-router.get("/getCustomer/:id", trimRequest.all, requireAuth, controller.getCustomer);
+router.get(
+  "/getCustomer/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.getCustomer
+);
 
 router.patch(
   "/editCustomer/:id",
@@ -41,26 +51,35 @@ router.delete(
   trimRequest.all,
   requireAuth,
   controller.deleteCustomer
-)
+);
 
 router.delete(
   "/deleteSelectedCustomer",
   trimRequest.all,
   requireAuth,
   controller.deleteSelectedCustomer
-)
+);
 
 router.post(
   "/addResource",
   trimRequest.all,
   requireAuth,
   controller.addResource
-)
+);
 
+router.get(
+  "/getResourceList",
+  trimRequest.all,
+  requireAuth,
+  controller.getResourceList
+);
 
-router.get("/getResourceList", trimRequest.all, requireAuth, controller.getResourceList);
-
-router.get("/getResource/:id", trimRequest.all, requireAuth, controller.getResource);
+router.get(
+  "/getResource/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.getResource
+);
 
 router.patch(
   "/editResource/:id",
@@ -74,14 +93,14 @@ router.delete(
   trimRequest.all,
   requireAuth,
   controller.deleteResource
-)
+);
 
 router.delete(
   "/deleteSelectedResource",
   trimRequest.all,
   requireAuth,
   controller.deleteSelectedResource
-)
+);
 
 // addSupplier
 router.post(
@@ -103,11 +122,73 @@ router.delete(
   trimRequest.all,
   requireAuth,
   controller.deleteSupplier
-)
+);
 
 // getSupplierList
 
-router.get("/getSupplierList", trimRequest.all, requireAuth, controller.getSupplierList);
+router.get(
+  "/getSupplierList",
+  trimRequest.all,
+  requireAuth,
+  controller.getSupplierList
+);
 
-router.get("/getSupplier/:id", trimRequest.all, requireAuth, controller.getSupplier);
+router.get(
+  "/getSupplier/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.getSupplier
+);
+
+// LOgistics Users routes
+
+//add logisticts user
+router.post(
+  "/addLogistics",
+  trimRequest.all,
+  requireAuth,
+  controller.addLogisticsUser
+);
+
+//edit Logistics user
+
+router.patch(
+  "/editLogistics/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.editLogisticsUser
+);
+
+// get LOgistics User LIst
+router.get(
+  "/getLogisticsList",
+  trimRequest.all,
+  requireAuth,
+  controller.getLogisticsUserList
+);
+
+// get Logistics User By Id
+router.get(
+  "/getLogistics/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.getLogisticsUserById
+);
+
+// delete Logistics User BY id
+router.delete(
+  "/deleteLogistics/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteLogisticsUser
+);
+
+//delete Multiple LOgistics Users
+router.delete(
+  "/deleteSelectedLogistics",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSelectedLogisticsUser
+);
+
 module.exports = router;
