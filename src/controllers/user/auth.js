@@ -1,15 +1,13 @@
 const User = require("../../models/user");
 const utils = require("../../utils/utils");
 const UserAccess = require("../../models/userAccess");
-const ResetPassword = require("../../models/reset_password")
+const ResetPassword = require("../../models/reset_password");
 const OTP = require("../../models/otp");
 const EmailOrPhoneVerifiedStatus = require("../../models/email_or_phone_verified_status");
 
-
 const emailer = require("../../utils/emailer");
 const jwt = require("jsonwebtoken");
-const uuid = require('uuid');
-
+const uuid = require("uuid");
 
 const generateToken = (_id) => {
   const expiration =
@@ -65,15 +63,20 @@ exports.checkEmailExist = async (req, res) => {
   }
 };
 
-
 exports.sendOtpForSignup = async (req, res) => {
   try {
     const { email, signup_by, phone_number_code, phone_number } = req.body;
-    if (!["email", "phone_number"].includes(signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
+    if (!["email", "phone_number"].includes(signup_by))
+      return utils.handleError(res, {
+        message: "Invalid sign up by value",
+        code: 400,
+      });
     const otp = utils.generateOTP();
 
     if (signup_by == "email") {
-      const otpData = await EmailOrPhoneVerifiedStatus.findOne({ email: email });
+      const otpData = await EmailOrPhoneVerifiedStatus.findOne({
+        email: email,
+      });
       const data = {
         email: email,
         otp,
@@ -92,12 +95,14 @@ exports.sendOtpForSignup = async (req, res) => {
         to: email,
         subject: "Verify Your Email Address",
         app_name: process.env.APP_NAME,
-        otp: otp
+        otp: otp,
       };
       emailer.sendEmail(null, mailOptions, "verifyEmail");
       res.json({ code: 200, message: "OTP sent successfully" });
     } else {
-      const otpData = await EmailOrPhoneVerifiedStatus.findOne({ phone_number: phone_number });
+      const otpData = await EmailOrPhoneVerifiedStatus.findOne({
+        phone_number: phone_number,
+      });
       const data = {
         phone_number: phone_number,
         otp,
@@ -114,7 +119,6 @@ exports.sendOtpForSignup = async (req, res) => {
 
       res.json({ code: 200, message: "OTP sent successfully", otp: otp });
     }
-
   } catch (error) {
     utils.handleError(res, error);
   }
@@ -123,21 +127,33 @@ exports.sendOtpForSignup = async (req, res) => {
 exports.verifyOtpForSignup = async (req, res) => {
   try {
     const { otp, email, signup_by, phone_number } = req.body;
-    if (!["email", "phone_number"].includes(signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
-
+    if (!["email", "phone_number"].includes(signup_by))
+      return utils.handleError(res, {
+        message: "Invalid sign up by value",
+        code: 400,
+      });
 
     if (signup_by === "email") {
       const condition = {
         otp,
-        email: email
+        email: email,
       };
 
       const otpData = await EmailOrPhoneVerifiedStatus.findOne(condition);
 
-      if (!otpData || otpData.otp !== otp) return utils.handleError(res, { message: "The OTP you entered is incorrect. Please try again", code: 400 });
-      if (otpData.verified == true) return res.json({ code: 200, message: "Otp verified successfully" });
+      if (!otpData || otpData.otp !== otp)
+        return utils.handleError(res, {
+          message: "The OTP you entered is incorrect. Please try again",
+          code: 400,
+        });
+      if (otpData.verified == true)
+        return res.json({ code: 200, message: "Otp verified successfully" });
 
-      if (otpData.exp_time < new Date()) return utils.handleError(res, { message: "The OTP you entered has expired. Please request a new one", code: 400 });
+      if (otpData.exp_time < new Date())
+        return utils.handleError(res, {
+          message: "The OTP you entered has expired. Please request a new one",
+          code: 400,
+        });
 
       otpData.verified = true;
       otpData.is_used = true;
@@ -147,15 +163,24 @@ exports.verifyOtpForSignup = async (req, res) => {
     } else {
       const condition = {
         otp,
-        phone_number: phone_number
+        phone_number: phone_number,
       };
 
       const otpData = await EmailOrPhoneVerifiedStatus.findOne(condition);
 
-      if (!otpData || otpData.otp !== otp) return utils.handleError(res, { message: "The OTP you entered is incorrect. Please try again", code: 400 });
-      if (otpData.verified == true) return res.json({ code: 200, message: "Otp verified successfully" });
+      if (!otpData || otpData.otp !== otp)
+        return utils.handleError(res, {
+          message: "The OTP you entered is incorrect. Please try again",
+          code: 400,
+        });
+      if (otpData.verified == true)
+        return res.json({ code: 200, message: "Otp verified successfully" });
 
-      if (otpData.exp_time < new Date()) return utils.handleError(res, { message: "The OTP you entered has expired. Please request a new one", code: 400 });
+      if (otpData.exp_time < new Date())
+        return utils.handleError(res, {
+          message: "The OTP you entered has expired. Please request a new one",
+          code: 400,
+        });
 
       otpData.verified = true;
       otpData.is_used = true;
@@ -163,43 +188,41 @@ exports.verifyOtpForSignup = async (req, res) => {
 
       res.json({ code: 200, message: "Otp verified successfully" });
     }
-
   } catch (error) {
     utils.handleError(res, error);
   }
 };
 
-exports.signup = async (req, res) => {
-  try {
-    const data = req.body;
-    if (!["email", "phone_number"].includes(data.signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
+// exports.signup = async (req, res) => {
+//   try {
+//     const data = req.body;
+//     if (!["email", "phone_number"].includes(data.signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
 
-    if (data.signup_by == "email") {
-      const doesEmailExists = await emailer.emailExists(data.email);
-      if (doesEmailExists) return utils.handleError(res, { message: "", code: 400 })
-    }
+//     if (data.signup_by == "email") {
+//       const doesEmailExists = await emailer.emailExists(data.email);
+//       if (doesEmailExists) return utils.handleError(res, { message: "", code: 400 })
+//     }
 
-    if (!user) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400, });
+//     if (!user) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400, });
 
-    const isPasswordMatch = await utils.checkPassword(data.password, user);
-    if (!isPasswordMatch) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400 });
+//     const isPasswordMatch = await utils.checkPassword(data.password, user);
+//     if (!isPasswordMatch) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400 });
 
-    if (user.status !== "active") return utils.handleError(res, { message: "Your account has been deactivated", code: 400, });
-    // if (user.is_deleted === true) return utils.handleError(res, { message: "Your account has been deleted", code: 400 });
+//     if (user.status !== "active") return utils.handleError(res, { message: "Your account has been deactivated", code: 400, });
+//     // if (user.is_deleted === true) return utils.handleError(res, { message: "Your account has been deleted", code: 400 });
 
-    const token = await saveUserAccessAndReturnToken(req, user);
-    user.last_login = new Date();
+//     const token = await saveUserAccessAndReturnToken(req, user);
+//     user.last_login = new Date();
 
-    await user.save();
-    user = user.toJSON();
+//     await user.save();
+//     user = user.toJSON();
 
-    delete user.password;
-    res.status(200).json({ code: 200, data: { user: user, token: token } });
-  } catch (error) {
-    utils.handleError(res, error);
-  }
-};
-
+//     delete user.password;
+//     res.status(200).json({ code: 200, data: { user: user, token: token } });
+//   } catch (error) {
+//     utils.handleError(res, error);
+//   }
+// };
 
 async function checkEmailVerified(email) {
   try {
@@ -223,12 +246,15 @@ async function checkPhoneNumberVerified(phone_number) {
   }
 }
 
-
 //not completed
 exports.signup = async (req, res) => {
   try {
     const data = req.body;
-    if (!["email", "phone_number"].includes(data.signup_by)) return utils.handleError(res, { message: "Invalid sign up by value", code: 400 });
+    if (!["email", "phone_number"].includes(data.signup_by))
+      return utils.handleError(res, {
+        message: "Invalid sign up by value",
+        code: 400,
+      });
 
     if (data.signup_by == "email") {
       const doesEmailExists = await emailer.emailExists(data.email);
@@ -238,7 +264,6 @@ exports.signup = async (req, res) => {
           code: 400,
         });
     }
-
 
     if (data.signup_by == "phone_number") {
       const doesPhoneNumberExist = await emailer.checkMobileExists(
@@ -262,11 +287,8 @@ exports.signup = async (req, res) => {
         });
     }
 
-
     if (data.signup_by == "email") {
-      const isPhoneNumberVerified = await checkEmailVerified(
-        data.phone_number
-      );
+      const isPhoneNumberVerified = await checkEmailVerified(data.phone_number);
 
       if (!isPhoneNumberVerified)
         return utils.handleError(res, {
@@ -275,13 +297,13 @@ exports.signup = async (req, res) => {
         });
     }
 
-    let user = await registerUser(data);
+    let user = await User(data);
     const token = await saveUserAccessAndReturnToken(req, user);
 
-    await utils.createCustomer(user)
-    user = user.toJSON();
+    await user.save();
+    // await utils.createCustomer(user)
+    //user = user.toJSON();
     delete user.password;
-
 
     const notificaitonData = {
       receiver_id: user._id,
@@ -292,13 +314,13 @@ exports.signup = async (req, res) => {
       type: "account_creation",
       related_to: user._id,
     };
+    console.log(notificaitonData);
 
     await utils.sendPushNotification(notificaitonData);
 
+    //const notification = new Notification(notificaitonData);
 
-    // const notification = new Notification(notificaitonData);
-
-    // await notification.save();
+    //await notification.save();
 
     res.status(200).json({ code: 200, data: { user: user, token: token } });
   } catch (error) {
@@ -311,12 +333,24 @@ exports.login = async (req, res) => {
   try {
     const data = req.body;
     let user = await User.findOne({ email: data.email }, "+password");
-    if (!user) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400, });
+    if (!user)
+      return utils.handleError(res, {
+        message: "Invalid login credentials. Please try again",
+        code: 400,
+      });
 
     const isPasswordMatch = await utils.checkPassword(data.password, user);
-    if (!isPasswordMatch) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400 });
+    if (!isPasswordMatch)
+      return utils.handleError(res, {
+        message: "Invalid login credentials. Please try again",
+        code: 400,
+      });
 
-    if (user.status !== "active") return utils.handleError(res, { message: "Your account has been deactivated", code: 400, });
+    if (user.status !== "active")
+      return utils.handleError(res, {
+        message: "Your account has been deactivated",
+        code: 400,
+      });
     // if (user.is_deleted === true) return utils.handleError(res, { message: "Your account has been deleted", code: 400 });
 
     const token = await saveUserAccessAndReturnToken(req, user);
@@ -332,8 +366,6 @@ exports.login = async (req, res) => {
   }
 };
 
-
-
 exports.forgetPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -341,7 +373,11 @@ exports.forgetPassword = async (req, res) => {
     const otp = utils.generateOTP();
 
     const user = await User.findOne({ email });
-    if (!user) return utils.handleError(res, { message: "No account found with the provided email", code: 400 });
+    if (!user)
+      return utils.handleError(res, {
+        message: "No account found with the provided email",
+        code: 400,
+      });
 
     const otpData = await OTP.findOne({ email: user.email });
 
@@ -378,21 +414,33 @@ exports.verifyOTP = async (req, res) => {
 
     const condition = {
       otp,
-      email: email
+      email: email,
     };
 
     const otpData = await OTP.findOne(condition);
+    console.log(otpData)
 
-    if (!otpData || otpData.otp !== otp) return utils.handleError(res, { message: "The OTP you entered is incorrect. Please try again", code: 400 });
-    if (otpData.is_used) return utils.handleError(res, { message: "This OTP has already been used. Please request a new one", code: 400 });
-    if (otpData.exp_time < new Date()) return utils.handleError(res, { message: "The OTP you entered has expired. Please request a new one", code: 400 });
+    if (!otpData || otpData.otp !== otp)
+      return utils.handleError(res, {
+        message: "The OTP you entered is incorrect. Please try again",
+        code: 400,
+      });
+    if (otpData.is_used)
+      return utils.handleError(res, {
+        message: "This OTP has already been used. Please request a new one",
+        code: 400,
+      });
+    if (otpData.exp_time < new Date())
+      return utils.handleError(res, {
+        message: "The OTP you entered has expired. Please request a new one",
+        code: 400,
+      });
 
     otpData.verified = true;
     otpData.is_used = true;
     await otpData.save();
 
     res.json({ code: 200, message: "Otp verified successfully" });
-
   } catch (error) {
     utils.handleError(res, error);
   }
@@ -404,11 +452,16 @@ exports.resetPassword = async (req, res) => {
     const user = await User.findOne({ email: email });
 
     const otpData = await OTP.findOne({ email, otp });
-    if (!otpData) return utils.handleError(res, { message: "The OTP you entered is incorrect. Please try again", code: 400 });
-    if (!otpData.verified) return utils.handleError(res, {
-      message: "The OTP you entered has not verified",
-      code: 400,
-    });
+    if (!otpData)
+      return utils.handleError(res, {
+        message: "The OTP you entered is incorrect. Please try again",
+        code: 400,
+      });
+    if (!otpData.verified)
+      return utils.handleError(res, {
+        message: "The OTP you entered has not verified",
+        code: 400,
+      });
 
     user.password = password;
     user.decoded_password = password;
@@ -430,10 +483,18 @@ exports.changePassword = async (req, res) => {
 
     let user = await User.findById(user_id, "+password");
     const isPasswordMatch = await utils.checkPassword(currentPassword, user);
-    if (!isPasswordMatch) return utils.handleError(res, { message: "Current password is incorrect", code: 400 });
+    if (!isPasswordMatch)
+      return utils.handleError(res, {
+        message: "Current password is incorrect",
+        code: 400,
+      });
 
     const newPasswordMatch = await utils.checkPassword(newPassword, user);
-    if (newPasswordMatch) return utils.handleError(res, { message: "New password must be different from the current password", code: 400 });
+    if (newPasswordMatch)
+      return utils.handleError(res, {
+        message: "New password must be different from the current password",
+        code: 400,
+      });
 
     user.password = newPassword;
     user.decoded_password = newPassword;
@@ -442,9 +503,8 @@ exports.changePassword = async (req, res) => {
 
     res.json({
       message: "Password has been changed successfully",
-      code: 200
+      code: 200,
     });
-
   } catch (error) {
     utils.handleError(res, error);
   }

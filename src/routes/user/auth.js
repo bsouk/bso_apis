@@ -49,6 +49,12 @@ router.post(
 )
 
 router.post(
+    '/signup',
+    trimRequest.all,
+    controller.signup
+)
+
+router.post(
     "/forgetPassword",
     trimRequest.all,
     controller.forgetPassword
