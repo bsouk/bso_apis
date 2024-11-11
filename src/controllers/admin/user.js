@@ -892,6 +892,9 @@ exports.getSupplierList = async (req, res) => {
           joining_date: 1,
           createdAt: 1,
           address: 1,
+          business_name : 1,
+          categories_id : 1,
+          sub_categories_id : 1
         },
       },
     ]);
