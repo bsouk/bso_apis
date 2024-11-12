@@ -22,6 +22,13 @@ router.post(
     controller.createBuyerProfile
 );
 
+router.patch(
+    "/editBuyerProfile/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.editBuyerProfile
+);
+
 router.get(
     "/buyerdetails/:id",
     trimRequest.all,
@@ -34,6 +41,13 @@ router.post(
     trimRequest.all,
     requireAuth,
     controller.addCompanyDetails
+)
+
+router.patch(
+    "/editCompanyData/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.editCompanyDetails
 )
 
 module.exports = router;

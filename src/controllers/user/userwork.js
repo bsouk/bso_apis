@@ -62,6 +62,58 @@ exports.createBuyerProfile = async (req, res) => {
     }
 }
 
+//edit Buyer data
+exports.editBuyerProfile = async (req, res) => {
+    try {
+        const data = req.body;
+        const id = req.params.id;
+
+        const user = await User.findById(id);
+        if (!user)
+            return utils.handleError(res, {
+                message: "Buyer not found",
+                code: 404,
+            });
+
+        if (user.is_deleted)
+            return utils.handleError(res, {
+                message: "You cannot edit an account that has been deleted",
+                code: 400,
+            });
+
+        if (data.email) {
+            const doesEmailExists = await User.findOne({
+                email: data.email,
+                _id: { $ne: new mongoose.Types.ObjectId(id) },
+            });
+
+            if (doesEmailExists)
+                return utils.handleError(res, {
+                    message: "This email address is already registered",
+                    code: 400,
+                });
+        }
+
+        if (data.phone_number) {
+            const doesPhoneNumberExist = await User.findOne({
+                phone_number: data.phone_number,
+                _id: { $ne: new mongoose.Types.ObjectId(id) },
+            });
+            if (doesPhoneNumberExist)
+                return utils.handleError(res, {
+                    message: "This phone number is already registered",
+                    code: 400,
+                });
+        }
+
+        await User.findByIdAndUpdate(id, data);
+
+        res.json({ message: "Buyer edit successfully", code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
 //get buyer profile details
 exports.getBuyerDetails = async (req, res) => {
     try {
@@ -121,6 +173,30 @@ exports.addCompanyDetails = async (req, res) => {
             code: 200
         })
     } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+//edit company data
+exports.editCompanyDetails = async(req,res)=>{
+    try{
+        const id = req.params.id
+        console.log("company id is ", id)
+
+        const data = req.body;
+        console.log("data to edited is ", data)
+
+        const companyData = await company_details.findById(id);
+        console.log("company data is ", companyData)
+
+        const result = await company_details.findByIdAndUpdate(id,data);
+
+        res.status(200).json({
+            status : true,
+            message : "Company details edited Successfully",
+            code : 200
+        })
+    }catch(err){
         utils.handleError(res, err);
     }
 }
