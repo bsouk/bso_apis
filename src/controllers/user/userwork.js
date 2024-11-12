@@ -69,6 +69,7 @@ exports.editProfile = async (req, res) => {
         const id = req.params.id;
 
         const user = await User.findById(id);
+        console.log("user is ", user, user?.profile_completed)
         if (!user)
             return utils.handleError(res, {
                 message: "Profile not found",
@@ -106,7 +107,18 @@ exports.editProfile = async (req, res) => {
                 });
         }
 
-        await User.findByIdAndUpdate(id, data);
+        const updatedUser = await User.findByIdAndUpdate(id, data);
+        console.log("updated user is ", updatedUser);
+
+        if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+            console.log("condition data is ", updatedUser.profile_completed)
+            updatedUser.profile_completed = true;
+            await updatedUser.save()
+        }
+        else {
+            updatedUser.profile_completed = false
+            await updatedUser.save()
+        }
 
         res.json({ message: "Profile edit successfully", code: 200 });
     } catch (error) {
