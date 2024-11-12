@@ -5,6 +5,7 @@ const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
+const company_details = require("../../models/company_details");
 
 //create password for users
 function createNewPassword() {
@@ -18,6 +19,7 @@ function createNewPassword() {
     return password;
 }
 
+//create Buyer profile
 exports.createBuyerProfile = async (req, res) => {
     try {
         const data = req.body;
@@ -60,6 +62,7 @@ exports.createBuyerProfile = async (req, res) => {
     }
 }
 
+//get buyer profile details
 exports.getBuyerDetails = async (req, res) => {
     try {
         const user_id = req.params.id;
@@ -97,6 +100,26 @@ exports.getBuyerDetails = async (req, res) => {
             },
         ]);
         res.json({ data: user[0], code: 200 });
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+//add company details
+exports.addCompanyDetails = async (req, res) => {
+    try {
+        const data = req.body
+        console.log("comapny data is ", data)
+
+        const newcompanydata = await company_details.create(data);
+        console.log("created data is ", newcompanydata);
+
+        res.status(200).json({
+            success: true,
+            message: "Company details added successfully",
+            data: newcompanydata,
+            code: 200
+        })
     } catch (err) {
         utils.handleError(res, err);
     }

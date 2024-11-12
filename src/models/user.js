@@ -77,37 +77,6 @@ const UserSchema = new mongoose.Schema(
       default: null
     },
 
-    //company details
-    company_logo: {
-      type: String,
-    },
-    company_website: {
-      type: String,
-    },
-    company_name: {
-      type: String
-    },
-    company_overview: {
-      type: String
-    },
-    company_address: {
-      type: String
-    },
-    company_industry: {
-      type: String
-    },
-    company_size: {
-      type: Number
-    },
-    services: [{
-      name: {
-        type: String
-      },
-      description: {
-        type: String
-      }
-    }],
-
     //
     experience_in_year: {
       type: Number,

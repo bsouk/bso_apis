@@ -29,5 +29,11 @@ router.get(
     controller.getBuyerDetails
 )
 
+router.post(
+    "/addCompanyData",
+    trimRequest.all,
+    requireAuth,
+    controller.addCompanyDetails
+)
 
 module.exports = router;
