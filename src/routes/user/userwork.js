@@ -12,9 +12,6 @@ const trimRequest = require("trim-request");
 const validation = require("../../middleware/adminValidation");
 const validator = require("../../middleware/validator");
 
-//buyer routes
-
-//add buyer route
 router.post(
     "/addNewBuyer",
     trimRequest.all,
@@ -23,10 +20,10 @@ router.post(
 );
 
 router.patch(
-    "/editBuyerProfile/:id",
+    "/editProfile/:id",
     trimRequest.all,
     requireAuth,
-    controller.editBuyerProfile
+    controller.editProfile
 );
 
 router.get(
@@ -49,5 +46,35 @@ router.patch(
     requireAuth,
     controller.editCompanyDetails
 )
+
+router.post(
+    "/addNewSupplier",
+    trimRequest.all,
+    requireAuth,
+    controller.createSupplierProfile
+);
+
+
+router.post(
+    "/addAddress",
+    trimRequest.all,
+    requireAuth,
+    controller.addAddress
+);
+
+router.patch(
+    "/editAddress/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.editAddress
+)
+
+router.get(
+    "/getAddressList",
+    trimRequest.all,
+    requireAuth,
+    controller.getAddressList
+)
+
 
 module.exports = router;

@@ -63,7 +63,7 @@ exports.createBuyerProfile = async (req, res) => {
 }
 
 //edit Buyer data
-exports.editBuyerProfile = async (req, res) => {
+exports.editProfile = async (req, res) => {
     try {
         const data = req.body;
         const id = req.params.id;
@@ -71,7 +71,7 @@ exports.editBuyerProfile = async (req, res) => {
         const user = await User.findById(id);
         if (!user)
             return utils.handleError(res, {
-                message: "Buyer not found",
+                message: "Profile not found",
                 code: 404,
             });
 
@@ -108,7 +108,7 @@ exports.editBuyerProfile = async (req, res) => {
 
         await User.findByIdAndUpdate(id, data);
 
-        res.json({ message: "Buyer edit successfully", code: 200 });
+        res.json({ message: "Profile edit successfully", code: 200 });
     } catch (error) {
         utils.handleError(res, error);
     }
@@ -178,8 +178,8 @@ exports.addCompanyDetails = async (req, res) => {
 }
 
 //edit company data
-exports.editCompanyDetails = async(req,res)=>{
-    try{
+exports.editCompanyDetails = async (req, res) => {
+    try {
         const id = req.params.id
         console.log("company id is ", id)
 
@@ -189,14 +189,133 @@ exports.editCompanyDetails = async(req,res)=>{
         const companyData = await company_details.findById(id);
         console.log("company data is ", companyData)
 
-        const result = await company_details.findByIdAndUpdate(id,data);
+        if (Object.keys(companyData).length === 0) {
+            return utils.handleError(res, {
+                message: "Company Details Not Found",
+                code: 400,
+            });
+        }
+
+        const result = await company_details.findByIdAndUpdate(id, data);
 
         res.status(200).json({
-            status : true,
-            message : "Company details edited Successfully",
-            code : 200
+            status: true,
+            message: "Company details edited Successfully",
+            code: 200
         })
-    }catch(err){
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+
+//create Supplier Profile
+exports.createSupplierProfile = async (req, res) => {
+    try {
+        const data = req.body;
+        console.log("user data is ", data);
+
+        const doesEmailExists = await emailer.emailExists(data.email);
+        if (doesEmailExists)
+            return utils.handleError(res, {
+                message: "This email address is already registered",
+                code: 400,
+            });
+
+        if (data.phone_number) {
+            const doesPhoneNumberExist = await emailer.checkMobileExists(
+                data.phone_number
+            );
+            if (doesPhoneNumberExist)
+                return utils.handleError(res, {
+                    message: "This phone number is already registered",
+                    code: 400,
+                });
+        }
+        const password = createNewPassword();
+        const userData = {
+            ...data,
+            password,
+            decoded_password: password,
+            user_type: "supplier",
+            profile_completed: true,
+            is_user_approved_by_admin: true,
+        };
+
+        const user = new User(userData);
+        await user.save();
+
+        res.status(200).json({ message: "Supplier added successfully", data: user, code: 200 });
+
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+//add address
+exports.addAddress = async (req, res) => {
+    try {
+        const data = req.body
+        console.log("address data is ", data)
+
+        const newaddressdata = await Address.create(data);
+        console.log("created address data is ", newaddressdata);
+
+        res.status(200).json({
+            success: true,
+            message: "Address added successfully",
+            data: newaddressdata,
+            code: 200
+        })
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+//edit address 
+exports.editAddress = async (req, res) => {
+    try {
+        const id = req.params.id
+        console.log("address id is ", id)
+
+        const data = req.body;
+        console.log("data to edited is ", data)
+
+        const addressdata = await Address.findById(id);
+        console.log("addressdata is ", addressdata)
+
+        if (Object.keys(addressdata).length === 0) {
+            return utils.handleError(res, {
+                message: "Address Not Found",
+                code: 400,
+            });
+        }
+
+        const result = await Address.findByIdAndUpdate(id, data);
+
+        res.status(200).json({
+            status: true,
+            message: "Address edited Successfully",
+            code: 200
+        })
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+// get Address List
+exports.getAddressList = async (req, res) => {
+    try {
+        const addressList = await Address.find().populate("user_id", "full_name");
+        console.log(addressList)
+
+        return res.status(200).json({
+            success: true,
+            message: "Address List Fetched Successfully",
+            data: addressList,
+            code: 200
+        })
+    } catch (err) {
         utils.handleError(res, err);
     }
 }

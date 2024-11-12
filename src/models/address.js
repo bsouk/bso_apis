@@ -4,9 +4,13 @@ const mongoosePaginate = require('mongoose-paginate-v2')
 const addressSchema = new mongoose.Schema(
     {
         user_id: {
-            type: mongoose.Schema.Types.ObjectId
+            type: mongoose.Schema.Types.ObjectId,
+            ref : 'users'
         },
         phone_number: {
+            type: String
+        },
+        email: {
             type: String
         },
         address: {
@@ -51,6 +55,11 @@ const addressSchema = new mongoose.Schema(
         is_primary: {
             type: Boolean,
             default: false
+        },
+        address_type : {
+            type : String,
+            enum : ["Home", "Work"],
+            default : "Home"
         }
     },
     {
