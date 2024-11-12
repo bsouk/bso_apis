@@ -71,6 +71,21 @@ exports.contactUs = async (req, res) => {
   }
 }
 
+exports.contactUsList = async (req, res) => {
+  try {
+    const data = await ContactUs.find();
+    console.log("data is ", data)
+    res.status(200).json({
+      success: true,
+      message: "Contact Us data fetched successfully",
+      data: data,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
 exports.getWalkthrough = async (req, res) => {
   try {
     const data = await Walkthrough.findOne({}).sort({ createdAt: -1 });

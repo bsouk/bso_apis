@@ -77,6 +77,37 @@ const UserSchema = new mongoose.Schema(
       default: null
     },
 
+    //company details
+    company_logo: {
+      type: String,
+    },
+    company_website: {
+      type: String,
+    },
+    company_name: {
+      type: String
+    },
+    company_overview: {
+      type: String
+    },
+    company_address: {
+      type: String
+    },
+    company_industry: {
+      type: String
+    },
+    company_size: {
+      type: Number
+    },
+    services: [{
+      name: {
+        type: String
+      },
+      description: {
+        type: String
+      }
+    }],
+
     //
     experience_in_year: {
       type: Number,
@@ -103,50 +134,50 @@ const UserSchema = new mongoose.Schema(
       type: [String],
     },
 
-  
 
-    business_name:{
-       type:String
+
+    business_name: {
+      type: String
     },
-    categories_id : {
-      type : mongoose.Schema.Types.ObjectId
+    categories_id: {
+      type: mongoose.Schema.Types.ObjectId
     },
-    sub_categories_id:{
-      type : mongoose.Schema.Types.ObjectId
+    sub_categories_id: {
+      type: mongoose.Schema.Types.ObjectId
 
     },
     // bank_details:{
     //   type:String
     // },
-    certification:{
-      type:String
+    certification: {
+      type: String
     },
-    health_and_saftey_procedures:{
-      type:String
+    health_and_saftey_procedures: {
+      type: String
     },
-    quality_procedures:{
-      type:String
+    quality_procedures: {
+      type: String
     },
-    anti_correcuptin_procedures:{
-      type:String
+    anti_correcuptin_procedures: {
+      type: String
     },
-    business_document:{
-      type:String
+    business_document: {
+      type: String
     },
 
     //bank details
 
-    account_holder_name:{
-      type:String
+    account_holder_name: {
+      type: String
     },
-    bank_account_name:{
-      type:String
+    bank_account_name: {
+      type: String
     },
-    bank_name:{
-      type:String
+    bank_name: {
+      type: String
     },
-    swift_code:{
-      type:String
+    swift_code: {
+      type: String
     }
   },
   {

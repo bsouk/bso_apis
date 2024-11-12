@@ -27,6 +27,13 @@ router.post(
     controller.contactUs
 )
 
+//get contact us list 
+router.get(
+    "/getcontactUsList",
+    trimRequest.all,
+    controller.contactUsList
+)
+
 router.get(
     "/getContactUsDetails",
     trimRequest.all,

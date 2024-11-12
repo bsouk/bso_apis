@@ -246,7 +246,7 @@ async function checkPhoneNumberVerified(phone_number) {
   }
 }
 
-//not completed
+
 exports.signup = async (req, res) => {
   try {
     const data = req.body;
@@ -328,7 +328,7 @@ exports.signup = async (req, res) => {
   }
 };
 
-//not completed
+
 exports.login = async (req, res) => {
   try {
     const data = req.body;
