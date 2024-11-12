@@ -331,11 +331,11 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { usercredentials, password } = req.body;
+    const { user_credentials, password } = req.body;
     console.log(req.body)
 
     let user = await User.findOne(
-      { $or: [{ email: usercredentials }, { phone_number: usercredentials }] },
+      { $or: [{ email: user_credentials }, { phone_number: user_credentials }] },
       "+password"
     );
 
