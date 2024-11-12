@@ -76,5 +76,12 @@ router.get(
     controller.getAddressList
 )
 
+router.post(
+    "/changeDefaultAddress",
+    trimRequest.all,
+    requireAuth,
+    controller.changeDefaultAddress
+)
+
 
 module.exports = router;

@@ -319,3 +319,30 @@ exports.getAddressList = async (req, res) => {
         utils.handleError(res, err);
     }
 }
+
+
+//change Default Address field
+exports.changeDefaultAddress = async (req, res) => {
+    try {
+        const { id } = req.body;
+
+        const condition = {
+            user_id: req.user._id,
+            _id: { $ne: new mongoose.Types.ObjectId(id) }
+        }
+
+        console.log("condition is ", condition)
+
+        await Address.findByIdAndUpdate(id, { default_address: true });
+        await Address.updateMany(condition, { default_address: false });
+
+        res.json({
+            message: "Address set to default",
+            code: 200,
+            id,
+        });
+
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
