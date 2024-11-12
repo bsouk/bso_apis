@@ -331,20 +331,23 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const data = req.body;
+    const { usercredentials, password } = req.body;
+    console.log(req.body)
 
     let user = await User.findOne(
-      { $or: [{ email: data.usercredentials }, { phone_number: data.usercredentials }] },
+      { $or: [{ email: usercredentials }, { phone_number: usercredentials }] },
       "+password"
     );
 
-    if (!user)
+    console.log("user is ", user)
+
+    if (Object.keys(user).length === 0)
       return utils.handleError(res, {
         message: "Invalid login credentials. Please try again",
         code: 400,
       });
 
-    const isPasswordMatch = await utils.checkPassword(data.password, user);
+    const isPasswordMatch = await utils.checkPassword(password, user);
     if (!isPasswordMatch)
       return utils.handleError(res, {
         message: "Invalid login credentials. Please try again",
