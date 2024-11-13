@@ -1,5 +1,6 @@
 const User = require("../../models/user");
 const Address = require("../../models/address");
+const Supplier = require("../../models/supplier")
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
@@ -22,18 +23,18 @@ function createNewPassword() {
 
 const getUniqueId = async () => {
     return new Promise(async (resolve, reject) => {
-      try {
-        const lastUser = await User.findOne({}).sort({ createdAt: -1 });
-        if (lastUser && lastUser.unique_user_id) {
-          resolve((+lastUser.unique_user_id) + 1);
-        } else {
-          resolve(100000);
+        try {
+            const lastUser = await User.findOne({}).sort({ createdAt: -1 });
+            if (lastUser && lastUser.unique_user_id) {
+                resolve((+lastUser.unique_user_id) + 1);
+            } else {
+                resolve(100000);
+            }
+        } catch (error) {
+            reject(error);
         }
-      } catch (error) {
-        reject(error);
-      }
     });
-  };
+};
 
 //create Buyer profile
 exports.createBuyerProfile = async (req, res) => {
@@ -129,7 +130,7 @@ exports.editProfile = async (req, res) => {
 
         if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
             console.log("condition data is ", updatedUser.profile_completed)
-            updatedUser.profile_completed = true; 
+            updatedUser.profile_completed = true;
             await updatedUser.save()
         }
         else {
@@ -244,7 +245,8 @@ exports.createSupplierProfile = async (req, res) => {
         const data = req.body;
         console.log("user data is ", data);
 
-        const doesEmailExists = await emailer.emailExists(data.email);
+        const doesEmailExists = await Supplier.findOne({ email: data.email })
+        console.log("email is ", doesEmailExists)
         if (doesEmailExists)
             return utils.handleError(res, {
                 message: "This email address is already registered",
@@ -252,9 +254,8 @@ exports.createSupplierProfile = async (req, res) => {
             });
 
         if (data.phone_number) {
-            const doesPhoneNumberExist = await emailer.checkMobileExists(
-                data.phone_number
-            );
+            const doesPhoneNumberExist = await Supplier.findOne({ phone: data.phone })
+            console.log("phone no is", doesPhoneNumberExist)
             if (doesPhoneNumberExist)
                 return utils.handleError(res, {
                     message: "This phone number is already registered",
@@ -267,12 +268,12 @@ exports.createSupplierProfile = async (req, res) => {
             unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
-            user_type: "supplier",
+            //user_type: "supplier",
             //profile_completed: true,
-           // is_user_approved_by_admin: true,
+            // is_user_approved_by_admin: true,
         };
 
-        const user = new User(userData);
+        const user = new Supplier(userData);
         await user.save();
 
         res.status(200).json({ message: "Supplier added successfully", data: user, code: 200 });
@@ -288,10 +289,10 @@ exports.addAddress = async (req, res) => {
         const data = req.body
         console.log("address data is ", data)
 
-        const allAddress = await Address.find({user_id : data.user_id});
+        const allAddress = await Address.find({ user_id: data.user_id });
         console.log("address list is ", allAddress)
 
-        if(!allAddress || allAddress.length === 0){
+        if (!allAddress || allAddress.length === 0) {
             data.default_address = true
         }
 
@@ -443,7 +444,7 @@ exports.createLogisticsProfile = async (req, res) => {
             decoded_password: password,
             user_type: "logistics",
             //profile_completed: true,
-           // is_user_approved_by_admin: true,
+            // is_user_approved_by_admin: true,
         };
 
         const user = new User(userData);
@@ -459,45 +460,45 @@ exports.createLogisticsProfile = async (req, res) => {
 //upload Media
 exports.uploadMedia = async (req, res) => {
     try {
-      if (!req.files.media || !req.body.path)
-        return utils.handleError(res, {
-          message: "MEDIA OR PATH MISSING",
-          code: 400,
-        });
-      let isArray = req.body.isArray;
-      if (Array.isArray(req.files.media)) {
-        let mediaArray = [];
-        for (let index = 0; index < req.files.media.length; index++) {
-          const element = req.files.media[index];
-          let media = await utils.uploadImage({
-            file: element,
-            path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-          });
-          mediaArray.push(`${req.body.path}/${media}`);
-        }
-  
-        return res.status(200).json({
-          code: 200,
-          data: mediaArray,
-        });
-      } else {
-        let media = await utils.uploadImage({
-          file: req.files.media,
-          path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-        });
-  
-        const url = `${req.body.path}/${media}`;
-        return res.status(200).json({
-          code: 200,
-          data: isArray === "true" ? [url] : url,
-        });
-      }
-    } catch (error) {
-      utils.handleError(res, error);
-    }
-  };
+        if (!req.files.media || !req.body.path)
+            return utils.handleError(res, {
+                message: "MEDIA OR PATH MISSING",
+                code: 400,
+            });
+        let isArray = req.body.isArray;
+        if (Array.isArray(req.files.media)) {
+            let mediaArray = [];
+            for (let index = 0; index < req.files.media.length; index++) {
+                const element = req.files.media[index];
+                let media = await utils.uploadImage({
+                    file: element,
+                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                });
+                mediaArray.push(`${req.body.path}/${media}`);
+            }
 
-  
+            return res.status(200).json({
+                code: 200,
+                data: mediaArray,
+            });
+        } else {
+            let media = await utils.uploadImage({
+                file: req.files.media,
+                path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+            });
+
+            const url = `${req.body.path}/${media}`;
+            return res.status(200).json({
+                code: 200,
+                data: isArray === "true" ? [url] : url,
+            });
+        }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
 //get User Profile details
 exports.getProfileDetails = async (req, res) => {
     try {
@@ -539,4 +540,4 @@ exports.getProfileDetails = async (req, res) => {
     } catch (err) {
         utils.handleError(res, err);
     }
-};
+}

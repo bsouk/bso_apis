@@ -1,17 +1,33 @@
-const { Schema, model } = require("mongoose");
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt-nodejs");
+const validator = require("validator");
+const mongoosePaginate = require("mongoose-paginate-v2");
+const { string } = require("i/lib/util");
 
-const SupplierSchema = new Schema({
+const SupplierSchema = new mongoose.Schema({
+  unique_user_id: {
+    type: String,
+  },
   supplier_name: {
     type: String,
     required: true,
   },
-  business_name: {
-    type: String,
-    required: true,
-  },
+  // business_name: {
+  //   type: String,
+  //   required: true,
+  // },
   image: {
     type: String,
-    required: true,
+  },
+  password: {
+    type: String,
+    // required: true,
+    select: false,
+  },
+  decoded_password: {
+    type: String,
+    // required: true,
+    select: false,
   },
   email: {
     type: String,
@@ -27,52 +43,98 @@ const SupplierSchema = new Schema({
     type: String,
     required: true,
   },
-  business_type: {
-    type: String,
-    required: true,
-  },
+  // business_type: {
+  //   type: String,
+  //   required: true,
+  // },
   country: {
     type: String,
-    required: true,
   },
   address: {
     type: String,
-    required: true,
   },
   category: {
     type: String,
-    required: true,
   },
   sub_category: {
     type: String,
-    required: true,
   },
   bank_details: {
     account_holder_name: {
       type: String,
-      required: true,
     },
     account_number: {
       type: String,
-      required: true,
     },
     bank_name: {
       type: String,
-      required: true,
     },
     swift_code: {
       type: String,
-      required: true,
     },
+    iban_number: {
+      type: String,
+    }
   },
+  company_data: {
+    company_logo: {
+      type: String
+    },
+    name: {
+      type: String
+    },
+    business_category: {
+      type: String
+    },
+    phone_number: {
+      type: Number,
+    },
+    email: {
+      type: String
+    },
+    address: {
+      line1: {
+        type: String
+      },
+      line2: {
+        type: String
+      },
+      city: {
+        type: String
+      },
+      zip_code: {
+        type: Number
+      },
+      country: {
+        type: String
+      }
+    }
+  },
+  sample_products: [{
+    product_name: {
+      type: String
+    },
+    price: {
+      type: Number
+    },
+    images: [String]
+  }],
   health_safety_procedures: {
     type: String,
   },
   status: {
+    type: String,
     default: "active",
     enum: ["active", "inactive"],
   },
   business_certificates: {
     type: Array,
   },
-});
+  licenses: [String]
+},
+  {
+    timestamps: true,
+  }
+)
+
+module.exports = mongoose.model("supplier", SupplierSchema)

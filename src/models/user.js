@@ -62,8 +62,8 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
-    reject_reason : {
-      type : String
+    reject_reason: {
+      type: String
     },
     status: {
       type: String,
@@ -145,7 +145,7 @@ const UserSchema = new mongoose.Schema(
     account_holder_name: {
       type: String
     },
-    bank_account_name: {
+    bank_account_number: {
       type: String
     },
     bank_name: {
