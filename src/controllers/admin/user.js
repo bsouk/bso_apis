@@ -192,7 +192,7 @@ exports.getCustomerList = async (req, res) => {
           last_login: 1,
           unique_user_id: 1,
           is_company_approved: 1,
-          is_user_approved_by_admin : 1
+          is_user_approved_by_admin: 1
         },
       },
     ]);
@@ -490,7 +490,7 @@ exports.getResourceList = async (req, res) => {
           last_login: 1,
           unique_user_id: 1,
           is_company_approved: 1,
-          is_user_approved_by_admin : 1
+          is_user_approved_by_admin: 1
         },
       },
     ]);
@@ -924,7 +924,7 @@ exports.getSupplierList = async (req, res) => {
           last_login: 1,
           unique_user_id: 1,
           is_company_approved: 1,
-          is_user_approved_by_admin : 1
+          is_user_approved_by_admin: 1
         },
       },
     ]);
@@ -1220,7 +1220,7 @@ exports.getLogisticsUserList = async (req, res) => {
           last_login: 1,
           unique_user_id: 1,
           is_company_approved: 1,
-          is_user_approved_by_admin : 1
+          is_user_approved_by_admin: 1
         },
       },
     ]);
@@ -1335,7 +1335,7 @@ exports.deleteSelectedLogisticsUser = async (req, res) => {
 exports.ApproveUser = async (req, res) => {
   try {
     const userId = req.params.id
-    console.log("login user is ", userId);
+    console.log("user is ", userId);
 
     const Userdata = await User.findById(userId);
     console.log("user is ", Userdata);
@@ -1364,7 +1364,7 @@ exports.ApproveUser = async (req, res) => {
 exports.RejectUser = async (req, res) => {
   try {
     const userId = req.params.id
-    console.log("login user is ", userId);
+    console.log("user is ", userId);
 
     console.log("req.body is ", req.body)
 
@@ -1396,7 +1396,7 @@ exports.RejectUser = async (req, res) => {
 exports.changeStatus = async (req, res) => {
   try {
     const userId = req.params.id
-    console.log("login user is ", userId);
+    console.log("user is ", userId);
 
     const Userdata = await User.findById(userId);
     console.log("user is ", Userdata);
@@ -1413,6 +1413,46 @@ exports.changeStatus = async (req, res) => {
     } else {
       Userdata.status = "active"
     }
+    await Userdata.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile Status Changed Successfully",
+      code: 200
+    })
+  } catch (err) {
+    utils.handleError(res, err);
+  }
+}
+
+
+//change Profile availability status
+exports.changeAvailabilityStatus = async (req, res) => {
+  try {
+    const userId = req.params.id
+    console.log("user is ", userId);
+
+    console.log("req.body is ", req.body)
+
+    const Userdata = await User.findById(userId);
+    console.log("user is ", Userdata);
+
+    if (Object.keys(Userdata).length === 0) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    if (Userdata.user_type === "resource") {
+      Userdata.availability_status = req.body?.status
+    } else {
+      return utils.handleError(res, {
+        message: "Only Resource status can be changed",
+        code: 400,
+      });
+    }
+
     await Userdata.save();
 
     res.status(200).json({

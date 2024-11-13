@@ -215,5 +215,13 @@ router.post(
   controller.changeStatus
 );
 
+//change profile availability status
+router.post(
+  "/changeAvailabilityStatus/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.changeAvailabilityStatus
+);
+
 
 module.exports = router;

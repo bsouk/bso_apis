@@ -539,4 +539,4 @@ exports.getProfileDetails = async (req, res) => {
     } catch (err) {
         utils.handleError(res, err);
     }
-}
+};
