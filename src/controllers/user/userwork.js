@@ -65,7 +65,7 @@ exports.createBuyerProfile = async (req, res) => {
             password,
             decoded_password: password,
             user_type: "buyer",
-            profile_completed: true,
+            //profile_completed: true,
             is_user_approved_by_admin: true,
         };
 
@@ -268,7 +268,7 @@ exports.createSupplierProfile = async (req, res) => {
             password,
             decoded_password: password,
             user_type: "supplier",
-            profile_completed: true,
+            //profile_completed: true,
             is_user_approved_by_admin: true,
         };
 
@@ -294,7 +294,7 @@ exports.addAddress = async (req, res) => {
         if(!allAddress || allAddress.length === 0){
             data.default_address = true
         }
-        
+
         const newaddressdata = await Address.create(data);
         console.log("created address data is ", newaddressdata);
 
@@ -442,7 +442,7 @@ exports.createLogisticsProfile = async (req, res) => {
             password,
             decoded_password: password,
             user_type: "logistics",
-            profile_completed: true,
+            //profile_completed: true,
             is_user_approved_by_admin: true,
         };
 
