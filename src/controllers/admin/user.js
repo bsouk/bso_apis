@@ -1358,6 +1358,8 @@ exports.RejectUser = async (req, res) => {
     const userId = req.params.id
     console.log("login user is ", userId);
 
+    console.log("req.body is ", req.body)
+
     const Userdata = await User.findById(userId);
     console.log("user is ", Userdata);
 
@@ -1369,6 +1371,7 @@ exports.RejectUser = async (req, res) => {
     }
 
     Userdata.is_user_approved_by_admin = false;
+    Userdata.reject_reason = req.body?.reason
     await Userdata.save();
 
     res.status(200).json({

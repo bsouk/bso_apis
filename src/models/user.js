@@ -62,6 +62,9 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    reject_reason : {
+      type : String
+    },
     status: {
       type: String,
       enum: ["active", "inactive"],

@@ -91,5 +91,11 @@ router.post(
     controller.changeDefaultAddress
 )
 
+router.post(
+    "/addLogistics",
+    trimRequest.all,
+    requireAuth,
+    controller.createLogisticsProfile
+);
 
 module.exports = router;
