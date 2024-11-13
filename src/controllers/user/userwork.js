@@ -66,7 +66,7 @@ exports.createBuyerProfile = async (req, res) => {
             decoded_password: password,
             user_type: "buyer",
             //profile_completed: true,
-            is_user_approved_by_admin: true,
+            //is_user_approved_by_admin: true,
         };
 
         const user = new User(userData);
@@ -269,7 +269,7 @@ exports.createSupplierProfile = async (req, res) => {
             decoded_password: password,
             user_type: "supplier",
             //profile_completed: true,
-            is_user_approved_by_admin: true,
+           // is_user_approved_by_admin: true,
         };
 
         const user = new User(userData);
@@ -443,7 +443,7 @@ exports.createLogisticsProfile = async (req, res) => {
             decoded_password: password,
             user_type: "logistics",
             //profile_completed: true,
-            is_user_approved_by_admin: true,
+           // is_user_approved_by_admin: true,
         };
 
         const user = new User(userData);
