@@ -6,6 +6,7 @@ const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
 const company_details = require("../../models/company_details");
+const jwt = require("jsonwebtoken")
 
 //create password for users
 function createNewPassword() {
@@ -325,6 +326,47 @@ exports.getAddressList = async (req, res) => {
             success: true,
             message: "Address List Fetched Successfully",
             data: addressList,
+            code: 200
+        })
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+//User specific Addresses
+exports.getUserAddressList = async (req, res) => {
+    try {
+        // console.log(req.cookies?.token)
+        // const userId = req.user._id;
+        // console.log("userid is ", userId);
+
+        // const addresslist = await Address.find({ user_id: userId }).populate("user_id", "full_name");
+        // console.log("addressList is ", addresslist);
+
+        // if (!addresslist || addresslist.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "Address Not Found",
+        //         code: 400,
+        //     });
+        // }
+
+        const allAddress = await Address.aggregate([
+            {
+                $match: {
+                    user_id: req.user._id,
+                },
+            }
+        ]);
+
+        allAddress.sort((a, b) => {
+            return b.default_address - a.default_address;
+        });
+
+
+        res.status(200).json({
+            success: true,
+            message: "User Address List Fetched Successfully",
+            data: allAddress,
             code: 200
         })
     } catch (err) {

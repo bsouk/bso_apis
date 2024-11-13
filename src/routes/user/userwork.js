@@ -76,6 +76,14 @@ router.get(
     controller.getAddressList
 )
 
+//user scpecific address list
+router.get(
+    "/getUserAddressList",
+    trimRequest.all,
+    requireAuth,
+    controller.getUserAddressList
+)
+
 router.post(
     "/changeDefaultAddress",
     trimRequest.all,
