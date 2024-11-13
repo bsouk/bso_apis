@@ -17,6 +17,21 @@ function createNewPassword() {
   return password;
 }
 
+const getUniqueId = async () => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const lastUser = await User.findOne({}).sort({ createdAt: -1 });
+      if (lastUser && lastUser.unique_user_id) {
+        resolve((+lastUser.unique_user_id) + 1);
+      } else {
+        resolve(100000);
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
 exports.uploadMedia = async (req, res) => {
   try {
     if (!req.files.media || !req.body.path)
@@ -82,6 +97,7 @@ exports.addCustomer = async (req, res) => {
     const password = createNewPassword();
     const userData = {
       ...data,
+      unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
       user_type: "buyer",
@@ -173,6 +189,8 @@ exports.getCustomerList = async (req, res) => {
           status: 1,
           joining_date: 1,
           createdAt: 1,
+          last_login: 1,
+          unique_user_id : 1
         },
       },
     ]);
@@ -388,6 +406,7 @@ exports.addResource = async (req, res) => {
     const password = createNewPassword();
     const userData = {
       ...data,
+      unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
       user_type: "resource",
@@ -466,6 +485,8 @@ exports.getResourceList = async (req, res) => {
           status: 1,
           availability_status: 1,
           createdAt: 1,
+          last_login: 1,
+          unique_user_id : 1
         },
       },
     ]);
@@ -627,6 +648,7 @@ exports.addSupplier = async (req, res) => {
     // console.log("userData ---->",data)
     const userData = {
       ...data,
+      unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
       user_type: "supplier",
@@ -892,9 +914,11 @@ exports.getSupplierList = async (req, res) => {
           joining_date: 1,
           createdAt: 1,
           address: 1,
-          business_name : 1,
-          categories_id : 1,
-          sub_categories_id : 1
+          business_name: 1,
+          categories_id: 1,
+          sub_categories_id: 1,
+          last_login: 1,
+          unique_user_id : 1
         },
       },
     ]);
@@ -980,6 +1004,7 @@ exports.addLogisticsUser = async (req, res) => {
     // console.log("userData ---->",data)
     const userData = {
       ...data,
+      unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
       user_type: "logistics",
@@ -1186,6 +1211,8 @@ exports.getLogisticsUserList = async (req, res) => {
           joining_date: 1,
           createdAt: 1,
           address: 1,
+          last_login: 1,
+          unique_user_id : 1
         },
       },
     ]);
@@ -1294,3 +1321,95 @@ exports.deleteSelectedLogisticsUser = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+
+//Approve User By admin
+exports.ApproveUser = async (req, res) => {
+  try {
+    const userId = req.params.id
+    console.log("login user is ", userId);
+
+    const Userdata = await User.findById(userId);
+    console.log("user is ", Userdata);
+
+    if (Object.keys(Userdata).length === 0) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    Userdata.is_user_approved_by_admin = true;
+    await Userdata.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile Approved By Admin Successfully",
+      code: 200
+    })
+  } catch (err) {
+    utils.handleError(res, err);
+  }
+}
+
+//reject profile by admin
+exports.RejectUser = async (req, res) => {
+  try {
+    const userId = req.params.id
+    console.log("login user is ", userId);
+
+    const Userdata = await User.findById(userId);
+    console.log("user is ", Userdata);
+
+    if (Object.keys(Userdata).length === 0) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    Userdata.is_user_approved_by_admin = false;
+    await Userdata.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile Rejected By Admin Successfully",
+      code: 200
+    })
+  } catch (err) {
+    utils.handleError(res, err);
+  }
+}
+
+//change Profile status
+exports.changeStatus = async (req, res) => {
+  try {
+    const userId = req.params.id
+    console.log("login user is ", userId);
+
+    const Userdata = await User.findById(userId);
+    console.log("user is ", Userdata);
+
+    if (Object.keys(Userdata).length === 0) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    if (Userdata.status === "active") {
+      Userdata.status = "inactive"
+    } else {
+      Userdata.status = "active"
+    }
+    await Userdata.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile Status Changed Successfully",
+      code: 200
+    })
+  } catch (err) {
+    utils.handleError(res, err);
+  }
+}

@@ -20,6 +20,21 @@ function createNewPassword() {
     return password;
 }
 
+const getUniqueId = async () => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const lastUser = await User.findOne({}).sort({ createdAt: -1 });
+        if (lastUser && lastUser.unique_user_id) {
+          resolve((+lastUser.unique_user_id) + 1);
+        } else {
+          resolve(100000);
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
 //create Buyer profile
 exports.createBuyerProfile = async (req, res) => {
     try {
@@ -46,6 +61,7 @@ exports.createBuyerProfile = async (req, res) => {
         const password = createNewPassword();
         const userData = {
             ...data,
+            unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
             user_type: "buyer",
@@ -113,7 +129,7 @@ exports.editProfile = async (req, res) => {
 
         if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
             console.log("condition data is ", updatedUser.profile_completed)
-            updatedUser.profile_completed = true;
+            updatedUser.profile_completed = true; 
             await updatedUser.save()
         }
         else {
@@ -248,6 +264,7 @@ exports.createSupplierProfile = async (req, res) => {
         const password = createNewPassword();
         const userData = {
             ...data,
+            unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
             user_type: "supplier",
@@ -336,37 +353,36 @@ exports.getAddressList = async (req, res) => {
 //User specific Addresses
 exports.getUserAddressList = async (req, res) => {
     try {
-        // console.log(req.cookies?.token)
-        // const userId = req.user._id;
-        // console.log("userid is ", userId);
+        const userId = req.user._id;
+        console.log("userid is ", userId);
 
-        // const addresslist = await Address.find({ user_id: userId }).populate("user_id", "full_name");
-        // console.log("addressList is ", addresslist);
+        const addresslist = await Address.find({ user_id: userId }).populate("user_id", "full_name");
+        console.log("addressList is ", addresslist);
 
-        // if (!addresslist || addresslist.length === 0) {
-        //     return utils.handleError(res, {
-        //         message: "Address Not Found",
-        //         code: 400,
-        //     });
-        // }
+        if (!addresslist || addresslist.length === 0) {
+            return utils.handleError(res, {
+                message: "Address Not Found",
+                code: 400,
+            });
+        }
 
-        const allAddress = await Address.aggregate([
-            {
-                $match: {
-                    user_id: req.user._id,
-                },
-            }
-        ]);
+        // const allAddress = await Address.aggregate([
+        //     {
+        //         $match: {
+        //             user_id: req.user._id,
+        //         },
+        //     }
+        // ]);
 
-        allAddress.sort((a, b) => {
-            return b.default_address - a.default_address;
-        });
+        // allAddress.sort((a, b) => {
+        //     return b.default_address - a.default_address;
+        // });
 
 
         res.status(200).json({
             success: true,
             message: "User Address List Fetched Successfully",
-            data: allAddress,
+            data: addresslist,
             code: 200
         })
     } catch (err) {

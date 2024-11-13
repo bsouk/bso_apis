@@ -191,4 +191,29 @@ router.delete(
   controller.deleteSelectedLogisticsUser
 );
 
+//Approve profile by admin
+router.post(
+  "/approveProfile/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.ApproveUser
+);
+
+//Reject profile by admin
+router.post(
+  "/rejectProfile/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.RejectUser
+);
+
+//change Profile status
+router.post(
+  "/changeProfileStatus/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.changeStatus
+);
+
+
 module.exports = router;
