@@ -288,6 +288,13 @@ exports.addAddress = async (req, res) => {
         const data = req.body
         console.log("address data is ", data)
 
+        const allAddress = await Address.find({user_id : data.user_id});
+        console.log("address list is ", allAddress)
+
+        if(!allAddress || allAddress.length === 0){
+            data.default_address = true
+        }
+
         const newaddressdata = await Address.create(data);
         console.log("created address data is ", newaddressdata);
 
@@ -366,19 +373,6 @@ exports.getUserAddressList = async (req, res) => {
             });
         }
 
-        // const allAddress = await Address.aggregate([
-        //     {
-        //         $match: {
-        //             user_id: req.user._id,
-        //         },
-        //     }
-        // ]);
-
-        // allAddress.sort((a, b) => {
-        //     return b.default_address - a.default_address;
-        // });
-
-
         res.status(200).json({
             success: true,
             message: "User Address List Fetched Successfully",
@@ -411,6 +405,51 @@ exports.changeDefaultAddress = async (req, res) => {
             code: 200,
             id,
         });
+
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+
+//create Logistics Profile
+exports.createLogisticsProfile = async (req, res) => {
+    try {
+        const data = req.body;
+        console.log("data is ", data);
+
+        const doesEmailExists = await emailer.emailExists(data.email);
+        if (doesEmailExists)
+            return utils.handleError(res, {
+                message: "This email address is already registered",
+                code: 400,
+            });
+
+        if (data.phone_number) {
+            const doesPhoneNumberExist = await emailer.checkMobileExists(
+                data.phone_number
+            );
+            if (doesPhoneNumberExist)
+                return utils.handleError(res, {
+                    message: "This phone number is already registered",
+                    code: 400,
+                });
+        }
+        const password = createNewPassword();
+        const userData = {
+            ...data,
+            unique_user_id: await getUniqueId(),
+            password,
+            decoded_password: password,
+            user_type: "logistics",
+            profile_completed: true,
+            is_user_approved_by_admin: true,
+        };
+
+        const user = new User(userData);
+        await user.save();
+
+        res.status(200).json({ message: "Logistics added successfully", data: user, code: 200 });
 
     } catch (err) {
         utils.handleError(res, err);
