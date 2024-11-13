@@ -8,7 +8,6 @@ const UserSchema = new mongoose.Schema(
   {
     unique_user_id: {
       type: String,
-      required: true
     },
     profile_image: {
       type: String,

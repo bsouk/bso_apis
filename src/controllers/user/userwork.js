@@ -294,7 +294,7 @@ exports.addAddress = async (req, res) => {
         if(!allAddress || allAddress.length === 0){
             data.default_address = true
         }
-
+        
         const newaddressdata = await Address.create(data);
         console.log("created address data is ", newaddressdata);
 
