@@ -496,3 +496,47 @@ exports.uploadMedia = async (req, res) => {
       utils.handleError(res, error);
     }
   };
+
+  
+//get User Profile details
+exports.getProfileDetails = async (req, res) => {
+    try {
+        const user_id = req.params.id;
+        const user = await User.aggregate([
+            {
+                $match: {
+                    _id: new mongoose.Types.ObjectId(user_id),
+                },
+            },
+            {
+                $lookup: {
+                    from: "addresses",
+                    let: { user_id: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$user_id", "$$user_id"] },
+                                is_primary: true,
+                            },
+                        },
+                    ],
+                    as: "address",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$address",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $addFields: {
+                    address: "$address.address",
+                },
+            },
+        ]);
+        res.json({ data: user[0], code: 200 });
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}

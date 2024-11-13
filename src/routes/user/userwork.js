@@ -103,6 +103,13 @@ router.post(
     trimRequest.all,
     requireAuth,
     controller.uploadMedia
-  );
+);
+
+router.get(
+    "/getProfileDetails/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getProfileDetails
+);
 
 module.exports = router;
