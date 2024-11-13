@@ -190,7 +190,9 @@ exports.getCustomerList = async (req, res) => {
           joining_date: 1,
           createdAt: 1,
           last_login: 1,
-          unique_user_id : 1
+          unique_user_id: 1,
+          is_company_approved: 1,
+          is_user_approved_by_admin : 1
         },
       },
     ]);
@@ -486,7 +488,9 @@ exports.getResourceList = async (req, res) => {
           availability_status: 1,
           createdAt: 1,
           last_login: 1,
-          unique_user_id : 1
+          unique_user_id: 1,
+          is_company_approved: 1,
+          is_user_approved_by_admin : 1
         },
       },
     ]);
@@ -918,7 +922,9 @@ exports.getSupplierList = async (req, res) => {
           categories_id: 1,
           sub_categories_id: 1,
           last_login: 1,
-          unique_user_id : 1
+          unique_user_id: 1,
+          is_company_approved: 1,
+          is_user_approved_by_admin : 1
         },
       },
     ]);
@@ -1212,7 +1218,9 @@ exports.getLogisticsUserList = async (req, res) => {
           createdAt: 1,
           address: 1,
           last_login: 1,
-          unique_user_id : 1
+          unique_user_id: 1,
+          is_company_approved: 1,
+          is_user_approved_by_admin : 1
         },
       },
     ]);
