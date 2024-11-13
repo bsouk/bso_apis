@@ -455,3 +455,44 @@ exports.createLogisticsProfile = async (req, res) => {
         utils.handleError(res, err);
     }
 }
+
+//upload Media
+exports.uploadMedia = async (req, res) => {
+    try {
+      if (!req.files.media || !req.body.path)
+        return utils.handleError(res, {
+          message: "MEDIA OR PATH MISSING",
+          code: 400,
+        });
+      let isArray = req.body.isArray;
+      if (Array.isArray(req.files.media)) {
+        let mediaArray = [];
+        for (let index = 0; index < req.files.media.length; index++) {
+          const element = req.files.media[index];
+          let media = await utils.uploadImage({
+            file: element,
+            path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+          });
+          mediaArray.push(`${req.body.path}/${media}`);
+        }
+  
+        return res.status(200).json({
+          code: 200,
+          data: mediaArray,
+        });
+      } else {
+        let media = await utils.uploadImage({
+          file: req.files.media,
+          path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+        });
+  
+        const url = `${req.body.path}/${media}`;
+        return res.status(200).json({
+          code: 200,
+          data: isArray === "true" ? [url] : url,
+        });
+      }
+    } catch (error) {
+      utils.handleError(res, error);
+    }
+  };

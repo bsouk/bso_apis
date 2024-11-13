@@ -98,4 +98,11 @@ router.post(
     controller.createLogisticsProfile
 );
 
+router.post(
+    "/uploadMedia",
+    trimRequest.all,
+    requireAuth,
+    controller.uploadMedia
+  );
+
 module.exports = router;
