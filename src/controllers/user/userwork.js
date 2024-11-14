@@ -270,7 +270,7 @@ exports.createSupplierProfile = async (req, res) => {
             unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
-            //user_type: "supplier",
+            user_type: "supplier",
             //profile_completed: true,
             // is_user_approved_by_admin: true,
         };
