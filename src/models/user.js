@@ -203,6 +203,9 @@ const UserSchema = new mongoose.Schema(
         },
         country: {
           type: String
+        },
+        service_area: {  //logistics related
+          type: String
         }
       }
     },
