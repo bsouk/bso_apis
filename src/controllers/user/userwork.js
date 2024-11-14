@@ -128,14 +128,135 @@ exports.editProfile = async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(id, data);
         console.log("updated user is ", updatedUser);
 
-        if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
-            console.log("condition data is ", updatedUser.profile_completed)
-            updatedUser.profile_completed = true;
-            await updatedUser.save()
-        }
-        else {
-            updatedUser.profile_completed = false
-            await updatedUser.save()
+        // if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+        //     console.log("condition data is ", updatedUser.profile_completed)
+        //     updatedUser.profile_completed = true;
+        //     await updatedUser.save()
+        // }
+        // else {
+        //     updatedUser.profile_completed = false
+        //     await updatedUser.save()
+        // }
+
+        //function for checking field values 
+        const isFieldPopulated = (obj, path) => {
+            console.log("object is ", obj, " and path is ", path)
+            const keys = path.split('.');
+            console.log("keys is ", keys)
+            let current = obj;
+            for (let key of keys) {
+                console.log("cond is ", current, "key is ", current[key])
+                if (!current || !current[key]) {
+                    return { path, code: false };
+                }
+                current = current[key];
+            }
+            return { path, code: true };
+        };
+
+        switch (updatedUser.user_type) {
+            case "buyer": {
+                if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+                    console.log("condition data is ", updatedUser.profile_completed)
+                    updatedUser.profile_completed = true;
+                    await updatedUser.save()
+                }
+            }
+                break;
+            case "supplier": {
+                const requiredFields = [
+                    'full_name',
+                    'profile_image',
+                    'email',
+                    'phone_number',
+                    'bank_details.account_holder_name',
+                    'bank_details.account_number',
+                    'bank_details.bank_name',
+                    'bank_details.swift_code',
+                    'bank_details.iban_number',
+                    'company_data.company_logo',
+                    'company_data.name',
+                    'company_data.business_category',
+                    'company_data.phone_number',
+                    'company_data.email',
+                    'company_data.address.line1',
+                    'company_data.address.line2',
+                    'company_data.address.city',
+                    'company_data.address.state',
+                    'company_data.address.zip_code',
+                    'company_data.address.country',
+                    'additional_notes'
+                ];
+
+                console.log("supplier check fields is ", requiredFields)
+
+                const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+                // const isProfilecompleted=isProfileComplete
+                const hasRequiredArrays =
+                    Array.isArray(updatedUser.sample_products) && updatedUser.sample_products.length > 0 &&
+                    Array.isArray(updatedUser.business_certificates) && updatedUser.business_certificates.length > 0 &&
+                    Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+                console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+                if (isProfileComplete && hasRequiredArrays) {
+                    updatedUser.profile_completed = true;
+                } else {
+                    updatedUser.profile_completed = false;
+                }
+
+                await updatedUser.save();
+            }
+                break;
+            case "logistics": {
+                const requiredFields = [
+                    'full_name',
+                    'profile_image',
+                    'email',
+                    'phone_number',
+                    'company_data.company_logo',
+                    'company_data.name',
+                    'company_data.business_category',
+                    'company_data.phone_number',
+                    'company_data.email',
+                    'company_data.address.line1',
+                    'company_data.address.line2',
+                    'company_data.address.city',
+                    'company_data.address.zip_code',
+                    'company_data.address.country',
+                    'company_data.address.service_area',
+                    'health_safety_procedures',
+                    'delivery_type'
+                ];
+
+                console.log("supplier check fields is ", requiredFields)
+
+                const isProfileComplete = requiredFields.forEach(field => isFieldPopulated(updatedUser, field));
+
+                const hasRequiredArrays =
+                    Array.isArray(updatedUser.insurances) && updatedUser.insurances.length > 0 &&
+                    Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+                console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+                if (isProfileComplete && hasRequiredArrays) {
+                    updatedUser.profile_completed = true;
+                } else {
+                    updatedUser.profile_completed = false;
+                }
+
+                await updatedUser.save();
+
+            }
+                break;
+            case "resource": {
+
+            }
+                break;
+            default: {
+                updatedUser.profile_completed = false
+                await updatedUser.save()
+            }
         }
 
         res.json({ message: "Profile edit successfully", code: 200 });

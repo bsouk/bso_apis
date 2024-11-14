@@ -250,6 +250,7 @@ async function checkPhoneNumberVerified(phone_number) {
 exports.signup = async (req, res) => {
   try {
     const data = req.body;
+    console.log("req.body is ", data)
     if (!["email", "phone_number"].includes(data.signup_by))
       return utils.handleError(res, {
         message: "Invalid sign up by value",
@@ -288,9 +289,10 @@ exports.signup = async (req, res) => {
     }
 
     if (data.signup_by == "email") {
-      const isPhoneNumberVerified = await checkEmailVerified(data.phone_number);
+      const isEmailVerified = await checkEmailVerified(data.email);
+      console.log("email is ", isEmailVerified)
 
-      if (!isPhoneNumberVerified)
+      if (!isEmailVerified)
         return utils.handleError(res, {
           message: "Email is verified yet",
           code: 400,
