@@ -191,7 +191,7 @@ exports.editProfile = async (req, res) => {
                 console.log("supplier check fields is ", requiredFields)
 
                 const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
-                // const isProfilecompleted=isProfileComplete
+
                 const hasRequiredArrays =
                     Array.isArray(updatedUser.sample_products) && updatedUser.sample_products.length > 0 &&
                     Array.isArray(updatedUser.business_certificates) && updatedUser.business_certificates.length > 0 &&
@@ -223,15 +223,15 @@ exports.editProfile = async (req, res) => {
                     'company_data.address.line2',
                     'company_data.address.city',
                     'company_data.address.zip_code',
+                    'company_data.address.state',
                     'company_data.address.country',
                     'company_data.address.service_area',
-                    'health_safety_procedures',
                     'delivery_type'
                 ];
 
                 console.log("supplier check fields is ", requiredFields)
 
-                const isProfileComplete = requiredFields.forEach(field => isFieldPopulated(updatedUser, field));
+                const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
 
                 const hasRequiredArrays =
                     Array.isArray(updatedUser.insurances) && updatedUser.insurances.length > 0 &&
@@ -660,6 +660,53 @@ exports.getProfileDetails = async (req, res) => {
             },
         ]);
         res.json({ data: user[0], code: 200 });
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+
+//create resource profile
+exports.createResourceProfile = async (req, res) => {
+    try {
+        const data = req.body;
+        console.log("req.body is ", data);
+
+        const doesEmailExists = await emailer.emailExists(data.email);
+        console.log("email is ", doesEmailExists)
+        if (doesEmailExists)
+            return utils.handleError(res, {
+                message: "This email address is already registered",
+                code: 400,
+            });
+
+        if (data.phone_number) {
+            const doesPhoneNumberExist = await emailer.checkMobileExists(
+                data.phone_number
+            );
+            console.log("phone no is", doesPhoneNumberExist)
+            if (doesPhoneNumberExist)
+                return utils.handleError(res, {
+                    message: "This phone number is already registered",
+                    code: 400,
+                });
+        }
+        const password = createNewPassword();
+        const userData = {
+            ...data,
+            unique_user_id: await getUniqueId(),
+            password,
+            decoded_password: password,
+            user_type: "resource",
+            //profile_completed: true,
+            // is_user_approved_by_admin: true,
+        };
+
+        const user = new User(userData);
+        await user.save();
+
+        res.status(200).json({ message: "Resource added successfully", data: user, code: 200 });
+
     } catch (err) {
         utils.handleError(res, err);
     }

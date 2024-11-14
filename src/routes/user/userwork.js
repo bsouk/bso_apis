@@ -112,4 +112,11 @@ router.get(
     controller.getProfileDetails
 );
 
+router.post(
+    "/addResource",
+    trimRequest.all,
+    requireAuth,
+    controller.createResourceProfile
+);
+
 module.exports = router;

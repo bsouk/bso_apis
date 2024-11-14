@@ -88,26 +88,143 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+
+    // app resource fields
     profile_description: {
       type: String
     },
+    profile_title: {
+      type: String
+    },
+    work_exprience: [{
+      job_title: {
+        type: String
+      },
+      company_name: {
+        type: String
+      },
+      date_of_employement: {
+        type: String
+      },
+      key_responsibility: {
+        type: String
+      }
+    }],
+    education: [{
+      degree: {
+        type: String
+      },
+      collage: {
+        type: String
+      },
+      year_of_passing: {
+        type: String
+      },
+      field_of_study: {
+        type: String
+      }
+    }],
+    portfolio: [{
+      project_name: {
+        type: String
+      },
+      link: {
+        type: String
+      },
+      project_description: {
+        type: String
+      },
+      skills_used: [String]
+    }],
     skills: {
       type: [String],
+    },
+    certifications: [{
+      certificate_name: {
+        type: String
+      },
+      issuing_organisation: {
+        type: String
+      },
+      date_of_issuance: {
+        type: String
+      },
+      expiration_date: {
+        type: String
+      },
+      certificate_images: [String]
+    }],
+    languages: [String],
+    testimonials: [{
+      user_image: {
+        type: String
+      },
+      name: {
+        type: String
+      },
+      company_name: {
+        type: String
+      },
+      designation: {
+        type: String
+      },
+      feedback: {
+        type: String
+      }
+    }],
+    specialisations: {
+      type: String
+    },
+    resource_availability: {
+      time_zone: {
+        type: String
+      },
+      days_of_operation: {
+        type: String
+      },
+      working_hours: {
+        from: {
+          type: String
+        },
+        to: {
+          type: String
+        }
+      },
+      other_info: {
+        type: String
+      }
     },
     rate_per_hour: {
       type: Number
     },
+    project_pricing_model: {
+      type: String
+    },
+    employement_history: [{
+      job_title: {
+        type: String
+      },
+      company_name: {
+        type: String
+      },
+      date_of_employement: {
+        type: String
+      },
+      key_responsibility: {
+        type: String
+      }
+    }],
+
+
+
     availability_status: {
       type: String,
       enum: ["open_to_work", "hired"],
       default: "open_to_work"
     },
-    portfolio: {
-      type: [String],
-    },
-    certifications: {
-      type: [String],
-    },
+    // portfolio: {
+    //   type: [String],
+    // },
 
 
 
