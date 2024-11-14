@@ -245,7 +245,7 @@ exports.createSupplierProfile = async (req, res) => {
         const data = req.body;
         console.log("user data is ", data);
 
-        const doesEmailExists = await Supplier.findOne({ email: data.email })
+        const doesEmailExists = await emailer.emailExists(data.email);
         console.log("email is ", doesEmailExists)
         if (doesEmailExists)
             return utils.handleError(res, {
@@ -254,7 +254,9 @@ exports.createSupplierProfile = async (req, res) => {
             });
 
         if (data.phone_number) {
-            const doesPhoneNumberExist = await Supplier.findOne({ phone: data.phone })
+            const doesPhoneNumberExist = await emailer.checkMobileExists(
+                data.phone_number
+            );
             console.log("phone no is", doesPhoneNumberExist)
             if (doesPhoneNumberExist)
                 return utils.handleError(res, {
@@ -273,7 +275,7 @@ exports.createSupplierProfile = async (req, res) => {
             // is_user_approved_by_admin: true,
         };
 
-        const user = new Supplier(userData);
+        const user = new User(userData);
         await user.save();
 
         res.status(200).json({ message: "Supplier added successfully", data: user, code: 200 });

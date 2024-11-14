@@ -83,7 +83,7 @@ const UserSchema = new mongoose.Schema(
       default: null
     },
 
-    //
+    //resources related
     experience_in_year: {
       type: Number,
       default: 0
@@ -142,16 +142,88 @@ const UserSchema = new mongoose.Schema(
 
     //bank details
 
-    account_holder_name: {
+    // account_holder_name: {
+    //   type: String
+    // },
+    // bank_account_number: {
+    //   type: String
+    // },
+    // bank_name: {
+    //   type: String
+    // },
+    // swift_code: {
+    //   type: String
+    // }
+
+    bank_details: {
+      account_holder_name: {
+        type: String,
+      },
+      account_number: {
+        type: String,
+      },
+      bank_name: {
+        type: String,
+      },
+      swift_code: {
+        type: String,
+      },
+      iban_number: {
+        type: String,
+      }
+    },
+    company_data: {
+      company_logo: {
+        type: String
+      },
+      name: {
+        type: String
+      },
+      business_category: {
+        type: String
+      },
+      phone_number: {
+        type: Number,
+      },
+      email: {
+        type: String
+      },
+      address: {
+        line1: {
+          type: String
+        },
+        line2: {
+          type: String
+        },
+        city: {
+          type: String
+        },
+        zip_code: {
+          type: Number
+        },
+        country: {
+          type: String
+        }
+      }
+    },
+    sample_products: [{
+      product_name: {
+        type: String
+      },
+      price: {
+        type: Number
+      },
+      images: [String]
+    }],
+    business_certificates: {
+      type: Array,
+    },
+    licenses: [String],
+    insurances: [String], //logistics related
+    delivery_type: {
       type: String
     },
-    bank_account_number: {
-      type: String
-    },
-    bank_name: {
-      type: String
-    },
-    swift_code: {
+    additional_notes: {
       type: String
     }
   },
