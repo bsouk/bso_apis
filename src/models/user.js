@@ -198,6 +198,9 @@ const UserSchema = new mongoose.Schema(
         city: {
           type: String
         },
+        state: {
+          type: String
+        },
         zip_code: {
           type: Number
         },

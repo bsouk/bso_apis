@@ -87,7 +87,7 @@ exports.editProfile = async (req, res) => {
         const id = req.params.id;
 
         const user = await User.findById(id);
-        console.log("user is ", user, user?.profile_completed)
+        console.log("user is ", user)
         if (!user)
             return utils.handleError(res, {
                 message: "Profile not found",
