@@ -102,7 +102,7 @@ exports.addCustomer = async (req, res) => {
       decoded_password: password,
       user_type: "buyer",
       profile_completed: true,
-     // is_user_approved_by_admin: true,
+      // is_user_approved_by_admin: true,
     };
 
     const user = new User(userData);
@@ -657,7 +657,7 @@ exports.addSupplier = async (req, res) => {
       decoded_password: password,
       user_type: "supplier",
       profile_completed: true,
-     // is_user_approved_by_admin: true,
+      // is_user_approved_by_admin: true,
     };
 
     const user = new User(userData);
@@ -1015,7 +1015,7 @@ exports.addLogisticsUser = async (req, res) => {
       decoded_password: password,
       user_type: "logistics",
       profile_completed: true,
-     // is_user_approved_by_admin: true,
+      // is_user_approved_by_admin: true,
     };
 
     const user = new User(userData);
@@ -1340,7 +1340,7 @@ exports.ApproveUser = async (req, res) => {
     const Userdata = await User.findById(userId);
     console.log("user is ", Userdata);
 
-    if (Object.keys(Userdata).length === 0) {
+    if (!Userdata) {
       return utils.handleError(res, {
         message: "User Not Found",
         code: 400,
@@ -1371,7 +1371,7 @@ exports.RejectUser = async (req, res) => {
     const Userdata = await User.findById(userId);
     console.log("user is ", Userdata);
 
-    if (Object.keys(Userdata).length === 0) {
+    if (!Userdata) {
       return utils.handleError(res, {
         message: "User Not Found",
         code: 400,
@@ -1401,7 +1401,7 @@ exports.changeStatus = async (req, res) => {
     const Userdata = await User.findById(userId);
     console.log("user is ", Userdata);
 
-    if (Object.keys(Userdata).length === 0) {
+    if (!Userdata) {
       return utils.handleError(res, {
         message: "User Not Found",
         code: 400,
@@ -1437,7 +1437,7 @@ exports.changeAvailabilityStatus = async (req, res) => {
     const Userdata = await User.findById(userId);
     console.log("user is ", Userdata);
 
-    if (Object.keys(Userdata).length === 0) {
+    if (!Userdata) {
       return utils.handleError(res, {
         message: "User Not Found",
         code: 400,
@@ -1445,7 +1445,7 @@ exports.changeAvailabilityStatus = async (req, res) => {
     }
 
     if (Userdata.user_type === "resource") {
-      Userdata.availability_status = req.body?.status
+      Userdata.availability_status = req.body.status
     } else {
       return utils.handleError(res, {
         message: "Only Resource status can be changed",
