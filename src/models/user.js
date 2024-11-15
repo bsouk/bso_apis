@@ -96,82 +96,83 @@ const UserSchema = new mongoose.Schema(
     profile_title: {
       type: String
     },
-    work_exprience: [{
-      job_title: {
-        type: String
-      },
-      company_name: {
-        type: String
-      },
-      date_of_employement: {
-        type: String
-      },
-      key_responsibility: {
-        type: String
-      }
-    }],
-    education: [{
-      degree: {
-        type: String
-      },
-      collage: {
-        type: String
-      },
-      year_of_passing: {
-        type: String
-      },
-      field_of_study: {
-        type: String
-      }
-    }],
-    portfolio: [{
-      project_name: {
-        type: String
-      },
-      link: {
-        type: String
-      },
-      project_description: {
-        type: String
-      },
-      skills_used: [String]
-    }],
+    work_exprience: {
+      type: [{
+        job_title: {
+          type: String
+        },
+        company_name: {
+          type: String
+        },
+        date_of_employement: {
+          type: String
+        },
+        key_responsibility: {
+          type: String
+        }
+      }],
+      default: []
+    },
+    education: {
+      type: [{
+        degree: {
+          type: String
+        },
+        collage: {
+          type: String
+        },
+        year_of_passing: {
+          type: String
+        },
+        field_of_study: {
+          type: String
+        }
+      }],
+      default: []
+    },
+    portfolio: {
+      type: [{
+        project_name: String,
+        link: String,
+        project_description: String,
+        skills_used: [String]
+      }],
+      default: []
+    },
     skills: {
       type: [String],
     },
-    certifications: [{
-      certificate_name: {
-        type: String
-      },
-      issuing_organisation: {
-        type: String
-      },
-      date_of_issuance: {
-        type: String
-      },
-      expiration_date: {
-        type: String
-      },
-      certificate_images: [String]
-    }],
+    certifications: {
+      type: [{
+        certificate_name: String,
+        issuing_organisation: String,
+        date_of_issuance: String,
+        expiration_date: String,
+        certificate_images: [String]
+      }],
+      default: []
+    },
     languages: [String],
-    testimonials: [{
-      user_image: {
-        type: String
-      },
-      name: {
-        type: String
-      },
-      company_name: {
-        type: String
-      },
-      designation: {
-        type: String
-      },
-      feedback: {
-        type: String
-      }
-    }],
+    testimonials: {
+      type: [{
+        user_image: {
+          type: String
+        },
+        name: {
+          type: String
+        },
+        company_name: {
+          type: String
+        },
+        designation: {
+          type: String
+        },
+        feedback: {
+          type: String
+        }
+      }],
+      default: []
+    },
     specialisations: {
       type: String
     },
@@ -200,20 +201,23 @@ const UserSchema = new mongoose.Schema(
     project_pricing_model: {
       type: String
     },
-    employement_history: [{
-      job_title: {
-        type: String
-      },
-      company_name: {
-        type: String
-      },
-      date_of_employement: {
-        type: String
-      },
-      key_responsibility: {
-        type: String
-      }
-    }],
+    employement_history: {
+      type: [{
+        job_title: {
+          type: String
+        },
+        company_name: {
+          type: String
+        },
+        date_of_employement: {
+          type: String
+        },
+        key_responsibility: {
+          type: String
+        }
+      }],
+      default: []
+    },
 
 
 
@@ -329,15 +333,18 @@ const UserSchema = new mongoose.Schema(
         }
       }
     },
-    sample_products: [{
-      product_name: {
-        type: String
-      },
-      price: {
-        type: Number
-      },
-      images: [String]
-    }],
+    sample_products: {
+      type: [{
+        product_name: {
+          type: String
+        },
+        price: {
+          type: Number
+        },
+        images: [String]
+      }],
+      default: []
+    },
     business_certificates: {
       type: Array,
     },
