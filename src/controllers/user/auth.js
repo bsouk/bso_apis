@@ -370,7 +370,7 @@ exports.login = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",  
+      secure: process.env.NODE_ENV === "production",
       maxAge: 1000 * 60 * 60 * 24 * process.env.JWT_EXPIRATION_DAY,
     });
 
@@ -497,6 +497,7 @@ exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user_id = req.user._id;
+    console.log("Logged user is ", user_id)
 
     let user = await User.findById(user_id, "+password");
     const isPasswordMatch = await utils.checkPassword(currentPassword, user);

@@ -229,7 +229,7 @@ exports.editProfile = async (req, res) => {
                     'delivery_type'
                 ];
 
-                console.log("supplier check fields is ", requiredFields)
+                console.log("logistics check fields is ", requiredFields)
 
                 const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
 
@@ -250,6 +250,42 @@ exports.editProfile = async (req, res) => {
             }
                 break;
             case "resource": {
+                const requiredFields = [
+                    "full_name",
+                    "email",
+                    "phone_number",
+                    "profile_image",
+                    "profile_title",
+                    "profile_description",
+                    "specialisations",
+                    "rate_per_hour",
+                    "project_pricing_model",
+                    "resource_availability"
+                ]
+
+                console.log("resource check fields is ", requiredFields)
+
+                const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+                const hasRequiredArrays =
+                    Array.isArray(updatedUser.work_exprience) && updatedUser.work_exprience.length > 0 &&
+                    Array.isArray(updatedUser.education) && updatedUser.education.length > 0 &&
+                    Array.isArray(updatedUser.portfolio) && updatedUser.portfolio.length > 0 &&
+                    Array.isArray(updatedUser.skills) && updatedUser.skills.length > 0 &&
+                    Array.isArray(updatedUser.certifications) && updatedUser.certifications.length > 0 &&
+                    Array.isArray(updatedUser.languages) && updatedUser.languages.length > 0 &&
+                    Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
+                    Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
+
+                console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+                if (isProfileComplete && hasRequiredArrays) {
+                    updatedUser.profile_completed = true;
+                } else {
+                    updatedUser.profile_completed = false;
+                }
+
+                await updatedUser.save();
 
             }
                 break;
@@ -711,3 +747,27 @@ exports.createResourceProfile = async (req, res) => {
         utils.handleError(res, err);
     }
 }
+
+
+// delete address
+exports.deleteAddress = async (req, res) => {
+    try {
+        const id = req.params.id;
+
+        const address = await Address.findById(id);
+
+        if (!address) return utils.handleError(res, { message: "Address not found", code: 404, });
+        if (address.default_address) return utils.handleError(res, { message: "You can not delete default address", code: 400, });
+
+        await Address.findByIdAndDelete(id);
+
+        res.json({
+            message: "Address removed successfully",
+            code: 200,
+            id: id,
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};

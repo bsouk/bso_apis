@@ -91,6 +91,14 @@ router.post(
     controller.changeDefaultAddress
 )
 
+//delete address
+router.delete(
+    "/deleteAddress/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteAddress
+)
+
 router.post(
     "/addLogistics",
     trimRequest.all,
