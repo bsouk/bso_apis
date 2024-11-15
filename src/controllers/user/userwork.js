@@ -9,6 +9,9 @@ const generatePassword = require("generate-password");
 const company_details = require("../../models/company_details");
 const jwt = require("jsonwebtoken")
 
+const fs = require('fs');
+const path = require('path');
+
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -633,6 +636,7 @@ exports.uploadMedia = async (req, res) => {
                     file: element,
                     path: `${process.env.STORAGE_PATH}/${req.body.path}`,
                 });
+                console.log(" media :", media)
                 mediaArray.push(`${req.body.path}/${media}`);
             }
 
@@ -647,6 +651,7 @@ exports.uploadMedia = async (req, res) => {
             });
 
             const url = `${req.body.path}/${media}`;
+            console.log("url is ", url)
             return res.status(200).json({
                 code: 200,
                 data: isArray === "true" ? [url] : url,
@@ -767,6 +772,46 @@ exports.deleteAddress = async (req, res) => {
             id: id,
         });
 
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
+// remove media
+exports.deleteMedia = async (req, res) => {
+    try {
+        console.log("req.body is ", req.body)
+        if (!req.body.path || !req.body.filename) {
+            return utils.handleError(res, {
+                message: "PATH OR FILENAME MISSING",
+                code: 400,
+            });
+        }
+
+        const filePath = path.join( req.body.path, req.body.filename);
+        console.log("filepath is ", filePath)
+
+        if (!fs.existsSync(filePath)) {
+            return utils.handleError(res, {
+                message: "File not found",
+                code: 404,
+            });
+        }
+
+        fs.unlink(filePath, (err) => {
+            if (err) {
+                return utils.handleError(res, {
+                    message: "Error deleting file",
+                    code: 500,
+                });
+            }
+
+            return res.status(200).json({
+                code: 200,
+                message: "File deleted successfully",
+            });
+        });
     } catch (error) {
         utils.handleError(res, error);
     }

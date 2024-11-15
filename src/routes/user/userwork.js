@@ -127,4 +127,11 @@ router.post(
     controller.createResourceProfile
 );
 
+router.post(
+    "/removeMedia",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteMedia
+);
+
 module.exports = router;
