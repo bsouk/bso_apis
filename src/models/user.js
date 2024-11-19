@@ -297,6 +297,9 @@ const UserSchema = new mongoose.Schema(
       company_logo: {
         type: String
       },
+      owner_name : {
+        type : String
+      },
       name: {
         type: String
       },
