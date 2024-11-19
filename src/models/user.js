@@ -27,8 +27,7 @@ const UserSchema = new mongoose.Schema(
         validator: validator.isEmail,
         message: "EMAIL_IS_NOT_VALID",
       },
-      lowercase: true,
-      required: true,
+      lowercase: true
     },
     phone_number_code: {
       type: String,
