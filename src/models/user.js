@@ -35,6 +35,10 @@ const UserSchema = new mongoose.Schema(
     phone_number: {
       type: String,
     },
+    signup_by: {
+      type : String,
+      enum : ["email" , "phone_number"]
+    },
     password: {
       type: String,
       // required: true,
