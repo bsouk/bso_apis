@@ -306,10 +306,42 @@ const UserSchema = new mongoose.Schema(
       },
       iban_number: {
         type: String,
-      }
+      },
+      address: {
+        line1: {
+          type: String
+        },
+        line2: {
+          type: String
+        },
+        city: {
+          type: String
+        },
+        state: {
+          type: String
+        },
+        zip_code: {
+          type: Number
+        },
+        country: {
+          type: String
+        }
+      },
     },
     company_data: {
       company_logo: {
+        type: String
+      },
+      registration_number:
+      {
+        type: String
+      },
+      incorporation_date:
+      {
+        type: String
+      },
+      vat_number:
+      {
         type: String
       },
       owner_name : {
@@ -349,6 +381,26 @@ const UserSchema = new mongoose.Schema(
         service_area: {  //logistics related
           type: String
         }
+      }
+    },
+    beneficiary_address: {
+      line1: {
+        type: String
+      },
+      line2: {
+        type: String
+      },
+      city: {
+        type: String
+      },
+      state: {
+        type: String
+      },
+      zip_code: {
+        type: Number
+      },
+      country: {
+        type: String
       }
     },
     sample_products: {
