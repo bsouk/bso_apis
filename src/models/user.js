@@ -112,7 +112,13 @@ const UserSchema = new mongoose.Schema(
         },
         key_responsibility: {
           type: String
-        }
+        },
+        start_date: {
+          type: String
+        },
+        end_date: {
+          type: String
+        },
       }],
       default: []
     },
@@ -217,7 +223,13 @@ const UserSchema = new mongoose.Schema(
         },
         key_responsibility: {
           type: String
-        }
+        },
+        start_date: {
+          type: String
+        },
+        end_date: {
+          type: String
+        },
       }],
       default: []
     },

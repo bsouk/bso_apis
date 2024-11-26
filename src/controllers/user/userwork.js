@@ -188,7 +188,8 @@ exports.editProfile = async (req, res) => {
                     'company_data.address.state',
                     'company_data.address.zip_code',
                     'company_data.address.country',
-                    'additional_notes'
+                    'additional_notes',
+                   
                 ];
 
                 console.log("supplier check fields is ", requiredFields)
