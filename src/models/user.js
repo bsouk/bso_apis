@@ -107,9 +107,9 @@ const UserSchema = new mongoose.Schema(
         company_name: {
           type: String
         },
-        date_of_employement: {
-          type: String
-        },
+        // date_of_employement: {
+        //   type: String
+        // },
         key_responsibility: {
           type: String
         },
@@ -218,9 +218,9 @@ const UserSchema = new mongoose.Schema(
         company_name: {
           type: String
         },
-        date_of_employement: {
-          type: String
-        },
+        // date_of_employement: {
+        //   type: String
+        // },
         key_responsibility: {
           type: String
         },
