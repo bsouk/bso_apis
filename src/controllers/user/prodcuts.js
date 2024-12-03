@@ -1,0 +1,64 @@
+const Product = require("../../models/product");
+const utils = require("../../utils/utils");
+
+exports.addProduct = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const data = req.body;
+
+    if (!data.brand_id) {
+      delete data.brand_id;
+    }
+
+    const productData = {
+      user_id: user_id,
+      ...data,
+    };
+
+    const product = await Product.create(productData);
+    res.json({ message: "Product added successfully", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+exports.deleteProduct = async (req, res) => {
+  try {
+    const product_id = req.params.id;
+
+    const product = await Product.findById(product_id);
+    if (!product)
+      return utils.handleError(res, {
+        message: "Product not found",
+        code: 404,
+      });
+
+    if (product.is_deleted === true)
+      utils.handleError(res, {
+        message: "Product is already deleted",
+        code: 400,
+      });
+    await Product.findByIdAndUpdate(product_id, { is_deleted: true });
+
+    res.json({ message: "Product deleted successfully", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+exports.getProduct = async (req, res) => {
+  try {
+    const product_id = req.params.id;
+    const product = await Product.findById(product_id);
+
+    if (!product || product.is_deleted === true)
+      return utils.handleError(res, {
+        message: "Product not found",
+        code: 404,
+      });
+
+    res.json({ data: product, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
