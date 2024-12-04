@@ -79,7 +79,7 @@ router.get(
   "/getSubCategory/:id",
   trimRequest.all,
   requireAuth,
-  controller.getSubCategory
+  controller.getSubCategoryById
 );
 
 module.exports = router

@@ -144,6 +144,7 @@ exports.getSubCategory = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(offset)
       .limit(limit);
+
     const count = await ProductSubCategory.countDocuments(filter);
 
     res.json({ data: catergories, count, code: 200 });
@@ -192,7 +193,7 @@ exports.deleteSubCategory = async (req, res) => {
   }
 };
 
-exports.getSubCategory = async (req, res) => {
+exports.getSubCategoryById = async (req, res) => {
   try {
     const id = req.params.id;
 
