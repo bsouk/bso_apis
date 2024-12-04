@@ -3,9 +3,9 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 
 const productSchema = new mongoose.Schema(
   {
-    user_id : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'users'
+    user_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users'
     },
     name: {
       type: String,
@@ -41,15 +41,20 @@ const productSchema = new mongoose.Schema(
     bulk_discount: {
       type: Number,
     },
-    tag : {
-        type : [String]
+    tag: {
+      type: [String]
     },
-    images : {
-        type : [String]
+    images: {
+      type: [String]
     },
-    is_deleted : {
-        type : Boolean,
-        default : false
+    is_deleted: {
+      type: Boolean,
+      default: false
+    },
+    isAdminApproved: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending"
     }
   },
   {
