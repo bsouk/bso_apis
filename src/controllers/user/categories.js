@@ -7,15 +7,24 @@ const generatePassword = require('generate-password');
 
 const ProductCategory = require("../../models/product_category");
 const ProductSubCategory = require("../../models/product_sub_category");
+const ProductSubSubCategory = require("../../models/product_sub_sub_category");
+
 
 exports.getCategoryList = async (req, res) => {
     try {
-        const { search, offset = 0, limit = 10, sub_id } = req.query;
+        const { search, offset = 0, limit = 10, sub_id, sub_sub_id } = req.query;
 
         const filter = {};
 
         if (search) {
             filter.name = { $regex: search, $options: "i" };
+        }
+
+        if (sub_id && sub_sub_id) {
+            return utils.handleError(res, {
+                message: "Please send category Parent Id separately",
+                code: 404,
+            });
         }
 
         let catergories = []
@@ -28,7 +37,16 @@ exports.getCategoryList = async (req, res) => {
                 .limit(limit);
 
             count = await ProductSubCategory.countDocuments(filter);
-        } else {
+        } else if (sub_sub_id) {
+            filter.product_sub_category_type_id = new mongoose.Types.ObjectId(sub_sub_id)
+            catergories = await ProductSubSubCategory.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(offset)
+                .limit(limit);
+
+            count = await ProductSubSubCategory.countDocuments(filter);
+        }
+        else {
             catergories = await ProductCategory.find(filter)
                 .sort({ createdAt: -1 })
                 .skip(offset)
