@@ -57,6 +57,13 @@ exports.getProductCategory = async (req, res) => {
     const id = req.params.id;
 
     const catergory = await ProductCategory.findById(id);
+    if (!catergory) {
+      return utils.handleError(res, {
+        message: "Category not found",
+        code: 404,
+      });
+    }
+
 
     res.json({ data: catergory, code: 200 });
   } catch (error) {
@@ -189,9 +196,15 @@ exports.getSubCategory = async (req, res) => {
   try {
     const id = req.params.id;
 
-    const catergory = await ProductSubCategory.findById(id);
+    const subcategory = await ProductSubCategory.findById(id);
+    if (!subcategory) {
+      return utils.handleError(res, {
+        message: "Sub Category not found",
+        code: 404,
+      });
+    }
 
-    res.json({ data: catergory, code: 200 });
+    res.json({ data: subcategory, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
