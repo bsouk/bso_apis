@@ -36,4 +36,11 @@ router.get(
     controller.getProductList
 )
 
+router.patch(
+    '/editProduct/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.editProduct
+)
+
 module.exports = router

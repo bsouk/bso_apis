@@ -134,4 +134,18 @@ router.post(
     controller.deleteMedia
 );
 
+router.post(
+    "/addQuery",
+    trimRequest.all,
+    requireAuth,
+    controller.addQuery
+);
+
+router.get(
+    "/getMyQueries",
+    trimRequest.all,
+    requireAuth,
+    controller.getMyQueries
+);
+
 module.exports = router;

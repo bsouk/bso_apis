@@ -11,6 +11,7 @@ const jwt = require("jsonwebtoken")
 
 const fs = require('fs');
 const path = require('path');
+const Query = require("../../models/query");
 
 //create password for users
 function createNewPassword() {
@@ -207,7 +208,7 @@ exports.editProfile = async (req, res) => {
                     'beneficiary_address.zip_code',
                     'beneficiary_address.country',
                     'additional_notes',
-                   
+
                 ];
 
                 console.log("supplier check fields is ", requiredFields)
@@ -808,7 +809,7 @@ exports.deleteMedia = async (req, res) => {
             });
         }
 
-        const filePath = path.join( req.body.path, req.body.filename);
+        const filePath = path.join(req.body.path, req.body.filename);
         console.log("filepath is ", filePath)
 
         if (!fs.existsSync(filePath)) {
@@ -835,3 +836,60 @@ exports.deleteMedia = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+//generate query number
+async function generateQueryNumber() {
+    const randomPart = await Math.floor(Math.random() * 10000000000);
+    console.log("query number is ", randomPart)
+    return `#${randomPart}`;
+}
+
+// add querry
+exports.addQuery = async (req, res) => {
+    try {
+        const data = req.body
+        console.log("data is ", data)
+
+        const userId = req.user._id;
+        console.log("userid is ", userId);
+
+        let queryid = await generateQueryNumber()
+        const newQueryData = {
+            query_unique_id: queryid.toString(),
+            createdByUser: userId,
+            queryDetails: [...data.queryDetails]
+        }
+
+        const result = await Query.create(newQueryData)
+        console.log("result is ", result);
+
+        return res.status(200).json({
+            message: "Query created successfully",
+            data: result,
+            code: 200
+        })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+//Buyer Queries
+
+exports.getMyQueries = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log("userid is ", userId)
+
+        const myQueries = await Query.find({ createdByUser: userId })
+
+        return res.status(200).json({
+            message: "My Queries Fetched Successfully",
+            data: myQueries,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

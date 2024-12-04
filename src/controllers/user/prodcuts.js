@@ -85,3 +85,20 @@ exports.getProductList = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+exports.editProduct = async (req, res) => {
+  try {
+    const productId = req.params.id
+
+    await Product.findByIdAndUpdate(productId, req.body);
+    const updatedproduct = await Product.findById(productId);
+
+    res.json({
+      data: updatedproduct,
+      message: "Product has been updated",
+      code: 200
+    });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
