@@ -65,12 +65,16 @@ exports.getProduct = async (req, res) => {
 
 exports.getProductList = async (req, res) => {
   try {
-    const { search, offset = 0, limit = 10 } = req.query;
+    const { search, offset = 0, limit = 10, supplier_id } = req.query;
 
     const filter = {};
 
     if (search) {
       filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (supplier_id) {
+      filter.user_id = supplier_id
     }
 
     const productlist = await Product.find(filter)
