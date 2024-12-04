@@ -62,3 +62,26 @@ exports.getProduct = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+exports.getProductList = async (req, res) => {
+  try {
+    const { search, offset = 0, limit = 10 } = req.query;
+
+    const filter = {};
+
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    const productlist = await Product.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit);
+
+    const count = await Product.countDocuments(filter);
+
+    res.json({ data: productlist, count, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};

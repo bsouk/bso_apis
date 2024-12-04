@@ -29,4 +29,11 @@ router.get(
     controller.getProduct
 )
 
+router.get(
+    '/getProductList',
+    trimRequest.all,
+    requireAuth,
+    controller.getProductList
+)
+
 module.exports = router
