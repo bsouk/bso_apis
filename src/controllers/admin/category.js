@@ -8,6 +8,8 @@ const generatePassword = require('generate-password');
 
 const ProductCategory = require("../../models/product_category");
 const ProductSubCategory = require("../../models/product_sub_category");
+const ProductSubSubCategory = require("../../models/product_sub_sub_category");
+
 
 exports.addProductCategory = async (req, res) => {
   try {
@@ -110,6 +112,8 @@ exports.deleteProductCategory = async (req, res) => {
   }
 };
 
+//sub category
+
 exports.addProductSubCategory = async (req, res) => {
   try {
     const { name, icon, product_category_type_id } = req.body
@@ -206,6 +210,109 @@ exports.getSubCategoryById = async (req, res) => {
     }
 
     res.json({ data: subcategory, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+//sub sub category
+
+exports.addProductSubSubCategory = async (req, res) => {
+  try {
+    const { name, icon, product_category_type_id, product_sub_category_type_id } = req.body
+
+    if (!name || !icon || !product_category_type_id || !product_sub_category_type_id) return res.json({ "message": "Send valid data", "code": 500 })
+
+    const isSubSubCategoryExist = await ProductSubSubCategory.findOne({ name, product_category_type_id, product_sub_category_type_id });
+
+    if (isSubSubCategoryExist) return res.json({ "message": "Sub-Sub-Category already exist for this category", "code": 500 });
+
+    const newSubSubCategory = new ProductSubSubCategory({ name, icon, product_category_type_id, product_sub_category_type_id });
+    await newSubSubCategory.save();
+    return res.json({ "message": "Sub-Sub-Category added successfully", "code": 500 })
+
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.getSubSubCategory = async (req, res) => {
+  try {
+    const { search, offset = 0, limit = 10 } = req.query;
+
+    const filter = {};
+
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    const catergories = await ProductSubSubCategory.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit);
+
+    const count = await ProductSubSubCategory.countDocuments(filter);
+
+    res.json({ data: catergories, count, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+
+exports.editSubSubCategory = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const isCategoryExists = await ProductSubSubCategory.findById(id);
+    if (!isCategoryExists)
+      return utils.handleError(res, {
+        message: "Sub-Sub-Category not found",
+        code: 404,
+      });
+
+    const result = await ProductSubSubCategory.findByIdAndUpdate({ _id: id }, req.body);
+    console.log("result is ", result)
+
+    res.json({ message: "Sub-Sub-Category edited successfully", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+exports.deleteSubSubCategory = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const isCategoryExists = await ProductSubSubCategory.findById(id);
+    if (!isCategoryExists)
+      return utils.handleError(res, {
+        message: "Sub-Sub-Category not found",
+        code: 404,
+      });
+
+    await ProductSubSubCategory.findByIdAndDelete(id);
+
+    res.json({ message: "Sub-Sub-Category deleted successfully", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+exports.getSubSubCategoryById = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const subsubcategory = await ProductSubSubCategory.findById(id);
+    if (!subsubcategory) {
+      return utils.handleError(res, {
+        message: "Sub-Sub-Category not found",
+        code: 404,
+      });
+    }
+
+    res.json({ data: subsubcategory, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }

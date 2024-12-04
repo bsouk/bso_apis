@@ -82,4 +82,43 @@ router.get(
   controller.getSubCategoryById
 );
 
+
+//sub-sub-category
+
+router.post(
+  "/addSubSubCategory",
+  trimRequest.all,
+  requireAuth,
+  controller.addProductSubSubCategory
+);
+
+router.get(
+  "/getSubSubCategories",
+  trimRequest.all,
+  requireAuth,
+  controller.getSubSubCategory
+);
+
+router.patch(
+  "/editSubSubCategory/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.editSubSubCategory
+);
+
+router.delete(
+  "/deleteSubSubCategory/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSubSubCategory
+);
+
+router.get(
+  "/getSubSubCategory/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.getSubSubCategoryById
+);
+
+
 module.exports = router
