@@ -94,6 +94,14 @@ exports.editProduct = async (req, res) => {
   try {
     const productId = req.params.id
 
+    const product = await Product.findById(productId);
+
+    if (!product || product.is_deleted === true)
+      return utils.handleError(res, {
+        message: "Product not found",
+        code: 404,
+      });
+
     await Product.findByIdAndUpdate(productId, req.body);
     const updatedproduct = await Product.findById(productId);
 
