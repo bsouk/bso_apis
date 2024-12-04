@@ -51,7 +51,7 @@ const productSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
-    isAdminApproved: {
+    is_admin_approved: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending"
