@@ -43,4 +43,11 @@ router.patch(
     controller.editProduct
 )
 
+router.patch(
+    '/approveRejectProduct',
+    trimRequest.all,
+    requireAuth,
+    controller.approveRejectProduct
+)
+
 module.exports = router

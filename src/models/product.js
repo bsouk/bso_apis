@@ -55,6 +55,9 @@ const productSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending"
+    },
+    rejected_reason: {
+      type: String
     }
   },
   {

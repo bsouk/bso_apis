@@ -114,3 +114,41 @@ exports.editProduct = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+exports.approveRejectProduct = async (req, res) => {
+    try {
+        const productId = req.body.id
+
+        const product = await Product.findById(productId);
+
+        if (!product || product.is_deleted === true)
+            return utils.handleError(res, {
+                message: "Product not found",
+                code: 404,
+            });
+
+        if (req.body.status === "rejected" && !req.body.reason) {
+            return utils.handleError(res, {
+                message: "Rejection reason is required",
+                code: 404,
+            });
+        }
+
+        if (req.body.reason && req.body.status === "rejected") {
+            product.is_admin_approved = req.body.status
+            product.rejected_reason = req.body.reason
+            await product.save()
+        } else {
+            product.is_admin_approved = req.body.status
+            await product.save()
+        }
+
+        res.json({
+            message: "Product status changed Successfully",
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
