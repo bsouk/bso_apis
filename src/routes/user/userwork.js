@@ -148,4 +148,12 @@ router.get(
     controller.getMyQueries
 );
 
+//Home Api
+router.get(
+    "/getBuyerHome",
+    trimRequest.all,
+    requireAuth,
+    controller.getHomeData
+);
+
 module.exports = router;

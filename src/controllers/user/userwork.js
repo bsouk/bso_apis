@@ -12,6 +12,9 @@ const jwt = require("jsonwebtoken")
 const fs = require('fs');
 const path = require('path');
 const Query = require("../../models/query");
+const Category = require("../../models/product_category");
+const ads = require("../../models/ads");
+const Product = require("../../models/product");
 
 //create password for users
 function createNewPassword() {
@@ -887,6 +890,28 @@ exports.getMyQueries = async (req, res) => {
         return res.status(200).json({
             message: "My Queries Fetched Successfully",
             data: myQueries,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+//get Home Api data
+exports.getHomeData = async (req, res) => {
+    try {
+        const categorylist = await Category.find().limit(10)
+        const adslist = await ads.find().limit(10)
+        const topProduct = await Product.find().limit(10)
+
+        return res.status(200).json({
+            message: "data Fetched Successfully",
+            data: {
+                categories: categorylist,
+                ads: adslist,
+                topProduct
+            },
             code: 200
         })
     } catch (error) {
