@@ -16,13 +16,25 @@ router.post(
     controller.addBrand
 );
 
+router.delete(
+    "/deleteselectedbrand",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteselectedbrand
+);
+
 router.get(
     "/getBrand",
     trimRequest.all,
     requireAuth,
     controller.getBrand
 );
-
+router.get(
+    "/getBrandbyId/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getBrandbyId
+)
 router.put(
     "/editBrand/:id",
     trimRequest.all,
