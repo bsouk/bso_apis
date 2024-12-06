@@ -147,3 +147,36 @@ exports.editProduct = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+exports.getProductNameList = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    console.log("userid is ", userId)
+
+    const { search, offset = 0, limit = 10 } = req.query;
+
+    const filter = {
+      user_id: userId
+    };
+
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    console.log("filter is ", filter)
+
+    const productlist = await Product.aggregate([
+      { $match: { ...filter } },
+      { $project: { _id: 1, name: 1 } },
+      { $sort: { createdAt: -1 } },
+      { $skip: offset },
+      { $limit: limit }
+    ])
+
+    const count = await Product.countDocuments(filter);
+
+    res.json({ data: productlist, count, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}

@@ -128,7 +128,7 @@ exports.deleteselectedbrand = async (req, res) => {
                 code: 400,
             });
 
-        const isAllDeleted = await User.find({ _id: brand_ids, is_deleted: true });
+        const isAllDeleted = await Brand.find({ _id: brand_ids, is_deleted: true });
 
         if (isAllDeleted.length === brand_ids.length)
             return utils.handleError(res, {
@@ -136,7 +136,7 @@ exports.deleteselectedbrand = async (req, res) => {
                 code: 400,
             });
 
-        await User.updateMany({ _id: brand_ids }, { is_deleted: true });
+        await Brand.updateMany({ _id: brand_ids }, { is_deleted: true });
 
         res.json({ message: "Selected Brands have been deleted", code: 200 });
     } catch (error) {

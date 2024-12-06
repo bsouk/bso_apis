@@ -112,6 +112,35 @@ exports.deleteProductCategory = async (req, res) => {
   }
 };
 
+exports.deleteSelectedCategory = async (req, res) => {
+  try {
+    const { ids = [] } = req.body;
+    console.log("req.body is ", req.body)
+
+    if (ids.length === 0)
+      return utils.handleError(res, {
+        message: "Please select at least one Category",
+        code: 400,
+      });
+
+    const isAllDeleted = await ProductCategory.find({ _id: ids });
+    console.log("categories : ", isAllDeleted)
+
+    if (isAllDeleted.length === 0)
+      return utils.handleError(res, {
+        message: "No category found",
+        code: 400,
+      });
+
+    const result = await ProductCategory.deleteMany({ _id: { $in: ids } });
+    console.log("result", result)
+
+    return res.json({ message: "Selected Category have been deleted", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
 //sub category
 
 exports.addProductSubCategory = async (req, res) => {
@@ -215,6 +244,35 @@ exports.getSubCategoryById = async (req, res) => {
   }
 };
 
+exports.deleteSelectedSubCategory = async (req, res) => {
+  try {
+    const { ids = [] } = req.body;
+    console.log("req.body is ", req.body)
+
+    if (ids.length === 0)
+      return utils.handleError(res, {
+        message: "Please select at least one Sub Category",
+        code: 400,
+      });
+
+    const isAllDeleted = await ProductSubCategory.find({ _id: ids });
+    console.log("categories : ", isAllDeleted)
+
+    if (isAllDeleted.length === 0)
+      return utils.handleError(res, {
+        message: "No Sub category found",
+        code: 400,
+      });
+
+    const result = await ProductSubCategory.deleteMany({ _id: { $in: ids } });
+    console.log("result", result)
+
+    return res.json({ message: "Selected Sub Category have been deleted", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
 //sub sub category
 
 exports.addProductSubSubCategory = async (req, res) => {
@@ -317,3 +375,33 @@ exports.getSubSubCategoryById = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+
+exports.deleteSelectedSubSubCategory = async (req, res) => {
+  try {
+    const { ids = [] } = req.body;
+    console.log("req.body is ", req.body)
+
+    if (ids.length === 0)
+      return utils.handleError(res, {
+        message: "Please select at least one Sub-Sub-Category",
+        code: 400,
+      });
+
+    const isAllDeleted = await ProductSubSubCategory.find({ _id: ids });
+    console.log("categories : ", isAllDeleted)
+
+    if (isAllDeleted.length === 0)
+      return utils.handleError(res, {
+        message: "No Sub-Sub-Category found",
+        code: 400,
+      });
+
+    const result = await ProductSubSubCategory.deleteMany({ _id: { $in: ids } });
+    console.log("result", result)
+
+    return res.json({ message: "Selected Sub-Sub-Category have been deleted", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}

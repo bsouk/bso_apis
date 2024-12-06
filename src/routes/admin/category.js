@@ -45,6 +45,13 @@ router.delete(
   controller.deleteProductCategory
 );
 
+router.post(
+  "/deleteSelectedCategory",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSelectedCategory
+);
+
 //subcategory
 
 router.post(
@@ -82,6 +89,12 @@ router.get(
   controller.getSubCategoryById
 );
 
+router.post(
+  "/deleteSelectedSubCategory",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSelectedSubCategory
+);
 
 //sub-sub-category
 
@@ -118,6 +131,13 @@ router.get(
   trimRequest.all,
   requireAuth,
   controller.getSubSubCategoryById
+);
+
+router.post(
+  "/deleteSelectedSubSubCategory",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSelectedSubSubCategory
 );
 
 
