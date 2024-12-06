@@ -1,13 +1,64 @@
 const Product = require("../../models/product");
 const utils = require("../../utils/utils");
 
+// exports.addProduct = async (req, res) => {
+//     try {
+//         const user_id = req.user.id;
+//         const data = req.body;
+
+//         if (!data.brand_id) {
+//             delete data.brand_id;
+//         }
+
+//         const productData = {
+//             user_id: user_id,
+//             ...data,
+//         };
+
+//         const product = await Product.create(productData);
+//         res.json({ message: "Product added successfully", code: 200 });
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// };
+
 exports.addProduct = async (req, res) => {
     try {
         const user_id = req.user.id;
+        const { id, name } = req.query
         const data = req.body;
 
         if (!data.brand_id) {
             delete data.brand_id;
+        }
+
+        if (name && id) {
+            return utils.handleError(res, {
+                message: "Please specify one query either name or id",
+                code: 404,
+            });
+        }
+        else if (id) {
+            const productData = await Product.findOne({ _id: id })
+            console.log("product data is ", productData)
+
+            if (!productData) {
+                return utils.handleError(res, {
+                    message: "Product not found",
+                    code: 404,
+                });
+            }
+            const newdata = Array.isArray(data) ? [...data] : [data];
+
+            productData?.variant?.push(...newdata);
+            await productData.save();
+
+            return res.json({ message: "Product sku added successfully", code: 200 });
+
+        }
+
+        if (name) {
+            data.name = name
         }
 
         const productData = {
@@ -16,7 +67,9 @@ exports.addProduct = async (req, res) => {
         };
 
         const product = await Product.create(productData);
-        res.json({ message: "Product added successfully", code: 200 });
+        return res.json({ message: "Product added successfully", code: 200 });
+
+
     } catch (error) {
         utils.handleError(res, error);
     }

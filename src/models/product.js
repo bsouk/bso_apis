@@ -11,9 +11,6 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    description: {
-      type: String,
-    },
     brand_id: {
       type: mongoose.Schema.Types.ObjectId,
     },
@@ -26,25 +23,46 @@ const productSchema = new mongoose.Schema(
     sub_sub_category_id: {
       type: [mongoose.Schema.Types.ObjectId],
     },
-    sku: {
-      type: String,
-    },
-    price: {
-      type: Number,
-    },
-    inventory_quantity: {
-      type: Number,
-    },
-    discount: {
-      type: Number,
-    },
-    bulk_discount: {
-      type: Number,
-    },
+    variant: [
+      {
+        sku_id: {
+          type: String
+        },
+        description: {
+          type: String,
+        },
+        price: {
+          type: Number,
+        },
+        inventory_quantity: {
+          type: Number,
+        },
+        discount: {
+          type: Number,
+        },
+        bulk_discount: {
+          type: Number,
+        },
+        images: {
+          type: [String]
+        },
+        specification: [
+          {
+            specification_type: {
+              type: String
+            },
+            value: {
+              type: String
+            }
+          }
+        ],
+        is_sku_deleted: {
+          type: Boolean,
+          default: false
+        },
+      }
+    ],
     tag: {
-      type: [String]
-    },
-    images: {
       type: [String]
     },
     is_deleted: {
