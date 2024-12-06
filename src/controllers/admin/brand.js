@@ -117,29 +117,31 @@ exports.getBrandbyId = async (req, res) => {
     }
 };
 
-
 exports.deleteselectedbrand = async (req, res) => {
     try {
-        const { brand_ids = [] } = req.body;
+        const { ids = [] } = req.body;
+        console.log("req.body is ", req.body)
 
-        if (brand_ids.length === 0)
+        if (ids.length === 0)
             return utils.handleError(res, {
                 message: "Please select at least one Brand",
                 code: 400,
             });
 
-        const isAllDeleted = await Brand.find({ _id: brand_ids, is_deleted: true });
+        const isAllDeleted = await Brand.find({ _id: ids });
+        console.log("brands : ", isAllDeleted)
 
-        if (isAllDeleted.length === brand_ids.length)
+        if (isAllDeleted.length === 0)
             return utils.handleError(res, {
-                message: "All selected Brands are already deleted",
+                message: "No Brand found",
                 code: 400,
             });
 
-        await Brand.updateMany({ _id: brand_ids }, { is_deleted: true });
+        const result = await Brand.deleteMany({ _id: { $in: ids } });
+        console.log("result", result)
 
-        res.json({ message: "Selected Brands have been deleted", code: 200 });
+        return res.json({ message: "Selected Brand have been deleted", code: 200 });
     } catch (error) {
         utils.handleError(res, error);
     }
-};
+}
