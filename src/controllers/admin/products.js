@@ -73,8 +73,10 @@ exports.addProduct = async (req, res) => {
                 });
             }
 
-            const isExistedSku = productData?.variant?.some(i => i.sku_id.toString() === req.body?.sku_data?.sku_id?.toString())
-            console.log("isExistedSku : ", isExistedSku)
+            const isExistedSku = await Product.findOne({
+                "variant.sku_id": req.body?.sku_data?.sku_id,
+            });
+            console.log("isExistedSkuData : ", isExistedSku)
 
             if (isExistedSku) {
                 return utils.handleError(res, {
