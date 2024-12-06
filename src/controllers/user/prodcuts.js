@@ -7,6 +7,7 @@ exports.addProduct = async (req, res) => {
     const user_id = req.user.id;
     const { id, name } = req.query
     const data = req.body;
+    console.log("req.body is ", data)
 
     if (!data.brand_id) {
       delete data.brand_id;
@@ -29,12 +30,12 @@ exports.addProduct = async (req, res) => {
         });
       }
       const newdata = Array.isArray(data) ? [...data] : [data];
+      console.log("newdata is ", newdata)
 
       productData?.variant?.push(...newdata);
       await productData.save();
 
       return res.json({ message: "Product sku added successfully", code: 200 });
-
     }
 
     if (name) {
@@ -47,8 +48,7 @@ exports.addProduct = async (req, res) => {
     };
 
     const product = await Product.create(productData);
-    return res.json({ message: "Product added successfully", code: 200 });
-
+    return res.json({ message: "Product added successfully", data: product, code: 200 });
 
   } catch (error) {
     utils.handleError(res, error);
