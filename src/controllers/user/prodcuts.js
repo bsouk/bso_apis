@@ -169,8 +169,8 @@ exports.getProductNameList = async (req, res) => {
       { $match: { ...filter } },
       { $project: { _id: 1, name: 1 } },
       { $sort: { createdAt: -1 } },
-      { $skip: offset },
-      { $limit: limit }
+      { $skip: parseInt(offset) || 0 },
+      { $limit: parseInt(limit) || 10 }
     ])
 
     const count = await Product.countDocuments(filter);
