@@ -5,21 +5,11 @@ const utils = require("../../utils/utils");
 exports.addProduct = async (req, res) => {
   try {
     const user_id = req.user.id;
-    const { id, name } = req.query
+    const { id } = req.body
     const data = req.body;
     console.log("req.body is ", data)
 
-    if (!data.brand_id) {
-      delete data.brand_id;
-    }
-
-    if (name && id) {
-      return utils.handleError(res, {
-        message: "Please specify one query either name or id",
-        code: 404,
-      });
-    }
-    else if (id) {
+    if (id) {
       const productData = await Product.findOne({ _id: id })
       console.log("product data is ", productData)
 
@@ -29,24 +19,40 @@ exports.addProduct = async (req, res) => {
           code: 404,
         });
       }
-      const newdata = Array.isArray(data) ? [...data] : [data];
-      console.log("newdata is ", newdata)
+      
+      const newData = {
+        ...req.body.sku_data
+      }
 
-      productData?.variant?.push(...newdata);
+      console.log("new data is ", newData)
+      productData?.variant?.push(newData);
       await productData.save();
 
       return res.json({ message: "Product sku added successfully", code: 200 });
     }
 
-    if (name) {
-      data.name = name
+    let newVariant = []
+    if (data.sku_data) {
+      newVariant.push(data.sku_data)
     }
 
     const productData = {
       user_id: user_id,
-      ...data,
+      name: data.name,
+      brand_id: data.brand_id,
+      category_id: data.category_id,
+      variant: [...newVariant]
     };
 
+    if (data.sub_category_id) {
+      productData.sub_category_id = data.sub_category_id
+    }
+
+    if (data.sub_sub_category_id) {
+      productData.sub_sub_category_id = data.sub_sub_category_id
+    }
+
+    console.log("final product data is", productData)
     const product = await Product.create(productData);
     return res.json({ message: "Product added successfully", data: product, code: 200 });
 
