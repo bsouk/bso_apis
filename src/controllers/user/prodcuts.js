@@ -1,7 +1,6 @@
 const Product = require("../../models/product");
 const utils = require("../../utils/utils");
 
-
 exports.addProduct = async (req, res) => {
   try {
     const user_id = req.user.id;
@@ -19,7 +18,17 @@ exports.addProduct = async (req, res) => {
           code: 404,
         });
       }
-      
+
+      const isExistedSku = productData?.variant?.some(i => i.sku_id.toString() === req.body?.sku_data?.sku_id?.toString())
+      console.log("isExistedSku : ", isExistedSku)
+
+      if (isExistedSku) {
+        return utils.handleError(res, {
+          message: "Sku Id is already existed",
+          code: 404,
+        });
+      }
+
       const newData = {
         ...req.body.sku_data
       }
@@ -33,6 +42,19 @@ exports.addProduct = async (req, res) => {
 
     let newVariant = []
     if (data.sku_data) {
+      // const isExistedSkuData = await Product.find({ sku_id: { $elemMatch: data?.sku_data?.sku_id } })
+      const isExistedSkuData = await Product.findOne({
+        "variant.sku_id": data?.sku_data?.sku_id,
+      });
+      console.log("isExistedSkuData : ", isExistedSkuData)
+
+      if (isExistedSkuData) {
+        return utils.handleError(res, {
+          message: "Sku Id is already existed",
+          code: 404,
+        });
+      }
+
       newVariant.push(data.sku_data)
     }
 
@@ -88,7 +110,7 @@ exports.deleteProduct = async (req, res) => {
 exports.getProduct = async (req, res) => {
   try {
     const product_id = req.params.id;
-    const product = await Product.findById(product_id);
+    const product = await Product.findById(product_id).populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id');
 
     if (!product || product.is_deleted === true)
       return utils.handleError(res, {
@@ -119,7 +141,8 @@ exports.getProductList = async (req, res) => {
     const productlist = await Product.find(filter)
       .sort({ createdAt: -1 })
       .skip(offset)
-      .limit(limit);
+      .limit(limit)
+      .populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id')
 
     const count = await Product.countDocuments(filter);
 

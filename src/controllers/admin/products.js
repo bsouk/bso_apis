@@ -4,10 +4,40 @@ const utils = require("../../utils/utils");
 // exports.addProduct = async (req, res) => {
 //     try {
 //         const user_id = req.user.id;
+//         const { id, name } = req.query
 //         const data = req.body;
 
 //         if (!data.brand_id) {
 //             delete data.brand_id;
+//         }
+
+//         if (name && id) {
+//             return utils.handleError(res, {
+//                 message: "Please specify one query either name or id",
+//                 code: 404,
+//             });
+//         }
+//         else if (id) {
+//             const productData = await Product.findOne({ _id: id })
+//             console.log("product data is ", productData)
+
+//             if (!productData) {
+//                 return utils.handleError(res, {
+//                     message: "Product not found",
+//                     code: 404,
+//                 });
+//             }
+//             const newdata = Array.isArray(data) ? [...data] : [data];
+
+//             productData?.variant?.push(...newdata);
+//             await productData.save();
+
+//             return res.json({ message: "Product sku added successfully", code: 200 });
+
+//         }
+
+//         if (name) {
+//             data.name = name
 //         }
 
 //         const productData = {
@@ -16,29 +46,23 @@ const utils = require("../../utils/utils");
 //         };
 
 //         const product = await Product.create(productData);
-//         res.json({ message: "Product added successfully", code: 200 });
+//         return res.json({ message: "Product added successfully", code: 200 });
+
+
 //     } catch (error) {
 //         utils.handleError(res, error);
 //     }
 // };
 
+
 exports.addProduct = async (req, res) => {
     try {
         const user_id = req.user.id;
-        const { id, name } = req.query
+        const { id } = req.body
         const data = req.body;
+        console.log("req.body is ", data)
 
-        if (!data.brand_id) {
-            delete data.brand_id;
-        }
-
-        if (name && id) {
-            return utils.handleError(res, {
-                message: "Please specify one query either name or id",
-                code: 404,
-            });
-        }
-        else if (id) {
+        if (id) {
             const productData = await Product.findOne({ _id: id })
             console.log("product data is ", productData)
 
@@ -48,27 +72,65 @@ exports.addProduct = async (req, res) => {
                     code: 404,
                 });
             }
-            const newdata = Array.isArray(data) ? [...data] : [data];
 
-            productData?.variant?.push(...newdata);
+            const isExistedSku = productData?.variant?.some(i => i.sku_id.toString() === req.body?.sku_data?.sku_id?.toString())
+            console.log("isExistedSku : ", isExistedSku)
+
+            if (isExistedSku) {
+                return utils.handleError(res, {
+                    message: "Sku Id is already existed",
+                    code: 404,
+                });
+            }
+
+            const newData = {
+                ...req.body.sku_data
+            }
+
+            console.log("new data is ", newData)
+            productData?.variant?.push(newData);
             await productData.save();
 
             return res.json({ message: "Product sku added successfully", code: 200 });
-
         }
 
-        if (name) {
-            data.name = name
+        let newVariant = []
+        if (data.sku_data) {
+            // const isExistedSkuData = await Product.find({ sku_id: { $elemMatch: data?.sku_data?.sku_id } })
+            const isExistedSkuData = await Product.findOne({
+                "variant.sku_id": data?.sku_data?.sku_id,
+            });
+            console.log("isExistedSkuData : ", isExistedSkuData)
+
+            if (isExistedSkuData) {
+                return utils.handleError(res, {
+                    message: "Sku Id is already existed",
+                    code: 404,
+                });
+            }
+
+            newVariant.push(data.sku_data)
         }
 
         const productData = {
             user_id: user_id,
-            ...data,
+            name: data.name,
+            brand_id: data.brand_id,
+            category_id: data.category_id,
+            variant: [...newVariant]
         };
 
-        const product = await Product.create(productData);
-        return res.json({ message: "Product added successfully", code: 200 });
+        if (data.sub_category_id) {
+            productData.sub_category_id = data.sub_category_id
+        }
 
+        if (data.sub_sub_category_id) {
+            productData.sub_sub_category_id = data.sub_sub_category_id
+        }
+
+        console.log("final product data is", productData)
+        const product = await Product.create(productData);
+        return res.json({ message: "Product added successfully", data: product, code: 200 });
 
     } catch (error) {
         utils.handleError(res, error);
@@ -102,7 +164,7 @@ exports.deleteProduct = async (req, res) => {
 exports.getProduct = async (req, res) => {
     try {
         const product_id = req.params.id;
-        const product = await Product.findById(product_id);
+        const product = await Product.findById(product_id).populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id').populate('user_id');
 
         if (!product || product.is_deleted === true)
             return utils.handleError(res, {
@@ -133,7 +195,8 @@ exports.getProductList = async (req, res) => {
         const productlist = await Product.find(filter)
             .sort({ createdAt: -1 })
             .skip(offset)
-            .limit(limit);
+            .limit(limit)
+            .populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id').populate('user_id')
 
         const count = await Product.countDocuments(filter);
 
