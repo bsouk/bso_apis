@@ -242,7 +242,9 @@ exports.getProductList = async (req, res) => {
     try {
         const { search, offset = 0, limit = 10, supplier_id } = req.query;
 
-        const filter = {};
+        const filter = {
+            is_deleted: { $ne: true }
+        };
 
         if (search) {
             filter.name = { $regex: search, $options: "i" };
