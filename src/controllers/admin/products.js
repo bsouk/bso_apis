@@ -212,7 +212,15 @@ exports.getProduct = async (req, res) => {
                 }
             },
             { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-            { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } }
+            { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    brand_id: 0,
+                    category_id: 0,
+                    sub_category_id: 0,
+                    sub_sub_category_id: 0
+                }
+            }
         ])
 
         console.log("productdata is ", product)
@@ -223,7 +231,7 @@ exports.getProduct = async (req, res) => {
                 code: 404,
             });
 
-        res.json({ data: product, code: 200 });
+        res.json({ data: product[0], code: 200 });
     } catch (error) {
         utils.handleError(res, error);
     }
@@ -302,6 +310,14 @@ exports.getProductList = async (req, res) => {
             },
             {
                 $limit: parseInt(limit)
+            },
+            {
+                $project: {
+                    brand_id: 0,
+                    category_id: 0,
+                    sub_category_id: 0,
+                    sub_sub_category_id: 0
+                }
             }
         ])
 
