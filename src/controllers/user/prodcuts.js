@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const utils = require("../../utils/utils");
 
@@ -115,7 +116,46 @@ exports.deleteProduct = async (req, res) => {
 exports.getProduct = async (req, res) => {
   try {
     const product_id = req.params.id;
-    const product = await Product.findById(product_id).populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id');
+    // const product = await Product.findById(product_id).populate({ path: 'category_id', as: 'category' }).populate({ path: 'sub_category_id', as: 'sub_sub_category' }).populate({ path: 'sub_sub_category_id', as: 'sub_sub_category' }).populate({ path: 'brand_id', as: 'brand' });
+
+    const product = await Product.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(product_id), is_deleted: { $ne: true } } },
+      {
+        $lookup: {
+          from: 'product_categories',
+          localField: 'category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'product_sub_category_types',
+          localField: 'sub_category_id',
+          foreignField: '_id',
+          as: 'sub_category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'product_sub_sub_category_types',
+          localField: 'sub_sub_category_id',
+          foreignField: '_id',
+          as: 'sub_sub_category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'brands',
+          localField: 'brand_id',
+          foreignField: '_id',
+          as: 'brand'
+        }
+      },
+      { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } }
+    ])
+
+    console.log("productdata is ", product)
 
     if (!product || product.is_deleted === true)
       return utils.handleError(res, {
@@ -140,14 +180,60 @@ exports.getProductList = async (req, res) => {
     }
 
     if (supplier_id) {
-      filter.user_id = supplier_id
+      filter.user_id = new mongoose.Types.ObjectId(supplier_id)
     }
 
-    const productlist = await Product.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit)
-      .populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id')
+    // const productlist = await Product.find(filter)
+    //   .sort({ createdAt: -1 })
+    //   .skip(offset)
+    //   .limit(limit)
+    //   .populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id')
+
+    const productlist = await Product.aggregate([
+      { $match: { ...filter } },
+      {
+        $lookup: {
+          from: 'product_categories',
+          localField: 'category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'product_sub_category_types',
+          localField: 'sub_category_id',
+          foreignField: '_id',
+          as: 'sub_category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'product_sub_sub_category_types',
+          localField: 'sub_sub_category_id',
+          foreignField: '_id',
+          as: 'sub_sub_category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'brands',
+          localField: 'brand_id',
+          foreignField: '_id',
+          as: 'brand'
+        }
+      },
+      { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $skip: parseInt(offset)
+      },
+      {
+        $limit: parseInt(limit)
+      }
+    ])
 
     const count = await Product.countDocuments(filter);
 
