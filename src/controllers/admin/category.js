@@ -405,3 +405,55 @@ exports.deleteSelectedSubSubCategory = async (req, res) => {
     utils.handleError(res, error);
   }
 }
+
+//get category as per parent category
+exports.getCategoryList = async (req, res) => {
+  try {
+    const { search, offset = 0, limit = 10, sub_id, sub_sub_id } = req.query;
+
+    const filter = {};
+
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (sub_id && sub_sub_id) {
+      return utils.handleError(res, {
+        message: "Please send category Parent Id separately",
+        code: 404,
+      });
+    }
+
+    let catergories = []
+    let count = 0
+    if (sub_id) {
+      filter.product_category_type_id = new mongoose.Types.ObjectId(sub_id)
+      catergories = await ProductSubCategory.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit);
+
+      count = await ProductSubCategory.countDocuments(filter);
+    } else if (sub_sub_id) {
+      filter.product_sub_category_type_id = new mongoose.Types.ObjectId(sub_sub_id)
+      catergories = await ProductSubSubCategory.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit);
+
+      count = await ProductSubSubCategory.countDocuments(filter);
+    }
+    else {
+      catergories = await ProductCategory.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit);
+
+      count = await ProductCategory.countDocuments(filter);
+    }
+
+    res.json({ data: catergories, count, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};

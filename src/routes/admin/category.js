@@ -141,4 +141,11 @@ router.post(
 );
 
 
+//get categories as per parents
+router.get(
+  '/getCategoryList',
+  trimRequest.all,
+  controller.getCategoryList
+)
+
 module.exports = router
