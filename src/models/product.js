@@ -27,6 +27,10 @@ const productSchema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       ref: "product_sub_sub_category_types"
     },
+    supplier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'users'
+    },
     variant: [
       {
         sku_id: {

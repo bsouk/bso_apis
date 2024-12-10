@@ -224,4 +224,13 @@ router.post(
 );
 
 
+
+//get supplier list for form use
+router.get(
+  "/getSupplierData",
+  trimRequest.all,
+  requireAuth,
+  controller.supplierListForm
+);
+
 module.exports = router;

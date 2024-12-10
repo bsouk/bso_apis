@@ -50,4 +50,20 @@ router.patch(
     controller.approveRejectProduct
 )
 
+router.get(
+    '/getProductNameList',
+    trimRequest.all,
+    requireAuth,
+    controller.getProductNameList
+)
+
+
+router.get(
+    '/getSkuVariant',
+    trimRequest.all,
+    requireAuth,
+    controller.getSkuList
+)
+
+
 module.exports = router

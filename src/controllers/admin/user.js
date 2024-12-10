@@ -1464,3 +1464,30 @@ exports.changeAvailabilityStatus = async (req, res) => {
     utils.handleError(res, err);
   }
 }
+
+
+// get supplier list for listing in forms
+exports.supplierListForm = async (req, res) => {
+  try {
+    const data = await User.aggregate([
+      { $match: { user_type: 'supplier' } },
+      {
+        $project: {
+          _id: 1,
+          full_name: 1,
+          first_name: 1,
+          last_name: 1
+        }
+      }
+    ])
+    console.log("data is ", data)
+
+    return res.status(200).json({
+      message: "supplier list fetched succesfully",
+      data: data,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, err);
+  }
+}

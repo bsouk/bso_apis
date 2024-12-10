@@ -393,3 +393,64 @@ exports.approveRejectProduct = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+exports.getProductNameList = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log("userid is ", userId)
+
+        const { search, offset = 0, limit = 10 } = req.query;
+
+        const filter = {
+            user_id: userId
+        };
+
+        if (search) {
+            filter.name = { $regex: search, $options: "i" };
+        }
+
+        console.log("filter is ", filter)
+
+        const productlist = await Product.aggregate([
+            { $match: { ...filter } },
+            { $project: { _id: 1, name: 1 } },
+            { $sort: { createdAt: -1 } },
+            { $skip: parseInt(offset) || 0 },
+            { $limit: parseInt(limit) || 10 }
+        ])
+
+        const count = await Product.countDocuments(filter);
+
+        res.json({ data: productlist, count, code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getSkuList = async (req, res) => {
+    try {
+        const { id } = req.query
+        console.log("id is ", id)
+
+        const data = await Product.findOne({ _id: id })
+        console.log("product data is ", data)
+
+        if (!data || data.length === 0) {
+            return utils.handleError(res, {
+                message: "Product not found",
+                code: 404,
+            });
+        }
+
+        const skuListData = [...data.variant]
+        console.log("skulist :", skuListData)
+        return res.status(200).json({
+            message: "Sku variants fetched successfully",
+            data: skuListData,
+            code: 200
+        })
+
+    } catch (error) {
+
+    }
+}
