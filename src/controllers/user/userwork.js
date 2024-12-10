@@ -884,65 +884,50 @@ exports.getMyQueries = async (req, res) => {
     try {
         const userId = req.user._id;
         console.log("userid is ", userId)
-
-        const myQueries = await Query.aggregate([
-            { $match: { createdByUser: new mongoose.Types.ObjectId(userId) } },
-
+        const agg = [
+            {
+                $match: {
+                    createdByUser: new mongoose.Types.ObjectId(userId)
+                }
+            },
             { $unwind: "$queryDetails" },
-
             {
                 $lookup: {
                     from: "products",
-                    localField: "queryDetails.product_id",
-                    foreignField: "_id",
-                    as: "product_data"
+                    let: { sku_id: "$queryDetails.sku_id" },
+                    pipeline: [
+                        { $unwind: "$variant" },
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$variant._id", "$$sku_id"]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                variant: 1
+                            }
+                        }
+                    ],
+                    as: "products"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$products",
+                    preserveNullAndEmptyArrays: true
                 }
             },
 
-            { $unwind: { path: "$product_data", preserveNullAndEmptyArrays: true } },
-
-            { $unwind: { path: "$product_data.variant", preserveNullAndEmptyArrays: true } },
-
-            // {
-            //     $match: {
-            //         $expr: {
-            //             $eq: ["$queryDetails.sku_id", "$product_data.variant._id"]
-            //         }
-            //     }
-            // },
-
-            // {
-            //     $addFields: {
-            //         "queryDetails.skuDetails": "$product_data.variant"
-            //     }
-            // },
             {
                 $addFields: {
-                    "queryDetails.skuDetails": {
-                        _id: "$product_data.variant._id",
-                        sku_id: "$product_data.variant.sku_id",
-                        description: "$product_data.variant.description",
-                        inventory_quantity: "$product_data.variant.inventory_quantity",
-                        images: "$product_data.variant.images",
-                        specification: "$product_data.variant.specification",
-                        is_sku_deleted: "$product_data.variant.is_sku_deleted",
-                        tag: "$product_data.variant.tag"
-                    }
-                }
-            },
-
-            {
-                $group: {
-                    _id: "$_id",
-                    query_unique_id: { $first: "$query_unique_id" },
-                    status: { $first: "$status" },
-                    createdByUser: { $first: "$createdByUser" },
-                    queryDetails: { $push: "$queryDetails" },
-                    createdAt: { $first: "$createdAt" },
-                    updatedAt: { $first: "$updatedAt" }
+                    "queryDetails.sku_details": "$products.variant"
                 }
             }
-        ])
+        ]
+        console.log(JSON.stringify(agg))
+        const myQueries = await Query.aggregate(agg)
 
         return res.status(200).json({
             message: "My Queries Fetched Successfully",

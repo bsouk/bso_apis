@@ -45,7 +45,7 @@ const querySchema = new mongoose.Schema({
                 required: true
             },
             sku_id: {
-                type: String,
+                type: mongoose.Schema.Types.ObjectId,
             },
             price: {
                 type: Number
