@@ -396,14 +396,12 @@ exports.approveRejectProduct = async (req, res) => {
 
 exports.getProductNameList = async (req, res) => {
     try {
-        const userId = req.user._id;
-        console.log("userid is ", userId)
+        // const userId = req.user._id;
+        // console.log("userid is ", userId)
 
-        const { search, offset = 0, limit = 10 } = req.query;
+        const { search } = req.query;
 
-        const filter = {
-            user_id: userId
-        };
+        const filter = {};
 
         if (search) {
             filter.name = { $regex: search, $options: "i" };
@@ -415,8 +413,8 @@ exports.getProductNameList = async (req, res) => {
             { $match: { ...filter } },
             { $project: { _id: 1, name: 1 } },
             { $sort: { createdAt: -1 } },
-            { $skip: parseInt(offset) || 0 },
-            { $limit: parseInt(limit) || 10 }
+            // { $skip: parseInt(offset) || 0 },
+            // { $limit: parseInt(limit) || 10 }
         ])
 
         const count = await Product.countDocuments(filter);
