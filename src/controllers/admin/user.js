@@ -1469,8 +1469,9 @@ exports.changeAvailabilityStatus = async (req, res) => {
 // get supplier list for listing in forms
 exports.supplierListForm = async (req, res) => {
   try {
+    const { user_id } = req.query
     const data = await User.aggregate([
-      { $match: { user_type: 'supplier', is_deleted: false } },
+      { $match: { user_type: 'supplier', _id: new mongoose.Types.ObjectId(user_id), is_deleted: false } },
       {
         $project: {
           _id: 1,
@@ -1484,7 +1485,7 @@ exports.supplierListForm = async (req, res) => {
 
     return res.status(200).json({
       message: "supplier list fetched succesfully",
-      data: data,
+      data: data[0],
       code: 200
     })
   } catch (error) {
