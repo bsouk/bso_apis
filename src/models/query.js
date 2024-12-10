@@ -8,7 +8,7 @@ const querySchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["pending", "completed"],
+        enum: ["pending", "completed", "rejected"],
         default: "pending"
     },
     queryCreation: {

@@ -884,11 +884,19 @@ exports.getMyQueries = async (req, res) => {
     try {
         const userId = req.user._id;
         console.log("userid is ", userId)
+
+        const { status } = req.query
+        const filter = {
+            createdByUser: new mongoose.Types.ObjectId(userId)
+        }
+
+        if (status) {
+            filter.status = status
+        }
+
         const agg = [
             {
-                $match: {
-                    createdByUser: new mongoose.Types.ObjectId(userId)
-                }
+                $match: { ...filter }
             },
             { $unwind: "$queryDetails" },
             {

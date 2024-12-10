@@ -1470,6 +1470,12 @@ exports.changeAvailabilityStatus = async (req, res) => {
 exports.supplierListForm = async (req, res) => {
   try {
     const { user_id } = req.query
+    if (!user_id) {
+      return utils.handleError(res, {
+        message: "User Id is required",
+        code: 400,
+      });
+    }
     const data = await User.aggregate([
       { $match: { user_type: 'supplier', _id: new mongoose.Types.ObjectId(user_id), is_deleted: false } },
       {
