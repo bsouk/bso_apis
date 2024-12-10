@@ -34,12 +34,12 @@ const querySchema = new mongoose.Schema({
     },
     queryDetails: [
         {
-            productData: {
+            product_id: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'products',
                 required: true
             },
-            supplier: {
+            supplier_id: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'users',
                 required: true
@@ -55,7 +55,7 @@ const querySchema = new mongoose.Schema({
                 type: Number,
                 required: true
             },
-            description: {
+            query: {
                 type: String,
                 required: true
             },

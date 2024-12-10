@@ -893,7 +893,7 @@ exports.getMyQueries = async (req, res) => {
             {
                 $lookup: {
                     from: "products",
-                    localField: "queryDetails.productData",
+                    localField: "queryDetails.product_id",
                     foreignField: "_id",
                     as: "product_data"
                 }
