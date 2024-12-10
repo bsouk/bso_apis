@@ -885,7 +885,50 @@ exports.getMyQueries = async (req, res) => {
         const userId = req.user._id;
         console.log("userid is ", userId)
 
-        const myQueries = await Query.find({ createdByUser: userId })
+        const myQueries = await Query.aggregate([
+            { $match: { createdByUser: new mongoose.Types.ObjectId(userId) } },
+
+            { $unwind: "$queryDetails" },
+
+            {
+                $lookup: {
+                    from: "products",
+                    localField: "queryDetails.productData",
+                    foreignField: "_id",
+                    as: "product_data"
+                }
+            },
+
+            { $unwind: { path: "$product_data", preserveNullAndEmptyArrays: true } },
+
+            { $unwind: { path: "$product_data.variant", preserveNullAndEmptyArrays: true } },
+
+            {
+                $match: {
+                    $expr: {
+                        $eq: ["$queryDetails.sku_id", "$product_data.variant.sku_id"]
+                    }
+                }
+            },
+
+            {
+                $addFields: {
+                    "queryDetails.skuDetails": "$product_data.variant"
+                }
+            },
+
+            {
+                $group: {
+                    _id: "$_id",
+                    query_unique_id: { $first: "$query_unique_id" },
+                    status: { $first: "$status" },
+                    createdByUser: { $first: "$createdByUser" },
+                    queryDetails: { $push: "$queryDetails" },
+                    createdAt: { $first: "$createdAt" },
+                    updatedAt: { $first: "$updatedAt" }
+                }
+            }
+        ])
 
         return res.status(200).json({
             message: "My Queries Fetched Successfully",

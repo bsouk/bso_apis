@@ -13,7 +13,7 @@ const querySchema = new mongoose.Schema({
     },
     queryCreation: {
         type: String,
-        default: Date.now()
+        default: Date.now
     },
     queryClose: {
         type: String
@@ -36,11 +36,16 @@ const querySchema = new mongoose.Schema({
         {
             productData: {
                 type: mongoose.Schema.Types.ObjectId,
+                ref: 'products',
                 required: true
             },
             supplier: {
                 type: mongoose.Schema.Types.ObjectId,
+                ref: 'users',
                 required: true
+            },
+            sku_id: {
+                type: String,
             },
             price: {
                 type: Number,
