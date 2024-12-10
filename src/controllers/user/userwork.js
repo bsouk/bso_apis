@@ -968,3 +968,33 @@ exports.getHomeData = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+//get query by id
+exports.getQueryById = async (req, res) => {
+    try {
+        const { id } = req.params
+
+        if (!id) {
+            return utils.handleError(res, {
+                message: "Query id is required",
+                code: 400,
+            });
+        }
+
+        const queryData = await Query.findById({ _id: id })
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Query not found",
+                code: 400,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Query data fetched successfully",
+            data: queryData,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

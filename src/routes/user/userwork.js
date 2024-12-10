@@ -156,4 +156,12 @@ router.get(
     controller.getHomeData
 );
 
+
+router.get(
+    "/getQueryDetails/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getQueryById
+);
+
 module.exports = router;
