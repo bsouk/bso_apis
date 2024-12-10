@@ -48,8 +48,7 @@ const querySchema = new mongoose.Schema({
                 type: String,
             },
             price: {
-                type: Number,
-                required: true
+                type: Number
             },
             quantity: {
                 type: Number,

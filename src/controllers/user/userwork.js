@@ -903,13 +903,13 @@ exports.getMyQueries = async (req, res) => {
 
             { $unwind: { path: "$product_data.variant", preserveNullAndEmptyArrays: true } },
 
-            {
-                $match: {
-                    $expr: {
-                        $eq: ["$queryDetails.sku_id", "$product_data.variant.sku_id"]
-                    }
-                }
-            },
+            // {
+            //     $match: {
+            //         $expr: {
+            //             $eq: ["$queryDetails.sku_id", "$product_data.variant._id"]
+            //         }
+            //     }
+            // },
 
             // {
             //     $addFields: {
