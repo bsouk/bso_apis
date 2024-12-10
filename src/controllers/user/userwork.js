@@ -911,9 +911,23 @@ exports.getMyQueries = async (req, res) => {
                 }
             },
 
+            // {
+            //     $addFields: {
+            //         "queryDetails.skuDetails": "$product_data.variant"
+            //     }
+            // },
             {
                 $addFields: {
-                    "queryDetails.skuDetails": "$product_data.variant"
+                    "queryDetails.skuDetails": {
+                        _id: "$product_data.variant._id",
+                        sku_id: "$product_data.variant.sku_id",
+                        description: "$product_data.variant.description",
+                        inventory_quantity: "$product_data.variant.inventory_quantity",
+                        images: "$product_data.variant.images",
+                        specification: "$product_data.variant.specification",
+                        is_sku_deleted: "$product_data.variant.is_sku_deleted",
+                        tag: "$product_data.variant.tag"
+                    }
                 }
             },
 
