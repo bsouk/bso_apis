@@ -293,12 +293,16 @@ exports.getProductNameList = async (req, res) => {
 
     const { search, offset = 0, limit = 10 } = req.query;
 
-    const filter = {
-      user_id: userId
-    };
+    const filter = {};
 
     if (search) {
       filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (req.query.category_id) {
+      filter.category_id = new mongoose.Types.ObjectId(req.query.category_id)
+    } else {
+      filter.user_id = new mongoose.Types.ObjectId(userId)
     }
 
     console.log("filter is ", filter)
