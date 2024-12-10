@@ -1470,7 +1470,7 @@ exports.changeAvailabilityStatus = async (req, res) => {
 exports.supplierListForm = async (req, res) => {
   try {
     const data = await User.aggregate([
-      { $match: { user_type: 'supplier' } },
+      { $match: { user_type: 'supplier', is_deleted: false } },
       {
         $project: {
           _id: 1,
