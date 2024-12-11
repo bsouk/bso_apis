@@ -875,7 +875,7 @@ exports.addQuery = async (req, res) => {
     } catch (error) {
         utils.handleError(res, error);
     }
-}
+} 
 
 
 //Buyer Queries

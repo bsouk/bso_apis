@@ -140,7 +140,7 @@ router.post(
     requireAuth,
     controller.addQuery
 );
-
+  
 router.get(
     "/getMyQueries",
     trimRequest.all,

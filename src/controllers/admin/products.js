@@ -73,7 +73,6 @@ exports.addProduct = async (req, res) => {
                     code: 404,
                 });
             }
-
             const isExistedSku = await Product.findOne({
                 "variant.sku_id": req.body?.sku_data?.sku_id,
             });
