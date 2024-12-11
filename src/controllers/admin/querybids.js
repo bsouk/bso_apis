@@ -26,7 +26,7 @@ exports.getquery = async (req, res) => {
                     localField: 'createdByUser',
                     foreignField: '_id',
                     as: 'user_detail',
-                    pipeline: [{ $project: { first_name: 1,last_name:1, _id: 1 } }],
+                    // pipeline: [{ $project: { first_name: 1,last_name:1, _id: 1 } }],
                 }
             },
             {
@@ -76,7 +76,7 @@ exports.getquerydetail = async (req, res) => {
                     localField: 'createdByUser',
                     foreignField: '_id',
                     as: 'user_detail',
-                    pipeline: [{ $project: { first_name: 1, last_name: 1, _id: 1 } }],
+                    // pipeline: [{ $project: { first_name: 1, last_name: 1, _id: 1 } }],
                 }
             },
             {
