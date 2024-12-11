@@ -1,6 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const Query = require("../../models/query");
+const BidSetting= require("../../models/bidsetting");
 const utils = require("../../utils/utils");
 
 
@@ -108,4 +109,55 @@ exports.getquerydetail = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+exports.addbidexpiration = async (req, res) => {
+    try {
+        const allowedFields = ["query_id","bid_closing_date", "remainder_setup_date", "query_priority"];
+        const data = req.body;
+
+        const invalidFields = Object.keys(data).filter(field => !allowedFields.includes(field));
+        if (invalidFields.length > 0) {
+            return res.status(400).json({ message: `Invalid parameters: ${invalidFields.join(", ")}`, code: 400 });
+        }
+
+        const existingBid = await BidSetting.findOne({query_id: query_id});
+
+        if (existingBid) {
+            await BidSetting.updateOne({ _id: existingBid._id }, { $set: data });
+            res.json({ message: "BidExpiration updated successfully", code: 200 });
+        } else {
+            const Bid = new BidSetting({
+                ...data,
+            });
+
+            await Bid.save();
+            res.json({ message: "BidExpiration added successfully", code: 200 });
+        }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+exports.getbidexpiration = async (req, res) => {
+    try {
+        const { event_id } = req.query;
+
+        if (!event_id) {
+            return res.status(400).json({ message: 'event_id parameter is required', code: 400 });
+        }
+
+        const existingBid = await BidSetting.findOne({ event_id });
+
+        if (!existingBid) {
+            return res.status(404).json({ message: 'BidExpiration not found for the provided event_id', code: 404 });
+        }
+
+        res.json({ data: existingBid, code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
+
 

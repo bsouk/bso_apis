@@ -185,28 +185,32 @@ exports.getProduct = async (req, res) => {
 
 exports.getProductList = async (req, res) => {
   try {
-    const { search, offset = 0, limit = 10, supplier_id } = req.query;
-
+    const { search, offset = 0, limit = 10, category_id } = req.query;
     const filter = {
       is_deleted: { $ne: true }
     };
-
     if (search) {
       filter.name = { $regex: search, $options: "i" };
     }
-
-    if (supplier_id) {
-      filter.user_id = new mongoose.Types.ObjectId(supplier_id)
+    if (category_id) {
+      filter.category_id = { $in: [new mongoose.Types.ObjectId(category_id)] }
     }
-
     // const productlist = await Product.find(filter)
     //   .sort({ createdAt: -1 })
     //   .skip(offset)
     //   .limit(limit)
     //   .populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id')
-
     const productlist = await Product.aggregate([
       { $match: { ...filter } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'product_categories',
@@ -251,6 +255,7 @@ exports.getProductList = async (req, res) => {
       },
       {
         $project: {
+          user_id: 0,
           brand_id: 0,
           category_id: 0,
           sub_category_id: 0,
@@ -258,9 +263,7 @@ exports.getProductList = async (req, res) => {
         }
       }
     ])
-
     const count = await Product.countDocuments(filter);
-
     res.json({ data: productlist, count, code: 200 });
   } catch (error) {
     utils.handleError(res, error);

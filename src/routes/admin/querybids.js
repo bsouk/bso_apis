@@ -14,12 +14,27 @@ const trimRequest = require('trim-request');
 router.get(
     '/getquery',
     trimRequest.all,
-    // requireAuth,
+    requireAuth,
     controller.getquery
 )
-router.get('/getquerydetail/:id', trimRequest.all, controller.getquerydetail);
-
-
+router.get(
+    '/getquerydetail/:id',
+     trimRequest.all,
+     requireAuth,
+    controller.getquerydetail
+);
+router.put(
+    '/addbidexpiration',
+     trimRequest.all,
+     requireAuth,
+    controller.addbidexpiration
+);
+router.get(
+    '/getbidexpiration/:id',
+     trimRequest.all,
+     requireAuth,
+    controller.getbidexpiration
+);
 
 
 module.exports = router
