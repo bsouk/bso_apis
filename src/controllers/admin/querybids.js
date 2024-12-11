@@ -1,7 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const Query = require("../../models/query");
-const BidSetting= require("../../models/bidsetting");
+const BidSetting = require("../../models/bidsetting");
 const utils = require("../../utils/utils");
 
 
@@ -33,11 +33,11 @@ exports.getquery = async (req, res) => {
             {
                 $addFields: {
                     user_detail: {
-                    $ifNull: [{ $arrayElemAt: ['$user_detail', 0] }, null],
-                  },
-                
+                        $ifNull: [{ $arrayElemAt: ['$user_detail', 0] }, null],
+                    },
+
                 },
-              },
+            },
             {
                 $sort: { createdAt: -1 }
             },
@@ -66,7 +66,7 @@ exports.getquerydetail = async (req, res) => {
 
         const filter = {
             _id: new mongoose.Types.ObjectId(id),
-           
+
         };
 
         const queryDetail = await Query.aggregate([
@@ -115,12 +115,12 @@ exports.addbidexpiration = async (req, res) => {
         const allowedFields = ["query_id", "bid_closing_date", "remainder_setup_date", "query_priority"];
         const data = req.body;
 
-       
+
         const invalidFields = Object.keys(data).filter(field => !allowedFields.includes(field));
         if (invalidFields.length > 0) {
-            return res.status(400).json({ 
-                message: `Invalid parameters: ${invalidFields.join(", ")}`, 
-                code: 400 
+            return res.status(400).json({
+                message: `Invalid parameters: ${invalidFields.join(", ")}`,
+                code: 400
             });
         }
 
@@ -128,28 +128,28 @@ exports.addbidexpiration = async (req, res) => {
 
         if (existingBid) {
             await BidSetting.updateOne(
-                { _id: existingBid._id }, 
+                { _id: existingBid._id },
                 { $set: data }
             );
-            return res.json({ 
-                message: "BidExpiration updated successfully", 
-                code: 200 
+            return res.json({
+                message: "BidExpiration updated successfully",
+                code: 200
             });
         } else {
-           
+
             const newBid = new BidSetting(data);
             await newBid.save();
-            return res.json({ 
-                message: "BidExpiration added successfully", 
-                code: 200 
+            return res.json({
+                message: "BidExpiration added successfully",
+                code: 200
             });
         }
     } catch (error) {
         console.error("Error in addbidexpiration:", error);
-        res.status(500).json({ 
-            message: "Internal Server Error", 
-            code: 500, 
-            error: error.message 
+        res.status(500).json({
+            message: "Internal Server Error",
+            code: 500,
+            error: error.message
         });
     }
 };
@@ -175,6 +175,41 @@ exports.getbidexpiration = async (req, res) => {
     }
 };
 
+exports.deletequery = async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({
+                message: "Please provide a valid array of IDs to delete.",
+                code: 400
+            });
+        }
+
+        const existingRecords = await Query.find({ _id: { $in: ids } });
+
+
+        if (existingRecords.length !== ids.length) {
+            return res.status(404).json({
+                message: "One or more IDs do not match any records.",
+                code: 404
+            });
+        }
+        const result = await Query.deleteMany({ _id: { $in: ids } });
+
+        res.json({
+            message: `${result.deletedCount} query(s) deleted successfully.`,
+            code: 200
+        });
+    } catch (error) {
+        console.error("Error in deletequery:", error);
+        res.status(500).json({
+            message: "Internal Server Error",
+            code: 500,
+            error: error.message
+        });
+    }
+};
 
 
 

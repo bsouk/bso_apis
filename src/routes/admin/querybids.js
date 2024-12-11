@@ -35,6 +35,11 @@ router.get(
      requireAuth,
     controller.getbidexpiration
 );
-
+router.delete(
+    '/deletequery',
+     trimRequest.all,
+     requireAuth,
+    controller.deletequery
+);
 
 module.exports = router
