@@ -117,9 +117,17 @@ exports.getProduct = async (req, res) => {
   try {
     const product_id = req.params.id;
     // const product = await Product.findById(product_id).populate({ path: 'category_id', as: 'category' }).populate({ path: 'sub_category_id', as: 'sub_sub_category' }).populate({ path: 'sub_sub_category_id', as: 'sub_sub_category' }).populate({ path: 'brand_id', as: 'brand' });
-
     const product = await Product.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(product_id), is_deleted: { $ne: true } } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: 'product_categories',
@@ -155,6 +163,7 @@ exports.getProduct = async (req, res) => {
       { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
       {
         $project: {
+          user_id: 0,
           brand_id: 0,
           category_id: 0,
           sub_category_id: 0,
@@ -162,15 +171,12 @@ exports.getProduct = async (req, res) => {
         }
       }
     ])
-
     console.log("productdata is ", product)
-
     if (!product || product.is_deleted === true)
       return utils.handleError(res, {
         message: "Product not found",
         code: 404,
       });
-
     res.json({ data: product[0], code: 200 });
   } catch (error) {
     utils.handleError(res, error);
