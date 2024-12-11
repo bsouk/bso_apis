@@ -53,6 +53,11 @@ router.post(
      requireAuth,
     controller.unassignVariant
 );
-
+// router.post(
+//     '/addquote',
+//      trimRequest.all,
+//      requireAuth,
+//     controller.addquote
+// );
 
 module.exports = router

@@ -283,7 +283,6 @@ exports.unassignVariant = async (req, res) => {
     try {
         const { id, product_id, sku_id, supplier_id } = req.body;
 
-        // Validate required fields
         if (!id || !product_id || !sku_id || !supplier_id) {
             return res.status(400).json({
                 message: "Missing required fields: query_id, product_id, sku_id, or supplier_id.",
@@ -291,13 +290,11 @@ exports.unassignVariant = async (req, res) => {
             });
         }
 
-        // Convert IDs to ObjectId
         const queryObjectId = new mongoose.Types.ObjectId(id);
         const productObjectId = new mongoose.Types.ObjectId(product_id);
         const skuObjectId = new mongoose.Types.ObjectId(sku_id);
         const supplierObjectId = new mongoose.Types.ObjectId(supplier_id);
 
-        // Find the Query document with the matching details
         const query = await Query.findOneAndUpdate(
             {
                 _id: queryObjectId,
@@ -311,10 +308,9 @@ exports.unassignVariant = async (req, res) => {
                     "queryDetails.$.assigned_to.type": null,
                 },
             },
-            { new: true } // Return the updated document
+            { new: true }
         );
 
-        // Check if the query was found and updated
         if (!query) {
             return res.status(404).json({
                 message: "Query not found or no matching queryDetails to unassign.",
@@ -322,11 +318,10 @@ exports.unassignVariant = async (req, res) => {
             });
         }
 
-        // Success response
         res.json({
             message: "Variant unassigned successfully.",
             code: 200,
-            updatedQuery: query, // Optional: return updated query for verification
+            updatedQuery: query, 
         });
     } catch (error) {
         console.error("Error in unassignVariant:", error);
