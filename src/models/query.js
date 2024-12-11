@@ -61,6 +61,10 @@ const querySchema = new mongoose.Schema({
             notes: {
                 type: String,
                 required: true
+            },
+            assigned_to: {
+                variant_assigned: { type: mongoose.Schema.Types.ObjectId , required: false,default:null}, 
+                type: { type: String , required: false,default:null},
             }
         }
     ]

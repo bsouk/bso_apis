@@ -42,6 +42,10 @@ const productSchema = new mongoose.Schema(
         price: {
           type: Number,
         },
+        assigned_to:{
+          type: String,
+          required: false,
+        },
         inventory_quantity: {
           type: Number,
         },

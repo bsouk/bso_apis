@@ -41,5 +41,18 @@ router.delete(
      requireAuth,
     controller.deletequery
 );
+router.post(
+    '/updateAssignedProduct',
+     trimRequest.all,
+     requireAuth,
+    controller.updateAssignedProduct
+);
+router.post(
+    '/unassignVariant',
+     trimRequest.all,
+     requireAuth,
+    controller.unassignVariant
+);
+
 
 module.exports = router
