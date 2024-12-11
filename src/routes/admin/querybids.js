@@ -30,7 +30,7 @@ router.put(
     controller.addbidexpiration
 );
 router.get(
-    '/getbidexpiration/:id',
+    '/getbidexpiration',
      trimRequest.all,
      requireAuth,
     controller.getbidexpiration

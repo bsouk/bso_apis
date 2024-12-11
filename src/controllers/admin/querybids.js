@@ -112,41 +112,58 @@ exports.getquerydetail = async (req, res) => {
 
 exports.addbidexpiration = async (req, res) => {
     try {
-        const allowedFields = ["query_id","bid_closing_date", "remainder_setup_date", "query_priority"];
+        const allowedFields = ["query_id", "bid_closing_date", "remainder_setup_date", "query_priority"];
         const data = req.body;
 
+       
         const invalidFields = Object.keys(data).filter(field => !allowedFields.includes(field));
         if (invalidFields.length > 0) {
-            return res.status(400).json({ message: `Invalid parameters: ${invalidFields.join(", ")}`, code: 400 });
+            return res.status(400).json({ 
+                message: `Invalid parameters: ${invalidFields.join(", ")}`, 
+                code: 400 
+            });
         }
 
-        const existingBid = await BidSetting.findOne({query_id: query_id});
+        const existingBid = await BidSetting.findOne({ query_id: data.query_id });
 
         if (existingBid) {
-            await BidSetting.updateOne({ _id: existingBid._id }, { $set: data });
-            res.json({ message: "BidExpiration updated successfully", code: 200 });
-        } else {
-            const Bid = new BidSetting({
-                ...data,
+            await BidSetting.updateOne(
+                { _id: existingBid._id }, 
+                { $set: data }
+            );
+            return res.json({ 
+                message: "BidExpiration updated successfully", 
+                code: 200 
             });
-
-            await Bid.save();
-            res.json({ message: "BidExpiration added successfully", code: 200 });
+        } else {
+           
+            const newBid = new BidSetting(data);
+            await newBid.save();
+            return res.json({ 
+                message: "BidExpiration added successfully", 
+                code: 200 
+            });
         }
     } catch (error) {
-        utils.handleError(res, error);
+        console.error("Error in addbidexpiration:", error);
+        res.status(500).json({ 
+            message: "Internal Server Error", 
+            code: 500, 
+            error: error.message 
+        });
     }
 };
 
+
 exports.getbidexpiration = async (req, res) => {
     try {
-        const { event_id } = req.query;
+        const data = req.query;
 
-        if (!event_id) {
+        if (!data.event_id) {
             return res.status(400).json({ message: 'event_id parameter is required', code: 400 });
         }
 
-        const existingBid = await BidSetting.findOne({ event_id });
+        const existingBid = await BidSetting.findOne({ query_id: data.event_id });
 
         if (!existingBid) {
             return res.status(404).json({ message: 'BidExpiration not found for the provided event_id', code: 404 });
