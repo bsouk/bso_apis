@@ -885,13 +885,18 @@ exports.getMyQueries = async (req, res) => {
         const userId = req.user._id;
         console.log("userid is ", userId)
 
-        const { status } = req.query
+        const { status, search, offset = 0, limit = 10 } = req.query
+
         const filter = {
             createdByUser: new mongoose.Types.ObjectId(userId)
         }
 
         if (status) {
             filter.status = status
+        }
+
+        if (search) {
+            filter.query_unique_id = { $regex: search, $options: "i" };
         }
 
         const agg = [
@@ -932,14 +937,19 @@ exports.getMyQueries = async (req, res) => {
                 $addFields: {
                     "queryDetails.sku_details": "$products.variant"
                 }
-            }
+            },
+            { $skip: parseInt(offset) || 0 },
+            { $limit: parseInt(limit) || 10 }
         ]
         console.log(JSON.stringify(agg))
         const myQueries = await Query.aggregate(agg)
 
+        const count = await Query.countDocuments(agg);
+
         return res.status(200).json({
             message: "My Queries Fetched Successfully",
             data: myQueries,
+            count: count,
             code: 200
         })
     } catch (error) {

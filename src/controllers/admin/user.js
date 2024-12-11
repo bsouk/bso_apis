@@ -5,6 +5,7 @@ const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
+const product = require("../../models/product");
 
 function createNewPassword() {
   const password = generatePassword.generate({
@@ -1469,15 +1470,24 @@ exports.changeAvailabilityStatus = async (req, res) => {
 // get supplier list for listing in forms
 exports.supplierListForm = async (req, res) => {
   try {
-    const { user_id } = req.query
-    if (!user_id) {
+    const { id } = req.query
+    if (!id) {
       return utils.handleError(res, {
-        message: "User Id is required",
+        message: "Id is required",
         code: 400,
       });
     }
+
+    const productData = await product.findById({ _id: id });
+    if (!productData) {
+      return utils.handleError(res, {
+        message: "product not found",
+        code: 400,
+      });
+    }
+
     const data = await User.aggregate([
-      { $match: { user_type: 'supplier', _id: new mongoose.Types.ObjectId(user_id), is_deleted: false } },
+      { $match: { user_type: 'supplier', _id: new mongoose.Types.ObjectId(productData?.user_id), is_deleted: false } },
       {
         $project: {
           _id: 1,
