@@ -883,76 +883,117 @@ exports.addQuery = async (req, res) => {
 exports.getMyQueries = async (req, res) => {
     try {
         const userId = req.user._id;
-        console.log("userid is ", userId)
-
-        const { status, search, offset = 0, limit = 10 } = req.query
-
+        console.log("userid is ", userId);
+        const { status, search, offset = 0, limit = 10 } = req.query;
+        // Base filter
         const filter = {
-            createdByUser: new mongoose.Types.ObjectId(userId)
-        }
-
+            createdByUser: new mongoose.Types.ObjectId(userId),
+        };
+        // Additional filters
         if (status) {
-            filter.status = status
+            filter.status = status;
         }
-
         if (search) {
             filter.query_unique_id = { $regex: search, $options: "i" };
         }
-
+        // Aggregation pipeline
         const agg = [
             {
-                $match: { ...filter }
+                $match: filter,
             },
-            { $unwind: "$queryDetails" },
+            {
+                $unwind: {
+                    path: "$queryDetails",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
             {
                 $lookup: {
                     from: "products",
                     let: { sku_id: "$queryDetails.sku_id" },
                     pipeline: [
-                        { $unwind: "$variant" },
                         {
                             $match: {
-                                $expr: {
-                                    $eq: ["$variant._id", "$$sku_id"]
-                                }
-                            }
+                                $expr: { $in: ["$$sku_id", "$variant._id"] },
+                            },
+                        },
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "user_id",
+                                foreignField: "_id",
+                                as: "user",
+                            },
+                        },
+                        {
+                            $unwind: {
+                                path: "$user",
+                                preserveNullAndEmptyArrays: true,
+                            },
                         },
                         {
                             $project: {
-                                variant: 1
-                            }
-                        }
+                                name: 1,
+                                variant: {
+                                    $filter: {
+                                        input: "$variant",
+                                        as: "v",
+                                        cond: { $eq: ["$$v._id", "$$sku_id"] },
+                                    },
+                                },
+                                user: 1,
+                            },
+                        },
                     ],
-                    as: "products"
-                }
+                    as: "product",
+                },
             },
             {
                 $unwind: {
-                    path: "$products",
-                    preserveNullAndEmptyArrays: true
-                }
+                    path: "$product",
+                    preserveNullAndEmptyArrays: true,
+                },
             },
-
             {
                 $addFields: {
-                    "queryDetails.sku_details": "$products.variant"
-                }
+                    "queryDetails.product": {
+                        name : "$product.name",
+                        variant: {
+                            $arrayElemAt: ["$product.variant", 0],
+                        },
+                        user: "$product.user",
+
+                    },
+                  
+                },
             },
-            { $skip: parseInt(offset) || 0 },
-            { $limit: parseInt(limit) || 10 }
-        ]
-        console.log(JSON.stringify(agg))
-        const myQueries = await Query.aggregate(agg)
-
-        const count = await Query.countDocuments(agg);
-
+            {
+                $project: {
+                    "queryDetails.product.user.password": 0, // Avoid sending sensitive user data
+                    product: 0, // Remove intermediate lookup data
+                },
+            },
+            {
+                $skip: parseInt(offset) || 0,
+            },
+            {
+                $limit: parseInt(limit) || 10,
+            },
+        ];
+        // Aggregation result
+        const myQueries = await Query.aggregate(agg);
+        // Count documents
+        const countAgg = [...agg, { $count: "total" }];
+        const countResult = await Query.aggregate(countAgg);
+        const count = countResult.length > 0 ? countResult[0].total : 0;
         return res.status(200).json({
             message: "My Queries Fetched Successfully",
             data: myQueries,
             count: count,
-            code: 200
-        })
+            code: 200,
+        });
     } catch (error) {
+        console.error(error);
         utils.handleError(res, error);
     }
 }
@@ -991,7 +1032,87 @@ exports.getQueryById = async (req, res) => {
             });
         }
 
-        const queryData = await Query.findById({ _id: id })
+        const agg = [
+            {
+                $match: { _id: new mongoose.Types.ObjectId(id) },
+
+            },
+            {
+                $unwind: {
+                    path: "$queryDetails",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    let: { sku_id: "$queryDetails.sku_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $in: ["$$sku_id", "$variant._id"] },
+                            },
+                        },
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "user_id",
+                                foreignField: "_id",
+                                as: "user",
+                            },
+                        },
+                        {
+                            $unwind: {
+                                path: "$user",
+                                preserveNullAndEmptyArrays: true,
+                            },
+                        },
+                        {
+                            $project: {
+                                name: 1,
+                                variant: {
+                                    $filter: {
+                                        input: "$variant",
+                                        as: "v",
+                                        cond: { $eq: ["$$v._id", "$$sku_id"] },
+                                    },
+                                },
+                                user: 1,
+                            },
+                        },
+                    ],
+                    as: "product",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$product",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $addFields: {
+                    "queryDetails.product": {
+                        name : "$product.name",
+                        variant: {
+                            $arrayElemAt: ["$product.variant", 0],
+                        },
+                        user: "$product.user",
+
+                    },
+                  
+                },
+            },
+            {
+                $project: {
+                    "queryDetails.product.user.password": 0, // Avoid sending sensitive user data
+                    product: 0, // Remove intermediate lookup data
+                },
+            },
+          
+        ];
+
+        const queryData = await Query.aggregate(agg)
         if (!queryData) {
             return utils.handleError(res, {
                 message: "Query not found",
@@ -999,9 +1120,17 @@ exports.getQueryById = async (req, res) => {
             });
         }
 
+        if(!queryData[0]){
+            return utils.handleError(res, {
+                message: "Query not found",
+                code: 400,
+            });
+
+        }
+
         return res.status(200).json({
             message: "Query data fetched successfully",
-            data: queryData,
+            data: queryData[0],
             code: 200
         })
     } catch (error) {
