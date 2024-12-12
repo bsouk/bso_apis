@@ -140,7 +140,7 @@ router.post(
     requireAuth,
     controller.addQuery
 );
-  
+
 router.get(
     "/getMyQueries",
     trimRequest.all,
@@ -162,6 +162,22 @@ router.get(
     trimRequest.all,
     requireAuth,
     controller.getQueryById
+);
+
+
+//edit query
+router.patch(
+    "/editQuery/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.editQuery
+);
+
+router.patch(
+    "/deleteQuery/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteQuery
 );
 
 module.exports = router;

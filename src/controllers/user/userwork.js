@@ -1233,9 +1233,6 @@ exports.getQueryById = async (req, res) => {
     }
 }
 
-
-
-
 //get Home Api data
 exports.getHomeData = async (req, res) => {
     try {
@@ -1252,6 +1249,58 @@ exports.getHomeData = async (req, res) => {
             },
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+// edit query 
+exports.editQuery = async (req, res) => {
+    try {
+        const { id } = req.params
+        const queryData = await Query.findById({ _id: id })
+
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Query not found",
+                code: 400,
+            });
+        }
+
+        const result = await Query.findByIdAndUpdate(id, req.body)
+        console.log(result)
+
+        return res.status(200).json({
+            message: "Query edited successfully",
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+//delete query
+exports.deleteQuery = async (req, res) => {
+    try {
+        const { id } = req.params
+        const queryData = await Query.findById({ _id: id })
+
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Query not found",
+                code: 400,
+            });
+        }
+
+        const result = await Query.deleteOne(id)
+        console.log(result)
+
+        return res.status(200).json({
+            message: "Query deleted successfully",
+            code: 200
+        })
+
     } catch (error) {
         utils.handleError(res, error);
     }

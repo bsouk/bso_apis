@@ -28,11 +28,21 @@ exports.getquery = async (req, res) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'bidsettings',
+                    localField: '_id',
+                    foreignField: 'query_id',
+                    as: 'bid_details'
+                }
+            },
+            {
                 $addFields: {
                     user_detail: {
                         $ifNull: [{ $arrayElemAt: ['$user_detail', 0] }, null],
                     },
-
+                    bid_details: {
+                        $ifNull: [{ $arrayElemAt: ['$bid_details', 0] }, null],
+                    }
                 },
             },
             {
@@ -88,6 +98,14 @@ exports.getquerydetail = async (req, res) => {
                 }
             },
             {
+                $lookup: {
+                    from: 'bidsettings',
+                    localField: '_id',
+                    foreignField: 'query_id',
+                    as: 'bid_details'
+                }
+            },
+            {
                 $addFields: {
                     user_detail: {
                         $ifNull: [{ $arrayElemAt: ['$user_detail', 0] }, null],
@@ -95,6 +113,9 @@ exports.getquerydetail = async (req, res) => {
                     product_detail: {
                         $ifNull: [{ $arrayElemAt: ['$product_detail', 0] }, null],
                     },
+                    bid_details: {
+                        $ifNull: [{ $arrayElemAt: ['$bid_details', 0] }, null],
+                    }
                 },
             },
         ]);
@@ -212,10 +233,10 @@ exports.deletequery = async (req, res) => {
 
 exports.updateAssignedProduct = async (req, res) => {
     try {
-        const { id,  product_id, sku_id, supplier_id } = req.body;
+        const { id, product_id, sku_id, supplier_id } = req.body;
 
-        console.log("=============req.body",req.body)
-        if (!id ||  !product_id || !sku_id || !supplier_id) {
+        console.log("=============req.body", req.body)
+        if (!id || !product_id || !sku_id || !supplier_id) {
             return res.status(400).json({
                 message: "Missing required fields: id, user_id, product_id, sku_id, or supplier_id.",
                 code: 400
@@ -233,7 +254,7 @@ exports.updateAssignedProduct = async (req, res) => {
             "queryDetails.variant_id": skuObjectId,
             "queryDetails.supplier_id": supplierObjectId
         });
-        console.log("=============query",query)
+        console.log("=============query", query)
 
         if (!query) {
             return res.status(404).json({
@@ -320,7 +341,7 @@ exports.unassignVariant = async (req, res) => {
         res.json({
             message: "Variant unassigned successfully.",
             code: 200,
-            updatedQuery: query, 
+            updatedQuery: query,
         });
     } catch (error) {
         console.error("Error in unassignVariant:", error);
