@@ -1256,10 +1256,34 @@ exports.getHomeData = async (req, res) => {
 
 
 // edit query 
+// exports.editQuery = async (req, res) => {
+//     try {
+//         const { id } = req.params
+//         const queryData = await Query.findById({ _id: id })
+
+//         if (!queryData) {
+//             return utils.handleError(res, {
+//                 message: "Query not found",
+//                 code: 400,
+//             });
+//         }
+
+//         const result = await Query.findByIdAndUpdate(id, req.body)
+//         console.log(result)
+
+//         return res.status(200).json({
+//             message: "Query edited successfully",
+//             code: 200
+//         })
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }
+
 exports.editQuery = async (req, res) => {
     try {
-        const { id } = req.params
-        const queryData = await Query.findById({ _id: id })
+        const { id } = req.params;
+        const queryData = await Query.findById({ _id: id });
 
         if (!queryData) {
             return utils.handleError(res, {
@@ -1268,17 +1292,52 @@ exports.editQuery = async (req, res) => {
             });
         }
 
-        const result = await Query.findByIdAndUpdate(id, req.body)
-        console.log(result)
+        const updateFields = {};
+
+        if (req.body.queryDetails && Array.isArray(req.body.queryDetails)) {
+            req.body.queryDetails.forEach(queryDetail => {
+                if (queryDetail._id) {
+                    const queryDetailIndex = queryData.queryDetails.findIndex(
+                        detail => detail._id.toString() === queryDetail._id.toString()
+                    );
+
+                    if (queryDetailIndex > -1) {
+                        Object.keys(queryDetail).forEach(key => {
+                            if (key !== '_id') {
+                                updateFields[`queryDetails.${queryDetailIndex}.${key}`] = queryDetail[key];
+                            }
+                        });
+                    }
+                }
+            });
+        } else {
+            Object.keys(req.body).forEach(key => {
+                if (key !== 'queryDetails') {
+                    updateFields[key] = req.body[key];
+                }
+            });
+        }
+
+        console.log('updateFields : ', updateFields);
+
+        const result = await Query.findByIdAndUpdate(
+            { _id: id },
+            { $set: updateFields },
+            { new: true }
+        );
+
+        console.log(result);
 
         return res.status(200).json({
             message: "Query edited successfully",
-            code: 200
-        })
+            code: 200,
+            data: result
+        });
     } catch (error) {
         utils.handleError(res, error);
     }
-}
+};
+
 
 //delete query
 exports.deleteQuery = async (req, res) => {
@@ -1293,7 +1352,7 @@ exports.deleteQuery = async (req, res) => {
             });
         }
 
-        const result = await Query.deleteOne({_id : id})
+        const result = await Query.deleteOne({ _id: id })
         console.log(result)
 
         return res.status(200).json({

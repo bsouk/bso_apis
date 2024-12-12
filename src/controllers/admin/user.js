@@ -193,7 +193,8 @@ exports.getCustomerList = async (req, res) => {
           last_login: 1,
           unique_user_id: 1,
           is_company_approved: 1,
-          is_user_approved_by_admin: 1
+          is_user_approved_by_admin: 1,
+          user_type: 1
         },
       },
     ]);
