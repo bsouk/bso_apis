@@ -128,6 +128,7 @@ exports.getProduct = async (req, res) => {
         }
       },
       { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+
       {
         $lookup: {
           from: 'product_categories',
@@ -163,6 +164,8 @@ exports.getProduct = async (req, res) => {
       { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
       {
         $project: {
+          'user.password': 0,
+          // 'user.email': 0,
           user_id: 0,
           brand_id: 0,
           category_id: 0,
@@ -186,12 +189,14 @@ exports.getProduct = async (req, res) => {
 exports.getProductList = async (req, res) => {
   try {
     const { search, offset = 0, limit = 10, category_id } = req.query;
+
     const filter = {
       is_deleted: { $ne: true }
     };
     if (search) {
       filter.name = { $regex: search, $options: "i" };
     }
+
     if (category_id) {
       filter.category_id = { $in: [new mongoose.Types.ObjectId(category_id)] }
     }
@@ -255,6 +260,8 @@ exports.getProductList = async (req, res) => {
       },
       {
         $project: {
+          'user.password': 0,
+          // 'user.email': 0,
           user_id: 0,
           brand_id: 0,
           category_id: 0,

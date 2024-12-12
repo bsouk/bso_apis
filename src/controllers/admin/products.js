@@ -214,6 +214,8 @@ exports.getProduct = async (req, res) => {
             { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
             {
                 $project: {
+                    'user.password': 0,
+                    // 'user.email': 0,
                     brand_id: 0,
                     category_id: 0,
                     sub_category_id: 0,
@@ -314,6 +316,8 @@ exports.getProductList = async (req, res) => {
             },
             {
                 $project: {
+                    'user.password': 0,
+                    // 'user.email': 0,
                     brand_id: 0,
                     category_id: 0,
                     sub_category_id: 0,

@@ -880,6 +880,92 @@ exports.addQuery = async (req, res) => {
 
 //Buyer Queries
 
+// exports.getMyQueries = async (req, res) => {
+//     try {
+//         const userId = req.user._id;
+//         console.log("userid is ", userId)
+
+//         const { status, search, offset = 0, limit = 10 } = req.query
+
+//         const filter = {
+//             createdByUser: new mongoose.Types.ObjectId(userId)
+//         }
+
+//         if (status) {
+//             filter.status = status
+//         }
+
+//         if (search) {
+//             filter.query_unique_id = { $regex: search, $options: "i" };
+//         }
+
+
+
+
+//         const agg = [
+//             {
+//                 $match: { ...filter }
+//             },
+//             { $unwind: "$queryDetails" },
+//             {
+//                 $lookup: {
+//                     from: "products",
+//                     let: { sku_id: "$queryDetails.sku_id" },
+//                     pipeline: [
+
+
+
+//                     {
+//                         $lookup: {
+//                             from: "users",
+//                             localField: "user_id",
+//                             foreignField : "_id",
+//                             as: "user"
+
+//                         }
+//                     },
+//                         {
+//                             $project: {
+//                                 variant: 1,
+//                                 user_id:1,
+//                                 name : 1,
+//                             }
+//                         }
+//                     ],
+//                     as: "products"
+//                 }
+//             },
+//             {
+//                 $unwind: {
+//                     path: "$products",
+//                     preserveNullAndEmptyArrays: true
+//                 }
+//             },
+
+//             {
+//                 $addFields: {
+//                     "queryDetails.sku_details": "$products.variant"
+//                 }
+//             },
+//             { $skip: parseInt(offset) || 0 },
+//             { $limit: parseInt(limit) || 10 }
+//         ]
+//         console.log(JSON.stringify(agg))
+//         const myQueries = await Query.aggregate(agg)
+
+//         const count = await Query.countDocuments(agg);
+
+//         return res.status(200).json({
+//             message: "My Queries Fetched Successfully",
+//             data: myQueries,
+//             count: count,
+//             code: 200
+//         })
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }
+
 exports.getMyQueries = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -996,29 +1082,7 @@ exports.getMyQueries = async (req, res) => {
         console.error(error);
         utils.handleError(res, error);
     }
-}
-
-
-//get Home Api data
-exports.getHomeData = async (req, res) => {
-    try {
-        const categorylist = await Category.find().limit(10)
-        const adslist = await ads.find().limit(10)
-        const topProduct = await Product.find().limit(10)
-
-        return res.status(200).json({
-            message: "data Fetched Successfully",
-            data: {
-                categories: categorylist,
-                ads: adslist,
-                topProduct
-            },
-            code: 200
-        })
-    } catch (error) {
-        utils.handleError(res, error);
-    }
-}
+};
 
 //get query by id
 exports.getQueryById = async (req, res) => {
@@ -1131,6 +1195,30 @@ exports.getQueryById = async (req, res) => {
         return res.status(200).json({
             message: "Query data fetched successfully",
             data: queryData[0],
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+
+//get Home Api data
+exports.getHomeData = async (req, res) => {
+    try {
+        const categorylist = await Category.find().limit(10)
+        const adslist = await ads.find().limit(10)
+        const topProduct = await Product.find().limit(10)
+
+        return res.status(200).json({
+            message: "data Fetched Successfully",
+            data: {
+                categories: categorylist,
+                ads: adslist,
+                topProduct
+            },
             code: 200
         })
     } catch (error) {
