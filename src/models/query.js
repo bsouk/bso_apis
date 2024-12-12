@@ -34,18 +34,85 @@ const querySchema = new mongoose.Schema({
     },
     queryDetails: [
         {
-            product_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'products',
-                required: true
+            // product_id: {
+            //     type: mongoose.Schema.Types.ObjectId,
+            //     ref: 'products',
+            //     required: true
+            // },
+            // supplier_id: {
+            //     type: mongoose.Schema.Types.ObjectId,
+            //     ref: 'users',
+            //     required: true
+            // },
+            // variant_id: {
+            //     type: mongoose.Schema.Types.ObjectId,
+            // },
+            product: {
+                id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'products'
+                },
+                name: {
+                    type: String
+                },
             },
-            supplier_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'users',
-                required: true
+            variant: {
+                _id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                },
+                sku_id: {
+                    type: String
+                },
+                description: {
+                    type: String,
+                },
+                price: {
+                    type: Number,
+                },
+                assigned_to: {
+                    type: String,
+                    required: false,
+                },
+                inventory_quantity: {
+                    type: Number,
+                },
+                discount: {
+                    type: Number,
+                },
+                bulk_discount: {
+                    type: Number,
+                },
+                images: {
+                    type: [String]
+                },
+                specification: [
+                    {
+                        specification_type: {
+                            type: String
+                        },
+                        value: {
+                            type: String
+                        }
+                    }
+                ],
+                is_sku_deleted: {
+                    type: Boolean,
+                    default: false
+                },
+                tag: {
+                    type: [String]
+                },
             },
-            variant_id: {
-                type: mongoose.Schema.Types.ObjectId,
+            supplier: {
+                _id: {
+                    type: mongoose.Types.ObjectId
+                },
+                name: {
+                    type: String
+                },
+                profile_image: {
+                    type: String
+                }
             },
             price: {
                 type: Number
@@ -63,8 +130,8 @@ const querySchema = new mongoose.Schema({
                 required: true
             },
             assigned_to: {
-                variant_assigned: { type: mongoose.Schema.Types.ObjectId , required: false,default:null}, 
-                type: { type: String , required: false,default:null},
+                variant_assigned: { type: mongoose.Schema.Types.ObjectId, required: false, default: null },
+                type: { type: String, required: false, default: null },
             }
         }
     ]

@@ -1471,37 +1471,43 @@ exports.changeAvailabilityStatus = async (req, res) => {
 exports.supplierListForm = async (req, res) => {
   try {
     const { id } = req.query
-    if (!id) {
-      return utils.handleError(res, {
-        message: "Id is required",
-        code: 400,
-      });
-    }
-
-    const productData = await product.findById({ _id: id });
-    if (!productData) {
-      return utils.handleError(res, {
-        message: "product not found",
-        code: 400,
-      });
-    }
-
-    const data = await User.aggregate([
-      { $match: { user_type: 'supplier', _id: new mongoose.Types.ObjectId(productData?.user_id), is_deleted: false } },
-      {
-        $project: {
-          _id: 1,
-          full_name: 1,
-          first_name: 1,
-          last_name: 1
-        }
+    // if (!id) {
+    //   return utils.handleError(res, {
+    //     message: "Id is required",
+    //     code: 400,
+    //   });
+    // }
+    let data = []
+    if (id) {
+      const productData = await product.findById({ _id: id });
+      if (!productData) {
+        return utils.handleError(res, {
+          message: "product not found",
+          code: 400,
+        });
       }
+
+      data = await User.aggregate([
+        { $match: { user_type: 'supplier', _id: new mongoose.Types.ObjectId(productData?.user_id), is_deleted: false } },
+        {
+          $project: {
+            _id: 1,
+            full_name: 1,
+            first_name: 1,
+            last_name: 1
+          }
+        }
+      ])
+      console.log("data is ", data)
+    }
+
+    data = await User.aggregate([
+      {$match : {}}
     ])
-    console.log("data is ", data)
 
     return res.status(200).json({
       message: "supplier list fetched succesfully",
-      data: data[0],
+      data: data,
       code: 200
     })
   } catch (error) {
