@@ -1499,19 +1499,19 @@ exports.supplierListForm = async (req, res) => {
         }
       ])
       console.log("data is ", data)
-    }
-
-    data = await User.aggregate([
-      { $match: { user_type: 'supplier', is_deleted: false } },
-      {
-        $project: {
-          _id: 1,
-          full_name: 1,
-          first_name: 1,
-          last_name: 1
+    } else {
+      data = await User.aggregate([
+        { $match: { user_type: 'supplier', is_deleted: false } },
+        {
+          $project: {
+            _id: 1,
+            full_name: 1,
+            first_name: 1,
+            last_name: 1
+          }
         }
-      }
-    ])
+      ])
+    }
 
     return res.status(200).json({
       message: "supplier list fetched succesfully",
