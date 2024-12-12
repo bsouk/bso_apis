@@ -1132,81 +1132,79 @@ exports.getQueryById = async (req, res) => {
         const agg = [
             {
                 $match: { _id: new mongoose.Types.ObjectId(id) },
+            },
+            // {
+            //     $unwind: {
+            //         path: "$queryDetails",
+            //         preserveNullAndEmptyArrays: true,
+            //     },
+            // },
+            // {
+            //     $lookup: {
+            //         from: "products",
+            //         let: { sku_id: "$queryDetails.variant_id" },
+            //         pipeline: [
+            //             {
+            //                 $match: {
+            //                     $expr: { $in: ["$$sku_id", "$variant._id"] },
+            //                 },
+            //             },
+            //             {
+            //                 $lookup: {
+            //                     from: "users",
+            //                     localField: "user_id",
+            //                     foreignField: "_id",
+            //                     as: "user",
+            //                 },
+            //             },
+            //             {
+            //                 $unwind: {
+            //                     path: "$user",
+            //                     preserveNullAndEmptyArrays: true,
+            //                 },
+            //             },
+            //             {
+            //                 $project: {
+            //                     name: 1,
+            //                     variant: {
+            //                         $filter: {
+            //                             input: "$variant",
+            //                             as: "v",
+            //                             cond: { $eq: ["$$v._id", "$$sku_id"] },
+            //                         },
+            //                     },
+            //                     user: 1,
+            //                 },
+            //             },
+            //         ],
+            //         as: "product",
+            //     },
+            // },
+            // {
+            //     $unwind: {
+            //         path: "$product",
+            //         preserveNullAndEmptyArrays: true,
+            //     },
+            // },
+            // {
+            //     $addFields: {
+            //         "queryDetails.product": {
+            //             name: "$product.name",
+            //             variant: {
+            //                 $arrayElemAt: ["$product.variant", 0],
+            //             },
+            //             user: "$product.user",
 
-            },
-            {
-                $unwind: {
-                    path: "$queryDetails",
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
-                $lookup: {
-                    from: "products",
-                    let: { sku_id: "$queryDetails.variant_id" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: { $in: ["$$sku_id", "$variant._id"] },
-                            },
-                        },
-                        {
-                            $lookup: {
-                                from: "users",
-                                localField: "user_id",
-                                foreignField: "_id",
-                                as: "user",
-                            },
-                        },
-                        {
-                            $unwind: {
-                                path: "$user",
-                                preserveNullAndEmptyArrays: true,
-                            },
-                        },
-                        {
-                            $project: {
-                                name: 1,
-                                variant: {
-                                    $filter: {
-                                        input: "$variant",
-                                        as: "v",
-                                        cond: { $eq: ["$$v._id", "$$sku_id"] },
-                                    },
-                                },
-                                user: 1,
-                            },
-                        },
-                    ],
-                    as: "product",
-                },
-            },
-            {
-                $unwind: {
-                    path: "$product",
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
-                $addFields: {
-                    "queryDetails.product": {
-                        name: "$product.name",
-                        variant: {
-                            $arrayElemAt: ["$product.variant", 0],
-                        },
-                        user: "$product.user",
+            //         },
 
-                    },
-
-                },
-            },
-            {
-                $project: {
-                    "queryDetails.product.user.password": 0, // Avoid sending sensitive user data
-                    product: 0, // Remove intermediate lookup data
-                },
-            },
-
+            //     },
+            // },
+            // {
+            //     $project: {
+            //         "queryDetails.product.user.password": 0, // Avoid sending sensitive user data
+            //         product: 0, // Remove intermediate lookup data
+            //     },
+            // },
         ];
 
         const queryData = await Query.aggregate(agg)

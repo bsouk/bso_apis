@@ -4,9 +4,6 @@ const Query = require("../../models/query");
 const BidSetting = require("../../models/bidsetting");
 const utils = require("../../utils/utils");
 
-
-
-
 exports.getquery = async (req, res) => {
     try {
         const { search, offset = 0, limit = 10 } = req.query;
@@ -56,6 +53,8 @@ exports.getquery = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+
 exports.getquerydetail = async (req, res) => {
     try {
         const { id } = req.params;
