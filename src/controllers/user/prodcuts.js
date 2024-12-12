@@ -280,6 +280,7 @@ exports.getProductList = async (req, res) => {
 exports.editProduct = async (req, res) => {
   try {
     const productId = req.params.id
+    console.log("req.body is ", req.body)
 
     const product = await Product.findById(productId);
 
@@ -289,7 +290,53 @@ exports.editProduct = async (req, res) => {
         code: 404,
       });
 
-    await Product.findByIdAndUpdate(productId, req.body);
+    let data_to_edit = {}
+    // if (req.body.variant) {
+    //     const isExisted = await Product.find({ 'variant.sku_id': { $in: req.body.variant.sku_id } })
+    //     console.log("isExisted ", isExisted)
+    //     if (!isExisted) {
+    //         return utils.handleError(res, {
+    //             message: "sku_id not existed",
+    //             code: 404,
+    //         });
+    //     }
+    //     data_to_edit.variant = [...req.body.variant]
+    // }
+    if (req.body.category_id) {
+      data_to_edit.category_id = [...req.body.category_id]
+    }
+    if (req.body.sub_category_id) {
+      data_to_edit.sub_category_id = [...req.body.sub_category_id]
+    }
+    if (req.body.sub_sub_category_id) {
+      data_to_edit.sub_sub_category_id = [...req.body.sub_sub_category_id]
+    }
+    if (req.body.name) {
+      data_to_edit.name = req.body.name
+    }
+    if (req.body.brand_id) {
+      data_to_edit.brand_id = req.body.brand_id
+    }
+    if (req.body.variant) {
+      for (const newVariant of req.body.variant) {
+        const existingVariantIndex = product.variant.findIndex(
+          (v) => v.sku_id === newVariant.sku_id
+        );
+
+        if (existingVariantIndex !== -1) {
+          Object.assign(product.variant[existingVariantIndex], newVariant);
+        } else {
+          return utils.handleError(res, {
+            message: `Variant with sku_id ${newVariant.sku_id} not found`,
+            code: 404,
+          });
+        }
+      }
+      data_to_edit.variant = product.variant;
+    }
+
+    await Product.findByIdAndUpdate(productId, data_to_edit, { new: true });
+
     const updatedproduct = await Product.findById(productId);
 
     res.json({
