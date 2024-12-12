@@ -173,7 +173,7 @@ router.patch(
     controller.editQuery
 );
 
-router.patch(
+router.delete(
     "/deleteQuery/:id",
     trimRequest.all,
     requireAuth,
