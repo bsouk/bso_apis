@@ -648,6 +648,23 @@ exports.deleteSelectedResource = async (req, res) => {
 
 //supplier
 
+//helper function
+const isFieldPopulated = (obj, path) => {
+  console.log("object is ", obj, " and path is ", path)
+  const keys = path.split('.');
+  console.log("keys is ", keys)
+  let current = obj;
+  for (let key of keys) {
+    console.log("cond is ", current, "key is ", current[key])
+    if (!current || !current[key]) {
+      return { path, code: false };
+    }
+    current = current[key];
+  }
+  return { path, code: true };
+};
+
+
 exports.addSupplier = async (req, res) => {
   try {
     const data = req.body;
@@ -686,6 +703,69 @@ exports.addSupplier = async (req, res) => {
     };
 
     const user = new User(userData);
+
+
+    //complete profile if necessary fields are present
+    const requiredFields = [
+      'full_name',
+      'profile_image',
+      'email',
+      'phone_number',
+      'bank_details.account_holder_name',
+      'bank_details.account_number',
+      'bank_details.bank_name',
+      'bank_details.swift_code',
+      'bank_details.iban_number',
+      'bank_details.address.line1',
+      'bank_details.address.line2',
+      'bank_details.address.city',
+      'bank_details.address.state',
+      'bank_details.address.zip_code',
+      'bank_details.address.country',
+      'company_data.company_logo',
+      'company_data.name',
+      'company_data.business_category',
+      'company_data.phone_number',
+      'company_data.name',
+      'company_data.registration_number',
+      'company_data.incorporation_date',
+      'company_data.vat_number',
+      'company_data.business_category',
+      'company_data.phone_number',
+      'company_data.email',
+      'company_data.address.line1',
+      'company_data.address.line2',
+      'company_data.address.city',
+      'company_data.address.state',
+      'company_data.address.zip_code',
+      'company_data.address.country',
+      'beneficiary_address.line1',
+      'beneficiary_address.line2',
+      'beneficiary_address.city',
+      'beneficiary_address.state',
+      'beneficiary_address.zip_code',
+      'beneficiary_address.country',
+      'additional_notes',
+    ];
+
+    console.log("supplier check fields is ", requiredFields)
+
+    const isProfileComplete = requiredFields.map(field => isFieldPopulated(user, field));
+
+    const hasRequiredArrays =
+      Array.isArray(user.sample_products) && user.sample_products.length > 0 &&
+      Array.isArray(user.business_certificates) && user.business_certificates.length > 0 &&
+      Array.isArray(user.licenses) && user.licenses.length > 0;
+
+    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+    if (isProfileComplete && hasRequiredArrays) {
+      user.profile_completed = true;
+    } else {
+      user.profile_completed = false;
+    }
+
+    await user.save();
 
     const addressData = {
       user_id: user._id,
@@ -754,6 +834,9 @@ exports.addSupplier = async (req, res) => {
   }
 };
 
+
+//edit supplier
+
 exports.editSupplier = async (req, res) => {
   try {
     const data = req.body;
@@ -797,7 +880,7 @@ exports.editSupplier = async (req, res) => {
         });
     }
 
-    await User.findByIdAndUpdate(id, data);
+    const updatedUser = await User.findByIdAndUpdate(id, data);
 
     if (
       data.phone_number_code ||
@@ -833,6 +916,67 @@ exports.editSupplier = async (req, res) => {
         await address.save();
       }
     }
+
+    const requiredFields = [
+      'full_name',
+      'profile_image',
+      'email',
+      'phone_number',
+      'bank_details.account_holder_name',
+      'bank_details.account_number',
+      'bank_details.bank_name',
+      'bank_details.swift_code',
+      'bank_details.iban_number',
+      'bank_details.address.line1',
+      'bank_details.address.line2',
+      'bank_details.address.city',
+      'bank_details.address.state',
+      'bank_details.address.zip_code',
+      'bank_details.address.country',
+      'company_data.company_logo',
+      'company_data.name',
+      'company_data.business_category',
+      'company_data.phone_number',
+      'company_data.name',
+      'company_data.registration_number',
+      'company_data.incorporation_date',
+      'company_data.vat_number',
+      'company_data.business_category',
+      'company_data.phone_number',
+      'company_data.email',
+      'company_data.address.line1',
+      'company_data.address.line2',
+      'company_data.address.city',
+      'company_data.address.state',
+      'company_data.address.zip_code',
+      'company_data.address.country',
+      'beneficiary_address.line1',
+      'beneficiary_address.line2',
+      'beneficiary_address.city',
+      'beneficiary_address.state',
+      'beneficiary_address.zip_code',
+      'beneficiary_address.country',
+      'additional_notes',
+    ];
+
+    console.log("supplier check fields is ", requiredFields)
+
+    const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+    const hasRequiredArrays =
+      Array.isArray(updatedUser.sample_products) && updatedUser.sample_products.length > 0 &&
+      Array.isArray(updatedUser.business_certificates) && updatedUser.business_certificates.length > 0 &&
+      Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+    if (isProfileComplete && hasRequiredArrays) {
+      updatedUser.profile_completed = true;
+    } else {
+      updatedUser.profile_completed = false;
+    }
+
+    await updatedUser.save();
 
     res.json({ message: "supplier edit successfully", code: 200 });
   } catch (error) {
