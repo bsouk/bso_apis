@@ -40,6 +40,8 @@ exports.uploadMedia = async (req, res) => {
         message: "MEDIA OR PATH MISSING",
         code: 400,
       });
+
+
     let isArray = req.body.isArray;
     if (Array.isArray(req.files.media)) {
       let mediaArray = [];
@@ -101,11 +103,18 @@ exports.addCustomer = async (req, res) => {
       unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
-      user_type: "buyer",
+      // user_type: "buyer",
       profile_completed: true,
       // is_user_approved_by_admin: true,
     };
 
+    if (data.company_data) {
+      if (data.company_data.name && data.company_data.registration_number && data.company_data.vat_number && data.company_data.incorporation_date) {
+        userData.user_type = "company"
+      } else {
+        userData.user_type = "buyer"
+      }
+    }
     const user = new User(userData);
 
     const addressData = {
@@ -292,7 +301,21 @@ exports.editCustomer = async (req, res) => {
         });
     }
 
-    await User.findByIdAndUpdate(id, data);
+    let userData = {
+      ...data
+    }
+
+    if (data.company_data) {
+      if (data.company_data.name && data.company_data.registration_number && data.company_data.vat_number && data.company_data.incorporation_date) {
+        userData.user_type = "company"
+      } else {
+        userData.user_type = "buyer"
+      }
+    }
+
+    console.log("userData is ", userData)
+
+    await User.findByIdAndUpdate(id, userData);
 
     if (
       data.phone_number_code ||
@@ -1521,5 +1544,33 @@ exports.supplierListForm = async (req, res) => {
     })
   } catch (error) {
     utils.handleError(res, err);
+  }
+}
+
+//share credentials
+exports.shareUserCrendentials = async (req, res) => {
+  try {
+    const user_id = req.body.id;
+    console.log("user_id", user_id)
+
+    const user = await User.findOne({ _id: new mongoose.Types.ObjectId(user_id) }, "+decoded_password");
+    if (!user) return utils.handleError(res, { message: "user not found", code: 404 });
+
+    const password = user.decoded_password;
+
+    const mailOptions = {
+      to: user.email,
+      subject: "Your Account Credentials",
+      name: user.full_name,
+      email: user.email,
+      password: password,
+      app_name: process.env.APP_NAME
+    }
+
+    emailer.sendEmail(null, mailOptions, "shareCredential");
+
+    res.json({ message: "Credential has been shared successfully", code: 200 })
+  } catch (error) {
+    utils.handleError(res, error)
   }
 }

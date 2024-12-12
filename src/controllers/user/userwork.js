@@ -211,7 +211,6 @@ exports.editProfile = async (req, res) => {
                     'beneficiary_address.zip_code',
                     'beneficiary_address.country',
                     'additional_notes',
-
                 ];
 
                 console.log("supplier check fields is ", requiredFields)

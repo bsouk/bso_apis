@@ -36,8 +36,8 @@ const UserSchema = new mongoose.Schema(
       type: String,
     },
     signup_by: {
-      type : String,
-      enum : ["email" , "phone_number"]
+      type: String,
+      enum: ["email", "phone_number"]
     },
     password: {
       type: String,
@@ -51,7 +51,7 @@ const UserSchema = new mongoose.Schema(
     },
     user_type: {
       type: String,
-      enum: ["buyer", "supplier", "logistics", "resource"],
+      enum: ["buyer", "supplier", "logistics", "resource", "company"],
       required: true,
     },
     joining_date: {
@@ -344,8 +344,8 @@ const UserSchema = new mongoose.Schema(
       {
         type: String
       },
-      owner_name : {
-        type : String
+      owner_name: {
+        type: String
       },
       name: {
         type: String

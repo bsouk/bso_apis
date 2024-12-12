@@ -233,4 +233,11 @@ router.get(
   controller.supplierListForm
 );
 
+router.post(
+  "/shareUserCredential",
+  trimRequest.all,
+  requireAuth,
+  controller.shareUserCrendentials
+);
+
 module.exports = router;
