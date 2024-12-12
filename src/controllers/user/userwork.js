@@ -996,7 +996,7 @@ exports.getMyQueries = async (req, res) => {
             {
                 $lookup: {
                     from: "products",
-                    let: { sku_id: "$queryDetails.sku_id" },
+                    let: { sku_id: "$queryDetails.variant_id" },
                     pipeline: [
                         {
                             $match: {
@@ -1110,7 +1110,7 @@ exports.getQueryById = async (req, res) => {
             {
                 $lookup: {
                     from: "products",
-                    let: { sku_id: "$queryDetails.sku_id" },
+                    let: { sku_id: "$queryDetails.variant_id" },
                     pipeline: [
                         {
                             $match: {

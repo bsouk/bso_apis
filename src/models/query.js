@@ -44,7 +44,7 @@ const querySchema = new mongoose.Schema({
                 ref: 'users',
                 required: true
             },
-            sku_id: {
+            variant_id: {
                 type: mongoose.Schema.Types.ObjectId,
             },
             price: {

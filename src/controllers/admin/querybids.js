@@ -231,7 +231,7 @@ exports.updateAssignedProduct = async (req, res) => {
         const query = await Query.findOne({
             _id: queryObjectId,
             "queryDetails.product_id": productObjectId,
-            "queryDetails.sku_id": skuObjectId,
+            "queryDetails.variant_id": skuObjectId,
             "queryDetails.supplier_id": supplierObjectId
         });
         console.log("=============query",query)
@@ -299,7 +299,7 @@ exports.unassignVariant = async (req, res) => {
             {
                 _id: queryObjectId,
                 "queryDetails.product_id": productObjectId,
-                "queryDetails.sku_id": skuObjectId,
+                "queryDetails.variant_id": skuObjectId,
                 "queryDetails.supplier_id": supplierObjectId,
             },
             {
