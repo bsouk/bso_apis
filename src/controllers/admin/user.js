@@ -1502,7 +1502,15 @@ exports.supplierListForm = async (req, res) => {
     }
 
     data = await User.aggregate([
-      {$match : {}}
+      { $match: { user_type: 'supplier', is_deleted: false } },
+      {
+        $project: {
+          _id: 1,
+          full_name: 1,
+          first_name: 1,
+          last_name: 1
+        }
+      }
     ])
 
     return res.status(200).json({
