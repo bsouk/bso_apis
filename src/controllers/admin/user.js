@@ -84,7 +84,7 @@ exports.addCustomer = async (req, res) => {
       return utils.handleError(res, {
         message: "This email address is already registered",
         code: 400,
-      }); 
+      });
 
     if (data.phone_number) {
       const doesPhoneNumberExist = await emailer.checkMobileExists(
@@ -672,6 +672,7 @@ exports.addSupplier = async (req, res) => {
     console.log("userdata ------->", data);
 
     const doesEmailExists = await emailer.emailExists(data.email);
+
     if (doesEmailExists)
       return utils.handleError(res, {
         message: "This email address is already registered",
@@ -1090,6 +1091,7 @@ exports.getSupplierList = async (req, res) => {
           business_name: 1,
           categories_id: 1,
           sub_categories_id: 1,
+          'company_data.business_category': 1,
           last_login: 1,
           unique_user_id: 1,
           is_company_approved: 1,
@@ -1142,7 +1144,7 @@ exports.getSupplier = async (req, res) => {
         },
       },
     ]);
-    res.json({ data: user[0], code: 200 });
+    res.json({ data: user[0] ? user[0] : null , code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
