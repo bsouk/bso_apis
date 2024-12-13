@@ -84,7 +84,7 @@ exports.addCustomer = async (req, res) => {
       return utils.handleError(res, {
         message: "This email address is already registered",
         code: 400,
-      });
+      }); 
 
     if (data.phone_number) {
       const doesPhoneNumberExist = await emailer.checkMobileExists(
@@ -153,7 +153,7 @@ exports.getCustomerList = async (req, res) => {
     const { limit = 10, offset = 0, search = "" } = req.query;
 
     const condition = {
-      user_type: "buyer",
+      // user_type: "buyer",
       profile_completed: true,
       is_deleted: false,
     };

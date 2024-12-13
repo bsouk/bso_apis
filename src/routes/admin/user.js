@@ -23,7 +23,7 @@ router.post(
   trimRequest.all,
   requireAuth,
   controller.addCustomer
-);
+); 
 
 router.get(
   "/getCustomerList",
