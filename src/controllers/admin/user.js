@@ -1389,6 +1389,7 @@ exports.getLogisticsUserList = async (req, res) => {
           createdAt: 1,
           address: 1,
           last_login: 1,
+          'company_data.business_category': 1,
           unique_user_id: 1,
           is_company_approved: 1,
           is_user_approved_by_admin: 1
@@ -1442,7 +1443,7 @@ exports.getLogisticsUserById = async (req, res) => {
         },
       },
     ]);
-    res.json({ data: user[0], code: 200 });
+    res.json({ data: user[0] ? user[0] : null, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
