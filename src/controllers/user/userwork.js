@@ -1086,11 +1086,14 @@ exports.addQuery = async (req, res) => {
 exports.getMyQueries = async (req, res) => {
     try {
         const userId = req.user._id;
-        console.log("userid is ", userId);
+        console.log("userid is", userId);
+
+        const userDetails = await User.findById(userId);
+        console.log("userdetails:", userDetails);
+
         const { status, search, offset = 0, limit = 10 } = req.query;
-        const filter = {
-            createdByUser: new mongoose.Types.ObjectId(userId),
-        };
+        const filter = {};
+
         if (status) {
             filter.status = status;
         }
@@ -1098,18 +1101,30 @@ exports.getMyQueries = async (req, res) => {
             filter.query_unique_id = { $regex: search, $options: "i" };
         }
 
+        const userMatchCondition = userDetails.user_type === "buyer"
+            ? { createdByUser: new mongoose.Types.ObjectId(userId) }
+            : { 'queryDetails.assigned_to.variant_assigned': new mongoose.Types.ObjectId(userId) }
+        //{ 'queryDetails.assigned_to.variant_assigned': { $eq: new mongoose.Types.ObjectId(userId) } };
+
         const data = await Query.aggregate([
-            { $match: { ...filter } },
+            { $unwind: '$queryDetails' },
+            {
+                $match: {
+                    ...filter,
+                    ...userMatchCondition,
+                },
+            },
             {
                 $skip: parseInt(offset) || 0,
             },
             {
                 $limit: parseInt(limit) || 10,
             },
-        ])
+        ]);
 
-        const count = await Product.countDocuments(filter);
-        res.json({ data: data, count, code: 200 });
+        const count = await Query.countDocuments({ ...filter, ...userMatchCondition });
+
+        res.json({ data, count, code: 200 });
 
     } catch (error) {
         utils.handleError(res, error);

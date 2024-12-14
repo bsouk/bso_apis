@@ -442,6 +442,41 @@ exports.addResource = async (req, res) => {
     };
 
     const user = new User(userData);
+    const requiredFields = [
+      "full_name",
+      "email",
+      "phone_number",
+      "profile_image",
+      "profile_title",
+      "profile_description",
+      "specialisations",
+      "rate_per_hour",
+      "project_pricing_model",
+      "resource_availability"
+    ]
+
+    console.log("resource check fields is ", requiredFields)
+
+    const isProfileComplete = requiredFields.map(field => isFieldPopulated(user, field));
+
+    const hasRequiredArrays =
+      Array.isArray(user.work_exprience) && user.work_exprience.length > 0 &&
+      Array.isArray(user.education) && user.education.length > 0 &&
+      Array.isArray(user.portfolio) && user.portfolio.length > 0 &&
+      Array.isArray(user.skills) && user.skills.length > 0 &&
+      Array.isArray(user.certifications) && user.certifications.length > 0 &&
+      Array.isArray(user.languages) && user.languages.length > 0 &&
+      Array.isArray(user.testimonials) && user.testimonials.length > 0 &&
+      Array.isArray(user.employement_history) && user.employement_history.length > 0;
+
+    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+    if (isProfileComplete && hasRequiredArrays) {
+      user.profile_completed = true;
+    } else {
+      user.profile_completed = false;
+    }
+
     await user.save();
 
     const mailOptions = {
@@ -502,22 +537,22 @@ exports.getResourceList = async (req, res) => {
       {
         $limit: +limit,
       },
-      {
-        $project: {
-          full_name: 1,
-          profile_image: 1,
-          email: 1,
-          phone_number_code: 1,
-          phone_number: 1,
-          status: 1,
-          availability_status: 1,
-          createdAt: 1,
-          last_login: 1,
-          unique_user_id: 1,
-          is_company_approved: 1,
-          is_user_approved_by_admin: 1
-        },
-      },
+      // {
+      //   $project: {
+      //     full_name: 1,
+      //     profile_image: 1,
+      //     email: 1,
+      //     phone_number_code: 1,
+      //     phone_number: 1,
+      //     status: 1,
+      //     availability_status: 1,
+      //     createdAt: 1,
+      //     last_login: 1,
+      //     unique_user_id: 1,
+      //     is_company_approved: 1,
+      //     is_user_approved_by_admin: 1
+      //   },
+      // },
     ]);
 
     const [count, users] = await Promise.all([countPromise, usersPromise]);
@@ -588,7 +623,43 @@ exports.editResource = async (req, res) => {
         });
     }
 
-    await User.findByIdAndUpdate(id, data);
+    const updatedUser = await User.findByIdAndUpdate(id, data);
+    const requiredFields = [
+      "full_name",
+      "email",
+      "phone_number",
+      "profile_image",
+      "profile_title",
+      "profile_description",
+      "specialisations",
+      "rate_per_hour",
+      "project_pricing_model",
+      "resource_availability"
+    ]
+
+    console.log("resource check fields is ", requiredFields)
+
+    const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+    const hasRequiredArrays =
+      Array.isArray(updatedUser.work_exprience) && updatedUser.work_exprience.length > 0 &&
+      Array.isArray(updatedUser.education) && updatedUser.education.length > 0 &&
+      Array.isArray(updatedUser.portfolio) && updatedUser.portfolio.length > 0 &&
+      Array.isArray(updatedUser.skills) && updatedUser.skills.length > 0 &&
+      Array.isArray(updatedUser.certifications) && updatedUser.certifications.length > 0 &&
+      Array.isArray(updatedUser.languages) && updatedUser.languages.length > 0 &&
+      Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
+      Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
+
+    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+    if (isProfileComplete && hasRequiredArrays) {
+      updatedUser.profile_completed = true;
+    } else {
+      updatedUser.profile_completed = false;
+    }
+
+    await updatedUser.save();
 
     res.json({ message: "Resource edit successfully", code: 200 });
   } catch (error) {
@@ -704,7 +775,6 @@ exports.addSupplier = async (req, res) => {
     };
 
     const user = new User(userData);
-
 
     //complete profile if necessary fields are present
     const requiredFields = [
@@ -1144,7 +1214,7 @@ exports.getSupplier = async (req, res) => {
         },
       },
     ]);
-    res.json({ data: user[0] ? user[0] : null , code: 200 });
+    res.json({ data: user[0] ? user[0] : null, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }

@@ -250,9 +250,9 @@ exports.updateAssignedProduct = async (req, res) => {
 
         const query = await Query.findOne({
             _id: queryObjectId,
-            "queryDetails.product_id": productObjectId,
-            "queryDetails.variant_id": skuObjectId,
-            "queryDetails.supplier_id": supplierObjectId
+            "queryDetails.product.id": productObjectId,
+            "queryDetails.variant._id": skuObjectId,
+            "queryDetails.supplier._id": supplierObjectId
         });
         console.log("=============query", query)
 
@@ -265,9 +265,9 @@ exports.updateAssignedProduct = async (req, res) => {
 
         const queryDetails = query.queryDetails.find(
             (detail) =>
-                detail.product_id.equals(productObjectId) &&
-                detail.sku_id.equals(skuObjectId) &&
-                detail.supplier_id.equals(supplierObjectId)
+                detail.product.id.equals(productObjectId) &&
+                detail.variant._id.equals(skuObjectId) &&
+                detail.supplier._id.equals(supplierObjectId)
         );
 
         if (!queryDetails) {
@@ -318,9 +318,9 @@ exports.unassignVariant = async (req, res) => {
         const query = await Query.findOneAndUpdate(
             {
                 _id: queryObjectId,
-                "queryDetails.product_id": productObjectId,
-                "queryDetails.variant_id": skuObjectId,
-                "queryDetails.supplier_id": supplierObjectId,
+                "queryDetails.product.id": productObjectId,
+                "queryDetails.variant._id": skuObjectId,
+                "queryDetails.supplier._id": supplierObjectId,
             },
             {
                 $set: {
@@ -330,7 +330,7 @@ exports.unassignVariant = async (req, res) => {
             },
             { new: true }
         );
-
+        console.log(query)
         if (!query) {
             return res.status(404).json({
                 message: "Query not found or no matching queryDetails to unassign.",
