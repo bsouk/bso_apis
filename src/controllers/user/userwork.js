@@ -1107,7 +1107,12 @@ exports.getMyQueries = async (req, res) => {
         //{ 'queryDetails.assigned_to.variant_assigned': { $eq: new mongoose.Types.ObjectId(userId) } };
 
         const data = await Query.aggregate([
-            { $unwind: '$queryDetails' },
+            {
+                $unwind: {
+                    path: '$queryDetails',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
             {
                 $match: {
                     ...filter,
@@ -1115,11 +1120,43 @@ exports.getMyQueries = async (req, res) => {
                 },
             },
             {
+                $unwind: {
+                    path: '$queryDetails.variant',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
                 $skip: parseInt(offset) || 0,
             },
             {
                 $limit: parseInt(limit) || 10,
             },
+            {
+                $group: {
+                    _id: '$_id',
+                    query_unique_id: { $first: '$query_unique_id' },
+                    status: { $first: '$status' },
+                    queryCreation: { $first: '$queryCreation' },
+                    queryClose: { $first: '$queryClose' },
+                    action: { $first: '$action' },
+                    createdByUser: { $first: '$createdByUser' },
+                    adminApproved: { $first: '$adminApproved' },
+                    adminReview: { $first: '$adminReview' },
+                    queryDetails: {
+                        $push: {
+                            product: '$queryDetails.product',
+                            variant: '$queryDetails.variant',
+                            supplier: '$queryDetails.supplier',
+                            price: '$queryDetails.price',
+                            quantity: '$queryDetails.quantity',
+                            query: '$queryDetails.query',
+                            notes: '$queryDetails.notes',
+                            assigned_to: '$queryDetails.assigned_to'
+                        }
+                    },
+                    query: { $first: '$query' },
+                }
+            }
         ]);
 
         const count = await Query.countDocuments({ ...filter, ...userMatchCondition });
