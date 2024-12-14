@@ -272,6 +272,9 @@ const UserSchema = new mongoose.Schema(
     anti_correcuptin_procedures: {
       type: String
     },
+    environment_policy: {
+      type: String
+    },
     business_document: {
       type: String
     },

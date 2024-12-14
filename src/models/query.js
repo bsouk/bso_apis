@@ -131,7 +131,7 @@ const querySchema = new mongoose.Schema({
             },
             assigned_to: {
                 variant_assigned: { type: mongoose.Schema.Types.ObjectId, required: false, default: null },
-                type: { type: String, required: false, default: null },
+                type: { type: String, required: false, default: "admin" },
             }
         }
     ]
