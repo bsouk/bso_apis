@@ -191,7 +191,8 @@ exports.getProductList = async (req, res) => {
     const { search, offset = 0, limit = 10, category_id } = req.query;
 
     const filter = {
-      is_deleted: { $ne: true }
+      is_deleted: { $ne: true },
+      is_admin_approved: "approved"
     };
     if (search) {
       filter.name = { $regex: search, $options: "i" };
@@ -371,7 +372,7 @@ exports.getProductNameList = async (req, res) => {
     console.log("filter is ", filter)
 
     const productlist = await Product.aggregate([
-      { $match: { ...filter, is_deleted: false } },
+      { $match: { ...filter, is_deleted: false, is_admin_approved: "approved" } },
       { $project: { _id: 1, name: 1 } },
       { $sort: { createdAt: -1 } },
       { $skip: parseInt(offset) || 0 },

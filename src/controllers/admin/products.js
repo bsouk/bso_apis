@@ -120,6 +120,7 @@ exports.addProduct = async (req, res) => {
                 brand_id: data.brand_id,
                 category_id: data.category_id,
                 variant: [...newVariant],
+                is_admin_approved: "approved"
             };
 
             if (data.sub_category_id) {
