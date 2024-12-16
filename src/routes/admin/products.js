@@ -65,5 +65,12 @@ router.get(
     controller.getSkuList
 )
 
+router.delete(
+    '/deleteSelectedProduct',
+    trimRequest.all,
+    requireAuth,
+    controller.deleteSelectedProducts
+)
+
 
 module.exports = router

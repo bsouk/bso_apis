@@ -164,6 +164,32 @@ exports.deleteProduct = async (req, res) => {
     }
 };
 
+exports.deleteSelectedProducts = async (req, res) => {
+    try {
+        const { product_ids = [] } = req.body;
+
+        if (product_ids.length == 0)
+            return utils.handleError(res, {
+                message: "Please select at least one product",
+                code: 400,
+            });
+        const isAllDeleted = await Product.find({ _id: product_ids, is_deleted: true });
+
+        if (isAllDeleted.length == product_ids.length)
+            return utils.handleError(res, {
+                message: "All selected products are already deleted",
+                code: 400,
+            });
+
+        await Product.updateMany({ _id: product_ids }, { is_deleted: true });
+
+        res.json({ message: "Selected products have been deleted", code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
 exports.getProduct = async (req, res) => {
     try {
         const product_id = req.params.id;
@@ -461,7 +487,7 @@ exports.getProductNameList = async (req, res) => {
         console.log("filter is ", filter)
 
         const productlist = await Product.aggregate([
-            { $match: { ...filter } },
+            { $match: { ...filter, is_deleted: false } },
             { $project: { _id: 1, name: 1 } },
             { $sort: { createdAt: -1 } },
             // { $skip: parseInt(offset) || 0 },

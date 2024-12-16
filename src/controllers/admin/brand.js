@@ -12,7 +12,8 @@ exports.addBrand = async (req, res) => {
         if (isBrandExists) return utils.handleError(res, { message: "The brand name already exists. Please enter a different name", code: 400 });
 
         const data = {
-            name: req.body.name
+            name: req.body.name,
+            icon: req.body.icon
         }
         const saveBrand = new Brand(data);
         await saveBrand.save()
@@ -70,7 +71,7 @@ exports.getBrand = async (req, res) => {
 
 exports.editBrand = async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, icon } = req.body;
         const id = req.params.id;
         const isBrandExists = await Brand.findById(id);
         if (!isBrandExists) return utils.handleError(res, { message: "Brand not found" });
@@ -78,7 +79,15 @@ exports.editBrand = async (req, res) => {
         const isBrandNameExists = await Brand.findOne({ _id: { $nin: [new mongoose.Types.ObjectId(id)] }, name });
         if (isBrandNameExists) return utils.handleError(res, { message: "The brand name already exists. Please enter a different name", code: 400 });
 
-        await Brand.findByIdAndUpdate(id, { $set: { name } })
+        let data = {}
+        if (name) {
+            data.name = name
+        }
+        if (icon) {
+            data.icon = icon
+        }
+
+        await Brand.findByIdAndUpdate(id, { $set: data })
         res.json({ message: "Brand edited successfully", code: 200 });
     } catch (error) {
         utils.handleError(res, error);

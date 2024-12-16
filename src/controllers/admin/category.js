@@ -104,6 +104,9 @@ exports.deleteProductCategory = async (req, res) => {
         code: 404,
       });
 
+    const subCategories = await ProductSubCategory.deleteMany({ product_category_type_id: id })
+    const subSubCategories = await ProductSubSubCategory.deleteMany({ product_category_type_id: id })
+
     await ProductCategory.findByIdAndDelete(id);
 
     res.json({ message: "Category deleted successfully", code: 200 });
@@ -148,6 +151,19 @@ exports.addProductSubCategory = async (req, res) => {
     const { name, icon, product_category_type_id } = req.body
 
     if (!name || !icon || !product_category_type_id) return res.json({ "message": "Send valid data", "code": 500 })
+
+    //mark main category have further sub category
+    const mainCategory = await ProductCategory.findById({ _id: product_category_type_id })
+
+    if (!mainCategory) {
+      return utils.handleError(res, {
+        message: "Main category not found",
+        code: 400,
+      });
+    }
+
+    mainCategory.isNext = true
+    await mainCategory.save()
 
     const isSubCategoryExist = await ProductSubCategory.findOne({ name, product_category_type_id });
 
@@ -218,6 +234,21 @@ exports.deleteSubCategory = async (req, res) => {
         code: 404,
       });
 
+    //count parent category child and if chile is single then update parent isnext false
+    const parentCount = await ProductSubCategory.find({ product_category_type_id: isCategoryExists.product_category_type_id })
+    console.log('length : ', parentCount.length)
+    if (parentCount.length === 1) {
+      const mainCategory = await ProductCategory.findById({ _id: isCategoryExists.product_category_type_id })
+      mainCategory.isNext = false
+      await mainCategory.save()
+    }
+
+    //now find its sub-category and delete all
+    const allChildCategories = await ProductSubSubCategory.find({ product_sub_category_type_id: id })
+    if (allChildCategories.length !== 0) {
+      const result = await ProductSubSubCategory.deleteMany({ _id: { $in: allChildCategories } })
+      console.log("result : ", result)
+    }
     await ProductSubCategory.findByIdAndDelete(id);
 
     res.json({ message: "Sub Category deleted successfully", code: 200 });
@@ -264,6 +295,23 @@ exports.deleteSelectedSubCategory = async (req, res) => {
         code: 400,
       });
 
+    //count parent category child and if chile is single then update parent isnext false
+    const parentCount = await ProductSubCategory.find({ product_category_type_id: isAllDeleted[0].product_category_type_id })
+    console.log('length : ', parentCount.length)
+    if (parentCount.length === 1) {
+      const mainCategory = await ProductCategory.findById({ _id: isAllDeleted[0].product_category_type_id })
+      mainCategory.isNext = false
+      await mainCategory.save()
+    }
+
+    //now find its sub-category and delete all
+    const allChildCategories = await ProductSubSubCategory.find({ product_sub_category_type_id: { $in: ids } });
+    if (allChildCategories.length !== 0) {
+      const childCategoryIds = allChildCategories.map((child) => child._id);
+      const deleteChildResult = await ProductSubSubCategory.deleteMany({ _id: { $in: childCategoryIds } });
+      console.log("Child categories deleted: ", deleteChildResult);
+    }
+
     const result = await ProductSubCategory.deleteMany({ _id: { $in: ids } });
     console.log("result", result)
 
@@ -284,6 +332,18 @@ exports.addProductSubSubCategory = async (req, res) => {
     const isSubSubCategoryExist = await ProductSubSubCategory.findOne({ name, product_category_type_id, product_sub_category_type_id });
 
     if (isSubSubCategoryExist) return res.json({ "message": "Sub-Sub-Category already exist for this category", "code": 500 });
+
+    //mark its parent category have sub category
+    const mainCategory = await ProductSubCategory.findById({ _id: product_sub_category_type_id })
+    if (!mainCategory) {
+      return utils.handleError(res, {
+        message: "Sub Category not found",
+        code: 404,
+      });
+    }
+
+    mainCategory.isNext = true
+    await mainCategory.save()
 
     const newSubSubCategory = new ProductSubSubCategory({ name, icon, product_category_type_id, product_sub_category_type_id });
     await newSubSubCategory.save();
@@ -350,6 +410,16 @@ exports.deleteSubSubCategory = async (req, res) => {
         code: 404,
       });
 
+    //count parent category child and if chile is single then update parent isnext false
+    const parentCount = await ProductSubSubCategory.find({ product_sub_category_type_id: isCategoryExists.product_sub_category_type_id })
+    console.log('length : ', parentCount.length)
+
+    if (parentCount.length === 1) {
+      const mainCategory = await ProductSubCategory.findById({ _id: isCategoryExists.product_sub_category_type_id })
+      mainCategory.isNext = false
+      await mainCategory.save()
+    }
+
     await ProductSubSubCategory.findByIdAndDelete(id);
 
     res.json({ message: "Sub-Sub-Category deleted successfully", code: 200 });
@@ -396,6 +466,15 @@ exports.deleteSelectedSubSubCategory = async (req, res) => {
         message: "No Sub-Sub-Category found",
         code: 400,
       });
+
+    //count parent category child and if chile is single then update parent isnext false
+    const parentCount = await ProductSubSubCategory.find({ product_sub_category_type_id: isAllDeleted[0].product_sub_category_type_id })
+    console.log('length : ', parentCount.length)
+    if (parentCount.length === 1) {
+      const mainCategory = await ProductSubCategory.findById({ _id: isAllDeleted[0].product_sub_category_type_id })
+      mainCategory.isNext = false
+      await mainCategory.save()
+    }
 
     const result = await ProductSubSubCategory.deleteMany({ _id: { $in: ids } });
     console.log("result", result)

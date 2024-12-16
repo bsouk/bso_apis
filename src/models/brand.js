@@ -6,6 +6,10 @@ const brandSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    icon: {
+        type: String,
+        required: true
+    }
 },
     {
         versionKey: false,

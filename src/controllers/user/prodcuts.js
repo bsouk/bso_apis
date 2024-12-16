@@ -371,7 +371,7 @@ exports.getProductNameList = async (req, res) => {
     console.log("filter is ", filter)
 
     const productlist = await Product.aggregate([
-      { $match: { ...filter } },
+      { $match: { ...filter, is_deleted: false } },
       { $project: { _id: 1, name: 1 } },
       { $sort: { createdAt: -1 } },
       { $skip: parseInt(offset) || 0 },
