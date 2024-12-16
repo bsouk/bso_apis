@@ -1220,6 +1220,31 @@ exports.getSupplier = async (req, res) => {
   }
 };
 
+exports.deleteSelectedSupplier = async (req, res) => {
+  try {
+    const { user_ids = [] } = req.body;
+
+    if (user_ids.length == 0)
+      return utils.handleError(res, {
+        message: "Please select at least one user",
+        code: 400,
+      });
+    const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
+
+    if (isAllDeleted.length == user_ids.length)
+      return utils.handleError(res, {
+        message: "All selected customers are already deleted",
+        code: 400,
+      });
+
+    await User.updateMany({ _id: user_ids }, { is_deleted: true });
+
+    res.json({ message: "Selected Supplier have been deleted", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
 // Logistics User
 
 exports.addLogisticsUser = async (req, res) => {

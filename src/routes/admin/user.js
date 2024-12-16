@@ -240,4 +240,12 @@ router.post(
   controller.shareUserCrendentials
 );
 
+router.delete(
+  "/deleteSelectedSupplier",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSelectedSupplier
+);
+
+
 module.exports = router;
