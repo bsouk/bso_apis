@@ -527,6 +527,6 @@ exports.getSkuList = async (req, res) => {
         })
 
     } catch (error) {
-
+        utils.handleError(res, error);
     }
 }

@@ -1290,7 +1290,7 @@ exports.getHomeData = async (req, res) => {
     try {
         const categorylist = await Category.find().limit(10)
         const adslist = await ads.find().limit(10)
-        const topProduct = await Product.find().limit(10)
+        const topProduct = await Product.find({ is_deleted: false, is_admin_approved: "approved" }).limit(10)
 
         return res.status(200).json({
             message: "data Fetched Successfully",

@@ -114,6 +114,19 @@ const querySchema = new mongoose.Schema({
                     type: String
                 }
             },
+            supplier_quote: {
+                quantity: {
+                    type: Number
+                },
+                price: {
+                    type: Number
+                },
+                message: {
+                    type: String
+                },
+                media: [String],
+                document: [String]
+            },
             price: {
                 type: Number
             },

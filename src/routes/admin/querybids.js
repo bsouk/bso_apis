@@ -60,4 +60,12 @@ router.post(
 //     controller.addquote
 // );
 
+//add supplier quote
+router.post(
+    '/addSupplierQuote/:id',
+     trimRequest.all,
+     requireAuth,
+    controller.addSupplierQuote
+);
+
 module.exports = router

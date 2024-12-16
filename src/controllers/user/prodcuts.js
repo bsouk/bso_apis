@@ -194,6 +194,7 @@ exports.getProductList = async (req, res) => {
       is_deleted: { $ne: true },
       is_admin_approved: "approved"
     };
+    
     if (search) {
       filter.name = { $regex: search, $options: "i" };
     }
