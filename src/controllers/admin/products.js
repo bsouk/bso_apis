@@ -58,7 +58,7 @@ const utils = require("../../utils/utils");
 
 exports.addProduct = async (req, res) => {
     try {
-        const user_id = req.user.id;
+        const user_id = req.body.supplier_id;
         const { id } = req.body
         console.log("id is ", id)
         const data = req.body;
@@ -119,7 +119,7 @@ exports.addProduct = async (req, res) => {
                 name: data.name,
                 brand_id: data.brand_id,
                 category_id: data.category_id,
-                variant: [...newVariant]
+                variant: [...newVariant],
             };
 
             if (data.sub_category_id) {
