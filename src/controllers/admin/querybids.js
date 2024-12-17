@@ -3,6 +3,7 @@ const Product = require("../../models/product");
 const Query = require("../../models/query");
 const BidSetting = require("../../models/bidsetting");
 const utils = require("../../utils/utils");
+const admin = require("../../models/admin");
 
 exports.getquery = async (req, res) => {
     try {
@@ -465,6 +466,12 @@ exports.supplierQuotesById = async (req, res) => {
 exports.addAdminQuote = async (req, res) => {
     try {
         const { id } = req.body
+        const userId = req.user._id;
+        console.log("userid is ", userId);
+
+        const userData = await admin.findOne({ _id: userId })
+        console.log("admin : ", userData)
+
         const queryData = await Query.findById({ _id: id })
         if (!queryData) {
             return utils.handleError(res, {
@@ -472,6 +479,13 @@ exports.addAdminQuote = async (req, res) => {
                 code: 404,
             });
         }
+
+        const assignData = {
+            id: userId,
+            type: userData.role
+        }
+
+        req.body.supplier_quote.assignedBy = assignData
 
         const result = await Query.findOneAndUpdate(
             {

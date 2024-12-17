@@ -642,24 +642,110 @@ exports.createLogisticsProfile = async (req, res) => {
 }
 
 //upload Media
+// exports.uploadMedia = async (req, res) => {
+//     try {
+//         if (!req.files.media || !req.body.path)
+//             return utils.handleError(res, {
+//                 message: "MEDIA OR PATH MISSING",
+//                 code: 400,
+//             });
+//         let isArray = req.body.isArray;
+//         if (Array.isArray(req.files.media)) {
+//             let mediaArray = [];
+//             for (let index = 0; index < req.files.media.length; index++) {
+//                 const element = req.files.media[index];
+//                 let media = await utils.uploadImage({
+//                     file: element,
+//                     path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+//                 });
+//                 console.log(" media :", media)
+//                 mediaArray.push(`${req.body.path}/${media}`);
+//             }
+
+//             return res.status(200).json({
+//                 code: 200,
+//                 data: mediaArray,
+//             });
+//         } else {
+//             let media = await utils.uploadImage({
+//                 file: req.files.media,
+//                 path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+//             });
+
+//             const url = `${req.body.path}/${media}`;
+//             console.log("url is ", url)
+//             return res.status(200).json({
+//                 code: 200,
+//                 data: isArray === "true" ? [url] : url,
+//             });
+//         }
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// };
+
+
+async function uploadFile(object) {
+    return new Promise((resolve, reject) => {
+        var obj = object.file;
+        var name = Date.now() + obj.name;
+        obj.mv(object.path + "/" + name, function (err) {
+            if (err) {
+                console.log(err)
+                reject(err);
+            }
+            resolve(name);
+        });
+    });
+}
+
 exports.uploadMedia = async (req, res) => {
     try {
-        if (!req.files.media || !req.body.path)
+        if (!req.files.media || !req.body.path) {
             return utils.handleError(res, {
                 message: "MEDIA OR PATH MISSING",
                 code: 400,
             });
+        }
+
         let isArray = req.body.isArray;
+        let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg"];
+        let supportedOtherTypes = [
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/pdf",
+            "audio/mpeg",
+            "video/mp4",
+            "video/quicktime",
+            "video/x-m4v"
+        ];
+
         if (Array.isArray(req.files.media)) {
             let mediaArray = [];
+
             for (let index = 0; index < req.files.media.length; index++) {
                 const element = req.files.media[index];
-                let media = await utils.uploadImage({
-                    file: element,
-                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                });
-                console.log(" media :", media)
-                mediaArray.push(`${req.body.path}/${media}`);
+                console.log("element:", element);
+                console.log("type:", element.mimetype);
+
+                if (supportedImageTypes.includes(element.mimetype)) {
+                    let media = await utils.uploadImage({
+                        file: element,
+                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                    });
+                    mediaArray.push(`${req.body.path}/${media}`);
+                } else if (supportedOtherTypes.includes(element.mimetype)) {
+                    let media = await uploadFile({
+                        file: element,
+                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                    });
+                    mediaArray.push(`${req.body.path}/${media}`);
+                } else {
+                    return utils.handleError(res, {
+                        message: `Unsupported file type: ${element.mimetype}`,
+                        code: 400,
+                    });
+                }
             }
 
             return res.status(200).json({
@@ -667,22 +753,43 @@ exports.uploadMedia = async (req, res) => {
                 data: mediaArray,
             });
         } else {
-            let media = await utils.uploadImage({
-                file: req.files.media,
-                path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-            });
+            const element = req.files.media;
+            console.log("element:", element);
+            console.log("type:", element.mimetype);
 
-            const url = `${req.body.path}/${media}`;
-            console.log("url is ", url)
-            return res.status(200).json({
-                code: 200,
-                data: isArray === "true" ? [url] : url,
-            });
+            if (supportedImageTypes.includes(element.mimetype)) {
+                let media = await utils.uploadImage({
+                    file: element,
+                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                });
+                const url = `${req.body.path}/${media}`;
+                return res.status(200).json({
+                    code: 200,
+                    data: isArray === "true" ? [url] : url,
+                });
+            } else if (supportedOtherTypes.includes(element.mimetype)) {
+                let media = await uploadFile({
+                    file: element,
+                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                });
+                const url = `${req.body.path}/${media}`;
+                return res.status(200).json({
+                    code: 200,
+                    data: isArray === "true" ? [url] : url,
+                });
+            } else {
+                return utils.handleError(res, {
+                    message: `Unsupported file type: ${element.mimetype}`,
+                    code: 400,
+                });
+            }
         }
     } catch (error) {
+        console.error("Error:", error);
         utils.handleError(res, error);
     }
 };
+
 
 
 //get User Profile details
@@ -1420,6 +1527,11 @@ exports.deleteQuery = async (req, res) => {
 exports.addSupplierQuote = async (req, res) => {
     try {
         const { id } = req.body
+        const userId = req.user._id;
+        console.log("userid is ", userId);
+
+        const userData = await User.findOne({ _id: userId })
+
         const queryData = await Query.findById({ _id: id })
         if (!queryData) {
             return utils.handleError(res, {
@@ -1427,6 +1539,12 @@ exports.addSupplierQuote = async (req, res) => {
                 code: 404,
             });
         }
+        const assignData = {
+            id: userId,
+            type: userData.user_type
+        }
+
+        req.body.supplier_quote.assignedBy = assignData
 
         const result = await Query.findOneAndUpdate(
             {
@@ -1434,7 +1552,9 @@ exports.addSupplierQuote = async (req, res) => {
                 'queryDetails._id': req?.body?.query_id
             },
             {
-                $set: { 'queryDetails.$.supplier_quote': req?.body?.supplier_quote }
+                $set: {
+                    'queryDetails.$.supplier_quote': req?.body?.supplier_quote
+                }
             },
             { new: true }
         )

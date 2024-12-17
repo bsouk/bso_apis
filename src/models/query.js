@@ -125,7 +125,15 @@ const querySchema = new mongoose.Schema({
                     type: String
                 },
                 media: [String],
-                document: [String]
+                document: [String],
+                assignedBy: {
+                    id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                    },
+                    type: {
+                        type: String
+                    }
+                }
             },
             price: {
                 type: Number
