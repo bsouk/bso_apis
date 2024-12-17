@@ -485,7 +485,7 @@ exports.addAdminQuote = async (req, res) => {
             type: userData.role
         }
 
-        req.body.supplier_quote.assignedBy = assignData
+        req.body.admin_quote.assignedBy = assignData
 
         const result = await Query.findOneAndUpdate(
             {
@@ -493,7 +493,7 @@ exports.addAdminQuote = async (req, res) => {
                 'queryDetails._id': req?.body?.query_id
             },
             {
-                $set: { 'queryDetails.$.supplier_quote': req?.body?.supplier_quote }
+                $set: { 'queryDetails.$.admin_quote': req?.body?.admin_quote }
             },
             { new: true }
         )
@@ -509,71 +509,71 @@ exports.addAdminQuote = async (req, res) => {
 }
 
 
-// assign multiple queries to supplier
-exports.assignMultipleQueries = async (req, res) => {
-    try {
-        const { id, product_id, sku_id, supplier_id } = req.body;
+// // assign multiple queries to supplier
+// exports.assignMultipleQueries = async (req, res) => {
+//     try {
+//         const { id, product_id, sku_id, supplier_id } = req.body;
 
-        console.log("=============req.body", req.body)
-        if (!id || !product_id || !sku_id || !supplier_id) {
-            return res.status(400).json({
-                message: "Missing required fields: id, user_id, product_id, sku_id, or supplier_id.",
-                code: 400
-            });
-        }
+//         console.log("=============req.body", req.body)
+//         if (!id || !product_id || !sku_id || !supplier_id) {
+//             return res.status(400).json({
+//                 message: "Missing required fields: id, user_id, product_id, sku_id, or supplier_id.",
+//                 code: 400
+//             });
+//         }
 
-        const queryObjectId = new mongoose.Types.ObjectId(id);
-        const productObjectId = new mongoose.Types.ObjectId(product_id);
-        const skuObjectId = new mongoose.Types.ObjectId(sku_id);
-        const supplierObjectId = new mongoose.Types.ObjectId(supplier_id);
+//         const queryObjectId = new mongoose.Types.ObjectId(id);
+//         const productObjectId = new mongoose.Types.ObjectId(product_id);
+//         const skuObjectId = new mongoose.Types.ObjectId(sku_id);
+//         const supplierObjectId = new mongoose.Types.ObjectId(supplier_id);
 
-        const query = await Query.findOne({
-            _id: queryObjectId,
-            "queryDetails.product.id": productObjectId,
-            "queryDetails.variant._id": skuObjectId,
-            "queryDetails.supplier._id": supplierObjectId
-        });
-        console.log("=============query", query)
+//         const query = await Query.findOne({
+//             _id: queryObjectId,
+//             "queryDetails.product.id": productObjectId,
+//             "queryDetails.variant._id": skuObjectId,
+//             "queryDetails.supplier._id": supplierObjectId
+//         });
+//         console.log("=============query", query)
 
-        if (!query) {
-            return res.status(404).json({
-                message: "Query not found with the given criteria.",
-                code: 404
-            });
-        }
+//         if (!query) {
+//             return res.status(404).json({
+//                 message: "Query not found with the given criteria.",
+//                 code: 404
+//             });
+//         }
 
-        const queryDetails = query.queryDetails.find(
-            (detail) =>
-                detail.product.id.equals(productObjectId) &&
-                detail.variant._id.equals(skuObjectId) &&
-                detail.supplier._id.equals(supplierObjectId)
-        );
+//         const queryDetails = query.queryDetails.find(
+//             (detail) =>
+//                 detail.product.id.equals(productObjectId) &&
+//                 detail.variant._id.equals(skuObjectId) &&
+//                 detail.supplier._id.equals(supplierObjectId)
+//         );
 
-        if (!queryDetails) {
-            return res.status(404).json({
-                message: "Matching queryDetails not found.",
-                code: 404
-            });
-        }
+//         if (!queryDetails) {
+//             return res.status(404).json({
+//                 message: "Matching queryDetails not found.",
+//                 code: 404
+//             });
+//         }
 
-        queryDetails.assigned_to = {
-            variant_assigned: supplierObjectId.toString(),
-            type: "supplier"
-        };
+//         queryDetails.assigned_to = {
+//             variant_assigned: supplierObjectId.toString(),
+//             type: "supplier"
+//         };
 
-        await query.save();
+//         await query.save();
 
-        res.json({
-            message: "Variant assigned successfully.",
-            code: 200,
-            updatedQuery: query
-        });
-    } catch (error) {
-        console.error("Error in updateAssignedProduct:", error);
-        res.status(500).json({
-            message: "Internal Server Error",
-            code: 500,
-            error: error.message
-        });
-    }
-};
+//         res.json({
+//             message: "Variant assigned successfully.",
+//             code: 200,
+//             updatedQuery: query
+//         });
+//     } catch (error) {
+//         console.error("Error in updateAssignedProduct:", error);
+//         res.status(500).json({
+//             message: "Internal Server Error",
+//             code: 500,
+//             error: error.message
+//         });
+//     }
+// };
