@@ -182,7 +182,7 @@ router.delete(
 
 //add supplier quote
 router.post(
-    '/addSupplierQuote/:id',
+    '/addSupplierQuote',
     trimRequest.all,
     requireAuth,
     controller.addSupplierQuote

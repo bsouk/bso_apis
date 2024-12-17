@@ -426,10 +426,25 @@ exports.supplierQuotesById = async (req, res) => {
                     }
                 },
                 {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'queryDetails.product.id',
+                        foreignField: '_id',
+                        as: 'product_data'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$product_data',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
                     $project: {
                         _id: 1,
                         'queryDetails.product': 1,
-                        'queryDetails.supplier_quote': 1
+                        'queryDetails.supplier_quote': 1,
+                        'product_data': 1
                     }
                 }
             ]
@@ -449,7 +464,7 @@ exports.supplierQuotesById = async (req, res) => {
 
 exports.addAdminQuote = async (req, res) => {
     try {
-        const { id } = req.params
+        const { id } = req.body
         const queryData = await Query.findById({ _id: id })
         if (!queryData) {
             return utils.handleError(res, {
@@ -478,3 +493,73 @@ exports.addAdminQuote = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+// assign multiple queries to supplier
+exports.assignMultipleQueries = async (req, res) => {
+    try {
+        const { id, product_id, sku_id, supplier_id } = req.body;
+
+        console.log("=============req.body", req.body)
+        if (!id || !product_id || !sku_id || !supplier_id) {
+            return res.status(400).json({
+                message: "Missing required fields: id, user_id, product_id, sku_id, or supplier_id.",
+                code: 400
+            });
+        }
+
+        const queryObjectId = new mongoose.Types.ObjectId(id);
+        const productObjectId = new mongoose.Types.ObjectId(product_id);
+        const skuObjectId = new mongoose.Types.ObjectId(sku_id);
+        const supplierObjectId = new mongoose.Types.ObjectId(supplier_id);
+
+        const query = await Query.findOne({
+            _id: queryObjectId,
+            "queryDetails.product.id": productObjectId,
+            "queryDetails.variant._id": skuObjectId,
+            "queryDetails.supplier._id": supplierObjectId
+        });
+        console.log("=============query", query)
+
+        if (!query) {
+            return res.status(404).json({
+                message: "Query not found with the given criteria.",
+                code: 404
+            });
+        }
+
+        const queryDetails = query.queryDetails.find(
+            (detail) =>
+                detail.product.id.equals(productObjectId) &&
+                detail.variant._id.equals(skuObjectId) &&
+                detail.supplier._id.equals(supplierObjectId)
+        );
+
+        if (!queryDetails) {
+            return res.status(404).json({
+                message: "Matching queryDetails not found.",
+                code: 404
+            });
+        }
+
+        queryDetails.assigned_to = {
+            variant_assigned: supplierObjectId.toString(),
+            type: "supplier"
+        };
+
+        await query.save();
+
+        res.json({
+            message: "Variant assigned successfully.",
+            code: 200,
+            updatedQuery: query
+        });
+    } catch (error) {
+        console.error("Error in updateAssignedProduct:", error);
+        res.status(500).json({
+            message: "Internal Server Error",
+            code: 500,
+            error: error.message
+        });
+    }
+};

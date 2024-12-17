@@ -1419,7 +1419,7 @@ exports.deleteQuery = async (req, res) => {
 
 exports.addSupplierQuote = async (req, res) => {
     try {
-        const { id } = req.params
+        const { id } = req.body
         const queryData = await Query.findById({ _id: id })
         if (!queryData) {
             return utils.handleError(res, {
