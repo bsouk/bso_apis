@@ -1527,13 +1527,13 @@ exports.deleteQuery = async (req, res) => {
 
 exports.addSupplierQuote = async (req, res) => {
     try {
-        const { id } = req.body
+        const { query_id } = req.body
         const userId = req.user._id;
         console.log("userid is ", userId);
 
         const userData = await User.findOne({ _id: userId })
 
-        const queryData = await Query.findById({ _id: id })
+        const queryData = await Query.findById({ _id: query_id })
         if (!queryData) {
             return utils.handleError(res, {
                 message: "Query not found",
@@ -1549,8 +1549,8 @@ exports.addSupplierQuote = async (req, res) => {
 
         const result = await Query.findOneAndUpdate(
             {
-                _id: id,
-                'queryDetails._id': req?.body?.query_id
+                _id: query_id,
+                'queryDetails._id': req?.body?.query_details_id
             },
             {
                 $set: {
