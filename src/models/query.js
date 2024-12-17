@@ -147,7 +147,20 @@ const querySchema = new mongoose.Schema({
                 type: { type: String, required: false, default: "admin" },
             }
         }
-    ]
+    ],
+    final_quote: {
+        quantity: {
+            type: Number
+        },
+        price: {
+            type: Number
+        },
+        message: {
+            type: String
+        },
+        media: [String],
+        document: [String]
+    },
 },
     {
         timestamps: true

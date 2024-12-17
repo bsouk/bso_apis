@@ -57,8 +57,10 @@ exports.getquery = async (req, res) => {
         ])
 
         const count = await Query.countDocuments(filter);
+        const pendingCount = await Query.countDocuments({ status: "pending" })
+        const splitCount = await Query.countDocuments({ 'queryDetails.assigned_to.type': 'supplier' })
 
-        res.json({ data: productlist, count, code: 200 });
+        res.json({ data: productlist, count, pendingCount, splitCount, code: 200 });
     } catch (error) {
         utils.handleError(res, error);
     }
@@ -353,36 +355,3 @@ exports.unassignVariant = async (req, res) => {
     }
 };
 
-
-/// add admin product query quote
-exports.addSupplierQuote = async (req, res) => {
-    try {
-        const { id } = req.params
-        const queryData = await Query.findById({ _id: id })
-        if (!queryData) {
-            return utils.handleError(res, {
-                message: "Query not found",
-                code: 404,
-            });
-        }
-
-        const result = await Query.findOneAndUpdate(
-            {
-                _id: id,
-                'queryDetails._id': req?.body?.query_id
-            },
-            {
-                $set: { 'queryDetails.$.supplier_quote': req?.body?.supplier_quote }
-            },
-            { new: true }
-        )
-        console.log("result : ", result)
-        return res.status(200).json({
-            message: "Supplier quote added successfully",
-            data: result,
-            code: 200
-        })
-    } catch (error) {
-        utils.handleError(res, error);
-    }
-}

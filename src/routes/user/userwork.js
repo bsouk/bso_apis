@@ -180,4 +180,12 @@ router.delete(
     controller.deleteQuery
 );
 
+//add supplier quote
+router.post(
+    '/addSupplierQuote/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.addSupplierQuote
+);
+
 module.exports = router;
