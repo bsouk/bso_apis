@@ -536,3 +536,43 @@ exports.getCategoryList = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+
+//aprove/reject main category
+exports.approveRejectCategory = async (req, res) => {
+  try {
+    const categoryId = req.body.id
+
+    const categoryData = await ProductCategory.findById(categoryId);
+
+    if (!categoryData)
+      return utils.handleError(res, {
+        message: "Category not found",
+        code: 404,
+      });
+
+    if (req.body.status === "rejected" && !req.body.reason) {
+      return utils.handleError(res, {
+        message: "Rejection reason is required",
+        code: 404,
+      });
+    }
+
+    if (req.body.reason && req.body.status === "rejected") {
+      categoryData.is_admin_approved = req.body.status
+      categoryData.rejected_reason = req.body.reason
+      await categoryData.save()
+    } else {
+      categoryData.is_admin_approved = req.body.status
+      await categoryData.save()
+    }
+
+    res.json({
+      message: "Category status changed Successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}

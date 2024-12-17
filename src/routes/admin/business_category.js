@@ -50,4 +50,11 @@ router.delete(
 );
 
 
+router.patch(
+    '/approveRejectBusinessCategory',
+    trimRequest.all,
+    requireAuth,
+    controller.approveRejectBusinessCategory
+)
+
 module.exports = router

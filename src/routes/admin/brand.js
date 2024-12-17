@@ -50,5 +50,12 @@ router.delete(
 );
 
 
+router.patch(
+    '/approveRejectBrand',
+    trimRequest.all,
+    requireAuth,
+    controller.approveRejectBrand
+)
+
 
 module.exports = router

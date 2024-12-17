@@ -18,6 +18,14 @@ const categorySubTypeSchema = new mongoose.Schema(
         isNext: {
             type: Boolean,
             default: false
+        },
+        is_admin_approved: {
+            type: String,
+            enum: ["pending", "approved", "rejected"],
+            default: "pending"
+        },
+        rejected_reason: {
+            type: String
         }
     },
     {

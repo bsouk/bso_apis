@@ -7,6 +7,14 @@ const businessCategorySchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        is_admin_approved: {
+            type: String,
+            enum: ["pending", "approved", "rejected"],
+            default: "pending"
+        },
+        rejected_reason: {
+            type: String
+        }
     },
     {
         versionKey: false,

@@ -153,3 +153,42 @@ exports.deleteselectedBusinessCategory = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.approveRejectBusinessCategory = async (req, res) => {
+    try {
+        const business_category_id = req.body.id
+
+        const business_category_data = await business_category.findById(business_category_id);
+
+        if (!business_category_data)
+            return utils.handleError(res, {
+                message: "Business category not found",
+                code: 404,
+            });
+
+        if (req.body.status === "rejected" && !req.body.reason) {
+            return utils.handleError(res, {
+                message: "Rejection reason is required",
+                code: 404,
+            });
+        }
+
+        if (req.body.reason && req.body.status === "rejected") {
+            business_category_data.is_admin_approved = req.body.status
+            business_category_data.rejected_reason = req.body.reason
+            await business_category_data.save()
+        } else {
+            business_category_data.is_admin_approved = req.body.status
+            await business_category_data.save()
+        }
+
+        res.json({
+            message: "Business category status changed Successfully",
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

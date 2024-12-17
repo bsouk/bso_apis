@@ -10,7 +10,6 @@ const controller = require('../../controllers/admin/querybids')
 const trimRequest = require('trim-request');
 
 
-
 router.get(
     '/getquery',
     trimRequest.all,
@@ -19,38 +18,38 @@ router.get(
 )
 router.get(
     '/getquerydetail/:id',
-     trimRequest.all,
-     requireAuth,
+    trimRequest.all,
+    requireAuth,
     controller.getquerydetail
 );
 router.put(
     '/addbidexpiration',
-     trimRequest.all,
-     requireAuth,
+    trimRequest.all,
+    requireAuth,
     controller.addbidexpiration
 );
 router.get(
     '/getbidexpiration',
-     trimRequest.all,
-     requireAuth,
+    trimRequest.all,
+    requireAuth,
     controller.getbidexpiration
 );
 router.delete(
     '/deletequery',
-     trimRequest.all,
-     requireAuth,
+    trimRequest.all,
+    requireAuth,
     controller.deletequery
 );
 router.post(
     '/updateAssignedProduct',
-     trimRequest.all,
-     requireAuth,
+    trimRequest.all,
+    requireAuth,
     controller.updateAssignedProduct
 );
 router.post(
     '/unassignVariant',
-     trimRequest.all,
-     requireAuth,
+    trimRequest.all,
+    requireAuth,
     controller.unassignVariant
 );
 // router.post(
@@ -59,6 +58,29 @@ router.post(
 //      requireAuth,
 //     controller.addquote
 // );
+
+
+router.post(
+    '/addFinalQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.addFinalQuote
+);
+
+router.post(
+    '/addAdminQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.addAdminQuote
+);
+
+
+router.get(
+    '/getSingleSupplierQuote/:product_id',
+    trimRequest.all,
+    requireAuth,
+    controller.supplierQuotesById
+);
 
 
 module.exports = router

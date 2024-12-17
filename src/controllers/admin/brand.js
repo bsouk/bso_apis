@@ -154,3 +154,41 @@ exports.deleteselectedbrand = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+exports.approveRejectBrand = async (req, res) => {
+    try {
+        const brandId = req.body.id
+
+        const brand = await Brand.findById(brandId);
+
+        if (!brand)
+            return utils.handleError(res, {
+                message: "Brand not found",
+                code: 404,
+            });
+
+        if (req.body.status === "rejected" && !req.body.reason) {
+            return utils.handleError(res, {
+                message: "Rejection reason is required",
+                code: 404,
+            });
+        }
+
+        if (req.body.reason && req.body.status === "rejected") {
+            brand.is_admin_approved = req.body.status
+            brand.rejected_reason = req.body.reason
+            await brand.save()
+        } else {
+            brand.is_admin_approved = req.body.status
+            await brand.save()
+        }
+
+        res.json({
+            message: "Brand status changed Successfully",
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

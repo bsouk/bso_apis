@@ -148,4 +148,11 @@ router.get(
   controller.getCategoryList
 )
 
+router.patch(
+  '/approveRejectCategory',
+  trimRequest.all,
+  requireAuth,
+  controller.approveRejectCategory
+)
+
 module.exports = router

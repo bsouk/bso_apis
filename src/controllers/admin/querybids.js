@@ -355,3 +355,126 @@ exports.unassignVariant = async (req, res) => {
     }
 };
 
+
+exports.addFinalQuote = async (req, res) => {
+    try {
+        const { query_id, final_quotes } = req.body
+        console.log("final_quotes : ", final_quotes)
+        const queryData = await Query.findOne({ _id: query_id })
+
+        if (!Array.isArray(final_quotes)) {
+            return utils.handleError(res, {
+                message: "final_quotes should be an array",
+                code: 400,
+            });
+        }
+
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Query not found",
+                code: 400,
+            });
+        }
+
+        // final_quotes?.forEach((i) => queryData?.final_quote?.push(i));
+        // await queryData.save()
+
+        const result = await Query.findOneAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(query_id)
+            },
+            {
+                $set: { 'final_quote': final_quotes }
+            },
+            { new: true }
+        )
+
+        return res.status(200).json({
+            message: "final quote added successfully",
+            data: result,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.supplierQuotesById = async (req, res) => {
+    try {
+        const { product_id } = req.params
+        console.log("product_id : ", product_id)
+
+        if (!mongoose.Types.ObjectId.isValid(product_id)) {
+            return res.status(400).json({
+                message: "Invalid product ID format",
+                code: 400
+            });
+        }
+
+        const data = await Query.aggregate(
+            [
+                {
+                    $unwind: {
+                        path: '$queryDetails',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: {
+                        'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        'queryDetails.product': 1,
+                        'queryDetails.supplier_quote': 1
+                    }
+                }
+            ]
+        )
+        console.log("data : ", data)
+
+        return res.status(200).json({
+            message: "Supplier quote fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.addAdminQuote = async (req, res) => {
+    try {
+        const { id } = req.params
+        const queryData = await Query.findById({ _id: id })
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Query not found",
+                code: 404,
+            });
+        }
+
+        const result = await Query.findOneAndUpdate(
+            {
+                _id: id,
+                'queryDetails._id': req?.body?.query_id
+            },
+            {
+                $set: { 'queryDetails.$.supplier_quote': req?.body?.supplier_quote }
+            },
+            { new: true }
+        )
+        console.log("result : ", result)
+        return res.status(200).json({
+            message: "Supplier quote added successfully",
+            data: result,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
