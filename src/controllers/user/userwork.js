@@ -1258,7 +1258,8 @@ exports.getMyQueries = async (req, res) => {
                             quantity: '$queryDetails.quantity',
                             query: '$queryDetails.query',
                             notes: '$queryDetails.notes',
-                            assigned_to: '$queryDetails.assigned_to'
+                            assigned_to: '$queryDetails.assigned_to',
+                            _id: '$queryDetails._id'
                         }
                     },
                     createdAt: { $first: '$createdAt' },
