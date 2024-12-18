@@ -611,13 +611,52 @@ exports.adminQuotesById = async (req, res) => {
 }
 
 
-// exports.generateFinalQuote = async (req, res) => {
-//     try {
+exports.generateFinalQuote = async (req, res) => {
+    try {
+        const { id } = req.params;
 
-//     } catch (error) {
-//         utils.handleError(res, error);
-//     }
-// }
+        const queryData = await Query.aggregate([
+            { $match: { _id: new mongoose.Types.ObjectId(id) } },
+            {
+                $project: {
+                    queryDetails: {
+                        $filter: {
+                            input: "$queryDetails",
+                            as: "detail",
+                            cond: {
+                                $or: [
+                                    { $ne: ["$$detail.supplier_quote", null] },
+                                    { $ne: ["$$detail.admin_quote", null] }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        if (!queryData.length) {
+            return res.status(400).json({
+                message: "Query not found",
+                code: 400,
+            });
+        }
+
+        const finalQuoteList = queryData[0].queryDetails.map(
+            (i) => i.supplier_quote || i.admin_quote
+        ).filter(i => i !== undefined || null)
+
+        console.log("finalQuote:", finalQuoteList);
+
+        return res.status(200).json({
+            message: "Final quote generated successfully",
+            data: finalQuoteList,
+            code: 200,
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
 
 
 // // assign multiple queries to supplier

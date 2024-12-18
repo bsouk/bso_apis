@@ -89,5 +89,11 @@ router.get(
     controller.adminQuotesById
 );
 
+router.get(
+    '/getFinalQuote/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.generateFinalQuote
+);
 
 module.exports = router
