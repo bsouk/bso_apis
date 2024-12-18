@@ -5,6 +5,14 @@ const quotationSchema = new mongoose.Schema({
     quotation_unique_id: {
         type: String
     },
+    query_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'queries'
+    },
+    bid_setting: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'bidsettings'
+    },
     final_quote: [
         {
             quantity: {
@@ -37,7 +45,14 @@ const quotationSchema = new mongoose.Schema({
     rejected_reason: {
         type: String
     },
-})
+    version_history: {
+        type: String
+    }
+},
+    {
+        timestamps: true
+    }
+)
 
 quotationSchema.plugin(mongoosePaginate);
 module.exports = mongoose.model("quotation", quotationSchema);

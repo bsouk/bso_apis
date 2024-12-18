@@ -177,21 +177,32 @@ const querySchema = new mongoose.Schema({
             }
         }
     ],
-    final_quote: [
-        {
-            quantity: {
-                type: Number
+    final_quote: {
+        type: [
+            {
+                quantity: {
+                    type: Number
+                },
+                price: {
+                    type: Number
+                },
+                message: {
+                    type: String
+                },
+                media: [String],
+                document: [String],
+                assignedBy: {
+                    id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                    },
+                    type: {
+                        type: String
+                    }
+                }
             },
-            price: {
-                type: Number
-            },
-            message: {
-                type: String
-            },
-            media: [String],
-            document: [String]
-        }
-    ]
+        ],
+        default: []
+    }
 },
     {
         timestamps: true
