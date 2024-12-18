@@ -98,7 +98,7 @@ exports.uploadMedia = async (req, res) => {
     }
 
     let isArray = req.body.isArray;
-    let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg"];
+    let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif"];
     let supportedOtherTypes = [
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
