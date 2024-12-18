@@ -194,14 +194,22 @@ exports.getProductList = async (req, res) => {
       is_deleted: { $ne: true },
       is_admin_approved: "approved"
     };
-    
+
     if (search) {
       filter.name = { $regex: search, $options: "i" };
     }
 
+    // if (category_id) {
+    //   filter.category_id = { $in: [new mongoose.Types.ObjectId(category_id)] }
+    // }
+
     if (category_id) {
-      filter.category_id = { $in: [new mongoose.Types.ObjectId(category_id)] }
+      const categoryIds = category_id.split(',').map(id => id.trim()).filter(mongoose.Types.ObjectId.isValid);
+      if (categoryIds.length) {
+        filter.category_id = { $in: categoryIds.map(id => new mongoose.Types.ObjectId(id)) };
+      }
     }
+
     // const productlist = await Product.find(filter)
     //   .sort({ createdAt: -1 })
     //   .skip(offset)

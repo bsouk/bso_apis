@@ -114,7 +114,7 @@ router.post(
 );
 
 router.get(
-    "/getProfileDetails/:id",
+    "/getProfileDetails",
     trimRequest.all,
     requireAuth,
     controller.getProfileDetails
