@@ -20,7 +20,7 @@ router.post(
 );
 
 router.patch(
-    "/editProfile/:id",
+    "/editProfile",
     trimRequest.all,
     requireAuth,
     controller.editProfile

@@ -91,7 +91,7 @@ exports.createBuyerProfile = async (req, res) => {
 exports.editProfile = async (req, res) => {
     try {
         const data = req.body;
-        const id = req.params.id;
+        const id = req.user._id;
 
         const user = await User.findById(id);
         console.log("user is ", user)

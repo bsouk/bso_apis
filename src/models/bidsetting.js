@@ -2,20 +2,18 @@ const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
 const BidSettingSchema = new mongoose.Schema({
-
-    query_id:{
-        type:mongoose.Schema.Types.ObjectId,
+    query_id: {
+        type: mongoose.Schema.Types.ObjectId,
         required: true
     },
-
-    bid_closing_date:{
-        type:Date,
+    bid_closing_date: {
+        type: Date,
         required: true
     },
-    remainder_setup_date:{
-        type:Date,
+    remainder_setup_date: {
+        type: Date,
         required: true
-    }, 
+    },
     query_priority: {
         type: String,
         enum: ["high", "medium", "low"],
