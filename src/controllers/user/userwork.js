@@ -473,7 +473,10 @@ exports.addAddress = async (req, res) => {
         const data = req.body
         console.log("address data is ", data)
 
-        const allAddress = await Address.find({ user_id: data.user_id });
+        const userId = req.user._id;
+        console.log("userid is ", userId);
+
+        const allAddress = await Address.find({ user_id: userId });
         console.log("address list is ", allAddress)
 
         if (!allAddress || allAddress.length === 0) {
