@@ -4,6 +4,7 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 const BidSettingSchema = new mongoose.Schema({
     query_id: {
         type: mongoose.Schema.Types.ObjectId,
+        ref: 'queries',
         required: true
     },
     bid_closing_date: {

@@ -26,6 +26,14 @@ const quotationSchema = new mongoose.Schema({
             },
             media: [String],
             document: [String],
+            assignedBy: {
+                id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                },
+                type: {
+                    type: String
+                }
+            },
             buyer_notes: {
                 type: String
             },
@@ -34,6 +42,10 @@ const quotationSchema = new mongoose.Schema({
             },
             admin_notes: {
                 type: String
+            },
+            bid: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'bids'
             }
         }
     ],

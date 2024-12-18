@@ -17,6 +17,14 @@ const BidSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'bidsettings'
     },
+    is_admin_approved: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending"
+    },
+    rejected_reason: {
+        type: String
+    },
 },
     {
         timestamps: true

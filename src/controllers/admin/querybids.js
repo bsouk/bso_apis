@@ -4,6 +4,9 @@ const Query = require("../../models/query");
 const BidSetting = require("../../models/bidsetting");
 const utils = require("../../utils/utils");
 const admin = require("../../models/admin");
+const bidsetting = require("../../models/bidsetting");
+const quotation = require("../../models/quotation");
+const moment = require("moment")
 
 exports.getquery = async (req, res) => {
     try {
@@ -357,6 +360,41 @@ exports.unassignVariant = async (req, res) => {
 };
 
 
+async function generateUniqueQuotationId() {
+    const id = await Math.floor(Math.random() * 10000000000)
+    console.log('unique id : ', id)
+    return `#${id}`
+}
+
+async function createQuotation(final_quotes, query_id) {
+
+    const bidSettingData = await bidsetting.findOne({ query_id: query_id })
+    console.log('bid setting data : ', bidSettingData)
+
+    if (!bidSettingData) {
+        return utils.handleError(res, {
+            message: "bids expiration details need to be added first",
+            code: 400,
+        });
+    }
+
+    const quoteId = await generateUniqueQuotationId()
+    const currentTime = await moment(Date.now()).format('lll')
+    const data = {
+        quotation_unique_id: await quoteId.toString(),
+        query_id,
+        final_quote: [...final_quotes],
+        version_history: currentTime
+    }
+
+    if (bidSettingData._id) {
+        data.bid_setting = bidSettingData._id
+    }
+
+    const newQuotation = await quotation.create(data)
+    console.log('new Quotation : ', newQuotation)
+}
+
 exports.addFinalQuote = async (req, res) => {
     try {
         const { query_id, final_quotes } = req.body
@@ -389,6 +427,8 @@ exports.addFinalQuote = async (req, res) => {
             },
             { new: true }
         )
+
+        await createQuotation(final_quotes, query_id)
 
         return res.status(200).json({
             message: "final quote added successfully",
@@ -507,6 +547,77 @@ exports.addAdminQuote = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.adminQuotesById = async (req, res) => {
+    try {
+        const { product_id } = req.params
+        console.log("product_id : ", product_id)
+
+        if (!mongoose.Types.ObjectId.isValid(product_id)) {
+            return res.status(400).json({
+                message: "Invalid product ID format",
+                code: 400
+            });
+        }
+
+        const data = await Query.aggregate(
+            [
+                {
+                    $unwind: {
+                        path: '$queryDetails',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: {
+                        'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'queryDetails.product.id',
+                        foreignField: '_id',
+                        as: 'product_data'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$product_data',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        'queryDetails.product': 1,
+                        'queryDetails.admin_quote': 1,
+                        'product_data': 1
+                    }
+                }
+            ]
+        )
+        console.log("data : ", data)
+
+        return res.status(200).json({
+            message: "Admin quote fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+// exports.generateFinalQuote = async (req, res) => {
+//     try {
+
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }
 
 
 // // assign multiple queries to supplier

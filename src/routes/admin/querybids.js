@@ -82,5 +82,12 @@ router.get(
     controller.supplierQuotesById
 );
 
+router.get(
+    '/getSingleAdminQuote/:product_id',
+    trimRequest.all,
+    requireAuth,
+    controller.adminQuotesById
+);
+
 
 module.exports = router
