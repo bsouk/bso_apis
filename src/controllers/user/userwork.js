@@ -830,6 +830,12 @@ exports.getProfileDetails = async (req, res) => {
                     address: "$address.address",
                 },
             },
+            {
+                $project: {
+                    password: 0,
+                    decoded_password: 0
+                }
+            }
         ]);
         res.json({ data: user[0], code: 200 });
     } catch (err) {
