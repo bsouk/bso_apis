@@ -634,33 +634,39 @@ exports.generateFinalQuote = async (req, res) => {
                     "queryDetails.product_data": { $arrayElemAt: ["$product_data", 0] }
                 }
             },
+            // {
+            //     $addFields: {
+            //         "queryDetails.final_quote": {
+            //             $cond: {
+            //                 if: { $ne: ["$queryDetails.supplier_quote", null] },
+            //                 then: "$queryDetails.supplier_quote",
+            //                 else: "$queryDetails.admin_quote"
+            //             }
+            //         }
+            //     }
+            // },
             {
                 $addFields: {
-                    final_quote: {
-                        $cond: {
-                            if: { $ne: ["$queryDetails.supplier_quote", null] },
-                            then: "$queryDetails.supplier_quote",
-                            else: "$queryDetails.admin_quote"
-                        }
+                    "queryDetails.final_quote": {
+                        $ifNull: ["$queryDetails.supplier_quote", "$queryDetails.admin_quote"]
                     }
                 }
             },
             {
                 $match: {
-                    final_quote: { $ne: null }
+                    "queryDetails.final_quote": { $ne: null }
                 }
             },
             {
                 $group: {
                     _id: "$_id",
-                    queryDetails: { $push: "$queryDetails" },
-                    finalQuotes: { $push: "$final_quote" }
+                    queryDetails: { $push: "$queryDetails" }
                 }
             },
             {
                 $project: {
                     "queryDetails.product_data": 1,
-                    finalQuotes: 1
+                    "queryDetails.final_quote": 1
                 }
             }
         ]);
@@ -674,7 +680,7 @@ exports.generateFinalQuote = async (req, res) => {
 
         return res.status(200).json({
             message: "Final quote generated successfully",
-            data: queryData,
+            data: queryData[0],
             code: 200,
         });
     } catch (error) {
