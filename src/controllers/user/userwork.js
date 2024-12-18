@@ -795,8 +795,8 @@ exports.uploadMedia = async (req, res) => {
 //get User Profile details
 exports.getProfileDetails = async (req, res) => {
     try {
-        const user_Id = req.user._id;
-        console.log("user : ", user_Id)
+        const user_id = req.user._id;
+        console.log("user : ", user_id)
 
         const user = await User.aggregate([
             {
