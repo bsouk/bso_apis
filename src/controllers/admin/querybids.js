@@ -617,20 +617,50 @@ exports.generateFinalQuote = async (req, res) => {
 
         const queryData = await Query.aggregate([
             { $match: { _id: new mongoose.Types.ObjectId(id) } },
+
+            { $unwind: "$queryDetails" },
+
             {
-                $project: {
-                    queryDetails: {
-                        $filter: {
-                            input: "$queryDetails",
-                            as: "detail",
-                            cond: {
-                                $or: [
-                                    { $ne: ["$$detail.supplier_quote", null] },
-                                    { $ne: ["$$detail.admin_quote", null] }
-                                ]
-                            }
+                $lookup: {
+                    from: "products",
+                    localField: "queryDetails.product.id",
+                    foreignField: "_id",
+                    as: "product_data"
+                }
+            },
+
+            {
+                $addFields: {
+                    "queryDetails.product_data": { $arrayElemAt: ["$product_data", 0] }
+                }
+            },
+            {
+                $addFields: {
+                    final_quote: {
+                        $cond: {
+                            if: { $ne: ["$queryDetails.supplier_quote", null] },
+                            then: "$queryDetails.supplier_quote",
+                            else: "$queryDetails.admin_quote"
                         }
                     }
+                }
+            },
+            {
+                $match: {
+                    final_quote: { $ne: null }
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    queryDetails: { $push: "$queryDetails" },
+                    finalQuotes: { $push: "$final_quote" }
+                }
+            },
+            {
+                $project: {
+                    "queryDetails.product_data": 1,
+                    finalQuotes: 1
                 }
             }
         ]);
@@ -642,15 +672,9 @@ exports.generateFinalQuote = async (req, res) => {
             });
         }
 
-        const finalQuoteList = queryData[0].queryDetails.map(
-            (i) => i.supplier_quote || i.admin_quote
-        ).filter(i => i !== undefined || null)
-
-        console.log("finalQuote:", finalQuoteList);
-
         return res.status(200).json({
             message: "Final quote generated successfully",
-            data: finalQuoteList,
+            data: queryData,
             code: 200,
         });
     } catch (error) {
