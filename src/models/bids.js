@@ -25,6 +25,30 @@ const BidSchema = new mongoose.Schema({
     rejected_reason: {
         type: String
     },
+    bid_data: {
+        type: {
+            quantity: {
+                type: Number
+            },
+            price: {
+                type: Number
+            },
+            message: {
+                type: String
+            },
+            media: [String],
+            document: [String],
+            assignedBy: {
+                id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                },
+                type: {
+                    type: String
+                }
+            }
+        },
+        default: {}
+    },
 },
     {
         timestamps: true

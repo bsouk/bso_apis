@@ -690,71 +690,95 @@ exports.generateFinalQuote = async (req, res) => {
 };
 
 
-// // assign multiple queries to supplier
-// exports.assignMultipleQueries = async (req, res) => {
-//     try {
-//         const { id, product_id, sku_id, supplier_id } = req.body;
+// assign multiple queries to supplier
+exports.assignMultipleQueries = async (req, res) => {
+    try {
+        const { assign_fields } = req.body;
 
-//         console.log("=============req.body", req.body)
-//         if (!id || !product_id || !sku_id || !supplier_id) {
-//             return res.status(400).json({
-//                 message: "Missing required fields: id, user_id, product_id, sku_id, or supplier_id.",
-//                 code: 400
-//             });
-//         }
+        console.log("=============req.body", req.body)
+        if (!Array.isArray(assign_fields) || assign_fields.length === 0) {
+            return res.status(400).json({
+                message: "Please provide a valid assign field list",
+                code: 400,
+            });
+        }
 
-//         const queryObjectId = new mongoose.Types.ObjectId(id);
-//         const productObjectId = new mongoose.Types.ObjectId(product_id);
-//         const skuObjectId = new mongoose.Types.ObjectId(sku_id);
-//         const supplierObjectId = new mongoose.Types.ObjectId(supplier_id);
+        const result = await Promise.all(assign_fields.map(async (i) => await Query.findOneAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(i.id),
+                "queryDetails.product.id": new mongoose.Types.ObjectId(i.product_id),
+                "queryDetails.variant._id": new mongoose.Types.ObjectId(i.sku_id),
+                "queryDetails.supplier._id": new mongoose.Types.ObjectId(i.supplier_id)
+            },
+            {
+                $set: {
+                    "queryDetails.$.assigned_to.variant_assigned": i.supplier_id.toString(),
+                    "queryDetails.$.assigned_to.type": "supplier",
+                }
+            },
+            { new: true }
+        )))
 
-//         const query = await Query.findOne({
-//             _id: queryObjectId,
-//             "queryDetails.product.id": productObjectId,
-//             "queryDetails.variant._id": skuObjectId,
-//             "queryDetails.supplier._id": supplierObjectId
-//         });
-//         console.log("=============query", query)
+        console.log("result : ", result)
 
-//         if (!query) {
-//             return res.status(404).json({
-//                 message: "Query not found with the given criteria.",
-//                 code: 404
-//             });
-//         }
+        res.json({
+            message: "Selected variant assigned successfully.",
+            data: result,
+            code: 200,
+        });
+    } catch (error) {
+        console.error("Error in assiging process:", error);
+        res.status(500).json({
+            message: "Internal Server Error",
+            code: 500,
+            error: error.message
+        });
+    }
+};
 
-//         const queryDetails = query.queryDetails.find(
-//             (detail) =>
-//                 detail.product.id.equals(productObjectId) &&
-//                 detail.variant._id.equals(skuObjectId) &&
-//                 detail.supplier._id.equals(supplierObjectId)
-//         );
+//unassign Multiple queries to supplier
+exports.unAssignMultipleQueries = async (req, res) => {
+    try {
+        const { unassign_fields } = req.body;
 
-//         if (!queryDetails) {
-//             return res.status(404).json({
-//                 message: "Matching queryDetails not found.",
-//                 code: 404
-//             });
-//         }
+        console.log("=============req.body", req.body)
+        if (!Array.isArray(unassign_fields) || unassign_fields.length === 0) {
+            return res.status(400).json({
+                message: "Please provide a valid assign field list",
+                code: 400,
+            });
+        }
 
-//         queryDetails.assigned_to = {
-//             variant_assigned: supplierObjectId.toString(),
-//             type: "supplier"
-//         };
+        const result = await Promise.all(unassign_fields.map(async (i) => await Query.findOneAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(i.id),
+                "queryDetails.product.id": new mongoose.Types.ObjectId(i.product_id),
+                "queryDetails.variant._id": new mongoose.Types.ObjectId(i.sku_id),
+                "queryDetails.supplier._id": new mongoose.Types.ObjectId(i.supplier_id)
+            },
+            {
+                $set: {
+                    "queryDetails.$.assigned_to.variant_assigned": null,
+                    "queryDetails.$.assigned_to.type": null,
+                    "queryDetails.$.supplier_quote": null,
+                }
+            },
+            { new: true }
+        )))
 
-//         await query.save();
+        console.log("result : ", result)
 
-//         res.json({
-//             message: "Variant assigned successfully.",
-//             code: 200,
-//             updatedQuery: query
-//         });
-//     } catch (error) {
-//         console.error("Error in updateAssignedProduct:", error);
-//         res.status(500).json({
-//             message: "Internal Server Error",
-//             code: 500,
-//             error: error.message
-//         });
-//     }
-// };
+        res.json({
+            message: "Selected variant Unassigned successfully.",
+            data: result,
+            code: 200,
+        });
+    } catch (error) {
+        console.error("Error in Unassiging process:", error);
+        res.status(500).json({
+            message: "Internal Server Error",
+            code: 500,
+            error: error.message
+        });
+    }
+};

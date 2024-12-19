@@ -96,4 +96,20 @@ router.get(
     controller.generateFinalQuote
 );
 
+//assign multiple query to supplier
+router.post(
+    '/assignSelectedQueries',
+    trimRequest.all,
+    requireAuth,
+    controller.assignMultipleQueries
+);
+
+//Unassign multiple query to supplier
+router.post(
+    '/unAssignSelectedQueries',
+    trimRequest.all,
+    requireAuth,
+    controller.unAssignMultipleQueries
+);
+
 module.exports = router
