@@ -467,26 +467,25 @@ exports.supplierQuotesById = async (req, res) => {
                         'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
                     }
                 },
-                {
-                    $lookup: {
-                        from: 'products',
-                        localField: 'queryDetails.product.id',
-                        foreignField: '_id',
-                        as: 'product_data'
-                    }
-                },
-                {
-                    $unwind: {
-                        path: '$product_data',
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
+                // {
+                //     $lookup: {
+                //         from: 'products',
+                //         localField: 'queryDetails.product.id',
+                //         foreignField: '_id',
+                //         as: 'product_data'
+                //     }
+                // },
+                // {
+                //     $unwind: {
+                //         path: '$product_data',
+                //         preserveNullAndEmptyArrays: true
+                //     }
+                // },
                 {
                     $project: {
                         _id: 1,
-                        'queryDetails.product': 1,
+                        'queryDetails.variant': 1,
                         'queryDetails.supplier_quote': 1,
-                        'product_data': 1
                     }
                 }
             ]
@@ -575,26 +574,25 @@ exports.adminQuotesById = async (req, res) => {
                         'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
                     }
                 },
-                {
-                    $lookup: {
-                        from: 'products',
-                        localField: 'queryDetails.product.id',
-                        foreignField: '_id',
-                        as: 'product_data'
-                    }
-                },
-                {
-                    $unwind: {
-                        path: '$product_data',
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
+                // {
+                //     $lookup: {
+                //         from: 'products',
+                //         localField: 'queryDetails.product.id',
+                //         foreignField: '_id',
+                //         as: 'product_data'
+                //     }
+                // },
+                // {
+                //     $unwind: {
+                //         path: '$product_data',
+                //         preserveNullAndEmptyArrays: true
+                //     }
+                // },
                 {
                     $project: {
                         _id: 1,
-                        'queryDetails.product': 1,
-                        'queryDetails.admin_quote': 1,
-                        'product_data': 1
+                        'queryDetails.variant': 1,
+                        'queryDetails.admin_quote': 1
                     }
                 }
             ]
@@ -621,20 +619,20 @@ exports.generateFinalQuote = async (req, res) => {
 
             { $unwind: "$queryDetails" },
 
-            {
-                $lookup: {
-                    from: "products",
-                    localField: "queryDetails.product.id",
-                    foreignField: "_id",
-                    as: "product_data"
-                }
-            },
+            // {
+            //     $lookup: {
+            //         from: "products",
+            //         localField: "queryDetails.product.id",
+            //         foreignField: "_id",
+            //         as: "product_data"
+            //     }
+            // },
 
-            {
-                $addFields: {
-                    "queryDetails.product_data": { $arrayElemAt: ["$product_data", 0] }
-                }
-            },
+            // {
+            //     $addFields: {
+            //         "queryDetails.product_data": { $arrayElemAt: ["$product_data", 0] }
+            //     }
+            // },
             // {
             //     $addFields: {
             //         "queryDetails.final_quote": {
@@ -666,7 +664,7 @@ exports.generateFinalQuote = async (req, res) => {
             },
             {
                 $project: {
-                    "queryDetails.product_data": 1,
+                    "queryDetails.variant": 1,
                     "queryDetails.final_quote": 1
                 }
             }

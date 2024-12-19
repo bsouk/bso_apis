@@ -840,6 +840,7 @@ exports.getProfileDetails = async (req, res) => {
                 }
             }
         ]);
+        
         res.json({ data: user[0], code: 200 });
     } catch (err) {
         utils.handleError(res, err);

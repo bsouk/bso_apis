@@ -26,28 +26,33 @@ const BidSchema = new mongoose.Schema({
         type: String
     },
     bid_data: {
-        type: {
-            quantity: {
-                type: Number
-            },
-            price: {
-                type: Number
-            },
-            message: {
-                type: String
-            },
-            media: [String],
-            document: [String],
-            assignedBy: {
-                id: {
-                    type: mongoose.Schema.Types.ObjectId,
+        type: [
+            {
+                quantity: {
+                    type: Number
                 },
-                type: {
+                price: {
+                    type: Number
+                },
+                message: {
+                    type: String
+                },
+                media: [String],
+                document: [String],
+                assignedBy: {
+                    id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                    },
+                    type: {
+                        type: String
+                    }
+                },
+                current_time: {
                     type: String
                 }
             }
-        },
-        default: {}
+        ],
+        default: []
     },
 },
     {
