@@ -264,16 +264,20 @@ const UserSchema = new mongoose.Schema(
       type: String
     },
     health_and_saftey_procedures: {
-      type: String
+      type: String,
+      default : ""
     },
     quality_procedures: {
-      type: String
+      type: String,
+      default : ""
     },
     anti_correcuptin_procedures: {
-      type: String
+      type: String,
+      default : ""
     },
     environment_policy: {
-      type: String
+      type: String,
+      default : ""
     },
     business_document: {
       type: String

@@ -83,7 +83,7 @@ exports.addCMS = async (req, res) => {
   try {
     const { type, content, images } = req.body;
 
-    if (!["privacy_policy", "terms_and_conditions", "about_us", "support"].includes(type))
+    if (!["privacy_policy", "terms_and_conditions", "about_us", "support", "quality_procedures", "health_and_safety_procedures", "anti_corruption_policy", "environmental_policy"].includes(type))
       return utils.handleError(res, {
         message: "Please provide valid type",
         code: 400,
@@ -115,7 +115,7 @@ exports.getCMS = async (req, res) => {
   try {
     const { type } = req.query;
 
-    if (!["privacy_policy", "terms_and_conditions", "about_us", "support"].includes(type))
+    if (!["privacy_policy", "terms_and_conditions", "about_us", "support", "quality_procedures", "health_and_safety_procedures", "anti_corruption_policy", "environmental_policy"].includes(type))
       return utils.handleError(res, {
         message: "Please provide valid type",
         code: 400,
@@ -215,43 +215,43 @@ exports.getContactUs = async (req, res) => {
     utils.handleError(res, error);
   }
 };
-exports.queryReply = async (req,res)=>{
-  try{
-    const data= await ContactUs.findById(req.body.id);
-    if(!data) return res.json({ message: "Query not found", code: 404 });
-    await data.updateOne({$set:{reply:req.body.reply,status:'Replied'}});
+exports.queryReply = async (req, res) => {
+  try {
+    const data = await ContactUs.findById(req.body.id);
+    if (!data) return res.json({ message: "Query not found", code: 404 });
+    await data.updateOne({ $set: { reply: req.body.reply, status: 'Replied' } });
     await data.save();
-    return res.json({code:200, message:'Your reply for query has been sent successfully'})
-  }catch(error){
+    return res.json({ code: 200, message: 'Your reply for query has been sent successfully' })
+  } catch (error) {
     utils.handleError(res, error);
   }
 };
-exports.deleteQuery=async(req,res)=>{
-  try{
+exports.deleteQuery = async (req, res) => {
+  try {
     await ContactUs.findByIdAndDelete(req.params.id);
     return res.json({ message: "Query deleted successfully", code: 200 });
-  }catch(error){
+  } catch (error) {
     utils.handleError(res, error);
   }
 }
-exports.changeQueryStatus=async(req,res)=>{
-  try{
-    const data= await ContactUs.findByIdAndUpdate(req.body.id,{
-      $set:{
-        status:req.body.status
+exports.changeQueryStatus = async (req, res) => {
+  try {
+    const data = await ContactUs.findByIdAndUpdate(req.body.id, {
+      $set: {
+        status: req.body.status
       }
     });
-   if(!data){
-    return utils.handleError(res, {
-      message: "Query Not Found",
-      code: 404,
-    });
-   }
-   return res.status(200).json({
-    message: "Status updated successfully",
-    code: 200
-   })
-  }catch(error){
+    if (!data) {
+      return utils.handleError(res, {
+        message: "Query Not Found",
+        code: 404,
+      });
+    }
+    return res.status(200).json({
+      message: "Status updated successfully",
+      code: 200
+    })
+  } catch (error) {
     utils.handleError(res, error);
   }
 }
