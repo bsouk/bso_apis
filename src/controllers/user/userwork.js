@@ -840,7 +840,7 @@ exports.getProfileDetails = async (req, res) => {
                 }
             }
         ]);
-        
+
         res.json({ data: user[0], code: 200 });
     } catch (err) {
         utils.handleError(res, err);
@@ -1211,6 +1211,7 @@ exports.getMyQueries = async (req, res) => {
         console.log("userdetails:", userDetails);
 
         const { status, search, offset = 0, limit = 10 } = req.query;
+        console.log('offset : ', offset, " limit : ", limit)
         const filter = {};
 
         if (status) {
@@ -1245,12 +1246,6 @@ exports.getMyQueries = async (req, res) => {
                 }
             },
             {
-                $skip: parseInt(offset) || 0,
-            },
-            {
-                $limit: parseInt(limit) || 10,
-            },
-            {
                 $group: {
                     _id: '$_id',
                     query_unique_id: { $first: '$query_unique_id' },
@@ -1277,7 +1272,13 @@ exports.getMyQueries = async (req, res) => {
                     createdAt: { $first: '$createdAt' },
                     updatedAt: { $first: '$updatedAt' }
                 }
-            }
+            },
+            {
+                $skip: +offset,
+            },
+            {
+                $limit: +limit,
+            },
         ]);
 
         const count = await Query.countDocuments({ ...filter, ...userMatchCondition });
