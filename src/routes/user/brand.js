@@ -12,7 +12,6 @@ const trimRequest = require('trim-request')
 router.get(
     "/getBrand",
     trimRequest.all,
-    requireAuth,
     controller.getBrand
 );
 
