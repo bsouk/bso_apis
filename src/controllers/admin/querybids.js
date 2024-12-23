@@ -444,12 +444,12 @@ exports.addFinalQuote = async (req, res) => {
 
 exports.supplierQuotesById = async (req, res) => {
     try {
-        const { product_id } = req.params
-        console.log("product_id : ", product_id)
+        const { query_id } = req.params
+        console.log("query_id : ", query_id)
 
-        if (!mongoose.Types.ObjectId.isValid(product_id)) {
+        if (!mongoose.Types.ObjectId.isValid(query_id)) {
             return res.status(400).json({
-                message: "Invalid product ID format",
+                message: "Invalid query ID format",
                 code: 400
             });
         }
@@ -464,7 +464,7 @@ exports.supplierQuotesById = async (req, res) => {
                 },
                 {
                     $match: {
-                        'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
+                        _id: new mongoose.Types.ObjectId(query_id)
                     }
                 },
                 // {
@@ -539,7 +539,7 @@ exports.addAdminQuote = async (req, res) => {
         )
         console.log("result : ", result)
         return res.status(200).json({
-            message: "Supplier quote added successfully",
+            message: "Admin quote added successfully",
             data: result,
             code: 200
         })
@@ -551,12 +551,11 @@ exports.addAdminQuote = async (req, res) => {
 
 exports.adminQuotesById = async (req, res) => {
     try {
-        const { product_id } = req.params
-        console.log("product_id : ", product_id)
+        const { query_id } = req.params
 
-        if (!mongoose.Types.ObjectId.isValid(product_id)) {
+        if (!mongoose.Types.ObjectId.isValid(query_id)) {
             return res.status(400).json({
-                message: "Invalid product ID format",
+                message: "Invalid query ID format",
                 code: 400
             });
         }
@@ -571,7 +570,8 @@ exports.adminQuotesById = async (req, res) => {
                 },
                 {
                     $match: {
-                        'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
+                        _id: new mongoose.Types.ObjectId(query_id),
+                        // 'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
                     }
                 },
                 // {

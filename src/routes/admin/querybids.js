@@ -76,14 +76,14 @@ router.post(
 
 
 router.get(
-    '/getSingleSupplierQuote/:product_id',
+    '/getSingleSupplierQuote/:query_id',
     trimRequest.all,
     requireAuth,
     controller.supplierQuotesById
 );
 
 router.get(
-    '/getSingleAdminQuote/:product_id',
+    '/getSingleAdminQuote/:query_id',
     trimRequest.all,
     requireAuth,
     controller.adminQuotesById
