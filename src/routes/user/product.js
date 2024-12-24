@@ -45,6 +45,7 @@ router.patch(
 router.get(
     '/getProductNameList',
     trimRequest.all,
+    requireAuth,
     controller.getProductNameList
 )
 
