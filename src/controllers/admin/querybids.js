@@ -444,13 +444,21 @@ exports.addFinalQuote = async (req, res) => {
 
 exports.supplierQuotesById = async (req, res) => {
     try {
-        const { query_id } = req.params
-        console.log("query_id : ", query_id)
+        const { query_id, id } = req.query
+        console.log("query_id : ", query_id, id)
 
-        if (!mongoose.Types.ObjectId.isValid(query_id)) {
+        if (!mongoose.Types.ObjectId.isValid(query_id) && !mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
-                message: "Invalid query ID format",
+                message: "Invalid ID format",
                 code: 400
+            });
+        }
+
+
+        if (!id && !query_id) {
+            return utils.handleError(res, {
+                message: "Query Id and index Id is required",
+                code: 404,
             });
         }
 
@@ -464,7 +472,8 @@ exports.supplierQuotesById = async (req, res) => {
                 },
                 {
                     $match: {
-                        _id: new mongoose.Types.ObjectId(query_id)
+                        _id: new mongoose.Types.ObjectId(id),
+                        'queryDetails._id': new mongoose.Types.ObjectId(query_id)
                     }
                 },
                 // {
@@ -551,12 +560,19 @@ exports.addAdminQuote = async (req, res) => {
 
 exports.adminQuotesById = async (req, res) => {
     try {
-        const { query_id } = req.params
+        const { id, query_id } = req.query
 
-        if (!mongoose.Types.ObjectId.isValid(query_id)) {
+        if (!mongoose.Types.ObjectId.isValid(id) && !mongoose.Types.ObjectId.isValid(query_id)) {
             return res.status(400).json({
-                message: "Invalid query ID format",
+                message: "Invalid ID format",
                 code: 400
+            });
+        }
+
+        if (!id && !query_id) {
+            return utils.handleError(res, {
+                message: "Query Id and index Id is required",
+                code: 404,
             });
         }
 
@@ -570,8 +586,8 @@ exports.adminQuotesById = async (req, res) => {
                 },
                 {
                     $match: {
-                        _id: new mongoose.Types.ObjectId(query_id),
-                        // 'queryDetails.product.id': new mongoose.Types.ObjectId(product_id)
+                        _id: new mongoose.Types.ObjectId(id),
+                        'queryDetails._id': new mongoose.Types.ObjectId(query_id)
                     }
                 },
                 // {
