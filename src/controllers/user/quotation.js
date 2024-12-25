@@ -269,3 +269,36 @@ exports.getQuotationDetails = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+exports.approveRejectQuotation = async (req, res) => {
+    try {
+        const { id, status } = req.body
+        const userId = req.user._id
+        const quotation_data = await quotation.findOne({ _id: id }).populate('query_id')
+        console.log('quotation_data : ', quotation_data)
+        if (!quotation_data) {
+            return utils.handleError(res, {
+                message: "Quotation not found",
+                code: 404,
+            });
+        }
+
+        if (quotation_data?.query_id?.createdByUser !== userId) {
+            return utils.handleError(res, {
+                message: "you don't have permission to edit it",
+                code: 404,
+            });
+        }
+
+        quotation_data.is_approved = status
+        await quotation_data.save()
+
+        return res.status(200).json({
+            message: "quotation status changed successfully",
+            code: 200
+        })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

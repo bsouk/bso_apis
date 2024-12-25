@@ -23,5 +23,11 @@ router.delete(
     controller.deleteMultipleQuotation
 );
 
+router.get(
+    '/getQuotationData/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getQuotationDetails
+)
 
 module.exports = router

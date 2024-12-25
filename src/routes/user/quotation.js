@@ -22,4 +22,11 @@ router.get(
     controller.getQuotationList
 )
 
+router.patch(
+    '/approveRejectQuotation',
+    trimRequest.all,
+    requireAuth,
+    controller.approveRejectQuotation
+)
+
 module.exports = router
