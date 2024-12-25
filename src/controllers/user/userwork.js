@@ -1567,7 +1567,8 @@ exports.addSupplierQuote = async (req, res) => {
             },
             {
                 $set: {
-                    'queryDetails.$.supplier_quote': req?.body?.supplier_quote
+                    'queryDetails.$.supplier_quote': req?.body?.supplier_quote,
+                    'queryDetails.$.admin_quote': null
                 }
             },
             { new: true }

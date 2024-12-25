@@ -542,7 +542,10 @@ exports.addAdminQuote = async (req, res) => {
                 'queryDetails._id': req?.body?.query_details_id
             },
             {
-                $set: { 'queryDetails.$.admin_quote': req?.body?.admin_quote }
+                $set: { 
+                    'queryDetails.$.admin_quote': req?.body?.admin_quote ,
+                    'queryDetails.$.supplier_quote': null 
+                }
             },
             { new: true }
         )
@@ -647,17 +650,6 @@ exports.generateFinalQuote = async (req, res) => {
             // {
             //     $addFields: {
             //         "queryDetails.product_data": { $arrayElemAt: ["$product_data", 0] }
-            //     }
-            // },
-            // {
-            //     $addFields: {
-            //         "queryDetails.final_quote": {
-            //             $cond: {
-            //                 if: { $ne: ["$queryDetails.supplier_quote", null] },
-            //                 then: "$queryDetails.supplier_quote",
-            //                 else: "$queryDetails.admin_quote"
-            //             }
-            //         }
             //     }
             // },
             {
