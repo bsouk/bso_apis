@@ -344,7 +344,7 @@ exports.login = async (req, res) => {
 
     console.log("user is ", user)
 
-    if (Object.keys(user).length === 0)
+    if (!user)
       return utils.handleError(res, {
         message: "Invalid login credentials. Please try again",
         code: 400,

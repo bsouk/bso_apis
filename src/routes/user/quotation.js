@@ -15,4 +15,11 @@ router.get(
     controller.getQuotationDetails
 )
 
+router.get(
+    '/getQuotationList',
+    trimRequest.all,
+    requireAuth,
+    controller.getQuotationList
+)
+
 module.exports = router
