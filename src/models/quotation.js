@@ -49,10 +49,10 @@ const quotationSchema = new mongoose.Schema({
             }
         }
     ],
-    is_admin_approved: {
+    is_approved: {
         type: String,
-        enum: ["pending", "approved", "rejected"],
-        default: "pending"
+        enum: ["processing", "approved", "cancelled"],
+        default: "processing"
     },
     rejected_reason: {
         type: String

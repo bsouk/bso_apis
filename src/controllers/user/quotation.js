@@ -6,15 +6,111 @@ const quotation = require("../../models/quotation");
 const user = require("../../models/user");
 
 
+// exports.getQuotationList = async (req, res) => {
+//     try {
+//         const { offset = 0, limit = 10, search } = req.query
+
+//         const userId = req.user._id;
+//         console.log("userid is ", userId);
+
+//         const user_data = await user.findOne({ _id: userId });
+//         console.log("logged user : ", user_data)
+//         if (!user_data) {
+//             return utils.handleError(res, {
+//                 message: "User not found",
+//                 code: 404,
+//             });
+//         }
+
+//         let filter = {}
+
+//         // if (user_data.user_type === "supplier") {
+//         //     filter.final_quote.assignedBy.id = new mongoose.Types.ObjectId(userId)
+//         //     filter.final_quote.assignedBy.type = "supplier"
+//         // }
+
+//         // if (user_data.user_type === "supplier") {
+//         //     filter["final_quote.assignedBy"] = {
+//         //         $elemMatch: {
+//         //             id: new mongoose.Types.ObjectId(userId),
+//         //             type: "supplier",
+//         //         },
+//         //     };
+//         // }
+
+//         if (search) {
+//             filter.quotation_unique_id = { $regex: search, $options: "i" }
+//         }
+//         const data = await quotation.aggregate([
+//             {
+//                 $unwind: {
+//                     path: "$final_quote",
+//                     preserveNullAndEmptyArrays: true
+//                 }
+//             },
+//             { $match: { ...filter } },
+//             {
+//                 $lookup: {
+//                     from: "queries",
+//                     localField: "query_id",
+//                     foreignField: "_id",
+//                     as: "query_data"
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "bidsettings",
+//                     localField: "bid_setting",
+//                     foreignField: "_id",
+//                     as: "bid_setting_data"
+//                 }
+//             },
+//             {
+//                 $project: {
+//                     $cond: {
+//                         if: {
+//                             "$final_quote.assignedBy.id": { $ne: new mongoose.Types.ObjectId(userId) },
+//                             "$final_quote.assignedBy.type": { $ne: "supplier" }
+//                         },
+//                         then: {
+//                             "final_quote.assignedBy": 0
+//                         }
+//                     }
+//                 }
+//             },
+//             {
+//                 $sort: { createdAt: -1 }
+//             },
+//             {
+//                 $skip: parseInt(offset)
+//             },
+//             {
+//                 $limit: parseInt(limit)
+//             }
+//         ])
+
+//         const count = await quotation.countDocuments(filter)
+
+//         return res.status(200).json({
+//             message: "quotation list fetched successfully",
+//             data: data,
+//             count: count,
+//             code: 200
+//         })
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }
+
 exports.getQuotationList = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, search } = req.query
-
+        const { offset = 0, limit = 10, search, status } = req.query;
         const userId = req.user._id;
-        console.log("userid is ", userId);
+        console.log("User ID:", userId);
 
         const user_data = await user.findOne({ _id: userId });
-        console.log("logged user : ", user_data)
+        console.log("Logged user:", user_data);
+
         if (!user_data) {
             return utils.handleError(res, {
                 message: "User not found",
@@ -22,24 +118,37 @@ exports.getQuotationList = async (req, res) => {
             });
         }
 
-        let filter = {}
+        let filter = {};
+
+        if (search) {
+            filter.quotation_unique_id = { $regex: search, $options: "i" };
+        }
+
+        if (status) {
+            filter.is_approved = status
+        }
 
         if (user_data.user_type === "supplier") {
             filter["final_quote.assignedBy.id"] = new mongoose.Types.ObjectId(userId);
             filter["final_quote.assignedBy.type"] = "supplier";
         }
 
-        if (search) {
-            filter.quotation_unique_id = { $regex: search, $options: "i" }
-        }
         const data = await quotation.aggregate([
-            { $match: { ...filter } },
+            {
+                $match: { ...filter }
+            },
             {
                 $lookup: {
                     from: "queries",
                     localField: "query_id",
                     foreignField: "_id",
-                    as: "query_data"
+                    as: "query_data",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$query_data",
+                    preserveNullAndEmptyArrays: true
                 }
             },
             {
@@ -47,32 +156,58 @@ exports.getQuotationList = async (req, res) => {
                     from: "bidsettings",
                     localField: "bid_setting",
                     foreignField: "_id",
-                    as: "bid_setting_data"
+                    as: "bid_setting_data",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$bid_setting_data",
+                    preserveNullAndEmptyArrays: true
                 }
             },
             {
-                $sort: { createdAt: -1 }
+                $project: {
+                    final_quote: {
+                        $filter: {
+                            input: "$final_quote",
+                            as: "quote",
+                            cond: {
+                                $and: [
+                                    { $eq: ["$$quote.assignedBy.id", new mongoose.Types.ObjectId(userId)] },
+                                    { $eq: ["$$quote.assignedBy.type", "supplier"] }
+                                ]
+                            }
+                        }
+                    },
+                    query_data: 1,
+                    bid_setting_data: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    is_approved: 1
+                }
             },
             {
-                $skip: parseInt(offset)
+                $sort: { createdAt: -1 },
             },
-            {
-                $limit: parseInt(limit)
-            }
-        ])
+            { $skip: parseInt(offset) },
+            { $limit: parseInt(limit) },
+        ]);
 
-        const count = await quotation.countDocuments(filter)
+        const count = await quotation.countDocuments(filter);
 
         return res.status(200).json({
-            message: "quotation list fetched successfully",
+            message: "Quotation list fetched successfully",
             data: data,
             count: count,
-            code: 200
-        })
+            code: 200,
+        });
     } catch (error) {
+        console.error("Error in getQuotationList:", error);
         utils.handleError(res, error);
     }
-}
+};
+
+
 
 exports.getQuotationDetails = async (req, res) => {
     try {

@@ -18,7 +18,7 @@ exports.getQuotationList = async (req, res) => {
             filter.quotation_unique_id = { $regex: search, $options: "i" }
         }
         if (status) {
-            filter.is_admin_approved = status
+            filter.is_approved = status
         }
 
         const data = await quotation.aggregate([
