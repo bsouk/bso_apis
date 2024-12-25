@@ -367,17 +367,17 @@ async function generateUniqueQuotationId() {
     return `#${id}`
 }
 
-async function createQuotation(final_quotes, query_id) {
+async function createQuotation(final_quotes, query_id, res) {
 
     const bidSettingData = await bidsetting.findOne({ query_id: query_id })
     console.log('bid setting data : ', bidSettingData)
 
-    if (!bidSettingData) {
-        return utils.handleError(res, {
-            message: "bids expiration details need to be added first",
-            code: 400,
-        });
-    }
+    // if (!bidSettingData) {
+    //     return utils.handleError(res, {
+    //         message: "bids expiration details not found",
+    //         code: 400,
+    //     });
+    // }
 
     const quoteId = await generateUniqueQuotationId()
     const currentTime = await moment(Date.now()).format('lll')
@@ -388,8 +388,8 @@ async function createQuotation(final_quotes, query_id) {
         version_history: currentTime
     }
 
-    if (bidSettingData._id) {
-        data.bid_setting = bidSettingData._id
+    if (bidSettingData?._id) {
+        data.bid_setting = bidSettingData?._id
     }
 
     const newQuotation = await quotation.create(data)
@@ -429,7 +429,7 @@ exports.addFinalQuote = async (req, res) => {
             { new: true }
         )
 
-        await createQuotation(final_quotes, query_id)
+        await createQuotation(final_quotes, query_id, res)
 
         return res.status(200).json({
             message: "final quote added successfully",
