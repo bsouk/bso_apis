@@ -274,6 +274,7 @@ exports.approveRejectQuotation = async (req, res) => {
     try {
         const { id, status } = req.body
         const userId = req.user._id
+        console.log("userId : ", userId)
         const quotation_data = await quotation.findOne({ _id: id }).populate('query_id')
         console.log('quotation_data : ', quotation_data)
         if (!quotation_data) {
@@ -283,7 +284,7 @@ exports.approveRejectQuotation = async (req, res) => {
             });
         }
 
-        if (quotation_data?.query_id?.createdByUser !== userId) {
+        if (quotation_data?.query_id?.createdByUser.toString() !== userId.toString()) {
             return utils.handleError(res, {
                 message: "you don't have permission to edit it",
                 code: 404,
