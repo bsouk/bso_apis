@@ -29,4 +29,12 @@ router.patch(
     controller.approveRejectQuotation
 )
 
+
+router.patch(
+    '/addQuotationNotes',
+    trimRequest.all,
+    requireAuth,
+    controller.addQuotationNotes
+)
+
 module.exports = router

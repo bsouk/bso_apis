@@ -303,3 +303,49 @@ exports.approveRejectQuotation = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.addQuotationNotes = async (req, res) => {
+    try {
+        const user_id = req.user._id
+        console.log("USER_ID : ", user_id)
+
+        const user_data = await user.findOne({ _id: user_id })
+        console.log("user_data : ", user_data)
+
+        if (!user_data) {
+            return utils.handleError(res, {
+                message: "token not found",
+                code: 404,
+            })
+        }
+
+        const { final_quote_id, note } = req.body
+        let filter = {}
+
+        if (user_data.user_type === "supplier") {
+            filter = { 'final_quote.$.supplier_notes': note }
+        } else {
+            filter = { 'final_quote.$.buyer_notes': note }
+        }
+
+        const data = await quotation.findOneAndUpdate(
+            {
+                'final_quote._id': new mongoose.Types.ObjectId(final_quote_id)
+            },
+            {
+                $set: filter
+            },
+            { new: true }
+        )
+
+        return res.status(200).json({
+            message: "Quotation notes added successfully",
+            data,
+            code: 200
+        })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
