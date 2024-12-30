@@ -8,7 +8,6 @@ const brandSchema = new mongoose.Schema({
     },
     icon: {
         type: String,
-        required: true
     },
     is_admin_approved: {
         type: String,
