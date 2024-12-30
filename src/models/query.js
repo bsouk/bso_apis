@@ -136,7 +136,7 @@ const querySchema = new mongoose.Schema({
                         }
                     }
                 },
-                default: {}
+                default: null
             },
             admin_quote: {
                 type: {
@@ -160,7 +160,7 @@ const querySchema = new mongoose.Schema({
                         }
                     }
                 },
-                default: {}
+                default: null
             },
             price: {
                 type: Number
