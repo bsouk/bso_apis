@@ -372,20 +372,19 @@ async function createQuotation(final_quotes, query_id, res) {
     const bidSettingData = await bidsetting.findOne({ query_id: query_id })
     console.log('bid setting data : ', bidSettingData)
 
-    // if (!bidSettingData) {
-    //     return utils.handleError(res, {
-    //         message: "bids expiration details not found",
-    //         code: 400,
-    //     });
-    // }
-
     const quoteId = await generateUniqueQuotationId()
     const currentTime = await moment(Date.now()).format('lll')
+    const timeline_data = await final_quotes.map(i => ({
+        date: currentTime,
+        detail: 'quotation created',
+        ...i
+    })
+    )
     const data = {
         quotation_unique_id: await quoteId.toString(),
         query_id,
         final_quote: [...final_quotes],
-        version_history: currentTime
+        version_history: [...timeline_data]
     }
 
     if (bidSettingData?._id) {
@@ -542,9 +541,9 @@ exports.addAdminQuote = async (req, res) => {
                 'queryDetails._id': req?.body?.query_details_id
             },
             {
-                $set: { 
-                    'queryDetails.$.admin_quote': req?.body?.admin_quote ,
-                    'queryDetails.$.supplier_quote': null 
+                $set: {
+                    'queryDetails.$.admin_quote': req?.body?.admin_quote,
+                    'queryDetails.$.supplier_quote': null
                 }
             },
             { new: true }

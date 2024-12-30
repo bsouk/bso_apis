@@ -186,6 +186,17 @@ const querySchema = new mongoose.Schema({
     final_quote: {
         type: [
             {
+                product_id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'products',
+                },
+                supplier_id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'users',
+                },
+                variant_id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                },
                 quantity: {
                     type: Number
                 },

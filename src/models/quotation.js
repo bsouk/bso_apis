@@ -15,6 +15,17 @@ const quotationSchema = new mongoose.Schema({
     },
     final_quote: [
         {
+            product_id: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'products',
+            },
+            supplier_id: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'users',
+            },
+            variant_id: {
+                type: mongoose.Schema.Types.ObjectId,
+            },
             quantity: {
                 type: Number
             },
@@ -43,10 +54,6 @@ const quotationSchema = new mongoose.Schema({
             admin_notes: {
                 type: String
             },
-            bid: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'bids'
-            }
         }
     ],
     is_approved: {
@@ -58,7 +65,58 @@ const quotationSchema = new mongoose.Schema({
         type: String
     },
     version_history: {
-        type: String
+        type:
+            [
+                {
+                    date: {
+                        type: Date,
+                        default: Date.now
+                    },
+                    detail: {
+                        type: String
+                    },
+                    product_id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: 'products',
+                    },
+                    supplier_id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: 'users',
+                    },
+                    variant_id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                    },
+                    quantity: {
+                        type: Number
+                    },
+                    price: {
+                        type: Number
+                    },
+                    message: {
+                        type: String
+                    },
+                    media: [String],
+                    document: [String],
+                    assignedBy: {
+                        id: {
+                            type: mongoose.Schema.Types.ObjectId,
+                        },
+                        type: {
+                            type: String
+                        }
+                    },
+                    buyer_notes: {
+                        type: String
+                    },
+                    supplier_notes: {
+                        type: String
+                    },
+                    admin_notes: {
+                        type: String
+                    },
+                }
+            ],
+        default: []
     }
 },
     {
