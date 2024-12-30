@@ -678,12 +678,12 @@ exports.generateFinalQuote = async (req, res) => {
             }
         ]);
 
-        if (!queryData.length) {
-            return res.status(400).json({
-                message: "Query not found",
-                code: 400,
-            });
-        }
+        // if (!queryData.length) {
+        //     return res.status(400).json({
+        //         message: "Query not found",
+        //         code: 400,
+        //     });
+        // }
 
         return res.status(200).json({
             message: "Final quote generated successfully",
