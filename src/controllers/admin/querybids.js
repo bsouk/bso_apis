@@ -671,6 +671,8 @@ exports.generateFinalQuote = async (req, res) => {
             },
             {
                 $project: {
+                    "queryDetails.product": 1,
+                    "queryDetails.supplier": 1,
                     "queryDetails.variant": 1,
                     "queryDetails.final_quote": 1
                 }

@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
 const quotation = require("../../models/quotation");
 const user = require("../../models/user");
+const moment = require("moment")
 
 
 // exports.getQuotationList = async (req, res) => {
@@ -478,11 +479,12 @@ exports.addQuotationNotes = async (req, res) => {
             })
         }
 
-        const queryData = await quotation.findById(
+        const queryData = await quotation.findOne(
             {
                 'final_quote._id': new mongoose.Types.ObjectId(final_quote_id)
             }
         )
+        console.log("query data :", queryData)
         if (!queryData) {
             return utils.handleError(res, {
                 message: "Quotation not found",
