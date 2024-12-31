@@ -184,7 +184,7 @@ exports.getQuotationList = async (req, res) => {
                     createdAt: 1,
                     updatedAt: 1,
                     is_approved: 1,
-                    quotation_unique_id : 1,
+                    quotation_unique_id: 1,
                 }
             },
             {
@@ -477,6 +477,18 @@ exports.addQuotationNotes = async (req, res) => {
             })
         }
 
+        const queryData = await quotation.findById(
+            {
+                'final_quote._id': new mongoose.Types.ObjectId(final_quote_id)
+            }
+        )
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Quotation not found",
+                code: 404,
+            });
+        }
+
         const { final_quote_id, note } = req.body
         let filter = {}
 
@@ -495,6 +507,24 @@ exports.addQuotationNotes = async (req, res) => {
             },
             { new: true }
         )
+
+        const quote = await queryData.final_quote.map(i => (i._id.toString() === final_quote_id.toString() ? i : null)).filter(e => e !== null)[0]
+        console.log('quote : ', quote)
+        const currentTime = await moment(Date.now()).format('lll')
+        const timeline_data = {
+            date: currentTime,
+            detail: user_data.user_type === "supplier" ? 'Supplier quotation quote added' : 'Buyer quotation quote added',
+            product_id: quote?.product_id,
+            supplier_id: quote?.supplier_id,
+            variant_id: quote?.variant_id,
+            price: quote?.price,
+            media: quote?.media,
+            document: quote?.document,
+            assignedBy: quote?.assignedBy
+        }
+
+        queryData.version_history.push(timeline_data)
+        await queryData.save()
 
         return res.status(200).json({
             message: "Quotation notes added successfully",
