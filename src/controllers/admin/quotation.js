@@ -607,7 +607,7 @@ exports.addAdminQuotationQuery = async (req, res) => {
         )
         console.log("result : ", result)
 
-        const quote = await queryData.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
+        const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
         console.log('quote : ', quote)
         const currentTime = await moment(Date.now()).format('lll')
         const timeline_data = {
@@ -616,10 +616,10 @@ exports.addAdminQuotationQuery = async (req, res) => {
             product_id: quote?.product_id,
             supplier_id: quote?.supplier_id,
             variant_id: quote?.variant_id,
-            price: quote?.price,
-            media: quote?.media,
-            document: quote?.document,
-            assignedBy: quote?.assignedBy
+            price: quote?.admin_quote.price,
+            media: quote?.admin_quote.media,
+            document: quote?.admin_quote.document,
+            assignedBy: quote?.admin_quote.assignedBy
         }
 
         queryData.version_history.push(timeline_data)
@@ -634,3 +634,6 @@ exports.addAdminQuotationQuery = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
