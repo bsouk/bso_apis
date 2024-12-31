@@ -183,7 +183,8 @@ exports.getQuotationList = async (req, res) => {
                     bid_setting_data: 1,
                     createdAt: 1,
                     updatedAt: 1,
-                    is_approved: 1
+                    is_approved: 1,
+                    quotation_unique_id : 1,
                 }
             },
             {
