@@ -464,6 +464,7 @@ exports.approveRejectQuotation = async (req, res) => {
 
 exports.addQuotationNotes = async (req, res) => {
     try {
+        const { final_quote_id, note } = req.body
         const user_id = req.user._id
         console.log("USER_ID : ", user_id)
 
@@ -489,7 +490,6 @@ exports.addQuotationNotes = async (req, res) => {
             });
         }
 
-        const { final_quote_id, note } = req.body
         let filter = {}
 
         if (user_data.user_type === "supplier") {

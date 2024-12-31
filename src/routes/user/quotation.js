@@ -37,4 +37,11 @@ router.patch(
     controller.addQuotationNotes
 )
 
+router.post(
+    '/addSupplierQuotationQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.addSupplierQuotationQuery
+);
+
 module.exports = router
