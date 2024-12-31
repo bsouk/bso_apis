@@ -54,6 +54,66 @@ const quotationSchema = new mongoose.Schema({
             admin_notes: {
                 type: String
             },
+            is_buyer_approved: {
+                type: Boolean,
+                default: false
+            },
+            is_supplier_approved: {
+                type: Boolean,
+                default: false
+            },
+            is_admin_approved: {
+                type: Boolean,
+                default: false
+            },
+            supplier_quote: {
+                type: {
+                    quantity: {
+                        type: Number
+                    },
+                    price: {
+                        type: Number
+                    },
+                    message: {
+                        type: String
+                    },
+                    media: [String],
+                    document: [String],
+                    assignedBy: {
+                        id: {
+                            type: mongoose.Schema.Types.ObjectId,
+                        },
+                        type: {
+                            type: String
+                        }
+                    }
+                },
+                default: null
+            },
+            admin_quote: {
+                type: {
+                    quantity: {
+                        type: Number
+                    },
+                    price: {
+                        type: Number
+                    },
+                    message: {
+                        type: String
+                    },
+                    media: [String],
+                    document: [String],
+                    assignedBy: {
+                        id: {
+                            type: mongoose.Schema.Types.ObjectId,
+                        },
+                        type: {
+                            type: String
+                        }
+                    }
+                },
+                default: null
+            }
         }
     ],
     is_approved: {

@@ -30,4 +30,11 @@ router.get(
     controller.getQuotationDetails
 )
 
+router.post(
+    '/addAdminQuotationQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.addAdminQuotationQuery
+);
+
 module.exports = router
