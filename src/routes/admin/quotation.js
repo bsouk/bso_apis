@@ -44,4 +44,18 @@ router.post(
     controller.addFinalQuotationList
 );
 
+router.get(
+    '/selectLogisticsList',
+    trimRequest.all,
+    requireAuth,
+    controller.selectLogistics
+);
+
+router.post(
+    '/assignQuotationLogistics',
+    trimRequest.all,
+    requireAuth,
+    controller.assignLogistics
+);
+
 module.exports = router

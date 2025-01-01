@@ -375,6 +375,12 @@ exports.getQuotationDetails = async (req, res) => {
                     }
                 },
                 {
+                    $unwind: {
+                        path: "$query_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
                     $lookup: {
                         from: "bidsettings",
                         localField: "bid_setting",
@@ -682,7 +688,8 @@ exports.addFinalQuotationList = async (req, res) => {
 exports.selectLogistics = async (req, res) => {
     try {
         const { id } = req.query
-        const quotation_data = await quotation.findOne({ _id: id }).populate('query_id')
+        const quotation_data = await quotation.findOne({ _id: id })
+        console.log("quotation_data", quotation_data, quotation_data.query_id)
         if (!quotation_data) {
             return utils.handleError(res, {
                 message: "quotation not found",
@@ -690,7 +697,17 @@ exports.selectLogistics = async (req, res) => {
             });
         }
 
-        const buyer_data = await User.findOne({ _id: quotation_data.query_id.createdByUser })
+        const query_data = await Query.findOne({ _id: quotation_data.query_id })
+        console.log("query_data", query_data)
+        if (!query_data) {
+            return utils.handleError(res, {
+                message: "query data not found",
+                code: 400,
+            });
+        }
+
+        const buyer_data = await User.findOne({ _id: query_data.createdByUser })
+        console.log("buyer_data", buyer_data)
         if (!buyer_data) {
             return utils.handleError(res, {
                 message: "buyer not found",
@@ -699,6 +716,7 @@ exports.selectLogistics = async (req, res) => {
         }
 
         const buyer_address = await Address.findOne({ user_id: buyer_data._id, default_address: true })
+        console.log("buyer_address", buyer_address)
         if (!buyer_address) {
             return utils.handleError(res, {
                 message: "buyer default address not found",
@@ -706,7 +724,33 @@ exports.selectLogistics = async (req, res) => {
             });
         }
 
-        const logistics_list = await User.find({})
+        const logistics_list = await User.find({
+            user_type: 'logistics',
+            company_data: { $exists: true, $ne: null }
+        });
+        console.log("Logistics List: ", logistics_list);
+
+        const filter_data = await logistics_list.map(i => {
+            console.log("city : ", i.company_data.address.city, " city : ", buyer_address.address.city)
+            console.log("country : ", i.company_data.address.country, " country : ", buyer_address.address.country)
+            if (i.company_data.address.city === buyer_address.address.city &&
+                i.company_data.address.country === buyer_address.address.country &&
+                i.company_data.address.zip_code === buyer_address.address.pin_code
+            ) {
+                return i
+            } else {
+                return null
+            }
+        }
+        ).filter(i => i !== null)
+
+        console.log("filter_data : ", filter_data)
+
+        return res.status(200).json({
+            message: "Logistics list fetched successfully",
+            data: filter_data,
+            code: 200
+        })
 
     } catch (error) {
         utils.handleError(res, error);
@@ -715,7 +759,33 @@ exports.selectLogistics = async (req, res) => {
 
 exports.assignLogistics = async (req, res) => {
     try {
+        const { logistics_id, product_ids, quotation_id } = req.body
+        if (!Array.isArray(product_ids)) {
+            product_ids = [...product_ids]
+        }
+        const assign_logistics = product_ids.map(async i => quotation.findOneAndUpdate(
+            {
+                _id: quotation_id,
+                'final_quote.product_id': i
+            },
+            {
+                $set: {
+                    "final_quote.$.logistics_id": logistics_id
+                }
+            },
+            { new: true }
+        ))
 
+        const data = await Promise.all(assign_logistics)
+        console.log('assign_logistics : ', data)
+
+        const result = await quotation.findOneAndUpdate({ _id: quotation_id }, { $set: { is_admin_logistics_decided: 'decided' } }, { new: true })
+        console.log('result : ', result)
+
+        return res.status(200).json({
+            message: "logistics assign successfully",
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }

@@ -434,6 +434,12 @@ exports.getQuotationDetails = async (req, res) => {
                     }
                 },
                 {
+                    $unwind: {
+                        path: '$query_data',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
                     $lookup: {
                         from: "bidsettings",
                         localField: "bid_setting",
@@ -617,12 +623,12 @@ exports.getQuotationDetails = async (req, res) => {
                 {
                     $replaceRoot: { newRoot: { $mergeObjects: ["$data", { version_history: "$version_history" }] } }
                 },
-                {
-                    $unwind: {
-                        path: '$query_data',
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
+                // {
+                //     $unwind: {
+                //         path: '$query_data',
+                //         preserveNullAndEmptyArrays: true
+                //     }
+                // },
                 {
                     $project: {
                         query_id: 0,

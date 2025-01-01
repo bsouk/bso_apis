@@ -223,6 +223,8 @@ exports.deletequery = async (req, res) => {
         }
         const result = await Query.deleteMany({ _id: { $in: ids } });
 
+        const query_quotation = await quotation.findByIdAndDelete({ query_id: { $in: ids } })
+
         res.json({
             message: `${result.deletedCount} query(s) deleted successfully.`,
             code: 200
