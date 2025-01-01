@@ -134,6 +134,10 @@ exports.getQuotationList = async (req, res) => {
             filter["final_quote.assignedBy.type"] = "supplier";
         }
 
+        if (user_data.user_type === "logistics") {
+            filter["final_quote.logistics_id"] = new mongoose.Types.ObjectId(userId);
+        }
+
         const data = await quotation.aggregate([
             {
                 $match: { ...filter }

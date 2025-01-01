@@ -689,7 +689,7 @@ exports.selectLogistics = async (req, res) => {
     try {
         const { id } = req.query
         const quotation_data = await quotation.findOne({ _id: id })
-        console.log("quotation_data", quotation_data, quotation_data.query_id)
+        console.log("quotation_data", quotation_data, quotation_data?.query_id)
         if (!quotation_data) {
             return utils.handleError(res, {
                 message: "quotation not found",
@@ -697,7 +697,7 @@ exports.selectLogistics = async (req, res) => {
             });
         }
 
-        const query_data = await Query.findOne({ _id: quotation_data.query_id })
+        const query_data = await Query.findOne({ _id: quotation_data?.query_id })
         console.log("query_data", query_data)
         if (!query_data) {
             return utils.handleError(res, {
@@ -734,8 +734,7 @@ exports.selectLogistics = async (req, res) => {
             console.log("city : ", i.company_data.address.city, " city : ", buyer_address.address.city)
             console.log("country : ", i.company_data.address.country, " country : ", buyer_address.address.country)
             if (i.company_data.address.city === buyer_address.address.city &&
-                i.company_data.address.country === buyer_address.address.country &&
-                i.company_data.address.zip_code === buyer_address.address.pin_code
+                i.company_data.address.country === buyer_address.address.country
             ) {
                 return i
             } else {
@@ -781,6 +780,27 @@ exports.assignLogistics = async (req, res) => {
 
         const result = await quotation.findOneAndUpdate({ _id: quotation_id }, { $set: { is_admin_logistics_decided: 'decided' } }, { new: true })
         console.log('result : ', result)
+
+        await product_ids.map(async e => await result.final_quote.map(async i => {
+            if (i.product_id.toString() === e.toString()) {
+                const currentTime = await moment(Date.now()).format('lll')
+                const timeline_data = {
+                    date: currentTime,
+                    detail: 'Logistics assigned to quotation',
+                    product_id: i?.product_id,
+                    supplier_id: i?.supplier_id,
+                    variant_id: i?.variant_id,
+                    price: i?.price,
+                    media: i?.media,
+                    document: i?.document,
+                    assignedBy: i?.assignedBy
+                }
+                await result.version_history.push(timeline_data)
+            }
+
+        }).filter(e => e !== null)[0])
+
+        await result.save()
 
         return res.status(200).json({
             message: "logistics assign successfully",
