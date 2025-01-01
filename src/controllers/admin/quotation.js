@@ -734,7 +734,8 @@ exports.selectLogistics = async (req, res) => {
             console.log("city : ", i.company_data.address.city, " city : ", buyer_address.address.city)
             console.log("country : ", i.company_data.address.country, " country : ", buyer_address.address.country)
             if (i.company_data.address.city === buyer_address.address.city &&
-                i.company_data.address.country === buyer_address.address.country
+                i.company_data.address.country === buyer_address.address.country &&
+                i.company_data.address.state === buyer_address.address.state
             ) {
                 return i
             } else {
