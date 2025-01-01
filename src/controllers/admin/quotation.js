@@ -7,6 +7,8 @@ const admin = require("../../models/admin");
 const bidsetting = require("../../models/bidsetting");
 const quotation = require("../../models/quotation");
 const moment = require("moment")
+const User = require("../../models/user");
+const Address = require("../../models/address");
 
 
 exports.getQuotationList = async (req, res) => {
@@ -672,6 +674,48 @@ exports.addFinalQuotationList = async (req, res) => {
             data: result,
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.selectLogistics = async (req, res) => {
+    try {
+        const { id } = req.query
+        const quotation_data = await quotation.findOne({ _id: id }).populate('query_id')
+        if (!quotation_data) {
+            return utils.handleError(res, {
+                message: "quotation not found",
+                code: 400,
+            });
+        }
+
+        const buyer_data = await User.findOne({ _id: quotation_data.query_id.createdByUser })
+        if (!buyer_data) {
+            return utils.handleError(res, {
+                message: "buyer not found",
+                code: 400,
+            });
+        }
+
+        const buyer_address = await Address.findOne({ user_id: buyer_data._id, default_address: true })
+        if (!buyer_address) {
+            return utils.handleError(res, {
+                message: "buyer default address not found",
+                code: 400,
+            });
+        }
+
+        const logistics_list = await User.find({})
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.assignLogistics = async (req, res) => {
+    try {
+
     } catch (error) {
         utils.handleError(res, error);
     }

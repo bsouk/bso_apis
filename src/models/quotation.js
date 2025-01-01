@@ -42,6 +42,10 @@ const quotationSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'users',
             },
+            logistics_id: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'users',
+            },
             variant_id: {
                 type: mongoose.Schema.Types.ObjectId,
             },
@@ -186,6 +190,10 @@ const quotationSchema = new mongoose.Schema({
                         type: mongoose.Schema.Types.ObjectId,
                         ref: 'users',
                     },
+                    logistics_id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: 'users',
+                    },
                     variant_id: {
                         type: mongoose.Schema.Types.ObjectId,
                     },
@@ -228,6 +236,10 @@ const quotationSchema = new mongoose.Schema({
                 ref: 'products',
             },
             supplier_id: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'users',
+            },
+            logistics_id: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'users',
             },

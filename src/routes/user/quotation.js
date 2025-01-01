@@ -44,4 +44,11 @@ router.post(
     controller.addSupplierQuotationQuery
 );
 
+router.post(
+    '/addLogisticsQuotationQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.addLogisticsQuotationQuery
+);
+
 module.exports = router

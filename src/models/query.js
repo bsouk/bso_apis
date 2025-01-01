@@ -23,6 +23,7 @@ const querySchema = new mongoose.Schema({
     },
     createdByUser: {
         type: mongoose.Schema.Types.ObjectId,
+        ref: 'users',
         required: true
     },
     adminApproved: {
