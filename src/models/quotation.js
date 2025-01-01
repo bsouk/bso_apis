@@ -89,6 +89,10 @@ const quotationSchema = new mongoose.Schema({
                 type: Boolean,
                 default: false
             },
+            is_logistics_approved: {
+                type: Boolean,
+                default: false
+            },
             supplier_quote: {
                 type: {
                     quantity: {
