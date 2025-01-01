@@ -429,6 +429,8 @@ exports.addFinalQuote = async (req, res) => {
         )
 
         await createQuotation(final_quotes, query_id, res)
+        queryData.status = "completed"
+        await queryData.save()
 
         return res.status(200).json({
             message: "final quote added successfully",

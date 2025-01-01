@@ -635,5 +635,44 @@ exports.addAdminQuotationQuery = async (req, res) => {
     }
 }
 
+//submit final quotation
 
+exports.addFinalQuotationList = async (req, res) => {
+    try {
+        const { quotation_id, final_quotation } = req.body
+        console.log("final_quotes : ", final_quotation)
+        const queryData = await quotation.findOne({ _id: quotation_id })
 
+        if (!Array.isArray(final_quotation)) {
+            return utils.handleError(res, {
+                message: "final quotation should be an array",
+                code: 400,
+            });
+        }
+
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Quotation not found",
+                code: 400,
+            });
+        }
+
+        const result = await quotation.findOneAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(quotation_id)
+            },
+            {
+                $set: { 'final_quotation_order': final_quotation }
+            },
+            { new: true }
+        )
+
+        return res.status(200).json({
+            message: "final quotation added successfully",
+            data: result,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

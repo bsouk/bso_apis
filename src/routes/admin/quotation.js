@@ -37,4 +37,11 @@ router.post(
     controller.addAdminQuotationQuery
 );
 
+router.post(
+    '/addFinalQuotationQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.addFinalQuotationList
+);
+
 module.exports = router

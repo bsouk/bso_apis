@@ -32,6 +32,10 @@ const querySchema = new mongoose.Schema({
     adminReview: {
         type: String
     },
+    // is_admin_logistics_decided: {
+    //     type: Boolean,
+    //     default: false
+    // },
     queryDetails: [
         {
             // product_id: {
@@ -105,7 +109,8 @@ const querySchema = new mongoose.Schema({
             },
             supplier: {
                 _id: {
-                    type: mongoose.Types.ObjectId
+                    type: mongoose.Types.ObjectId,
+                    ref: 'users'
                 },
                 name: {
                     type: String
@@ -114,6 +119,18 @@ const querySchema = new mongoose.Schema({
                     type: String
                 }
             },
+            // logistics: {
+            //     id: {
+            //         type: mongoose.Types.ObjectId,
+            //         ref: 'users'
+            //     },
+            //     name: {
+            //         type: String
+            //     },
+            //     profile_image: {
+            //         type: String
+            //     }
+            // },
             supplier_quote: {
                 type: {
                     quantity: {
@@ -162,6 +179,30 @@ const querySchema = new mongoose.Schema({
                 },
                 default: null
             },
+            // logistics_quote: {
+            //     type: {
+            //         quantity: {
+            //             type: Number
+            //         },
+            //         price: {
+            //             type: Number
+            //         },
+            //         message: {
+            //             type: String
+            //         },
+            //         media: [String],
+            //         document: [String],
+            //         assignedBy: {
+            //             id: {
+            //                 type: mongoose.Schema.Types.ObjectId,
+            //             },
+            //             type: {
+            //                 type: String
+            //             }
+            //         }
+            //     },
+            //     default: null
+            // },
             price: {
                 type: Number
             },
