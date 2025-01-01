@@ -129,9 +129,29 @@ exports.getQuotationList = async (req, res) => {
             filter.is_approved = status
         }
 
+        let filter_data = {
+            query_data: 1,
+            bid_setting_data: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            is_approved: 1,
+            quotation_unique_id: 1,
+        }
         if (user_data.user_type === "supplier") {
             filter["final_quote.assignedBy.id"] = new mongoose.Types.ObjectId(userId);
             filter["final_quote.assignedBy.type"] = "supplier";
+            filter_data.final_quote = {
+                $filter: {
+                    input: "$final_quote",
+                    as: "quote",
+                    cond: {
+                        $and: [
+                            { $eq: ["$$quote.assignedBy.id", new mongoose.Types.ObjectId(userId)] },
+                            { $eq: ["$$quote.assignedBy.type", "supplier"] }
+                        ]
+                    }
+                }
+            }
         }
 
         if (user_data.user_type === "logistics") {
@@ -171,26 +191,7 @@ exports.getQuotationList = async (req, res) => {
                 }
             },
             {
-                $project: {
-                    final_quote: {
-                        $filter: {
-                            input: "$final_quote",
-                            as: "quote",
-                            cond: {
-                                $and: [
-                                    { $eq: ["$$quote.assignedBy.id", new mongoose.Types.ObjectId(userId)] },
-                                    { $eq: ["$$quote.assignedBy.type", "supplier"] }
-                                ]
-                            }
-                        }
-                    },
-                    query_data: 1,
-                    bid_setting_data: 1,
-                    createdAt: 1,
-                    updatedAt: 1,
-                    is_approved: 1,
-                    quotation_unique_id: 1,
-                }
+                $project: filter_data
             },
             {
                 $sort: { createdAt: -1 },
