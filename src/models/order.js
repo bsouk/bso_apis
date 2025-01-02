@@ -35,8 +35,7 @@ const OrderSchema = new mongoose.Schema({
     },
     cancelled_by: {
         type: String,
-        enum: ["admin", "buyer"],
-        default: "",
+        enum: ["admin", "buyer"]
     },
     cancelled_by_id: {
         type: mongoose.Schema.Types.ObjectId,
