@@ -660,10 +660,36 @@ exports.generateFinalQuote = async (req, res) => {
                     }
                 }
             },
+            // {
+            //     $addFields: {
+            //         "queryDetails.final_quote.quantity":
+            //             "$queryDetails.quantity"
+            //     }
+            // },
             {
                 $addFields: {
-                    "queryDetails.final_quote.quantity":
-                        "$queryDetails.quantity"
+                    "queryDetails.final_quote.quantity": {
+                        $cond: {
+                            if: {
+                                $or: [
+                                    {
+                                        $ne: [
+                                            "$queryDetails.admin_quote",
+                                            null
+                                        ]
+                                    },
+                                    {
+                                        $ne: [
+                                            "$queryDetails.supplier_quote",
+                                            null
+                                        ]
+                                    }
+                                ]
+                            },
+                            then: "$queryDetails.quantity",
+                            else: null
+                        }
+                    }
                 }
             },
             {
