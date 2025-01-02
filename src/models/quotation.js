@@ -44,6 +44,10 @@ const quotationSchema = new mongoose.Schema({
         type: mongoose.Types.ObjectId,
         ref: 'users'
     },
+    decided_logistics_id: {
+        type: mongoose.Types.ObjectId,
+        ref: 'users'
+    },
     final_quote: [
         {
             product_id: {

@@ -779,7 +779,11 @@ exports.assignLogistics = async (req, res) => {
         const data = await Promise.all(assign_logistics)
         console.log('assign_logistics : ', data)
 
-        const result = await quotation.findOneAndUpdate({ _id: quotation_id }, { $set: { is_admin_logistics_decided: 'decided', quotation_type: 'admin-logistics' } }, { new: true })
+        const result = await quotation.findOneAndUpdate({ _id: quotation_id }, {
+            $set: {
+                is_admin_logistics_decided: 'decided', quotation_type: 'admin-logistics', decided_logistics_id: logistics_id,
+            }
+        }, { new: true })
         console.log('result : ', result)
 
         await product_ids.map(async e => await result.final_quote.map(async i => {
