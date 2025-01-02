@@ -656,8 +656,15 @@ exports.generateFinalQuote = async (req, res) => {
             {
                 $addFields: {
                     "queryDetails.final_quote": {
-                        $ifNull: ["$queryDetails.admin_quote", "$queryDetails.supplier_quote"]
+                        $ifNull: ["$queryDetails.admin_quote", "$queryDetails.supplier_quote"],
+                        quantity: 'queryDetails.quantity'
                     }
+                }
+            },
+            {
+                $addFields: {
+                    "queryDetails.final_quote.quantity":
+                        "$queryDetails.quantity"
                 }
             },
             {
