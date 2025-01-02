@@ -38,10 +38,6 @@ const quotationSchema = new mongoose.Schema({
                 ],
                 default: []
             }
-        },
-        default: {
-            reason: "",
-            logistics_ids: []
         }
     },
     accepted_logistics: {
