@@ -155,6 +155,7 @@ exports.getQuotationList = async (req, res) => {
         }
 
         if (user_data.user_type === "logistics") {
+            filter.decided_logistics_id = new mongoose.Types.ObjectId(userId);
             filter["final_quote.logistics_id"] = new mongoose.Types.ObjectId(userId);
         }
 

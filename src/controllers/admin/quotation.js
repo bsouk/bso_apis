@@ -781,7 +781,7 @@ exports.assignLogistics = async (req, res) => {
 
         const result = await quotation.findOneAndUpdate({ _id: quotation_id }, {
             $set: {
-                is_admin_logistics_decided: 'decided', quotation_type: 'admin-logistics', decided_logistics_id: logistics_id,
+                is_admin_logistics_decided: 'decided', quotation_type: 'admin-logistics', decided_logistics_id: logistics_id, is_approved : 'processing'
             }
         }, { new: true })
         console.log('result : ', result)
@@ -846,6 +846,7 @@ exports.approveRejectLogistics = async (req, res) => {
                 {
                     $set: {
                         is_admin_logistics_decided: 'undecided',
+                        decided_logistics_id: null,
                         "rejected_reason.reason": req.body.reason
                     },
                     $addToSet: {
