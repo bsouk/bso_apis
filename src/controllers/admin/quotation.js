@@ -779,7 +779,7 @@ exports.assignLogistics = async (req, res) => {
         const data = await Promise.all(assign_logistics)
         console.log('assign_logistics : ', data)
 
-        const result = await quotation.findOneAndUpdate({ _id: quotation_id }, { $set: { is_admin_logistics_decided: 'decided' } }, { new: true })
+        const result = await quotation.findOneAndUpdate({ _id: quotation_id }, { $set: { is_admin_logistics_decided: 'decided', quotation_type: 'admin-logistics' } }, { new: true })
         console.log('result : ', result)
 
         await product_ids.map(async e => await result.final_quote.map(async i => {
@@ -805,6 +805,63 @@ exports.assignLogistics = async (req, res) => {
 
         return res.status(200).json({
             message: "logistics assign successfully",
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.approveRejectLogistics = async (req, res) => {
+    try {
+        const { quotation_id, logistics_id, status } = req.body
+        const quotation_data = await quotation.findOne({ _id: quotation_id })
+        if (!quotation_data) {
+            return utils.handleError(res, {
+                message: "quotation not found",
+                code: 400,
+            });
+        }
+
+        if (status === 'rejected' && !req.body.reason) {
+            return utils.handleError(res, {
+                message: "rejected reason is required",
+                code: 400,
+            });
+        }
+
+        if (status === 'accepted') {
+            quotation_data.accepted_logistics = logistics_id
+        }
+
+        if (status === "rejected") {
+            const response = await quotation.findOneAndUpdate(
+                {
+                    _id: new mongoose.Types.ObjectId(quotation_id)
+                },
+                {
+                    $set: {
+                        is_admin_logistics_decided: 'undecided',
+                        "rejected_reason.reason": req.body.reason
+                    },
+                    $addToSet: {
+                        "rejected_reason.logistics_ids": logistics_id,
+                    },
+                },
+                { new: true, upsert: true }
+            )
+            console.log("response : ", response)
+
+            const result = await quotation.updateMany(
+                { 'final_quote.logistics_id': logistics_id },
+                { $set: { 'final_quote.$.logistics_id': null } }
+            )
+            console.log("result : ", result)
+        }
+        await quotation_data.save()
+
+        return res.status(200).json({
+            message: `logistics ${status} successfully`,
             code: 200
         })
     } catch (error) {

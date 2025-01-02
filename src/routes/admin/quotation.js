@@ -58,4 +58,11 @@ router.post(
     controller.assignLogistics
 );
 
+router.post(
+    '/acceptedRejectedLogistics',
+    trimRequest.all,
+    requireAuth,
+    controller.approveRejectLogistics
+);
+
 module.exports = router

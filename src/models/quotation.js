@@ -24,13 +24,23 @@ const quotationSchema = new mongoose.Schema({
         default: 'undecided'
     },
     rejected_reason: {
-        reason: String,
-        logistics_ids: [
-            {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'users'
-            }
-        ]
+        reason: {
+            type: String,
+            default: ""
+        },
+        logistics_ids: {
+            type: [
+                {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'users'
+                }
+            ],
+            default: []
+        }
+    },
+    accepted_logistics: {
+        type: mongoose.Types.ObjectId,
+        ref: 'users'
     },
     final_quote: [
         {
@@ -264,7 +274,7 @@ const quotationSchema = new mongoose.Schema({
             assignedBy: {
                 id: {
                     type: mongoose.Schema.Types.ObjectId,
-                    ref : 'users'
+                    ref: 'users'
                 },
                 type: {
                     type: String
