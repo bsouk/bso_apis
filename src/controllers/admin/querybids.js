@@ -211,9 +211,7 @@ exports.deletequery = async (req, res) => {
                 code: 400
             });
         }
-
         const existingRecords = await Query.find({ _id: { $in: ids } });
-
 
         if (existingRecords.length !== ids.length) {
             return res.status(404).json({
@@ -223,7 +221,7 @@ exports.deletequery = async (req, res) => {
         }
         const result = await Query.deleteMany({ _id: { $in: ids } });
 
-        const query_quotation = await quotation.findByIdAndDelete({ query_id: { $in: ids } })
+        const query_quotation = await quotation.deleteMany({ query_id: { $in: ids } })
 
         res.json({
             message: `${result.deletedCount} query(s) deleted successfully.`,
