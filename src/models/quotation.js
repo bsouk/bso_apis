@@ -48,6 +48,30 @@ const quotationSchema = new mongoose.Schema({
         type: mongoose.Types.ObjectId,
         ref: 'users'
     },
+    logistics_quote: {
+        type: {
+            quantity: {
+                type: Number
+            },
+            price: {
+                type: Number
+            },
+            message: {
+                type: String
+            },
+            media: [String],
+            document: [String],
+            assignedBy: {
+                id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                },
+                type: {
+                    type: String
+                }
+            }
+        },
+        default: null
+    },
     final_quote: [
         {
             product_id: {
@@ -156,31 +180,7 @@ const quotationSchema = new mongoose.Schema({
                     }
                 },
                 default: null
-            },
-            logistics_quote: {
-                type: {
-                    quantity: {
-                        type: Number
-                    },
-                    price: {
-                        type: Number
-                    },
-                    message: {
-                        type: String
-                    },
-                    media: [String],
-                    document: [String],
-                    assignedBy: {
-                        id: {
-                            type: mongoose.Schema.Types.ObjectId,
-                        },
-                        type: {
-                            type: String
-                        }
-                    }
-                },
-                default: null
-            },
+            }
         }
     ],
     is_approved: {

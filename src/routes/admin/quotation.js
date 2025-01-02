@@ -65,4 +65,11 @@ router.post(
     controller.approveRejectLogistics
 );
 
+router.patch(
+    '/addAdminQuotationNotes',
+    trimRequest.all,
+    requireAuth,
+    controller.addAdminQuotationNotes
+)
+
 module.exports = router

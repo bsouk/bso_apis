@@ -4,7 +4,10 @@ const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
 const quotation = require("../../models/quotation");
 const user = require("../../models/user");
-const moment = require("moment")
+const moment = require("moment");
+const order = require("../../models/order");
+const payment = require("../../models/payment");
+const tracking_order = require("../../models/tracking_order");
 
 
 // exports.getQuotationList = async (req, res) => {
@@ -745,7 +748,7 @@ exports.addQuotationNotes = async (req, res) => {
         const currentTime = await moment(Date.now()).format('lll')
         const timeline_data = {
             date: currentTime,
-            detail: user_data.user_type === "supplier" ? 'Supplier quotation quote added' : 'Buyer quotation quote added',
+            detail: user_data.user_type === "supplier" ? 'Supplier quotation note added' : 'Buyer quotation note added',
             product_id: quote?.product_id,
             supplier_id: quote?.supplier_id,
             variant_id: quote?.variant_id,
@@ -828,7 +831,7 @@ exports.addSupplierQuotationQuery = async (req, res) => {
 
 exports.addLogisticsQuotationQuery = async (req, res) => {
     try {
-        const { quotation_id, quotation_details_id } = req.body
+        const { quotation_id } = req.body
 
         const queryData = await quotation.findById({ _id: quotation_id })
         if (!queryData) {
@@ -840,43 +843,118 @@ exports.addLogisticsQuotationQuery = async (req, res) => {
 
         const result = await quotation.findOneAndUpdate(
             {
-                _id: quotation_id,
-                'final_quote._id': quotation_details_id
+                _id: quotation_id
             },
             {
                 $set: {
-                    'final_quote.$.logistics_quote': req?.body?.logistics_quote,
-                    'final_quote.$.admin_quote': null
+                    logistics_quote: req?.body?.logistics_quote
                 }
             },
             { new: true }
         )
         console.log("result : ", result)
 
+        // const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
+        // console.log('quote : ', quote)
+        // const currentTime = await moment(Date.now()).format('lll')
+        // const timeline_data = {
+        //     date: currentTime,
+        //     detail: 'Logistics quotation quote added',
+        //     product_id: quote?.product_id,
+        //     supplier_id: quote?.supplier_id,
+        //     variant_id: quote?.variant_id,
+        //     price: quote?.logistics_quote.price,
+        //     media: quote?.logistics_quote.media,
+        //     document: quote?.logistics_quote.document,
+        //     assignedBy: quote?.logistics_quote.assignedBy
+        // }
 
-        const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
-        console.log('quote : ', quote)
-        const currentTime = await moment(Date.now()).format('lll')
-        const timeline_data = {
-            date: currentTime,
-            detail: 'Logistics quotation quote added',
-            product_id: quote?.product_id,
-            supplier_id: quote?.supplier_id,
-            variant_id: quote?.variant_id,
-            price: quote?.logistics_quote.price,
-            media: quote?.logistics_quote.media,
-            document: quote?.logistics_quote.document,
-            assignedBy: quote?.logistics_quote.assignedBy
-        }
-
-        queryData.version_history.push(timeline_data)
-        await queryData.save()
+        // queryData.version_history.push(timeline_data)
+        // await queryData.save()
 
         return res.status(200).json({
             message: "Logistics quote added successfully",
             data: result,
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+//checkout quotation
+async function generateUniqueId() {
+    const id = await Math.floor(Math.random() * 10000000000)
+    console.log('unique id : ', id)
+    return `#${id}`
+}
+
+exports.checkout = async (req, res) => {
+    try {
+        const { shipping_address, billing_address, order_iteams, total_amount, delivery_charges, payment_method, logistics_id } = req.body
+        const userId = req.user._id
+        console.log("user : ", userId)
+
+        const buyer_data = await user.findOne({ _id: userId })
+        if (!buyer_data) {
+            return utils.handleError(res, {
+                message: "Buyer might be deleted or not existed",
+                code: 404,
+            });
+        }
+
+        const data = {
+            order_unique_id: await generateUniqueId(),
+            buyer_id: userId,
+            total_amount,
+            delivery_charges,
+            order_iteams,
+            shipping_address,
+            billing_address
+        }
+
+        const neworder = await order.create(data)
+        console.log("neworder : ", neworder)
+
+        const payment_data = {
+            order_id: neworder._id,
+            total_amount,
+            delivery_charges,
+            buyer_id: userId
+        }
+
+        if (payment_method !== "cash_on_delivery") {
+            payment_data.txn_id = "axis_123A789"
+        }
+
+        const newpayment = await payment.create(payment_data)
+        console.log("newpayment : ", newpayment)
+
+        const tracking_data = {
+            tracking_unique_id: await generateUniqueId(),
+            order_id: neworder._id,
+            logistics_id
+        }
+
+        const newtracking = await tracking_order.create(tracking_data)
+        console.log("newtracking : ", newtracking)
+
+        neworder.payment_id = newpayment._id
+        neworder.tracking_id = newtracking._id
+
+        await neworder.save()
+
+        return res.status(200).json({
+            message: "checkout successfull!",
+            data: {
+                order: neworder,
+                payment: newpayment,
+                tracking: newtracking
+            },
+            code: 200
+        })
+
     } catch (error) {
         utils.handleError(res, error);
     }

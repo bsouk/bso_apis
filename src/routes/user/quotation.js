@@ -51,4 +51,11 @@ router.post(
     controller.addLogisticsQuotationQuery
 );
 
+router.post(
+    '/checkout',
+    trimRequest.all,
+    requireAuth,
+    controller.checkout
+);
+
 module.exports = router
