@@ -862,6 +862,7 @@ exports.approveRejectLogistics = async (req, res) => {
 
         if (status === 'accepted') {
             quotation_data.accepted_logistics = logistics_id
+            quotation_data.rejected_reason = null
         }
 
         if (status === "rejected") {
@@ -874,6 +875,7 @@ exports.approveRejectLogistics = async (req, res) => {
                         is_admin_logistics_decided: 'undecided',
                         decided_logistics_id: null,
                         logistics_quote: null,
+                        admin_notes: null,
                         "rejected_reason.reason": req.body.reason
                     },
                     $addToSet: {

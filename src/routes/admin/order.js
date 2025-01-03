@@ -16,4 +16,11 @@ router.get(
     controller.getOrders
 )
 
+router.get(
+    '/orderDetails/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.OrderDetails
+)
+
 module.exports = router

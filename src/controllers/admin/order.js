@@ -27,3 +27,26 @@ exports.getOrders = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+exports.OrderDetails = async (req, res) => {
+    try {
+        const { id } = req.params
+        const order_data = await Order.findOne({ _id: id }).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id')
+        console.log("order_data : ", order_data)
+
+        if (!order_data) {
+            return utils.handleError(res, {
+                message: "Order not found",
+                code: 404,
+            });
+        }
+
+        return res.status(200).json({
+            message: "order details fetched successfully",
+            data: order_data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
