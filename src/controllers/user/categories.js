@@ -8,6 +8,7 @@ const generatePassword = require('generate-password');
 const ProductCategory = require("../../models/product_category");
 const ProductSubCategory = require("../../models/product_sub_category");
 const ProductSubSubCategory = require("../../models/product_sub_sub_category");
+const business_category = require("../../models/business_category")
 
 
 exports.getCategoryList = async (req, res) => {
@@ -60,4 +61,27 @@ exports.getCategoryList = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+exports.getBusinessCategories = async (req, res) => {
+    try {
+        const data = await business_category.find()
+        const count = await business_category.countDocuments()
+        console.log("Business categories : ", data)
+        if (!data || data.length === 0) {
+            return utils.handleError(res, {
+                message: "Business categories not found",
+                code: 404,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Business categories fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
 

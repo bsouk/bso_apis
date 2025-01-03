@@ -6,20 +6,14 @@ const requireAuth = passport.authenticate('jwt', {
     session: false
 })
 
-const controller = require('../../controllers/user/categories')
+const controller = require('../../controllers/admin/order')
 const trimRequest = require('trim-request');
 
-
 router.get(
-    '/getCategoryList',
+    '/getOrders',
     trimRequest.all,
-    controller.getCategoryList
-)
-
-router.get(
-    '/getBusinessCategories',
-    trimRequest.all,
-    controller.getBusinessCategories
+    requireAuth,
+    controller.getOrders
 )
 
 module.exports = router
