@@ -605,6 +605,11 @@ exports.getQuotationDetails = async (req, res) => {
 exports.addAdminQuotationQuery = async (req, res) => {
     try {
         const { quotation_id, quotation_details_id } = req.body
+        const userId = req.user._id;
+        console.log("userid is ", userId);
+
+        const userData = await admin.findOne({ _id: userId })
+        console.log("admin : ", userData)
 
         const queryData = await quotation.findById({ _id: quotation_id })
         if (!queryData) {
@@ -613,6 +618,13 @@ exports.addAdminQuotationQuery = async (req, res) => {
                 code: 404,
             });
         }
+
+        const assignData = {
+            id: userId,
+            type: userData.role
+        }
+
+        req.body.admin_quote.assignedBy = assignData
 
         const result = await quotation.findOneAndUpdate(
             {

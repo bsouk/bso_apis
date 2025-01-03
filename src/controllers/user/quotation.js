@@ -833,6 +833,18 @@ exports.addLogisticsQuotationQuery = async (req, res) => {
     try {
         const { quotation_id } = req.body
 
+        const userId = req.user._id;
+        console.log("userid is ", userId);
+
+        const userData = await user.findOne({ _id: userId })
+
+        if (!userData) {
+            return utils.handleError(res, {
+                message: "logistics not found",
+                code: 404,
+            });
+        }
+
         const queryData = await quotation.findById({ _id: quotation_id })
         if (!queryData) {
             return utils.handleError(res, {
@@ -840,9 +852,14 @@ exports.addLogisticsQuotationQuery = async (req, res) => {
                 code: 404,
             });
         }
-
         const currentTime = await moment(Date.now()).format('lll')
-        req.body.logistics_quote.assignedBy.data_time = currentTime
+        const assignData = {
+            id: userId,
+            type: userData.user_type,
+            data_time: currentTime
+        }
+
+        req.body.logistics_quote.assignedBy = assignData
 
         const result = await quotation.findOneAndUpdate(
             {

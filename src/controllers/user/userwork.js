@@ -1546,6 +1546,13 @@ exports.addSupplierQuote = async (req, res) => {
 
         const userData = await User.findOne({ _id: userId })
 
+        if (!userData) {
+            return utils.handleError(res, {
+                message: "supplier not found",
+                code: 404,
+            });
+        }
+
         const queryData = await Query.findById({ _id: query_id })
         if (!queryData) {
             return utils.handleError(res, {
