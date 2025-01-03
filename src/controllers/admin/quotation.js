@@ -866,26 +866,35 @@ exports.approveRejectLogistics = async (req, res) => {
         }
 
         if (status === "rejected") {
-            const response = await quotation.findOneAndUpdate(
-                {
-                    _id: new mongoose.Types.ObjectId(quotation_id)
-                },
-                {
-                    $set: {
-                        is_admin_logistics_decided: 'undecided',
-                        decided_logistics_id: null,
-                        logistics_quote: null,
-                        admin_notes: null,
-                        accepted_logistics: null,
-                        "rejected_reason.reason": req.body.reason
-                    },
-                    $addToSet: {
-                        "rejected_reason.logistics_ids": logistics_id,
-                    },
-                },
-                { new: true, upsert: true }
-            )
-            console.log("response : ", response)
+            quotation_data.is_admin_logistics_decided = 'undecided'
+            quotation_data.decided_logistics_id = null
+            quotation_data.logistics_quote = null
+            quotation_data.admin_notes = null
+            quotation_data.accepted_logistics = null
+            quotation_data.rejected_reason.reason = req.body.reason
+            if (!quotation_data.rejected_reason.logistics_ids(logistics_id)) {
+                quotation_data.rejected_reason.logistics_ids.push(logistics_id)
+            }
+            // const response = await quotation.findOneAndUpdate(
+            //     {
+            //         _id: new mongoose.Types.ObjectId(quotation_id)
+            //     },
+            //     {
+            //         $set: {
+            //             is_admin_logistics_decided: 'undecided',
+            //             decided_logistics_id: null,
+            //             logistics_quote: null,
+            //             admin_notes: null,
+            //             accepted_logistics: null,
+            //             "rejected_reason.reason": req.body.reason
+            //         },
+            //         $addToSet: {
+            //             "rejected_reason.logistics_ids": logistics_id,
+            //         },
+            //     },
+            //     { new: true, upsert: true }
+            // )
+            // console.log("response : ", response)
 
             const result = await quotation.updateMany(
                 { 'final_quote.logistics_id': logistics_id },
