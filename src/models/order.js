@@ -32,6 +32,10 @@ const OrderSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
+    logistics_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users"
+    },
     cancelled_by: {
         type: String,
         enum: ["admin", "buyer"]

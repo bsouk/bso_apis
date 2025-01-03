@@ -185,6 +185,32 @@ exports.downloadReport = async (req, res) => {
                     "Payment": order.payment_id.status
                 }))
 
+                const headings = [
+                    "Order Id",
+                    "Order Type",
+                    "Order Status",
+                    "Buyer",
+                    "Amount",
+                    "Delivery Charges",
+                    "Shipping Address",
+                    "Billing Address",
+                    "Payment"
+                ]
+
+                const data = []
+                orderList.map(async (order) =>
+                    await data.push([order.order_unique_id,
+                    order.order_type,
+                    order.order_status,
+                    order.buyer_id.full_name,
+                    order.total_amount,
+                    order.delivery_charges,
+                    `${order.shipping_address.address.address_line_1},${order.shipping_address.address.address_line_2},${order.shipping_address.address.city},${order.shipping_address.address.state},${order.shipping_address.address.country},${order.shipping_address.address.pin_code}`,
+                    `${order.billing_address.address.address_line_1},${order.billing_address.address.address_line_2},${order.billing_address.address.city},${order.billing_address.address.state},${order.billing_address.address.country},${order.billing_address.address.pin_code}`,
+                    order.payment_id.status
+                    ])
+                )
+
                 if (format === "excel") {
                     return generateExcel(cleanorderList, res)
                 } else if (format === "csv") {

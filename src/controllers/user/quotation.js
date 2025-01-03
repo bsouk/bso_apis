@@ -1100,7 +1100,8 @@ exports.checkout = async (req, res) => {
             delivery_charges,
             order_items,
             shipping_address,
-            billing_address
+            billing_address,
+            logistics_id
         }
 
         const neworder = await order.create(data)

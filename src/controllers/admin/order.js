@@ -14,7 +14,7 @@ exports.getOrders = async (req, res) => {
         if (search) {
             filter.order_unique_id = { $regex: search, $options: "i" }
         }
-        const myorders = await Order.find(filter).skip(parseInt(offset)).limit(parseInt(limit)).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id')
+        const myorders = await Order.find(filter).skip(parseInt(offset)).limit(parseInt(limit)).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id').populate('logistics_id')
         const count = await Order.countDocuments()
         console.log("myorders : ", myorders)
 
@@ -39,7 +39,7 @@ exports.getOrders = async (req, res) => {
 exports.OrderDetails = async (req, res) => {
     try {
         const { id } = req.params
-        const order_data = await Order.findOne({ _id: id }).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id')
+        const order_data = await Order.findOne({ _id: id }).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('logistics_id')
         console.log("order_data : ", order_data)
 
         if (!order_data) {
