@@ -30,4 +30,11 @@ router.delete(
     controller.deleteMultipleOrder
 );
 
+router.patch(
+    '/changeOrderStatus',
+    trimRequest.all,
+    requireAuth,
+    controller.changeOrderStatus
+);
+
 module.exports = router

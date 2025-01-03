@@ -2,6 +2,7 @@ const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const Order = require("../../models/order")
 const utils = require("../../utils/utils");
+const payment = require("../../models/payment");
 
 exports.getOrders = async (req, res) => {
     try {
@@ -23,7 +24,7 @@ exports.getOrders = async (req, res) => {
         //         code: 404,
         //     });
         // }
-        
+
         return res.status(200).json({
             message: "Orders list fetched successfully",
             data: myorders,
@@ -91,4 +92,29 @@ exports.deleteMultipleOrder = async (req, res) => {
     }
 };
 
+exports.changeOrderStatus = async (req, res) => {
+    try {
+        const { order_id, status, payment_id } = req.body
+        if (order_id && status) {
+            const result = await Order.findOneAndUpdate({ _id: order_id }, { $set: { order_status: status } }, { new: true })
+            console.log("result : ", result)
+            return res.status(200).json({
+                message: "Order status changed successfully",
+                data: result,
+                code: 200
+            })
+        }
 
+        if (payment_id && status) {
+            const result = await payment.findOneAndUpdate({ _id: payment_id }, { $set: { status: status } }, { new: true })
+            console.log("result : ", result)
+            return res.status(200).json({
+                message: "Payment status changed successfully",
+                data: result,
+                code: 200
+            })
+        }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
