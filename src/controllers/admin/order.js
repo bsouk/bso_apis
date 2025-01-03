@@ -17,12 +17,13 @@ exports.getOrders = async (req, res) => {
         const count = await Order.countDocuments()
         console.log("myorders : ", myorders)
 
-        if (!myorders || myorders.length === 0) {
-            return utils.handleError(res, {
-                message: "Order not found",
-                code: 404,
-            });
-        }
+        // if (!myorders || myorders.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "Order not found",
+        //         code: 404,
+        //     });
+        // }
+        
         return res.status(200).json({
             message: "Orders list fetched successfully",
             data: myorders,
@@ -56,3 +57,38 @@ exports.OrderDetails = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.deleteMultipleOrder = async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({
+                message: "Please provide a valid array of IDs to delete.",
+                code: 400
+            });
+        }
+
+        const existingRecords = await Order.find({ _id: { $in: ids } });
+
+        if (existingRecords.length !== ids.length) {
+            return res.status(404).json({
+                message: "One or more IDs do not match any records.",
+                code: 404
+            });
+        }
+        const result = await Order.deleteMany({ _id: { $in: ids } });
+
+        res.json({
+            message: `${result.deletedCount} Order(s) deleted successfully.`,
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("Error in deletequery:", error);
+        utils.handleError(res, error);
+    }
+};
+
+

@@ -23,4 +23,11 @@ router.get(
     controller.OrderDetails
 )
 
+router.delete(
+    '/deleteSelectedOrder',
+    trimRequest.all,
+    requireAuth,
+    controller.deleteMultipleOrder
+);
+
 module.exports = router

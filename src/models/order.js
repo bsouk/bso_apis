@@ -23,9 +23,8 @@ const OrderSchema = new mongoose.Schema({
         type: String,
         enum: [
             "pending",
-            "processing",
-            "cancelled",
-            "completed",
+            "delivered",
+            "cancelled"
         ],
         default: "pending"
     },
@@ -97,7 +96,7 @@ const OrderSchema = new mongoose.Schema({
     },
     tracking_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref : 'tracking_order',
+        ref: 'tracking_order',
         default: null
     },
 },
