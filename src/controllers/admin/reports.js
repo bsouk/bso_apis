@@ -6,7 +6,8 @@ const Payment = require("../../models/payment")
 const utils = require("../../utils/utils");
 
 const { stringify } = require('csv-stringify');
-const PDFDocument = require('pdfkit');
+// const PDFDocument = require('pdfkit');
+const PDFDocument = require('pdfkit-table');
 const XLSX = require('xlsx');
 
 
@@ -34,21 +35,65 @@ function generateCSV(data, res) {
     });
 }
 
-function generatePDF(data, res) {
-    const doc = new PDFDocument();
+// function generatePDF(data, res) {
+//     const doc = new PDFDocument();
+//     res.setHeader('Content-Type', 'application/pdf');
+//     res.setHeader('Content-Disposition', 'attachment; filename="data.pdf"');
+
+//     doc.pipe(res);
+//     data.forEach((item, index) => {
+//         doc.fontSize(16).text(`Record ${index + 1}`, { underline: true }).moveDown(0.5);
+
+//         Object.entries(item).forEach(([key, value]) => {
+//             doc.fontSize(12).text(`${key}: ${value}`, { indent: 20 });
+//         });
+
+//         doc.moveDown(1);
+//     });
+//     doc.end();
+// }
+
+async function generatePDF(headers, data, res) {
+    const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="data.pdf"');
 
     doc.pipe(res);
-    data.forEach((item, index) => {
-        doc.fontSize(16).text(`Record ${index + 1}`, { underline: true }).moveDown(0.5);
 
-        Object.entries(item).forEach(([key, value]) => {
-            doc.fontSize(12).text(`${key}: ${value}`, { indent: 20 });
-        });
+    doc.fontSize(18).text("Report", { align: 'center' }).moveDown(1);
 
-        doc.moveDown(1);
+    if (!data || data.length === 0) {
+        doc.fontSize(14).text("No data available", { align: 'center' });
+        doc.end();
+        return;
+    }
+
+    const columnWidths = headers.map(header => {
+        const maxContentWidth = Math.max(...data.map(row => String(row[header] || "").length), header.length);
+        return Math.min(200, maxContentWidth * 5); // Max 200px width per column
     });
+
+    const table = {
+        headers: headers.map((header, i) => ({
+            label: header,
+            property: header,
+            width: columnWidths[i] + 8, // Dynamically adjust width
+            align: 'left',
+        })),
+        rows: data.map(row => headers.map(header => row[header] || "N/A"))
+    };
+
+    await doc.table(table, {
+        prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
+        prepareRow: (row, indexColumn, indexRow, rectRow) => {
+            doc.font("Helvetica").fontSize(9);
+            if (rectRow.y + rectRow.height > doc.page.height - 50) {
+                doc.addPage();
+            }
+        },
+    });
+
     doc.end();
 }
 
@@ -216,7 +261,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return generateCSV(cleanorderList, res)
                 } else {
-                    return generatePDF(cleanorderList, res)
+                    return generatePDF(headings, cleanorderList, res)
                 }
             }; break;
             case "Payment": {
@@ -251,12 +296,33 @@ exports.downloadReport = async (req, res) => {
                     Reciept: payment?.receipt_number
                 }))
 
+                const headings = [
+                    "Payment Method",
+                    "Transaction Id",
+                    "Status",
+                    "Amount",
+                    "Delivery Charges",
+                    "Reciept"
+                ]
+
+                const data = []
+                paymentList.map(async (payment) =>
+                    await data.push([
+                        payment?.payment_method,
+                        payment?.txn_id,
+                        payment?.status,
+                        payment?.total_amount,
+                        payment.delivery_charges,
+                        payment?.receipt_number
+                    ])
+                )
+
                 if (format === "excel") {
                     return generateExcel(cleanpaymentList, res)
                 } else if (format === "csv") {
                     return generateCSV(cleanpaymentList, res)
                 } else {
-                    return generatePDF(cleanpaymentList, res)
+                    return generatePDF(headings, cleanpaymentList, res)
                 }
             }; break;
             case "SubAdmin": {
