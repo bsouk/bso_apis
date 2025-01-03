@@ -6,8 +6,14 @@ const utils = require("../../utils/utils");
 exports.getOrders = async (req, res) => {
     try {
         const { offset = 0, limit = 10, order_type = "", search = "" } = req.query
-
-        const myorders = await Order.find({ order_type, order_unique_id: { $regex: search, $options: "i" } }).skip(parseInt(offset)).limit(parseInt(limit)).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id')
+        const filter = {}
+        if (order_type) {
+            filter.order_type = order_type
+        }
+        if (search) {
+            filter.order_unique_id = { $regex: search, $options: "i" }
+        }
+        const myorders = await Order.find(filter).skip(parseInt(offset)).limit(parseInt(limit)).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id')
         const count = await Order.countDocuments()
         console.log("myorders : ", myorders)
 
