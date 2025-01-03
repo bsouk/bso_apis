@@ -872,7 +872,7 @@ exports.approveRejectLogistics = async (req, res) => {
             quotation_data.admin_notes = null
             quotation_data.accepted_logistics = null
             quotation_data.rejected_reason.reason = req.body.reason
-            if (!quotation_data.rejected_reason.logistics_ids(logistics_id)) {
+            if (!quotation_data.rejected_reason.logistics_ids.includes(logistics_id)) {
                 quotation_data.rejected_reason.logistics_ids.push(logistics_id)
             }
             // const response = await quotation.findOneAndUpdate(
