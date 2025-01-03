@@ -397,9 +397,15 @@ exports.getQuotationDetails = async (req, res) => {
                 {
                     $lookup: {
                         from: "users",
-                        localField: "logistics_id",
+                        localField: "decided_logistics_id",
                         foreignField: "_id",
                         as: "logistics_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$logistics_data",
+                        preserveNullAndEmptyArrays: true
                     }
                 },
                 {
