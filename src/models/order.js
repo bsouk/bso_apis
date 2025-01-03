@@ -53,7 +53,7 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
-    order_iteams: {
+    order_items: {
         type: [
             {
                 product_id: {
@@ -97,6 +97,7 @@ const OrderSchema = new mongoose.Schema({
     },
     tracking_id: {
         type: mongoose.Schema.Types.ObjectId,
+        ref : 'tracking_order',
         default: null
     },
 },

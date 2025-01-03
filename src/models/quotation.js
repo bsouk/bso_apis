@@ -72,6 +72,9 @@ const quotationSchema = new mongoose.Schema({
         },
         default: null
     },
+    admin_notes: {
+        type: String
+    },
     final_quote: [
         {
             product_id: {
@@ -114,9 +117,9 @@ const quotationSchema = new mongoose.Schema({
             supplier_notes: {
                 type: String
             },
-            admin_notes: {
-                type: String
-            },
+            // admin_notes: {
+            //     type: String
+            // },
             is_buyer_approved: {
                 type: Boolean,
                 default: false

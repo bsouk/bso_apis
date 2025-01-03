@@ -892,7 +892,7 @@ async function generateUniqueId() {
 
 exports.checkout = async (req, res) => {
     try {
-        const { shipping_address, billing_address, order_iteams, total_amount, delivery_charges, payment_method, logistics_id } = req.body
+        const { shipping_address, billing_address, order_items, total_amount, delivery_charges, payment_method, logistics_id } = req.body
         const userId = req.user._id
         console.log("user : ", userId)
 
@@ -909,7 +909,7 @@ exports.checkout = async (req, res) => {
             buyer_id: userId,
             total_amount,
             delivery_charges,
-            order_iteams,
+            order_items,
             shipping_address,
             billing_address
         }

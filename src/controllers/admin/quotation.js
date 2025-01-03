@@ -396,6 +396,14 @@ exports.getQuotationDetails = async (req, res) => {
                 },
                 {
                     $lookup: {
+                        from: "users",
+                        localField: "logistics_id",
+                        foreignField: "_id",
+                        as: "logistics_data"
+                    }
+                },
+                {
+                    $lookup: {
                         from: "products",
                         localField: "final_quote.product_id",
                         foreignField: "_id",
@@ -877,38 +885,38 @@ exports.approveRejectLogistics = async (req, res) => {
 
 exports.addAdminQuotationNotes = async (req, res) => {
     try {
-        const { final_quote_id, note } = req.body
+        const { quotation_id, note } = req.body
 
         const data = await quotation.findOneAndUpdate(
             {
-                'final_quote._id': new mongoose.Types.ObjectId(final_quote_id)
+                _id: new mongoose.Types.ObjectId(quotation_id)
             },
             {
-                $set: { 'final_quote.$.admin_notes': note }
+                $set: { 'admin_notes': note }
             },
             { new: true }
         )
 
-        const quote = await data.final_quote.map(i => (i._id.toString() === final_quote_id.toString() ? i : null)).filter(e => e !== null)[0]
-        console.log('quote : ', quote)
-        const currentTime = await moment(Date.now()).format('lll')
-        const timeline_data = {
-            date: currentTime,
-            detail:'Admin quotation note added',
-            product_id: quote?.product_id,
-            supplier_id: quote?.supplier_id,
-            variant_id: quote?.variant_id,
-            price: quote?.price,
-            media: quote?.media,
-            document: quote?.document,
-            assignedBy: quote?.assignedBy
-        }
+        // const quote = await data.final_quote.map(i => (i._id.toString() === final_quote_id.toString() ? i : null)).filter(e => e !== null)[0]
+        // console.log('quote : ', quote)
+        // const currentTime = await moment(Date.now()).format('lll')
+        // const timeline_data = {
+        //     date: currentTime,
+        //     detail:'Admin quotation note added',
+        //     product_id: quote?.product_id,
+        //     supplier_id: quote?.supplier_id,
+        //     variant_id: quote?.variant_id,
+        //     price: quote?.price,
+        //     media: quote?.media,
+        //     document: quote?.document,
+        //     assignedBy: quote?.assignedBy
+        // }
 
-        data.version_history.push(timeline_data)
-        await data.save()
+        // data.version_history.push(timeline_data)
+        // await data.save()
 
         return res.status(200).json({
-            message: "Quotation notes added successfully",
+            message: "Admin Quotation notes added successfully",
             data,
             code: 200
         })
