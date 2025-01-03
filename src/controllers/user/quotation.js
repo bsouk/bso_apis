@@ -444,7 +444,7 @@ exports.getQuotationDetails = async (req, res) => {
                 },
                 {
                     $unwind: {
-                        path: '$query_data',
+                        path: "$query_data",
                         preserveNullAndEmptyArrays: true
                     }
                 },
@@ -487,12 +487,16 @@ exports.getQuotationDetails = async (req, res) => {
                 {
                     $lookup: {
                         from: "products",
-                        let: { variantId: "$final_quote.variant_id" },
+                        let: {
+                            variantId: "$final_quote.variant_id"
+                        },
                         pipeline: [
                             { $unwind: "$variant" },
                             {
                                 $match: {
-                                    $expr: { $eq: ["$variant._id", "$$variantId"] }
+                                    $expr: {
+                                        $eq: ["$variant._id", "$$variantId"]
+                                    }
                                 }
                             },
                             {
@@ -513,7 +517,12 @@ exports.getQuotationDetails = async (req, res) => {
                                     $filter: {
                                         input: "$product_data",
                                         as: "product",
-                                        cond: { $eq: ["$$product._id", "$final_quote.product_id"] }
+                                        cond: {
+                                            $eq: [
+                                                "$$product._id",
+                                                "$final_quote.product_id"
+                                            ]
+                                        }
                                     }
                                 },
                                 0
@@ -525,7 +534,12 @@ exports.getQuotationDetails = async (req, res) => {
                                     $filter: {
                                         input: "$supplier_data",
                                         as: "supplier",
-                                        cond: { $eq: ["$$supplier._id", "$final_quote.supplier_id"] }
+                                        cond: {
+                                            $eq: [
+                                                "$$supplier._id",
+                                                "$final_quote.supplier_id"
+                                            ]
+                                        }
                                     }
                                 },
                                 0
@@ -537,7 +551,12 @@ exports.getQuotationDetails = async (req, res) => {
                                     $filter: {
                                         input: "$variant_data",
                                         as: "variant",
-                                        cond: { $eq: ["$$variant.variant._id", "$final_quote.variant_id"] }
+                                        cond: {
+                                            $eq: [
+                                                "$$variant.variant._id",
+                                                "$final_quote.variant_id"
+                                            ]
+                                        }
                                     }
                                 },
                                 0
@@ -553,8 +572,126 @@ exports.getQuotationDetails = async (req, res) => {
                     }
                 },
                 {
-                    $replaceRoot: { newRoot: { $mergeObjects: ["$data", { final_quote: "$final_quote" }] } }
+                    $replaceRoot: {
+                        newRoot: {
+                            $mergeObjects: [
+                                "$data",
+                                { final_quote: "$final_quote" }
+                            ]
+                        }
+                    }
                 },
+
+                {
+                    $unwind: {
+                        path: "$final_quotation_order",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: {
+                            variantId:
+                                "$final_quotation_order.variant_id"
+                        },
+                        pipeline: [
+                            { $unwind: "$variant" },
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$variant._id", "$$variantId"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 0,
+                                    variant: 1
+                                }
+                            }
+                        ],
+                        as: "variant_data"
+                    }
+                },
+                {
+                    $addFields: {
+                        "final_quotation_order.product": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$product_data",
+                                        as: "product",
+                                        cond: {
+                                            $eq: [
+                                                "$$product._id",
+                                                "$final_quotation_order.product_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        },
+                        "final_quotation_order.supplier": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$supplier_data",
+                                        as: "supplier",
+                                        cond: {
+                                            $eq: [
+                                                "$$supplier._id",
+                                                "$final_quotation_order.supplier_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        },
+                        "final_quotation_order.variant": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$variant_data",
+                                        as: "variant",
+                                        cond: {
+                                            $eq: [
+                                                "$$variant.variant._id",
+                                                "$final_quotation_order.variant_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        data: { $first: "$$ROOT" },
+                        final_quotation_order: {
+                            $push: "$final_quotation_order"
+                        }
+                    }
+                },
+                {
+                    $replaceRoot: {
+                        newRoot: {
+                            $mergeObjects: [
+                                "$data",
+                                {
+                                    final_quotation_order:
+                                        "$final_quotation_order"
+                                }
+                            ]
+                        }
+                    }
+                },
+
                 {
                     $unwind: {
                         path: "$version_history",
@@ -564,12 +701,20 @@ exports.getQuotationDetails = async (req, res) => {
                 {
                     $lookup: {
                         from: "products",
-                        let: { timelineVariantId: "$version_history.variant_id" },
+                        let: {
+                            timelineVariantId:
+                                "$version_history.variant_id"
+                        },
                         pipeline: [
                             { $unwind: "$variant" },
                             {
                                 $match: {
-                                    $expr: { $eq: ["$variant._id", "$$timelineVariantId"] }
+                                    $expr: {
+                                        $eq: [
+                                            "$variant._id",
+                                            "$$timelineVariantId"
+                                        ]
+                                    }
                                 }
                             },
                             {
@@ -590,7 +735,12 @@ exports.getQuotationDetails = async (req, res) => {
                                     $filter: {
                                         input: "$product_data",
                                         as: "product",
-                                        cond: { $eq: ["$$product._id", "$version_history.product_id"] }
+                                        cond: {
+                                            $eq: [
+                                                "$$product._id",
+                                                "$version_history.product_id"
+                                            ]
+                                        }
                                     }
                                 },
                                 0
@@ -602,7 +752,12 @@ exports.getQuotationDetails = async (req, res) => {
                                     $filter: {
                                         input: "$supplier_data",
                                         as: "supplier",
-                                        cond: { $eq: ["$$supplier._id", "$version_history.supplier_id"] }
+                                        cond: {
+                                            $eq: [
+                                                "$$supplier._id",
+                                                "$version_history.supplier_id"
+                                            ]
+                                        }
                                     }
                                 },
                                 0
@@ -614,7 +769,12 @@ exports.getQuotationDetails = async (req, res) => {
                                     $filter: {
                                         input: "$timeline_variant_data",
                                         as: "variant",
-                                        cond: { $eq: ["$$variant.variant._id", "$version_history.variant_id"] }
+                                        cond: {
+                                            $eq: [
+                                                "$$variant.variant._id",
+                                                "$version_history.variant_id"
+                                            ]
+                                        }
                                     }
                                 },
                                 0
@@ -626,11 +786,20 @@ exports.getQuotationDetails = async (req, res) => {
                     $group: {
                         _id: "$_id",
                         data: { $first: "$$ROOT" },
-                        version_history: { $push: "$version_history" }
+                        version_history: {
+                            $push: "$version_history"
+                        }
                     }
                 },
                 {
-                    $replaceRoot: { newRoot: { $mergeObjects: ["$data", { version_history: "$version_history" }] } }
+                    $replaceRoot: {
+                        newRoot: {
+                            $mergeObjects: [
+                                "$data",
+                                { version_history: "$version_history" }
+                            ]
+                        }
+                    }
                 },
                 // {
                 //     $unwind: {
