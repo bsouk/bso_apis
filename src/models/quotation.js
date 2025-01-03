@@ -27,7 +27,7 @@ const quotationSchema = new mongoose.Schema({
         type: {
             reason: {
                 type: String,
-                default: ""
+                default: null
             },
             logistics_ids: {
                 type: [
@@ -67,6 +67,9 @@ const quotationSchema = new mongoose.Schema({
                 },
                 type: {
                     type: String
+                },
+                date_time: {
+                    type: Date
                 }
             }
         },

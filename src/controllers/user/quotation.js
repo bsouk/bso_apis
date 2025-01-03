@@ -841,6 +841,9 @@ exports.addLogisticsQuotationQuery = async (req, res) => {
             });
         }
 
+        const currentTime = await moment(Date.now()).format('lll')
+        req.body.logistics_quote.assignedBy.data_time = currentTime
+
         const result = await quotation.findOneAndUpdate(
             {
                 _id: quotation_id

@@ -5,10 +5,12 @@ const utils = require("../../utils/utils");
 
 exports.myOrder = async (req, res) => {
     try {
+        const { offset = 0, limit = 10, order_type = "active", search = "" } = req.query
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        const myorders = await Order.find({ buyer_id: userId }).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id')
+        const myorders = await Order.find({ buyer_id: userId, order_type, order_unique_id: { $regex: search, $options: "i" } }).skip(parseInt(offset)).limit(parseInt(limit)).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id')
+
         console.log("myorders : ", myorders)
 
         if (!myorders || myorders.length === 0) {
