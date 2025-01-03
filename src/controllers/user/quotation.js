@@ -856,7 +856,7 @@ exports.addLogisticsQuotationQuery = async (req, res) => {
         const assignData = {
             id: userId,
             type: userData.user_type,
-            data_time: currentTime
+            date_time: currentTime
         }
 
         req.body.logistics_quote.assignedBy = assignData
