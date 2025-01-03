@@ -395,3 +395,38 @@ exports.getProductNameList = async (req, res) => {
     utils.handleError(res, error);
   }
 }
+
+exports.addReview = async (req, res) => {
+  try {
+    const { order_id, review_stars, title, comment, uploaded_images, product_id } = req.body
+    const product_data = await Product.findOne({ _id: product_id })
+    console.log("product_data : ", product_data)
+    if (!product_data) {
+      return utils.handleError(res, {
+        message: 'product not found',
+        code: 404,
+      });
+    }
+
+    const newreview = {
+      order_id,
+      review_stars,
+      title,
+      comment
+    }
+
+    if (uploaded_images && uploaded_images.length !== 0) {
+      newreview.uploaded_images = uploaded_images
+    }
+
+    product_data.review.push(newreview)
+    await product_data.save()
+
+    return res.status(200).json({
+      message: "review added successfully",
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}

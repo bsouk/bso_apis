@@ -41,7 +41,7 @@ const productSchema = new mongoose.Schema(
         price: {
           type: Number,
         },
-        assigned_to:{
+        assigned_to: {
           type: String,
           required: false,
         },
@@ -87,6 +87,29 @@ const productSchema = new mongoose.Schema(
     },
     rejected_reason: {
       type: String
+    },
+    review: {
+      type: [
+        {
+          order_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'orders'
+          },
+          review_stars: {
+            type: Number,
+            max: 5,
+            default: 0
+          },
+          title: {
+            type: String
+          },
+          comment: {
+            type: String
+          },
+          uploaded_images: [String]
+        }
+      ],
+      default: []
     }
   },
   {

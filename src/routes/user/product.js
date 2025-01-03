@@ -49,4 +49,11 @@ router.get(
     controller.getProductNameList
 )
 
+router.patch(
+    '/addReview',
+    trimRequest.all,
+    requireAuth,
+    controller.addReview
+)
+
 module.exports = router

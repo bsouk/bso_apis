@@ -861,6 +861,7 @@ exports.approveRejectLogistics = async (req, res) => {
                     $set: {
                         is_admin_logistics_decided: 'undecided',
                         decided_logistics_id: null,
+                        logistics_quote: null,
                         "rejected_reason.reason": req.body.reason
                     },
                     $addToSet: {
