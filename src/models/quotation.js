@@ -192,7 +192,7 @@ const quotationSchema = new mongoose.Schema({
         enum: ["processing", "approved", "cancelled"],
         default: "processing"
     },
-    rejected_reason: {
+    is_approved_rejected_reason: {
         type: String
     },
     version_history: {
