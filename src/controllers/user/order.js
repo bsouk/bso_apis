@@ -8,7 +8,9 @@ exports.myOrder = async (req, res) => {
         const { offset = 0, limit = 10, order_type = "active", search = "" } = req.query
         const userId = req.user._id
         console.log("userId : ", userId)
-        const filter = {}
+        const filter = {
+            buyer_id: new mongoose.Types.ObjectId(userId)
+        }
         if (order_type) {
             filter.order_type = order_type
         }
@@ -19,9 +21,7 @@ exports.myOrder = async (req, res) => {
         const myorders = await Order.aggregate([
             [
                 {
-                    $match: {
-                        buyer_id: new mongoose.Types.ObjectId(userId)
-                    }
+                    $match: filter
                 },
                 {
                     $lookup: {
@@ -272,6 +272,12 @@ exports.myOrder = async (req, res) => {
                     }
                 },
                 {
+                    $skip: parseInt(offset) || 0
+                },
+                {
+                    $limit: parseInt(limit) || 10
+                },
+                {
                     $project: {
                         order_logistics_data: 0,
                         order_supplier_data: 0,
@@ -284,12 +290,12 @@ exports.myOrder = async (req, res) => {
         const count = await Order.countDocuments()
         console.log("myorders : ", myorders)
 
-        if (!myorders || myorders.length === 0) {
-            return utils.handleError(res, {
-                message: "Order not found",
-                code: 404,
-            });
-        }
+        // if (!myorders || myorders.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "Order not found",
+        //         code: 404,
+        //     });
+        // }
         return res.status(200).json({
             message: "Orders list fetched successfully",
             data: myorders,
