@@ -496,7 +496,7 @@ exports.generateExcel = async (data, res) => {
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename="data.xlsx"');
-  res.send(buffer);
+  return res.send(workbook);
 }
 
 exports.generateCSV = async (data, res) => {
@@ -543,7 +543,7 @@ exports.generatePDF = async (headers, data, res) => {
   if (!data || data.length === 0) {
     doc.fontSize(14).text("No data available", { align: 'center' });
     doc.end();
-    return;
+    return doc;
   }
 
   const columnWidths = headers.map(header => {
