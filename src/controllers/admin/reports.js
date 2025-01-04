@@ -5,98 +5,6 @@ const Order = require("../../models/order")
 const Payment = require("../../models/payment")
 const utils = require("../../utils/utils");
 
-const { stringify } = require('csv-stringify');
-// const PDFDocument = require('pdfkit');
-const PDFDocument = require('pdfkit-table');
-const XLSX = require('xlsx');
-
-
-function generateExcel(data, res) {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="data.xlsx"');
-    res.send(workbook);
-}
-
-function generateCSV(data, res) {
-    stringify(data, { header: true }, (err, output) => {
-        if (err) {
-            console.error('Error generating CSV:', err);
-            return res.status(500).send('Error generating CSV');
-        }
-
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename="data.csv"');
-        return res.send(output);
-    });
-}
-
-// function generatePDF(data, res) {
-//     const doc = new PDFDocument();
-//     res.setHeader('Content-Type', 'application/pdf');
-//     res.setHeader('Content-Disposition', 'attachment; filename="data.pdf"');
-
-//     doc.pipe(res);
-//     data.forEach((item, index) => {
-//         doc.fontSize(16).text(`Record ${index + 1}`, { underline: true }).moveDown(0.5);
-
-//         Object.entries(item).forEach(([key, value]) => {
-//             doc.fontSize(12).text(`${key}: ${value}`, { indent: 20 });
-//         });
-
-//         doc.moveDown(1);
-//     });
-//     doc.end();
-// }
-
-async function generatePDF(headers, data, res) {
-    const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename="data.pdf"');
-
-    doc.pipe(res);
-
-    doc.fontSize(18).text("Report", { align: 'center' }).moveDown(1);
-
-    if (!data || data.length === 0) {
-        doc.fontSize(14).text("No data available", { align: 'center' });
-        doc.end();
-        return;
-    }
-
-    const columnWidths = headers.map(header => {
-        const maxContentWidth = Math.max(...data.map(row => String(row[header] || "").length), header.length);
-        return Math.min(200, maxContentWidth * 5); // Max 200px width per column
-    });
-
-    const table = {
-        headers: headers.map((header, i) => ({
-            label: header,
-            property: header,
-            width: columnWidths[i] + 8, // Dynamically adjust width
-            align: 'left',
-        })),
-        rows: data.map(row => headers.map(header => row[header] || "N/A"))
-    };
-
-    await doc.table(table, {
-        prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
-        prepareRow: (row, indexColumn, indexRow, rectRow) => {
-            doc.font("Helvetica").fontSize(9);
-            if (rectRow.y + rectRow.height > doc.page.height - 50) {
-                doc.addPage();
-            }
-        },
-    });
-
-    doc.end();
-}
-
 exports.downloadReport = async (req, res) => {
     const { format, reportOf } = req.body
     console.log("file format is ", format)
@@ -145,11 +53,11 @@ exports.downloadReport = async (req, res) => {
                 }))
 
                 if (format === "excel") {
-                    return generateExcel(cleanUserList, res)
+                    return utils.generateExcel(cleanUserList, res)
                 } else if (format === "csv") {
-                    return generateCSV(cleanUserList, res)
+                    return utils.generateCSV(cleanUserList, res)
                 } else {
-                    return generatePDF(cleanUserList, res)
+                    return utils.generatePDF(cleanUserList, res)
                 }
             };
                 break;
@@ -188,11 +96,11 @@ exports.downloadReport = async (req, res) => {
                 }))
 
                 if (format === "excel") {
-                    return generateExcel(cleanArticleList, res)
+                    return utils.generateExcel(cleanArticleList, res)
                 } else if (format === "csv") {
-                    return generateCSV(cleanArticleList, res)
+                    return utils.generateCSV(cleanArticleList, res)
                 } else {
-                    return generatePDF(cleanArticleList, res)
+                    return utils.generatePDF(cleanArticleList, res)
                 }
             }; break;
             case "Order": {
@@ -257,11 +165,11 @@ exports.downloadReport = async (req, res) => {
                 )
 
                 if (format === "excel") {
-                    return generateExcel(cleanorderList, res)
+                    return utils.generateExcel(cleanorderList, res)
                 } else if (format === "csv") {
-                    return generateCSV(cleanorderList, res)
+                    return utils.generateCSV(cleanorderList, res)
                 } else {
-                    return generatePDF(headings, cleanorderList, res)
+                    return utils.generatePDF(headings, cleanorderList, res)
                 }
             }; break;
             case "Payment": {
@@ -318,11 +226,11 @@ exports.downloadReport = async (req, res) => {
                 )
 
                 if (format === "excel") {
-                    return generateExcel(cleanpaymentList, res)
+                    return utils.generateExcel(cleanpaymentList, res)
                 } else if (format === "csv") {
-                    return generateCSV(cleanpaymentList, res)
+                    return utils.generateCSV(cleanpaymentList, res)
                 } else {
-                    return generatePDF(headings, cleanpaymentList, res)
+                    return utils.generatePDF(headings, cleanpaymentList, res)
                 }
             }; break;
             case "SubAdmin": {
@@ -357,11 +265,11 @@ exports.downloadReport = async (req, res) => {
                 }))
 
                 if (format === "excel") {
-                    return generateExcel(cleanSubAdminList, res)
+                    return utils.generateExcel(cleanSubAdminList, res)
                 } else if (format === "csv") {
-                    return generateCSV(cleanSubAdminList, res)
+                    return utils.generateCSV(cleanSubAdminList, res)
                 } else {
-                    return generatePDF(cleanSubAdminList, res)
+                    return utils.generatePDF(cleanSubAdminList, res)
                 }
             }; break;
             default: return utils.handleError(res, {

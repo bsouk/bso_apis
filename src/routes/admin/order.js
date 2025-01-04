@@ -37,4 +37,11 @@ router.patch(
     controller.changeOrderStatus
 );
 
+router.post(
+    '/exportOrder',
+    trimRequest.all,
+    requireAuth,
+    controller.exportOrder
+);
+
 module.exports = router

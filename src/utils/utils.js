@@ -31,6 +31,11 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 const xlsx = require("xlsx")
 const csv = require("csvtojson");
+
+const { stringify } = require('csv-stringify');
+// const PDFDocument = require('pdfkit');
+const PDFDocument = require('pdfkit-table');
+const XLSX = require('xlsx');
 /**
  * Removes extension from file
  * @param {string} file - filename
@@ -480,4 +485,91 @@ exports.validateColumns = (jsonData, requiredColumns) => {
       reject(error)
     }
   })
+}
+
+
+exports.generateExcel = async (data, res) => {
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+  const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="data.xlsx"');
+  res.send(workbook);
+}
+
+exports.generateCSV = async (data, res) => {
+  stringify(data, { header: true }, (err, output) => {
+    if (err) {
+      console.error('Error generating CSV:', err);
+      return res.status(500).send('Error generating CSV');
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="data.csv"');
+    return res.send(output);
+  });
+}
+
+// function generatePDF(data, res) {
+//     const doc = new PDFDocument();
+//     res.setHeader('Content-Type', 'application/pdf');
+//     res.setHeader('Content-Disposition', 'attachment; filename="data.pdf"');
+
+//     doc.pipe(res);
+//     data.forEach((item, index) => {
+//         doc.fontSize(16).text(`Record ${index + 1}`, { underline: true }).moveDown(0.5);
+
+//         Object.entries(item).forEach(([key, value]) => {
+//             doc.fontSize(12).text(`${key}: ${value}`, { indent: 20 });
+//         });
+
+//         doc.moveDown(1);
+//     });
+//     doc.end();
+// }
+
+exports.generatePDF = async (headers, data, res) => {
+  const doc = new PDFDocument({ margin: 30, size: 'A4', layout: 'landscape' });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'attachment; filename="data.pdf"');
+
+  doc.pipe(res);
+
+  doc.fontSize(18).text("Report", { align: 'center' }).moveDown(1);
+
+  if (!data || data.length === 0) {
+    doc.fontSize(14).text("No data available", { align: 'center' });
+    doc.end();
+    return;
+  }
+
+  const columnWidths = headers.map(header => {
+    const maxContentWidth = Math.max(...data.map(row => String(row[header] || "").length), header.length);
+    return Math.min(200, maxContentWidth * 5); // Max 200px width per column
+  });
+
+  const table = {
+    headers: headers.map((header, i) => ({
+      label: header,
+      property: header,
+      width: columnWidths[i] + 8, // Dynamically adjust width
+      align: 'left',
+    })),
+    rows: data.map(row => headers.map(header => row[header] || "N/A"))
+  };
+
+  await doc.table(table, {
+    prepareHeader: () => doc.font("Helvetica-Bold").fontSize(10),
+    prepareRow: (row, indexColumn, indexRow, rectRow) => {
+      doc.font("Helvetica").fontSize(9);
+      if (rectRow.y + rectRow.height > doc.page.height - 50) {
+        doc.addPage();
+      }
+    },
+  });
+
+  doc.end();
 }

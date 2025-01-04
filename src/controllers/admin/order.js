@@ -120,3 +120,83 @@ exports.changeOrderStatus = async (req, res) => {
 }
 
 
+exports.exportOrder = async (req, res) => {
+    try {
+        const { format } = req.body
+        console.log("file format is ", format)
+
+        if (!['excel', 'csv', 'pdf'].includes(format)) {
+            return utils.handleError(res, {
+                message: "unavailable download format",
+                code: 404,
+            });
+        }
+        const order_data = await Order.find()
+            .populate('order_items.product_id')
+            .populate('order_items.supplier_id')
+            .populate('order_items.logistics_id')
+            .populate('order_items.variant_id')
+            .populate('shipping_address')
+            .populate('billing_address')
+            .populate('payment_id')
+            .populate('tracking_id')
+            .populate('buyer_id')
+            .populate('logistics_id')
+        console.log("order : ", order_data)
+
+        if (!order_data) {
+            return utils.handleError(res, {
+                message: "Order not found",
+                code: 404,
+            });
+        }
+
+        const cleanorderList = order_data.map((order) => ({
+            "Order Id": order.order_unique_id,
+            "Order Type": order.order_type,
+            "Order Status": order.order_status,
+            "Buyer": order.buyer_id.full_name,
+            "Amount": order.total_amount,
+            "Delivery Charges": order.delivery_charges,
+            "Shipping Address": `${order.shipping_address.address.address_line_1},${order.shipping_address.address.address_line_2},${order.shipping_address.address.city},${order.shipping_address.address.state},${order.shipping_address.address.country},${order.shipping_address.address.pin_code}`,
+            "Billing Address": `${order.billing_address.address.address_line_1},${order.billing_address.address.address_line_2},${order.billing_address.address.city},${order.billing_address.address.state},${order.billing_address.address.country},${order.billing_address.address.pin_code}`,
+            "Payment": order.payment_id.status
+        }))
+
+        const headings = [
+            "Order Id",
+            "Order Type",
+            "Order Status",
+            "Buyer",
+            "Amount",
+            "Delivery Charges",
+            "Shipping Address",
+            "Billing Address",
+            "Payment"
+        ]
+
+        const data = []
+        order_data.map(async (order) =>
+            await data.push([order.order_unique_id,
+            order.order_type,
+            order.order_status,
+            order.buyer_id.full_name,
+            order.total_amount,
+            order.delivery_charges,
+            `${order.shipping_address.address.address_line_1},${order.shipping_address.address.address_line_2},${order.shipping_address.address.city},${order.shipping_address.address.state},${order.shipping_address.address.country},${order.shipping_address.address.pin_code}`,
+            `${order.billing_address.address.address_line_1},${order.billing_address.address.address_line_2},${order.billing_address.address.city},${order.billing_address.address.state},${order.billing_address.address.country},${order.billing_address.address.pin_code}`,
+            order.payment_id.status
+            ])
+        )
+
+        if (format === "excel") {
+            return utils.generateExcel(cleanorderList, res)
+        } else if (format === "csv") {
+            return utils.generateCSV(cleanorderList, res)
+        } else {
+            return utils.generatePDF(headings, cleanorderList, res)
+        }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
