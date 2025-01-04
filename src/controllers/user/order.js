@@ -15,7 +15,272 @@ exports.myOrder = async (req, res) => {
         if (search) {
             filter.order_unique_id = { $regex: search, $options: "i" }
         }
-        const myorders = await Order.find({ buyer_id: userId }, filter).skip(parseInt(offset)).limit(parseInt(limit)).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id').populate('logistics_id')
+        // const myorders = await Order.find({ buyer_id: userId }, filter).skip(parseInt(offset)).limit(parseInt(limit)).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id').populate('logistics_id')
+        const myorders = await Order.aggregate([
+            [
+                {
+                    $match: {
+                        buyer_id: new mongoose.Types.ObjectId(userId)
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "buyer_id",
+                        foreignField: "_id",
+                        as: "buyer_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$buyer_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "logistics_id",
+                        foreignField: "_id",
+                        as: "logistics_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$logistics_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "addresses",
+                        localField: "shipping_address",
+                        foreignField: "_id",
+                        as: "shipping_address_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$shipping_address_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "addresses",
+                        localField: "billing_address",
+                        foreignField: "_id",
+                        as: "billing_address_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$billing_address_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "tracking_orders",
+                        localField: "tracking_id",
+                        foreignField: "_id",
+                        as: "tracking_orders_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$tracking_orders_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "payments",
+                        localField: "payment_id",
+                        foreignField: "_id",
+                        as: "payment_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$payment_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$order_items",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $lookup: {
+                        from: "products",
+                        let: { id: "$order_items.product_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$_id", "$$id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "order_product_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        let: { id: "$order_items.supplier_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$_id", "$$id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "order_supplier_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        let: { id: "$order_items.logistics_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$_id", "$$id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "order_logistics_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: {
+                            id: "$order_items.variant_id"
+                        },
+                        pipeline: [
+                            { $unwind: "$variant" },
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$variant._id", "$$id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "order_variant_data"
+                    }
+                },
+                {
+                    $addFields: {
+                        "order_items.product": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$order_product_data",
+                                        as: "product",
+                                        cond: {
+                                            $eq: [
+                                                "$$product._id",
+                                                "$order_items.product_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        },
+                        "order_items.supplier": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$order_supplier_data",
+                                        as: "supplier",
+                                        cond: {
+                                            $eq: [
+                                                "$$supplier._id",
+                                                "$order_items.supplier_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        },
+                        "order_items.variant": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input:
+                                            "$order_variant_data.variant",
+                                        as: "variant",
+                                        cond: {
+                                            $eq: [
+                                                "$$variant._id",
+                                                "$order_items.variant_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        },
+                        "order_items.logistics": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$order_logistics_data",
+                                        as: "logistics",
+                                        cond: {
+                                            $eq: [
+                                                "$$logistics._id",
+                                                "$order_items.logistics_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        data: { $first: "$$ROOT" },
+                        order_items: { $push: "$order_items" }
+                    }
+                },
+                {
+                    $replaceRoot: {
+                        newRoot: {
+                            $mergeObjects: [
+                                "$data",
+                                { order_items: "$order_items" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        order_logistics_data: 0,
+                        order_supplier_data: 0,
+                        order_variant_data: 0,
+                        order_product_data: 0
+                    }
+                }
+            ]
+        ])
         const count = await Order.countDocuments()
         console.log("myorders : ", myorders)
 
