@@ -496,7 +496,7 @@ exports.generateExcel = async (data, res) => {
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', 'attachment; filename="data.xlsx"');
-  res.send(workbook);
+  res.send(buffer);
 }
 
 exports.generateCSV = async (data, res) => {
