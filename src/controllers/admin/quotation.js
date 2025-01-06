@@ -24,7 +24,7 @@ exports.getQuotationList = async (req, res) => {
         }
 
         const data = await quotation.aggregate([
-            { $match: { ...filter } },
+            // { $match: { ...filter } },
             {
                 $lookup: {
                     from: 'queries',
@@ -67,6 +67,7 @@ exports.getQuotationList = async (req, res) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
+            { $match: { ...filter } },
             {
                 $sort: { createdAt: -1 }
             },
