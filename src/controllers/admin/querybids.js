@@ -342,7 +342,7 @@ exports.unassignVariant = async (req, res) => {
             {
                 $set: {
                     "queryDetails.$.assigned_to.variant_assigned": null,
-                    // "queryDetails.$.assigned_to.type": null,
+                    "queryDetails.$.assigned_to.type": "admin",
                     "queryDetails.$.supplier_quote": null,
                 },
             },
@@ -811,7 +811,7 @@ exports.unAssignMultipleQueries = async (req, res) => {
             {
                 $set: {
                     "queryDetails.$.assigned_to.variant_assigned": null,
-                    // "queryDetails.$.assigned_to.type": null,
+                    "queryDetails.$.assigned_to.type": "admin",
                     "queryDetails.$.supplier_quote": null,
                 }
             },

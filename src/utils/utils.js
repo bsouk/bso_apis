@@ -572,5 +572,4 @@ exports.generatePDF = async (headers, data, res) => {
   });
 
   doc.end();
-  return doc
 }
