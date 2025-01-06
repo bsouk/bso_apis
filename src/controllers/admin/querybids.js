@@ -17,7 +17,7 @@ exports.getquery = async (req, res) => {
         };
 
         if (search) {
-            filter.name = { $regex: search, $options: "i" };
+            filter.query_unique_id = { $regex: search, $options: "i" };
         }
 
         const productlist = await Query.aggregate([
