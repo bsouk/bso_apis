@@ -824,6 +824,7 @@ exports.assignLogistics = async (req, res) => {
                     supplier_id: i?.supplier_id,
                     variant_id: i?.variant_id,
                     price: i?.price,
+                    quantity: i?.quantity,
                     media: i?.media,
                     document: i?.document,
                     assignedBy: i?.assignedBy

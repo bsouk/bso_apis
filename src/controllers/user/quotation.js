@@ -922,6 +922,7 @@ exports.addQuotationNotes = async (req, res) => {
             supplier_id: quote?.supplier_id,
             variant_id: quote?.variant_id,
             price: quote?.price,
+            quantity: quote?.quantity,
             media: quote?.media,
             document: quote?.document,
             assignedBy: quote?.assignedBy
@@ -980,6 +981,7 @@ exports.addSupplierQuotationQuery = async (req, res) => {
             supplier_id: quote?.supplier_id,
             variant_id: quote?.variant_id,
             price: quote?.supplier_quote.price,
+            quantity: quote?.supplier_quote?.quantity,
             media: quote?.supplier_quote.media,
             document: quote?.supplier_quote.document,
             assignedBy: quote?.supplier_quote.assignedBy
