@@ -651,12 +651,14 @@ exports.addAdminQuotationQuery = async (req, res) => {
             supplier_id: quote?.supplier_id,
             variant_id: quote?.variant_id,
             price: quote?.admin_quote.price,
+            quantity: quote?.admin_quote?.quantity,
             media: quote?.admin_quote.media,
             document: quote?.admin_quote.document,
             assignedBy: quote?.admin_quote.assignedBy
         }
 
         queryData.version_history.push(timeline_data)
+        queryData.buyer_notes = ""
         await queryData.save()
 
         return res.status(200).json({

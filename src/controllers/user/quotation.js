@@ -166,20 +166,20 @@ exports.getQuotationList = async (req, res) => {
             {
                 $match: { ...filter }
             },
-            {
-                $lookup: {
-                    from: "queries",
-                    localField: "query_id",
-                    foreignField: "_id",
-                    as: "query_data",
-                },
-            },
-            {
-                $unwind: {
-                    path: "$query_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
+            // {
+            //     $lookup: {
+            //         from: "queries",
+            //         localField: "query_id",
+            //         foreignField: "_id",
+            //         as: "query_data",
+            //     },
+            // },
+            // {
+            //     $unwind: {
+            //         path: "$query_data",
+            //         preserveNullAndEmptyArrays: true
+            //     }
+            // },
             {
                 $lookup: {
                     from: "bidsettings",

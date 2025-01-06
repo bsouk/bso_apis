@@ -105,6 +105,14 @@ exports.getquerydetail = async (req, res) => {
             },
             {
                 $lookup: {
+                    from: 'users',
+                    localField: 'queryDetails.supplier._id',
+                    foreignField: '_id',
+                    as: 'supplier_detail',
+                }
+            },
+            {
+                $lookup: {
                     from: 'bidsettings',
                     localField: '_id',
                     foreignField: 'query_id',
@@ -118,6 +126,9 @@ exports.getquerydetail = async (req, res) => {
                     },
                     product_detail: {
                         $ifNull: [{ $arrayElemAt: ['$product_detail', 0] }, null],
+                    },
+                    supplier_detail: {
+                        $ifNull: [{ $arrayElemAt: ['$supplier_detail', 0] }, null]
                     },
                     bid_details: {
                         $ifNull: [{ $arrayElemAt: ['$bid_details', 0] }, null],
@@ -331,7 +342,7 @@ exports.unassignVariant = async (req, res) => {
             {
                 $set: {
                     "queryDetails.$.assigned_to.variant_assigned": null,
-                    "queryDetails.$.assigned_to.type": null,
+                    // "queryDetails.$.assigned_to.type": null,
                     "queryDetails.$.supplier_quote": null,
                 },
             },
@@ -800,7 +811,7 @@ exports.unAssignMultipleQueries = async (req, res) => {
             {
                 $set: {
                     "queryDetails.$.assigned_to.variant_assigned": null,
-                    "queryDetails.$.assigned_to.type": null,
+                    // "queryDetails.$.assigned_to.type": null,
                     "queryDetails.$.supplier_quote": null,
                 }
             },
