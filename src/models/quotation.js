@@ -40,11 +40,13 @@ const quotationSchema = new mongoose.Schema({
     },
     accepted_logistics: {
         type: mongoose.Types.ObjectId,
-        ref: 'users'
+        ref: 'users',
+        default : null
     },
     decided_logistics_id: {
         type: mongoose.Types.ObjectId,
-        ref: 'users'
+        ref: 'users',
+        default : null
     },
     logistics_quote: {
         type: {
