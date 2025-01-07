@@ -197,64 +197,7 @@ const quotationSchema = new mongoose.Schema({
     is_approved_rejected_reason: {
         type: String
     },
-    version_history: {
-        type:
-            [
-                {
-                    date: {
-                        type: Date,
-                        default: Date.now
-                    },
-                    detail: {
-                        type: String
-                    },
-                    product_id: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: 'products',
-                    },
-                    supplier_id: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: 'users',
-                    },
-                    logistics_id: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: 'users',
-                    },
-                    variant_id: {
-                        type: mongoose.Schema.Types.ObjectId,
-                    },
-                    quantity: {
-                        type: Number
-                    },
-                    price: {
-                        type: Number
-                    },
-                    message: {
-                        type: String
-                    },
-                    media: [String],
-                    document: [String],
-                    assignedBy: {
-                        id: {
-                            type: mongoose.Schema.Types.ObjectId,
-                        },
-                        type: {
-                            type: String
-                        }
-                    },
-                    buyer_notes: {
-                        type: String
-                    },
-                    supplier_notes: {
-                        type: String
-                    },
-                    admin_notes: {
-                        type: String
-                    },
-                }
-            ],
-        default: []
-    },
+    
     final_quotation_order: [
         {
             product_id: {

@@ -8,6 +8,7 @@ const moment = require("moment");
 const order = require("../../models/order");
 const payment = require("../../models/payment");
 const tracking_order = require("../../models/tracking_order");
+const version_history = require("../../models/version_history");
 
 
 // exports.getQuotationList = async (req, res) => {
@@ -449,24 +450,46 @@ exports.getQuotationDetails = async (req, res) => {
                     }
                 },
                 {
-                    $lookup: {
-                        from: "bidsettings",
-                        localField: "bid_setting",
-                        foreignField: "_id",
-                        as: "bid_setting_data"
-                    }
-                },
-                {
                     $unwind: {
-                        path: "$bid_setting_data",
+                        path: "$final_quote",
                         preserveNullAndEmptyArrays: true
                     }
                 },
+                // {
+                //     $lookup: {
+                //         from: "bidsettings",
+                //         localField: "bid_setting",
+                //         foreignField: "_id",
+                //         as: "bid_setting_data"
+                //     }
+                // },
+                // {
+                //     $unwind: {
+                //         path: "$bid_setting_data",
+                //         preserveNullAndEmptyArrays: true
+                //     }
+                // },
                 {
                     $lookup: {
                         from: "products",
-                        localField: "final_quote.product_id",
-                        foreignField: "_id",
+                        let: { id: "$final_quote.product_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    name: 1
+                                }
+                            }
+                        ],
+                        // localField: "final_quote.product_id",
+                        // foreignField: "_id",
                         as: "product_data"
                     }
                 },
@@ -476,12 +499,6 @@ exports.getQuotationDetails = async (req, res) => {
                         localField: "final_quote.supplier_id",
                         foreignField: "_id",
                         as: "supplier_data"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$final_quote",
-                        preserveNullAndEmptyArrays: true
                     }
                 },
                 {
@@ -501,7 +518,7 @@ exports.getQuotationDetails = async (req, res) => {
                             },
                             {
                                 $project: {
-                                    _id: 0,
+                                    _id: 1,
                                     variant: 1
                                 }
                             }
@@ -528,24 +545,24 @@ exports.getQuotationDetails = async (req, res) => {
                                 0
                             ]
                         },
-                        "final_quote.supplier": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$supplier_data",
-                                        as: "supplier",
-                                        cond: {
-                                            $eq: [
-                                                "$$supplier._id",
-                                                "$final_quote.supplier_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "final_quote.variant": {
+                        // "final_quote.supplier": {
+                        //     $arrayElemAt: [
+                        //         {
+                        //             $filter: {
+                        //                 input: "$supplier_data",
+                        //                 as: "supplier",
+                        //                 cond: {
+                        //                     $eq: [
+                        //                         "$$supplier._id",
+                        //                         "$final_quote.supplier_id"
+                        //                     ]
+                        //                 }
+                        //             }
+                        //         },
+                        //         0
+                        //     ]
+                        // },
+                        "final_quote.variant_data": {
                             $arrayElemAt: [
                                 {
                                     $filter: {
@@ -561,6 +578,50 @@ exports.getQuotationDetails = async (req, res) => {
                                 },
                                 0
                             ]
+                        },
+                        "final_quote.query_data": {
+                            $let: {
+                                vars: {
+                                    matchedQuery: {
+                                        $arrayElemAt: [
+                                            {
+                                                $filter: {
+                                                    input:
+                                                        "$query_data.queryDetails",
+                                                    as: "query",
+                                                    cond: {
+                                                        $and: [
+                                                            {
+                                                                $eq: [
+                                                                    "$$query.product.id",
+                                                                    "$final_quote.product_id"
+                                                                ]
+                                                            },
+                                                            {
+                                                                $eq: [
+                                                                    "$$query.supplier._id",
+                                                                    "$final_quote.supplier_id"
+                                                                ]
+                                                            },
+                                                            {
+                                                                $eq: [
+                                                                    "$$query.variant._id",
+                                                                    "$final_quote.variant_id"
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+                                in: {
+                                    query: "$$matchedQuery.query",
+                                    notes: "$$matchedQuery.notes"
+                                }
+                            }
                         }
                     }
                 },
@@ -692,115 +753,115 @@ exports.getQuotationDetails = async (req, res) => {
                     }
                 },
 
-                {
-                    $unwind: {
-                        path: "$version_history",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "products",
-                        let: {
-                            timelineVariantId:
-                                "$version_history.variant_id"
-                        },
-                        pipeline: [
-                            { $unwind: "$variant" },
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: [
-                                            "$variant._id",
-                                            "$$timelineVariantId"
-                                        ]
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 0,
-                                    variant: 1
-                                }
-                            }
-                        ],
-                        as: "timeline_variant_data"
-                    }
-                },
-                {
-                    $addFields: {
-                        "version_history.product": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$product_data",
-                                        as: "product",
-                                        cond: {
-                                            $eq: [
-                                                "$$product._id",
-                                                "$version_history.product_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "version_history.supplier": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$supplier_data",
-                                        as: "supplier",
-                                        cond: {
-                                            $eq: [
-                                                "$$supplier._id",
-                                                "$version_history.supplier_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "version_history.variant": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$timeline_variant_data",
-                                        as: "variant",
-                                        cond: {
-                                            $eq: [
-                                                "$$variant.variant._id",
-                                                "$version_history.variant_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        }
-                    }
-                },
-                {
-                    $group: {
-                        _id: "$_id",
-                        data: { $first: "$$ROOT" },
-                        version_history: {
-                            $push: "$version_history"
-                        }
-                    }
-                },
-                {
-                    $replaceRoot: {
-                        newRoot: {
-                            $mergeObjects: [
-                                "$data",
-                                { version_history: "$version_history" }
-                            ]
-                        }
-                    }
-                },
+                // {
+                //     $unwind: {
+                //         path: "$version_history",
+                //         preserveNullAndEmptyArrays: true
+                //     }
+                // },
+                // {
+                //     $lookup: {
+                //         from: "products",
+                //         let: {
+                //             timelineVariantId:
+                //                 "$version_history.variant_id"
+                //         },
+                //         pipeline: [
+                //             { $unwind: "$variant" },
+                //             {
+                //                 $match: {
+                //                     $expr: {
+                //                         $eq: [
+                //                             "$variant._id",
+                //                             "$$timelineVariantId"
+                //                         ]
+                //                     }
+                //                 }
+                //             },
+                //             {
+                //                 $project: {
+                //                     _id: 0,
+                //                     variant: 1
+                //                 }
+                //             }
+                //         ],
+                //         as: "timeline_variant_data"
+                //     }
+                // },
+                // {
+                //     $addFields: {
+                //         "version_history.product": {
+                //             $arrayElemAt: [
+                //                 {
+                //                     $filter: {
+                //                         input: "$product_data",
+                //                         as: "product",
+                //                         cond: {
+                //                             $eq: [
+                //                                 "$$product._id",
+                //                                 "$version_history.product_id"
+                //                             ]
+                //                         }
+                //                     }
+                //                 },
+                //                 0
+                //             ]
+                //         },
+                //         "version_history.supplier": {
+                //             $arrayElemAt: [
+                //                 {
+                //                     $filter: {
+                //                         input: "$supplier_data",
+                //                         as: "supplier",
+                //                         cond: {
+                //                             $eq: [
+                //                                 "$$supplier._id",
+                //                                 "$version_history.supplier_id"
+                //                             ]
+                //                         }
+                //                     }
+                //                 },
+                //                 0
+                //             ]
+                //         },
+                //         "version_history.variant": {
+                //             $arrayElemAt: [
+                //                 {
+                //                     $filter: {
+                //                         input: "$timeline_variant_data",
+                //                         as: "variant",
+                //                         cond: {
+                //                             $eq: [
+                //                                 "$$variant.variant._id",
+                //                                 "$version_history.variant_id"
+                //                             ]
+                //                         }
+                //                     }
+                //                 },
+                //                 0
+                //             ]
+                //         }
+                //     }
+                // },
+                // {
+                //     $group: {
+                //         _id: "$_id",
+                //         data: { $first: "$$ROOT" },
+                //         version_history: {
+                //             $push: "$version_history"
+                //         }
+                //     }
+                // },
+                // {
+                //     $replaceRoot: {
+                //         newRoot: {
+                //             $mergeObjects: [
+                //                 "$data",
+                //                 { version_history: "$version_history" }
+                //             ]
+                //         }
+                //     }
+                // },
                 // {
                 //     $unwind: {
                 //         path: '$query_data',
@@ -814,7 +875,12 @@ exports.getQuotationDetails = async (req, res) => {
                         product_data: 0,
                         supplier_data: 0,
                         variant_data: 0,
-                        timeline_variant_data: 0
+                        timeline_variant_data: 0,
+                        query_data: 0,
+                        final_quotation_order: 0,
+                        "final_quote.product_id": 0,
+                        "final_quote.supplier_id": 0,
+                        "final_quote.variant_id": 0,
                     }
                 }
             ]
@@ -928,8 +994,11 @@ exports.addQuotationNotes = async (req, res) => {
             assignedBy: quote?.assignedBy
         }
 
-        queryData.version_history.push(timeline_data)
-        await queryData.save()
+        const result = await version_history.create({
+            quotation_id: queryData._id,
+            ...timeline_data
+        })
+        console.log("result : ", result)
 
         return res.status(200).json({
             message: "Quotation notes added successfully",
@@ -987,8 +1056,11 @@ exports.addSupplierQuotationQuery = async (req, res) => {
             assignedBy: quote?.supplier_quote.assignedBy
         }
 
-        queryData.version_history.push(timeline_data)
-        await queryData.save()
+        const response = await version_history.create({
+            quotation_id: queryData._id,
+            ...timeline_data
+        })
+        console.log("response : ", response)
 
         return res.status(200).json({
             message: "Supplier quote added successfully",
@@ -1045,23 +1117,25 @@ exports.addLogisticsQuotationQuery = async (req, res) => {
         )
         console.log("result : ", result)
 
-        // const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
-        // console.log('quote : ', quote)
-        // const currentTime = await moment(Date.now()).format('lll')
-        // const timeline_data = {
-        //     date: currentTime,
-        //     detail: 'Logistics quotation quote added',
-        //     product_id: quote?.product_id,
-        //     supplier_id: quote?.supplier_id,
-        //     variant_id: quote?.variant_id,
-        //     price: quote?.logistics_quote.price,
-        //     media: quote?.logistics_quote.media,
-        //     document: quote?.logistics_quote.document,
-        //     assignedBy: quote?.logistics_quote.assignedBy
-        // }
+        const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
+        console.log('quote : ', quote)
+        const timeline_data = {
+            date: currentTime,
+            detail: 'Logistics quotation quote added',
+            product_id: quote?.product_id,
+            supplier_id: quote?.supplier_id,
+            variant_id: quote?.variant_id,
+            price: quote?.logistics_quote.price,
+            media: quote?.logistics_quote.media,
+            document: quote?.logistics_quote.document,
+            assignedBy: quote?.logistics_quote.assignedBy
+        }
 
-        // queryData.version_history.push(timeline_data)
-        // await queryData.save()
+        const response = await version_history.create({
+            quotation_id: queryData._id,
+            ...timeline_data
+        })
+        console.log("response : ", response)
 
         return res.status(200).json({
             message: "Logistics quote added successfully",
@@ -1147,6 +1221,50 @@ exports.checkout = async (req, res) => {
             code: 200
         })
 
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getVersionHistory = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10, search, quotation_id } = req.query
+        if (!quotation_id) {
+            return utils.handleError(res, {
+                message: "Invalid quotation id",
+                code: 400,
+            });
+        }
+        const filter = {}
+        if (search) {
+            filter.quotation_id = { $regex: search, $options: 'i' }
+        }
+        const data = await version_history.aggregate([
+            {
+                $match: {
+                    quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                    ...filter
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset)
+            },
+            {
+                $limit: parseInt(limit)
+            }
+        ])
+        const count = await version_history.countDocuments()
+        return res.status(200).json({
+            message: "version history fetched successfully",
+            data,
+            count,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }

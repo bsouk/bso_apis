@@ -58,4 +58,11 @@ router.post(
     controller.checkout
 );
 
+router.get(
+    '/getVersionHistory',
+    trimRequest.all,
+    requireAuth,
+    controller.getVersionHistory
+)
+
 module.exports = router

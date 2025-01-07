@@ -6,7 +6,8 @@ const utils = require("../../utils/utils");
 const admin = require("../../models/admin");
 const bidsetting = require("../../models/bidsetting");
 const quotation = require("../../models/quotation");
-const moment = require("moment")
+const moment = require("moment");
+const version_history = require("../../models/version_history");
 
 exports.getquery = async (req, res) => {
     try {
@@ -388,14 +389,21 @@ async function createQuotation(final_quotes, query_id, res) {
     const timeline_data = await final_quotes.map(i => ({
         date: currentTime,
         detail: 'quotation created',
-        ...i
+        product_id: i?.product_id,
+        supplier_id: i?.supplier_id,
+        variant_id: i?.variant_id,
+        quantity: i?.quantity,
+        price: i?.price,
+        media: i?.media,
+        message: i?.message,
+        document: i?.document,
+        assignedBy: i?.assignedBy
     })
     )
     const data = {
         quotation_unique_id: await quoteId.toString(),
         query_id,
-        final_quote: [...final_quotes],
-        version_history: [...timeline_data]
+        final_quote: [...final_quotes]
     }
 
     if (bidSettingData?._id) {
@@ -404,6 +412,11 @@ async function createQuotation(final_quotes, query_id, res) {
 
     const newQuotation = await quotation.create(data)
     console.log('new Quotation : ', newQuotation)
+
+    await timeline_data.map(async i => await version_history.create({
+        quotation_id: newQuotation._id,
+        ...i
+    }))
 }
 
 exports.addFinalQuote = async (req, res) => {

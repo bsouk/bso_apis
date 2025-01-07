@@ -9,6 +9,7 @@ const quotation = require("../../models/quotation");
 const moment = require("moment")
 const User = require("../../models/user");
 const Address = require("../../models/address");
+const version_history = require("../../models/version_history");
 
 
 exports.getQuotationList = async (req, res) => {
@@ -512,83 +513,83 @@ exports.getQuotationDetails = async (req, res) => {
                 {
                     $replaceRoot: { newRoot: { $mergeObjects: ["$data", { final_quote: "$final_quote" }] } }
                 },
-                {
-                    $unwind: {
-                        path: "$version_history",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "products",
-                        let: { timelineVariantId: "$version_history.variant_id" },
-                        pipeline: [
-                            { $unwind: "$variant" },
-                            {
-                                $match: {
-                                    $expr: { $eq: ["$variant._id", "$$timelineVariantId"] }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 0,
-                                    variant: 1
-                                }
-                            }
-                        ],
-                        as: "timeline_variant_data"
-                    }
-                },
-                {
-                    $addFields: {
-                        "version_history.product": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$product_data",
-                                        as: "product",
-                                        cond: { $eq: ["$$product._id", "$version_history.product_id"] }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "version_history.supplier": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$supplier_data",
-                                        as: "supplier",
-                                        cond: { $eq: ["$$supplier._id", "$version_history.supplier_id"] }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "version_history.variant": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$timeline_variant_data",
-                                        as: "variant",
-                                        cond: { $eq: ["$$variant.variant._id", "$version_history.variant_id"] }
-                                    }
-                                },
-                                0
-                            ]
-                        }
-                    }
-                },
-                {
-                    $group: {
-                        _id: "$_id",
-                        data: { $first: "$$ROOT" },
-                        version_history: { $push: "$version_history" }
-                    }
-                },
-                {
-                    $replaceRoot: { newRoot: { $mergeObjects: ["$data", { version_history: "$version_history" }] } }
-                },
+                // {
+                //     $unwind: {
+                //         path: "$version_history",
+                //         preserveNullAndEmptyArrays: true
+                //     }
+                // },
+                // {
+                //     $lookup: {
+                //         from: "products",
+                //         let: { timelineVariantId: "$version_history.variant_id" },
+                //         pipeline: [
+                //             { $unwind: "$variant" },
+                //             {
+                //                 $match: {
+                //                     $expr: { $eq: ["$variant._id", "$$timelineVariantId"] }
+                //                 }
+                //             },
+                //             {
+                //                 $project: {
+                //                     _id: 0,
+                //                     variant: 1
+                //                 }
+                //             }
+                //         ],
+                //         as: "timeline_variant_data"
+                //     }
+                // },
+                // {
+                //     $addFields: {
+                //         "version_history.product": {
+                //             $arrayElemAt: [
+                //                 {
+                //                     $filter: {
+                //                         input: "$product_data",
+                //                         as: "product",
+                //                         cond: { $eq: ["$$product._id", "$version_history.product_id"] }
+                //                     }
+                //                 },
+                //                 0
+                //             ]
+                //         },
+                //         "version_history.supplier": {
+                //             $arrayElemAt: [
+                //                 {
+                //                     $filter: {
+                //                         input: "$supplier_data",
+                //                         as: "supplier",
+                //                         cond: { $eq: ["$$supplier._id", "$version_history.supplier_id"] }
+                //                     }
+                //                 },
+                //                 0
+                //             ]
+                //         },
+                //         "version_history.variant": {
+                //             $arrayElemAt: [
+                //                 {
+                //                     $filter: {
+                //                         input: "$timeline_variant_data",
+                //                         as: "variant",
+                //                         cond: { $eq: ["$$variant.variant._id", "$version_history.variant_id"] }
+                //                     }
+                //                 },
+                //                 0
+                //             ]
+                //         }
+                //     }
+                // },
+                // {
+                //     $group: {
+                //         _id: "$_id",
+                //         data: { $first: "$$ROOT" },
+                //         version_history: { $push: "$version_history" }
+                //     }
+                // },
+                // {
+                //     $replaceRoot: { newRoot: { $mergeObjects: ["$data", { version_history: "$version_history" }] } }
+                // },
                 {
                     $project: {
                         query_id: 0,
@@ -668,7 +669,12 @@ exports.addAdminQuotationQuery = async (req, res) => {
             assignedBy: quote?.admin_quote.assignedBy
         }
 
-        queryData.version_history.push(timeline_data)
+        const version_history_data = await version_history.create({
+            quotation_id,
+            ...timeline_data
+        })
+        console.log("version history : ", version_history_data)
+
         queryData.buyer_notes = ""
         await queryData.save()
 
@@ -840,7 +846,10 @@ exports.assignLogistics = async (req, res) => {
                     document: i?.document,
                     assignedBy: i?.assignedBy
                 }
-                await result.version_history.push(timeline_data)
+                await version_history.create({
+                    quotation_id,
+                    ...timeline_data
+                })
             }
 
         }).filter(e => e !== null)[0])
@@ -948,23 +957,25 @@ exports.addAdminQuotationNotes = async (req, res) => {
             { new: true }
         )
 
-        // const quote = await data.final_quote.map(i => (i._id.toString() === final_quote_id.toString() ? i : null)).filter(e => e !== null)[0]
-        // console.log('quote : ', quote)
-        // const currentTime = await moment(Date.now()).format('lll')
-        // const timeline_data = {
-        //     date: currentTime,
-        //     detail:'Admin quotation note added',
-        //     product_id: quote?.product_id,
-        //     supplier_id: quote?.supplier_id,
-        //     variant_id: quote?.variant_id,
-        //     price: quote?.price,
-        //     media: quote?.media,
-        //     document: quote?.document,
-        //     assignedBy: quote?.assignedBy
-        // }
+        const quote = await data.final_quote.map(i => (i._id.toString() === final_quote_id.toString() ? i : null)).filter(e => e !== null)[0]
+        console.log('quote : ', quote)
+        const currentTime = await moment(Date.now()).format('lll')
+        const timeline_data = {
+            date: currentTime,
+            detail: 'Admin quotation note added',
+            product_id: quote?.product_id,
+            supplier_id: quote?.supplier_id,
+            variant_id: quote?.variant_id,
+            price: quote?.price,
+            media: quote?.media,
+            document: quote?.document,
+            assignedBy: quote?.assignedBy
+        }
 
-        // data.version_history.push(timeline_data)
-        // await data.save()
+        await version_history.create({
+            quotation_id,
+            ...timeline_data
+        })
 
         return res.status(200).json({
             message: "Admin Quotation notes added successfully",
@@ -972,6 +983,50 @@ exports.addAdminQuotationNotes = async (req, res) => {
             code: 200
         })
 
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getVersionHistory = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10, search, quotation_id } = req.query
+        if (!quotation_id) {
+            return utils.handleError(res, {
+                message: "Invalid quotation id",
+                code: 400,
+            });
+        }
+        const filter = {}
+        if (search) {
+            filter.quotation_id = { $regex: search, $options: 'i' }
+        }
+        const data = await version_history.aggregate([
+            {
+                $match: {
+                    quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                    ...filter
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset)
+            },
+            {
+                $limit: parseInt(limit)
+            }
+        ])
+        const count = await version_history.countDocuments()
+        return res.status(200).json({
+            message: "version history fetched successfully",
+            data,
+            count,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }
