@@ -620,7 +620,7 @@ exports.getQuotationDetails = async (req, res) => {
                                 in: {
                                     query: "$$matchedQuery.query",
                                     notes: "$$matchedQuery.notes",
-                                    price : "$$matchedQuery.price"
+                                    price: "$$matchedQuery.price"
                                 }
                             }
                         }
@@ -1245,6 +1245,79 @@ exports.getVersionHistory = async (req, res) => {
                 $match: {
                     quotation_id: new mongoose.Types.ObjectId(quotation_id),
                     ...filter
+                }
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    let: {
+                        id:
+                            "$product_id"
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$id"]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                name: 1
+                            }
+                        }
+                    ],
+                    as: "product_data"
+                }
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    let: {
+                        variantId:
+                            "$variant_id"
+                    },
+                    pipeline: [
+                        { $unwind: "$variant" },
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$variant._id", "$$variantId"]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                variant: {
+                                    images: 1,
+                                    tag: 1
+                                }
+                            }
+                        }
+                    ],
+                    as: "variant_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$product_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $unwind: {
+                    path: "$variant_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    product_id: 0,
+                    supplier_id: 0,
+                    variant_id: 0,
                 }
             },
             {
