@@ -1332,7 +1332,11 @@ exports.getVersionHistory = async (req, res) => {
                 $limit: parseInt(limit)
             }
         ])
-        const count = await version_history.countDocuments()
+        let count = 0
+        await data.map((i) =>
+            count++
+        )
+        console.log(count)
         return res.status(200).json({
             message: "version history fetched successfully",
             data,

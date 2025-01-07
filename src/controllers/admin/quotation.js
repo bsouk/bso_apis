@@ -997,103 +997,111 @@ exports.getVersionHistory = async (req, res) => {
                 code: 400,
             });
         }
-        const filter = {}
-        if (search) {
-            filter.quotation_id = { $regex: search, $options: 'i' }
+        const filter = {
+            quotation_id: new mongoose.Types.ObjectId(quotation_id),
         }
-        const data = await version_history.aggregate([
-                   {
-                       $match: {
-                           quotation_id: new mongoose.Types.ObjectId(quotation_id),
-                           ...filter
-                       }
-                   },
-                   {
-                       $lookup: {
-                           from: "products",
-                           let: {
-                               id:
-                                   "$product_id"
-                           },
-                           pipeline: [
-                               {
-                                   $match: {
-                                       $expr: {
-                                           $eq: ["$_id", "$$id"]
-                                       }
-                                   }
-                               },
-                               {
-                                   $project: {
-                                       _id: 1,
-                                       name: 1
-                                   }
-                               }
-                           ],
-                           as: "product_data"
-                       }
-                   },
-                   {
-                       $lookup: {
-                           from: "products",
-                           let: {
-                               variantId:
-                                   "$variant_id"
-                           },
-                           pipeline: [
-                               { $unwind: "$variant" },
-                               {
-                                   $match: {
-                                       $expr: {
-                                           $eq: ["$variant._id", "$$variantId"]
-                                       }
-                                   }
-                               },
-                               {
-                                   $project: {
-                                       _id: 1,
-                                       variant: {
-                                           images: 1,
-                                           tag: 1
-                                       }
-                                   }
-                               }
-                           ],
-                           as: "variant_data"
-                       }
-                   },
-                   {
-                       $unwind: {
-                           path: "$product_data",
-                           preserveNullAndEmptyArrays: true
-                       }
-                   },
-                   {
-                       $unwind: {
-                           path: "$variant_data",
-                           preserveNullAndEmptyArrays: true
-                       }
-                   },
-                   {
-                       $project: {
-                           product_id: 0,
-                           supplier_id: 0,
-                           variant_id: 0,
-                       }
-                   },
-                   {
-                       $sort: {
-                           createdAt: -1
-                       }
-                   },
-                   {
-                       $skip: parseInt(offset)
-                   },
-                   {
-                       $limit: parseInt(limit)
-                   }
-               ])
-        const count = await version_history.countDocuments()
+        // if (search) {
+        //     filter.quotation_id = { $regex: search, $options: 'i' }
+        // }
+        const mainpipeline = [
+            {
+                $match: filter
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    let: {
+                        id:
+                            "$product_id"
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$id"]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                name: 1
+                            }
+                        }
+                    ],
+                    as: "product_data"
+                }
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    let: {
+                        variantId:
+                            "$variant_id"
+                    },
+                    pipeline: [
+                        { $unwind: "$variant" },
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$variant._id", "$$variantId"]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                variant: {
+                                    images: 1,
+                                    tag: 1
+                                }
+                            }
+                        }
+                    ],
+                    as: "variant_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$product_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $unwind: {
+                    path: "$variant_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    product_id: 0,
+                    supplier_id: 0,
+                    variant_id: 0,
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset)
+            },
+            {
+                $limit: parseInt(limit)
+            }
+        ]
+
+        const data = await version_history.aggregate(mainpipeline)
+        console.log(data)
+
+        let count = 0
+        await data.map((i) =>
+            count++
+        )
+        console.log(count)
+
         return res.status(200).json({
             message: "version history fetched successfully",
             data,
@@ -1104,3 +1112,5 @@ exports.getVersionHistory = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
