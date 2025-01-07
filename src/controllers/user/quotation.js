@@ -619,7 +619,8 @@ exports.getQuotationDetails = async (req, res) => {
                                 },
                                 in: {
                                     query: "$$matchedQuery.query",
-                                    notes: "$$matchedQuery.notes"
+                                    notes: "$$matchedQuery.notes",
+                                    price : "$$matchedQuery.price"
                                 }
                             }
                         }
