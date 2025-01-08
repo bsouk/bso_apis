@@ -1186,6 +1186,7 @@ exports.checkout = async (req, res) => {
 
         const payment_data = {
             order_id: neworder._id,
+            buyer_id : userId,
             total_amount,
             delivery_charges,
             buyer_id: userId

@@ -8,6 +8,10 @@ const PaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'orders'
         },
+        buyer_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "users"
+        },
         total_amount: {
             type: Number,
         },
