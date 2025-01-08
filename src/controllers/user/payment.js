@@ -8,8 +8,9 @@ const User = require("../../models/user")
 exports.getPaymentListing = async (req, res) => {
     try {
         const { status, from_date, to_date } = req.query
-        const userId = req.user_id
-        const filter = {}
+        const userId = req.user._id
+        console.log("userId : ", userId)
+        const filter = { buyer_id: new mongoose.Types.ObjectId(userId) }
         if (status) {
             filter.status = status
         }
@@ -24,12 +25,12 @@ exports.getPaymentListing = async (req, res) => {
         const data = await Payment.aggregate(
             [
                 {
-                    $match: { buyer_id: new mongoose.Types.ObjectId(userId), ...filter }
+                    $match: { ...filter }
                 },
                 {
                     $lookup: {
                         from: "orders",
-                        let: { id: "order_id" },
+                        let: { id: "$order_id" },
                         pipeline: [
                             {
                                 $match: {
@@ -44,6 +45,12 @@ exports.getPaymentListing = async (req, res) => {
                             }
                         ],
                         as: "order_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$order_data",
+                        preserveNullAndEmptyArrays: true
                     }
                 }
             ]
@@ -73,7 +80,7 @@ exports.paymentDetails = async (req, res) => {
                 {
                     $lookup: {
                         from: "orders",
-                        let: { id: "order_id" },
+                        let: { id: "$order_id" },
                         pipeline: [
                             {
                                 $match: {
@@ -88,6 +95,12 @@ exports.paymentDetails = async (req, res) => {
                             }
                         ],
                         as: "order_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$order_data",
+                        preserveNullAndEmptyArrays: true
                     }
                 }
             ]
