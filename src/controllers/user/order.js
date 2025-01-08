@@ -303,7 +303,7 @@ exports.myOrder = async (req, res) => {
                 }
             ]
         )
-        const count = await Order.countDocuments()
+        const count = await Order.countDocuments(filter)
         console.log("myorders : ", myorders)
 
         // if (!myorders || myorders.length === 0) {
