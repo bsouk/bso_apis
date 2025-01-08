@@ -1118,25 +1118,25 @@ exports.addLogisticsQuotationQuery = async (req, res) => {
         )
         console.log("result : ", result)
 
-        const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
-        console.log('quote : ', quote)
-        const timeline_data = {
-            date: currentTime,
-            detail: 'Logistics quotation quote added',
-            product_id: quote?.product_id,
-            supplier_id: quote?.supplier_id,
-            variant_id: quote?.variant_id,
-            price: quote?.logistics_quote.price,
-            media: quote?.logistics_quote.media,
-            document: quote?.logistics_quote.document,
-            assignedBy: quote?.logistics_quote.assignedBy
-        }
+        // const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
+        // console.log('quote : ', quote)
+        // const timeline_data = {
+        //     date: currentTime,
+        //     detail: 'Logistics quotation quote added',
+        //     product_id: quote?.product_id,
+        //     supplier_id: quote?.supplier_id,
+        //     variant_id: quote?.variant_id,
+        //     price: quote?.logistics_quote?.price,
+        //     media: quote?.logistics_quote?.media,
+        //     document: quote?.logistics_quote?.document,
+        //     assignedBy: quote?.logistics_quote?.assignedBy
+        // }
 
-        const response = await version_history.create({
-            quotation_id: queryData._id,
-            ...timeline_data
-        })
-        console.log("response : ", response)
+        // const response = await version_history.create({
+        //     quotation_id: queryData._id,
+        //     ...timeline_data
+        // })
+        // console.log("response : ", response)
 
         return res.status(200).json({
             message: "Logistics quote added successfully",
@@ -1186,7 +1186,7 @@ exports.checkout = async (req, res) => {
 
         const payment_data = {
             order_id: neworder._id,
-            buyer_id : userId,
+            buyer_id: userId,
             total_amount,
             delivery_charges,
             buyer_id: userId
