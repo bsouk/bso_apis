@@ -1904,6 +1904,7 @@ exports.shareUserCrendentials = async (req, res) => {
     if (!user) return utils.handleError(res, { message: "user not found", code: 404 });
 
     const password = user.decoded_password;
+    console.log("password : ", password)
 
     const mailOptions = {
       to: user.email,

@@ -108,7 +108,7 @@ exports.paymentDetails = async (req, res) => {
 
         return res.status(200).json({
             message: "Payment details fetched successfully",
-            data,
+            data: payment_data,
             code: 200
         })
     } catch (error) {
