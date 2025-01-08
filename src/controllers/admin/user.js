@@ -258,7 +258,7 @@ exports.getCustomerList = async (req, res) => {
     const { limit = 10, offset = 0, search = "" } = req.query;
 
     const condition = {
-      // user_type: "buyer",
+      $or: [{ user_type: "buyer" }, { user_type: "company" }],
       profile_completed: true,
       is_deleted: false,
     };
