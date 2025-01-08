@@ -663,7 +663,7 @@ exports.addAdminQuotationQuery = async (req, res) => {
             supplier_id: quote?.supplier_id,
             variant_id: quote?.variant_id,
             price: quote?.admin_quote.price,
-            quantity: quote?.admin_quote?.quantity,
+            quantity: quote?.quantity,
             media: quote?.admin_quote.media,
             document: quote?.admin_quote.document,
             assignedBy: quote?.admin_quote.assignedBy
@@ -1009,6 +1009,30 @@ exports.getVersionHistory = async (req, res) => {
             },
             {
                 $lookup: {
+                    from: "quotations",
+                    let: {
+                        id: "$quotation_id"
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$id"]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                quotation_unique_id: 1
+                            }
+                        }
+                    ],
+                    as: "quotation_data"
+                }
+            },
+            {
+                $lookup: {
                     from: "products",
                     let: {
                         id:
@@ -1069,6 +1093,12 @@ exports.getVersionHistory = async (req, res) => {
             },
             {
                 $unwind: {
+                    path: "$quotation_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $unwind: {
                     path: "$variant_data",
                     preserveNullAndEmptyArrays: true
                 }
@@ -1078,6 +1108,7 @@ exports.getVersionHistory = async (req, res) => {
                     product_id: 0,
                     supplier_id: 0,
                     variant_id: 0,
+                    quotation_id: 0
                 }
             },
             {
@@ -1094,6 +1125,7 @@ exports.getVersionHistory = async (req, res) => {
         ]
 
         const data = await version_history.aggregate(mainpipeline)
+        const totalCount = await version_history.countDocuments()
         console.log(data)
 
         let count = 0
@@ -1105,6 +1137,7 @@ exports.getVersionHistory = async (req, res) => {
         return res.status(200).json({
             message: "version history fetched successfully",
             data,
+            totalCount,
             count,
             code: 200
         })
