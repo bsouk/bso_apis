@@ -152,15 +152,15 @@ exports.exportOrder = async (req, res) => {
         }
 
         const cleanorderList = order_data.map((order) => ({
-            "Order Id": order.order_unique_id,
-            "Order Type": order.order_type,
-            "Order Status": order.order_status,
-            "Buyer": order.buyer_id.full_name,
-            "Amount": order.total_amount,
-            "Delivery Charges": order.delivery_charges,
-            "Shipping Address": `${order.shipping_address.address.address_line_1},${order.shipping_address.address.address_line_2},${order.shipping_address.address.city},${order.shipping_address.address.state},${order.shipping_address.address.country},${order.shipping_address.address.pin_code}`,
-            "Billing Address": `${order.billing_address.address.address_line_1},${order.billing_address.address.address_line_2},${order.billing_address.address.city},${order.billing_address.address.state},${order.billing_address.address.country},${order.billing_address.address.pin_code}`,
-            "Payment": order.payment_id.status
+            "Order Id": order?.order_unique_id,
+            "Order Type": order?.order_type,
+            "Order Status": order?.order_status,
+            "Buyer": order?.buyer_id?.full_name,
+            "Amount": order?.total_amount,
+            "Delivery Charges": order?.delivery_charges,
+            "Shipping Address": `${order?.shipping_address?.address?.address_line_1},${order?.shipping_address?.address?.address_line_2},${order?.shipping_address?.address?.city},${order?.shipping_address?.address?.state},${order?.shipping_address?.address?.country},${order?.shipping_address?.address?.pin_code}`,
+            "Billing Address": `${order?.billing_address?.address?.address_line_1},${order?.billing_address?.address?.address_line_2},${order?.billing_address?.address?.city},${order?.billing_address?.address?.state},${order?.billing_address?.address?.country},${order?.billing_address?.address?.pin_code}`,
+            "Payment": order?.payment_id?.status
         }))
 
         const headings = [
@@ -177,15 +177,15 @@ exports.exportOrder = async (req, res) => {
 
         const data = []
         order_data.map(async (order) =>
-            await data.push([order.order_unique_id,
-            order.order_type,
-            order.order_status,
-            order.buyer_id.full_name,
-            order.total_amount,
-            order.delivery_charges,
-            `${order.shipping_address.address.address_line_1},${order.shipping_address.address.address_line_2},${order.shipping_address.address.city},${order.shipping_address.address.state},${order.shipping_address.address.country},${order.shipping_address.address.pin_code}`,
-            `${order.billing_address.address.address_line_1},${order.billing_address.address.address_line_2},${order.billing_address.address.city},${order.billing_address.address.state},${order.billing_address.address.country},${order.billing_address.address.pin_code}`,
-            order.payment_id.status
+            await data.push([order?.order_unique_id,
+            order?.order_type,
+            order?.order_status,
+            order?.buyer_id?.full_name,
+            order?.total_amount,
+            order?.delivery_charges,
+            `${order?.shipping_address?.address?.address_line_1},${order?.shipping_address?.address?.address_line_2},${order?.shipping_address?.address?.city},${order?.shipping_address?.address?.state},${order?.shipping_address?.address?.country},${order?.shipping_address?.address?.pin_code}`,
+            `${order?.billing_address?.address?.address_line_1},${order?.billing_address?.address?.address_line_2},${order?.billing_address?.address?.city},${order?.billing_address?.address?.state},${order?.billing_address?.address?.country},${order?.billing_address?.address?.pin_code}`,
+            order?.payment_id?.status
             ])
         )
 
