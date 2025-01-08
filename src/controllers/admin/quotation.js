@@ -1125,19 +1125,18 @@ exports.getVersionHistory = async (req, res) => {
         ]
 
         const data = await version_history.aggregate(mainpipeline)
-        const totalCount = await version_history.countDocuments()
+        const count = await version_history.countDocuments(filter)
         console.log(data)
 
-        let count = 0
-        await data.map((i) =>
-            count++
-        )
-        console.log(count)
+        // let count = 0
+        // await data.map((i) =>
+        //     count++
+        // )
+        // console.log(count)
 
         return res.status(200).json({
             message: "version history fetched successfully",
             data,
-            totalCount,
             count,
             code: 200
         })
