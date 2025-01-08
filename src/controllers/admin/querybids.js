@@ -61,11 +61,12 @@ exports.getquery = async (req, res) => {
             },
         ])
 
+        const totalCount = await Query.countDocuments()
         const count = await Query.countDocuments(filter);
         const pendingCount = await Query.countDocuments({ status: "pending" })
         const splitCount = await Query.countDocuments({ 'queryDetails.assigned_to.type': 'supplier' })
 
-        res.json({ data: productlist, count, pendingCount, splitCount, code: 200 });
+        res.json({ data: productlist, totalCount, count, pendingCount, splitCount, code: 200 });
     } catch (error) {
         utils.handleError(res, error);
     }
