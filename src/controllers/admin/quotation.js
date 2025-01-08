@@ -886,11 +886,13 @@ exports.approveRejectLogistics = async (req, res) => {
         if (status === 'accepted') {
             quotation_data.accepted_logistics = logistics_id
             quotation_data.rejected_reason = null
+            quotation_data.is_approved = "approved"
         }
 
         if (status === "rejected") {
             quotation_data.is_admin_logistics_decided = 'undecided'
             quotation_data.decided_logistics_id = null
+            quotation_data.is_approved = "cancelled"
             quotation_data.logistics_quote = null
             quotation_data.admin_notes = null
             quotation_data.accepted_logistics = null
