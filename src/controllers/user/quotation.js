@@ -496,8 +496,22 @@ exports.getQuotationDetails = async (req, res) => {
                 {
                     $lookup: {
                         from: "users",
-                        localField: "final_quote.supplier_id",
-                        foreignField: "_id",
+                        let: { id: "$final_quote.supplier_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$_id", "$$id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    full_name: 1
+                                }
+                            }
+                        ],
                         as: "supplier_data"
                     }
                 },
@@ -545,23 +559,23 @@ exports.getQuotationDetails = async (req, res) => {
                                 0
                             ]
                         },
-                        // "final_quote.supplier": {
-                        //     $arrayElemAt: [
-                        //         {
-                        //             $filter: {
-                        //                 input: "$supplier_data",
-                        //                 as: "supplier",
-                        //                 cond: {
-                        //                     $eq: [
-                        //                         "$$supplier._id",
-                        //                         "$final_quote.supplier_id"
-                        //                     ]
-                        //                 }
-                        //             }
-                        //         },
-                        //         0
-                        //     ]
-                        // },
+                        "final_quote.supplier": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$supplier_data",
+                                        as: "supplier",
+                                        cond: {
+                                            $eq: [
+                                                "$$supplier._id",
+                                                "$final_quote.supplier_id"
+                                            ]
+                                        }
+                                    }
+                                },
+                                0
+                            ]
+                        },
                         "final_quote.variant_data": {
                             $arrayElemAt: [
                                 {
@@ -1158,7 +1172,7 @@ async function generateUniqueId() {
 
 exports.checkout = async (req, res) => {
     try {
-        const { shipping_address, billing_address, order_items, total_amount, delivery_charges, payment_method, logistics_id } = req.body
+        const { shipping_address, billing_address, order_items, total_amount, delivery_charges, payment_method, logistics_id, quotation_id } = req.body
         const userId = req.user._id
         console.log("user : ", userId)
 
@@ -1183,6 +1197,10 @@ exports.checkout = async (req, res) => {
 
         const neworder = await order.create(data)
         console.log("neworder : ", neworder)
+
+        const quotation_data = await quotation.findOne({ _id: quotation_id })
+        quotation_data.order_id = neworder._id
+        await quotation_data.save()
 
         const payment_data = {
             order_id: neworder._id,

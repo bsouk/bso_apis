@@ -14,6 +14,10 @@ const quotationSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'queries'
     },
+    order_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'orders'
+    },
     bid_setting: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'bidsettings'
@@ -41,12 +45,12 @@ const quotationSchema = new mongoose.Schema({
     accepted_logistics: {
         type: mongoose.Types.ObjectId,
         ref: 'users',
-        default : null
+        default: null
     },
     decided_logistics_id: {
         type: mongoose.Types.ObjectId,
         ref: 'users',
-        default : null
+        default: null
     },
     logistics_quote: {
         type: {
@@ -197,7 +201,7 @@ const quotationSchema = new mongoose.Schema({
     is_approved_rejected_reason: {
         type: String
     },
-    
+
     final_quotation_order: [
         {
             product_id: {
