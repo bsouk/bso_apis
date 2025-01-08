@@ -1207,7 +1207,7 @@ exports.checkout = async (req, res) => {
             buyer_id: userId,
             total_amount,
             delivery_charges,
-            buyer_id: userId
+            payment_method
         }
 
         if (payment_method !== "cash_on_delivery") {
