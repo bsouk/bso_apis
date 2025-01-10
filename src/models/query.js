@@ -108,18 +108,43 @@ const querySchema = new mongoose.Schema({
                     type: [String]
                 },
             },
-            supplier: {
-                _id: {
-                    type: mongoose.Types.ObjectId,
-                    ref: 'users'
+            // selected_supplier: [
+            //     {
+            //         id: {
+            //             type: mongoose.Types.ObjectId,
+            //             ref: 'users'
+            //         },
+            //         quantity: {
+            //             type: Number
+            //         }
+            //     }
+            // ],
+            split_quantity: {
+                is_selected: {
+                    type: Boolean,
+                    default: false
                 },
-                name: {
-                    type: String
+                total_quantity: {
+                    type: Number,
+                    default: 0
                 },
-                profile_image: {
-                    type: String
-                }
+                quantity_assigned: {
+                    type: Number,
+                    default: 0
+                },
             },
+            // supplier: {
+            //     _id: {
+            //         type: mongoose.Types.ObjectId,
+            //         ref: 'users'
+            //     },
+            //     name: {
+            //         type: String
+            //     },
+            //     profile_image: {
+            //         type: String
+            //     }
+            // },
             // logistics: {
             //     id: {
             //         type: mongoose.Types.ObjectId,
@@ -132,54 +157,6 @@ const querySchema = new mongoose.Schema({
             //         type: String
             //     }
             // },
-            supplier_quote: {
-                type: {
-                    quantity: {
-                        type: Number
-                    },
-                    price: {
-                        type: Number
-                    },
-                    message: {
-                        type: String
-                    },
-                    media: [String],
-                    document: [String],
-                    assignedBy: {
-                        id: {
-                            type: mongoose.Schema.Types.ObjectId,
-                        },
-                        type: {
-                            type: String
-                        }
-                    }
-                },
-                default: null
-            },
-            admin_quote: {
-                type: {
-                    quantity: {
-                        type: Number
-                    },
-                    price: {
-                        type: Number
-                    },
-                    message: {
-                        type: String
-                    },
-                    media: [String],
-                    document: [String],
-                    assignedBy: {
-                        id: {
-                            type: mongoose.Schema.Types.ObjectId,
-                        },
-                        type: {
-                            type: String
-                        }
-                    }
-                },
-                default: null
-            },
             // logistics_quote: {
             //     type: {
             //         quantity: {
@@ -219,49 +196,45 @@ const querySchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
-            assigned_to: {
-                variant_assigned: { type: mongoose.Schema.Types.ObjectId, required: false, default: null },
-                type: { type: String, required: false, default: "admin" },
-            }
         }
     ],
-    final_quote: {
-        type: [
-            {
-                product_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'products',
-                },
-                supplier_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'users',
-                },
-                variant_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                },
-                quantity: {
-                    type: Number
-                },
-                price: {
-                    type: Number
-                },
-                message: {
-                    type: String
-                },
-                media: [String],
-                document: [String],
-                assignedBy: {
-                    id: {
-                        type: mongoose.Schema.Types.ObjectId,
-                    },
-                    type: {
-                        type: String
-                    }
-                }
-            },
-        ],
-        default: []
-    }
+    // final_quote: {
+    //     type: [
+    //         {
+    //             product_id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'products',
+    //             },
+    //             supplier_id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'users',
+    //             },
+    //             variant_id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //             },
+    //             quantity: {
+    //                 type: Number
+    //             },
+    //             price: {
+    //                 type: Number
+    //             },
+    //             message: {
+    //                 type: String
+    //             },
+    //             media: [String],
+    //             document: [String],
+    //             assignedBy: {
+    //                 id: {
+    //                     type: mongoose.Schema.Types.ObjectId,
+    //                 },
+    //                 type: {
+    //                     type: String
+    //                 }
+    //             }
+    //         },
+    //     ],
+    //     default: []
+    // }
 },
     {
         timestamps: true

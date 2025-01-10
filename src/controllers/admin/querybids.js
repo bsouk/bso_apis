@@ -8,6 +8,7 @@ const bidsetting = require("../../models/bidsetting");
 const quotation = require("../../models/quotation");
 const moment = require("moment");
 const version_history = require("../../models/version_history");
+const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 
 exports.getquery = async (req, res) => {
     try {
@@ -252,124 +253,62 @@ exports.deletequery = async (req, res) => {
 
 exports.updateAssignedProduct = async (req, res) => {
     try {
-        const { id, product_id, sku_id, supplier_id } = req.body;
-
-        console.log("=============req.body", req.body)
-        if (!id || !product_id || !sku_id || !supplier_id) {
-            return res.status(400).json({
-                message: "Missing required fields: id, user_id, product_id, sku_id, or supplier_id.",
-                code: 400
+        const data = req.body
+        if (data.selected_supplier.length === 0 && !Array.isArray(data.selected_supplier)) {
+            return utils.handleError(res, {
+                message: "please select at least single supplier",
+                code: 400,
             });
         }
 
-        const queryObjectId = new mongoose.Types.ObjectId(id);
-        const productObjectId = new mongoose.Types.ObjectId(product_id);
-        const skuObjectId = new mongoose.Types.ObjectId(sku_id);
-        const supplierObjectId = new mongoose.Types.ObjectId(supplier_id);
+        const result = await Query.findOneAndUpdate(
+            {
+                "queryDetails._id": data.querydata_id
+            },
+            {
+                $set: {
+                    "queryDetails.$.split_quantity": data.split_quantity
+                }
+            }
+        )
+        console.log("result : ", result)
 
-        const query = await Query.findOne({
-            _id: queryObjectId,
-            "queryDetails.product.id": productObjectId,
-            "queryDetails.variant._id": skuObjectId,
-            "queryDetails.supplier._id": supplierObjectId
-        });
-        console.log("=============query", query)
+        await data.selected_supplier.map(async i => {
+            const result = await query_assigned_suppliers.create(i)
+            console.log("result : ", result)
+        })
 
-        if (!query) {
-            return res.status(404).json({
-                message: "Query not found with the given criteria.",
-                code: 404
-            });
-        }
-
-        const queryDetails = query.queryDetails.find(
-            (detail) =>
-                detail.product.id.equals(productObjectId) &&
-                detail.variant._id.equals(skuObjectId) &&
-                detail.supplier._id.equals(supplierObjectId)
-        );
-
-        if (!queryDetails) {
-            return res.status(404).json({
-                message: "Matching queryDetails not found.",
-                code: 404
-            });
-        }
-
-        queryDetails.assigned_to = {
-            variant_assigned: supplierObjectId.toString(),
-            type: "supplier"
-        };
-
-        await query.save();
-
-        res.json({
-            message: "Variant assigned successfully.",
-            code: 200,
-            updatedQuery: query
-        });
+        return res.status(200).json({
+            message: "selected suppliers assigned successfully",
+            code: 200
+        })
     } catch (error) {
-        console.error("Error in updateAssignedProduct:", error);
-        res.status(500).json({
-            message: "Internal Server Error",
-            code: 500,
-            error: error.message
-        });
+        utils.handleError(res, error);
     }
 };
 
 exports.unassignVariant = async (req, res) => {
     try {
-        const { id, product_id, sku_id, supplier_id } = req.body;
-
-        if (!id || !product_id || !sku_id || !supplier_id) {
-            return res.status(400).json({
-                message: "Missing required fields: query_id, product_id, sku_id, or supplier_id.",
+        const data = req.body
+        if (data.selected_supplier.length === 0 && !Array.isArray(data.selected_supplier)) {
+            return utils.handleError(res, {
+                message: "please select at least single supplier",
                 code: 400,
             });
         }
 
-        const queryObjectId = new mongoose.Types.ObjectId(id);
-        const productObjectId = new mongoose.Types.ObjectId(product_id);
-        const skuObjectId = new mongoose.Types.ObjectId(sku_id);
-        const supplierObjectId = new mongoose.Types.ObjectId(supplier_id);
+        await data.selected_supplier.map(async i => {
+            console.log("i : ", i)
+            const result = await query_assigned_suppliers.findOneAndDelete({ variant_id: new mongoose.Types.ObjectId(i.variant_id), variant_assigned_to: new mongoose.Types.ObjectId(i.supplier_id) })
+            console.log("result : ", result)
+        })
 
-        const query = await Query.findOneAndUpdate(
-            {
-                _id: queryObjectId,
-                "queryDetails.product.id": productObjectId,
-                "queryDetails.variant._id": skuObjectId,
-                "queryDetails.supplier._id": supplierObjectId,
-            },
-            {
-                $set: {
-                    "queryDetails.$.assigned_to.variant_assigned": null,
-                    "queryDetails.$.assigned_to.type": "admin",
-                    "queryDetails.$.supplier_quote": null,
-                },
-            },
-            { new: true }
-        );
-        console.log(query)
-        if (!query) {
-            return res.status(404).json({
-                message: "Query not found or no matching queryDetails to unassign.",
-                code: 404,
-            });
-        }
-
-        res.json({
-            message: "Variant unassigned successfully.",
-            code: 200,
-            updatedQuery: query,
-        });
+        return res.status(200).json({
+            message: "selected suppliers unassigned successfully",
+            code: 200
+        })
     } catch (error) {
-        console.error("Error in unassignVariant:", error);
-        res.status(500).json({
-            message: "Internal Server Error",
-            code: 500,
-            error: error.message,
-        });
+        utils.handleError(res, error);
     }
 };
 
@@ -540,7 +479,7 @@ exports.supplierQuotesById = async (req, res) => {
 
 exports.addAdminQuote = async (req, res) => {
     try {
-        const { query_id } = req.body
+        const { query_id, _id, admin_quote } = req.body
         const userId = req.user._id;
         console.log("userid is ", userId);
 
@@ -560,20 +499,19 @@ exports.addAdminQuote = async (req, res) => {
             type: userData.role
         }
 
-        req.body.admin_quote.assignedBy = assignData
+        admin_quote.assignedBy = assignData
 
-        const result = await Query.findOneAndUpdate(
+        const result = await query_assigned_suppliers.findOneAndUpdate(
             {
-                _id: query_id,
-                'queryDetails._id': req?.body?.query_details_id
+                query_id,
+                _id
             },
             {
                 $set: {
-                    'queryDetails.$.admin_quote': req?.body?.admin_quote,
-                    'queryDetails.$.supplier_quote': null
+                    admin_quote,
+                    supplier_quote: null
                 }
-            },
-            { new: true }
+            }
         )
         console.log("result : ", result)
         return res.status(200).json({
@@ -848,3 +786,102 @@ exports.unAssignMultipleQueries = async (req, res) => {
         });
     }
 };
+
+exports.getAssignedSuppliers = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10, variant_id } = req.query
+        let filter = {
+            variant_id: new mongoose.Types.ObjectId(variant_id)
+        }
+        const data = query_assigned_suppliers.aggregate(
+            [
+                {
+                    $match: filter
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        let: { id: "$variant_assigned_to" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    full_name: 1
+                                }
+                            }
+                        ],
+                        as: "supplier_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: { id: "$product_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    name: 1
+                                }
+                            }
+                        ],
+                        as: "product_data"
+                    }
+                },
+                {
+                    $addFields: {
+                        quote: {
+                            $ifNull: [
+                                "$admin_quote",
+                                "$supplier_quote"
+                            ]
+                        }
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$supplier_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$product_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $project: {
+                        supplier_quote: 0,
+                        admin_quote: 0,
+                        user_type: 0
+                    }
+                }
+            ]
+        )
+
+        const count = await query_assigned_suppliers.countDocuments(filter)
+        return res.status(200).json({
+            message: "assigned suppliers list fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

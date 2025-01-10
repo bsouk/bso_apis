@@ -15,6 +15,7 @@ const Query = require("../../models/query");
 const Category = require("../../models/product_category");
 const ads = require("../../models/ads");
 const Product = require("../../models/product");
+const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 
 //create password for users
 function createNewPassword() {
@@ -1564,7 +1565,7 @@ exports.deleteQuery = async (req, res) => {
 
 exports.addSupplierQuote = async (req, res) => {
     try {
-        const { query_id } = req.body
+        const { query_id, _id, supplier_quote } = req.body
         const userId = req.user._id;
         console.log("userid is ", userId);
 
@@ -1589,20 +1590,19 @@ exports.addSupplierQuote = async (req, res) => {
             type: userData.user_type
         }
 
-        req.body.supplier_quote.assignedBy = assignData
+        supplier_quote.assignedBy = assignData
 
-        const result = await Query.findOneAndUpdate(
+        const result = await query_assigned_suppliers.findOneAndUpdate(
             {
-                _id: query_id,
-                'queryDetails._id': req?.body?.query_details_id
+                query_id,
+                _id
             },
             {
                 $set: {
-                    'queryDetails.$.supplier_quote': req?.body?.supplier_quote,
-                    'queryDetails.$.admin_quote': null
+                    admin_quote: null,
+                    supplier_quote
                 }
-            },
-            { new: true }
+            }
         )
         console.log("result : ", result)
         return res.status(200).json({
