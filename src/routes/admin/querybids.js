@@ -112,4 +112,19 @@ router.post(
     controller.unAssignMultipleQueries
 );
 
+
+router.patch(
+    '/updateQuantity',
+    trimRequest.all,
+    requireAuth,
+    controller.updateSplitQuantity
+);
+
+router.get(
+    '/getAssignedSuppliers',
+    trimRequest.all,
+    requireAuth,
+    controller.getAssignedSuppliers
+);
+
 module.exports = router

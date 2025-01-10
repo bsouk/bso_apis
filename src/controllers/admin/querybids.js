@@ -261,18 +261,6 @@ exports.updateAssignedProduct = async (req, res) => {
             });
         }
 
-        const result = await Query.findOneAndUpdate(
-            {
-                "queryDetails._id": data.querydata_id
-            },
-            {
-                $set: {
-                    "queryDetails.$.split_quantity": data.split_quantity
-                }
-            }
-        )
-        console.log("result : ", result)
-
         await data.selected_supplier.map(async i => {
             const result = await query_assigned_suppliers.create(i)
             console.log("result : ", result)
@@ -786,6 +774,34 @@ exports.unAssignMultipleQueries = async (req, res) => {
         });
     }
 };
+
+exports.updateSplitQuantity = async (req, res) => {
+    try {
+        const { split_quantity, querydata_id } = req.body
+        const result = await Query.findOneAndUpdate(
+            {
+                "queryDetails._id": querydata_id
+            },
+            {
+                $set: {
+                    "queryDetails.$.split_quantity": split_quantity
+                }
+            },
+            {
+                new: true
+            }
+        )
+        console.log("result : ", result)
+
+        return res.status(200).json({
+            message: "quantity data updated successfully",
+            data: result,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
 
 exports.getAssignedSuppliers = async (req, res) => {
     try {
