@@ -127,4 +127,12 @@ router.get(
     controller.getAssignedSuppliers
 );
 
+
+router.get(
+    '/getProductVariantdata',
+    trimRequest.all,
+    requireAuth,
+    controller.getProductVariantdetails
+);
+
 module.exports = router

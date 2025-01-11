@@ -133,18 +133,17 @@ const querySchema = new mongoose.Schema({
                     default: 0
                 },
             },
-            // supplier: {
-            //     _id: {
-            //         type: mongoose.Types.ObjectId,
-            //         ref: 'users'
-            //     },
-            //     name: {
-            //         type: String
-            //     },
-            //     profile_image: {
-            //         type: String
-            //     }
-            // },
+            final_assigned_to: {
+                _id: {
+                    type: mongoose.Types.ObjectId,
+                },
+                name: {
+                    type: String
+                },
+                profile_image: {
+                    type: String
+                }
+            },
             // logistics: {
             //     id: {
             //         type: mongoose.Types.ObjectId,

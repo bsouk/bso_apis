@@ -901,3 +901,39 @@ exports.getAssignedSuppliers = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.getProductVariantdetails = async (req, res) => {
+    try {
+        const { querydata_id } = req.query
+        const data = await Query.aggregate([
+            {
+                $unwind: {
+                    path: "$queryDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $match: {
+                    "queryDetails._id": new mongoose.Types.ObjectId(querydata_id)
+                }
+            },
+            {
+                $project: {
+                    "queryDetails.product": 1,
+                    "queryDetails.variant.images": 1,
+                    "queryDetails.quantity" : 1
+                }
+            }
+        ])
+        console.log("data : ", data)
+
+        return res.status(200).json({
+            message: "Product variant data fetched successfully",
+            data: data[0],
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
