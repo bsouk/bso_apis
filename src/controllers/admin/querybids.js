@@ -860,12 +860,7 @@ exports.getAssignedSuppliers = async (req, res) => {
                 },
                 {
                     $addFields: {
-                        quote: {
-                            $ifNull: [
-                                "$admin_quote",
-                                "$supplier_quote"
-                            ]
-                        }
+                        quote: "$supplier_quote"
                     }
                 },
                 {
@@ -934,7 +929,7 @@ exports.getProductVariantdetails = async (req, res) => {
                     "queryDetails.product": 1,
                     "queryDetails.variant.images": 1,
                     "queryDetails.quantity": 1,
-                    "queryDetails.split_quantity" : 1
+                    "queryDetails.split_quantity": 1
                 }
             }
         ])

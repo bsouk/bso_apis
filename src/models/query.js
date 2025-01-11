@@ -33,25 +33,8 @@ const querySchema = new mongoose.Schema({
     adminReview: {
         type: String
     },
-    // is_admin_logistics_decided: {
-    //     type: Boolean,
-    //     default: false
-    // },
     queryDetails: [
         {
-            // product_id: {
-            //     type: mongoose.Schema.Types.ObjectId,
-            //     ref: 'products',
-            //     required: true
-            // },
-            // supplier_id: {
-            //     type: mongoose.Schema.Types.ObjectId,
-            //     ref: 'users',
-            //     required: true
-            // },
-            // variant_id: {
-            //     type: mongoose.Schema.Types.ObjectId,
-            // },
             product: {
                 id: {
                     type: mongoose.Schema.Types.ObjectId,
@@ -108,81 +91,52 @@ const querySchema = new mongoose.Schema({
                     type: [String]
                 },
             },
-            // selected_supplier: [
-            //     {
-            //         id: {
-            //             type: mongoose.Types.ObjectId,
-            //             ref: 'users'
-            //         },
-            //         quantity: {
-            //             type: Number
-            //         }
-            //     }
-            // ],
             split_quantity: {
                 is_selected: {
                     type: Boolean,
                     default: false
                 },
                 total_quantity: {
-                    type: Number,
-                    default: 0
+                    value: {
+                        type: Number,
+                        required: true
+                    },
+                    unit: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: 'quantity_units'
+                    }
                 },
                 quantity_assigned: {
-                    type: Number,
-                    default: 0
+                    value: {
+                        type: Number,
+                        required: true
+                    },
+                    unit: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: 'quantity_units'
+                    }
                 },
             },
-            final_assigned_to: {
-                _id: {
-                    type: mongoose.Types.ObjectId,
-                },
-                user_type: {
-                    type: String
-                }
-            },
-            // logistics: {
-            //     id: {
+            // final_assigned_to: {
+            //     _id: {
             //         type: mongoose.Types.ObjectId,
-            //         ref: 'users'
             //     },
-            //     name: {
-            //         type: String
-            //     },
-            //     profile_image: {
+            //     user_type: {
             //         type: String
             //     }
-            // },
-            // logistics_quote: {
-            //     type: {
-            //         quantity: {
-            //             type: Number
-            //         },
-            //         price: {
-            //             type: Number
-            //         },
-            //         message: {
-            //             type: String
-            //         },
-            //         media: [String],
-            //         document: [String],
-            //         assignedBy: {
-            //             id: {
-            //                 type: mongoose.Schema.Types.ObjectId,
-            //             },
-            //             type: {
-            //                 type: String
-            //             }
-            //         }
-            //     },
-            //     default: null
             // },
             price: {
                 type: Number
             },
             quantity: {
-                type: Number,
-                required: true
+                value: {
+                    type: Number,
+                    required: true
+                },
+                unit: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'quantity_units'
+                }
             },
             query: {
                 type: String,
@@ -193,44 +147,7 @@ const querySchema = new mongoose.Schema({
                 required: true
             },
         }
-    ],
-    // final_quote: {
-    //     type: [
-    //         {
-    //             product_id: {
-    //                 type: mongoose.Schema.Types.ObjectId,
-    //                 ref: 'products',
-    //             },
-    //             supplier_id: {
-    //                 type: mongoose.Schema.Types.ObjectId,
-    //                 ref: 'users',
-    //             },
-    //             variant_id: {
-    //                 type: mongoose.Schema.Types.ObjectId,
-    //             },
-    //             quantity: {
-    //                 type: Number
-    //             },
-    //             price: {
-    //                 type: Number
-    //             },
-    //             message: {
-    //                 type: String
-    //             },
-    //             media: [String],
-    //             document: [String],
-    //             assignedBy: {
-    //                 id: {
-    //                     type: mongoose.Schema.Types.ObjectId,
-    //                 },
-    //                 type: {
-    //                     type: String
-    //                 }
-    //             }
-    //         },
-    //     ],
-    //     default: []
-    // }
+    ]
 },
     {
         timestamps: true

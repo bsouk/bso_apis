@@ -188,4 +188,18 @@ router.post(
     controller.addSupplierQuote
 );
 
+router.post(
+  "/addUnit",
+  trimRequest.all,
+  requireAuth,
+  controller.addQuantityUnit
+);
+
+router.get(
+  "/getUnit",
+  trimRequest.all,
+  requireAuth,
+  controller.getQuantitiesUnits
+);
+
 module.exports = router;

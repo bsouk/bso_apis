@@ -16,6 +16,7 @@ const Category = require("../../models/product_category");
 const ads = require("../../models/ads");
 const Product = require("../../models/product");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
+const quantity_units = require("../../models/quantity_units");
 
 //create password for users
 function createNewPassword() {
@@ -1608,6 +1609,64 @@ exports.addSupplierQuote = async (req, res) => {
         return res.status(200).json({
             message: "Supplier quote added successfully",
             data: result,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.addQuantityUnit = async (req, res) => {
+    try {
+        const { unit } = req.body
+        const check = await quantity_units.findOne({ unit })
+        if (check) {
+            return utils.handleError(res, {
+                message: "unit already existed",
+                code: 404,
+            });
+        }
+        const newquantity = await quantity_units.create({ unit })
+        console.log("new quantity : ", newquantity)
+        return res.status(200).json({
+            message: "Quantity added successfully",
+            data: newquantity,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getQuantitiesUnits = async (req, res) => {
+    try {
+        const { search, offset = 0, limit = 10 } = req.query
+        let filter = {}
+        if (search) {
+            filter.unit = { $regex: search, $options: "i" }
+        }
+        const data = await quantity_units.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 10
+            }
+        ])
+
+        const count = await quantity_units.countDocuments(filter)
+        res.status(200).json({
+            message: "Quantities unit fetched successfully",
+            data,
+            count,
             code: 200
         })
     } catch (error) {
