@@ -1188,12 +1188,15 @@ exports.getMyQueries = async (req, res) => {
                         }
                     },
                     {
+                        $addFields: {
+                            "query_data.queryDetails.quantity":
+                                "$quantity"
+                        }
+                    },
+                    {
                         $project: {
-                            query_id: 0,
-                            product_id: 0,
-                            variant_id: 0,
-                            supplier_quote: 0,
-                            quantity_unit: 0
+                            _id: 0,
+                            query_data: 1
                         }
                     }
                 ]
