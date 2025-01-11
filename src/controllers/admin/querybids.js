@@ -927,7 +927,7 @@ exports.getProductVariantdetails = async (req, res) => {
             {
                 $project: {
                     "queryDetails.product": 1,
-                    "queryDetails.variant.id": 1,
+                    "queryDetails.variant._id": 1,
                     "queryDetails.variant.images": 1,
                     "queryDetails.quantity": 1,
                     "queryDetails.split_quantity": 1

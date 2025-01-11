@@ -1100,7 +1100,7 @@ exports.getMyQueries = async (req, res) => {
 
             count = await Query.countDocuments({ ...filter, ...userMatchCondition });
         } else {
-            const assigned_queries = await query_assigned_suppliers.aggregate(
+            data = await query_assigned_suppliers.aggregate(
                 [
                     {
                         $match: {
@@ -1109,10 +1109,100 @@ exports.getMyQueries = async (req, res) => {
                         }
                     },
                     {
-                        $lookup
+                        $lookup: {
+                            from: "queries",
+                            let: {
+                                id: "$query_id",
+                                productid: "$queryDetails.product.id",
+                                variantid: "$queryDetails.variant._id"
+                            },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $and: [
+                                            {
+                                                $expr: {
+                                                    $eq: ["$$id", "$_id"]
+                                                }
+                                            },
+                                            {
+                                                $expr: {
+                                                    $eq: [
+                                                        "$$productid",
+                                                        "$product_id"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                $expr: {
+                                                    $eq: [
+                                                        "$$variantid",
+                                                        "$variant_id"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        "queryDetails.split_quantity": 0,
+                                        "queryDetails.quantity": 0
+                                    }
+                                }
+                            ],
+                            as: "query_data"
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "quantity_units",
+                            let: { id: "$quantity.unit" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$_id"]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: "quantity_unit"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$quantity_unit",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$query_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $addFields: {
+                            "quantity.unit": "$quantity_unit.unit"
+                        }
+                    },
+                    {
+                        $project: {
+                            query_id: 0,
+                            product_id: 0,
+                            variant_id: 0,
+                            supplier_quote: 0,
+                            quantity_unit: 0
+                        }
                     }
                 ]
             )
+
+            count = await query_assigned_suppliers.countDocuments({
+                variant_assigned_to: new mongoose.Types.ObjectId(userId),
+                is_selected: true
+            })
         }
 
         return res.json({ data, count, code: 200 });
