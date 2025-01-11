@@ -1104,8 +1104,7 @@ exports.getMyQueries = async (req, res) => {
                 [
                     {
                         $match: {
-                            variant_assigned_to: new mongoose.Types.ObjectId(userId),
-                            is_selected: true
+                            variant_assigned_to: new mongoose.Types.ObjectId(userId)
                         }
                     },
                     {
