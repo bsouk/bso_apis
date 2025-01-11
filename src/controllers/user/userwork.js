@@ -1112,31 +1112,39 @@ exports.getMyQueries = async (req, res) => {
                             from: "queries",
                             let: {
                                 id: "$query_id",
-                                productid: "$queryDetails.product.id",
-                                variantid: "$queryDetails.variant._id"
+                                productid: "$product_id",
+                                variantid: "$variant_id"
                             },
                             pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$_id"]
+                                        }
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$queryDetails",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
                                 {
                                     $match: {
                                         $and: [
                                             {
                                                 $expr: {
-                                                    $eq: ["$$id", "$_id"]
-                                                }
-                                            },
-                                            {
-                                                $expr: {
                                                     $eq: [
-                                                        "$$productid",
-                                                        "$product_id"
+                                                        "$queryDetails.product.id",
+                                                        "$$productid"
                                                     ]
                                                 }
                                             },
                                             {
                                                 $expr: {
                                                     $eq: [
-                                                        "$$variantid",
-                                                        "$variant_id"
+                                                        "$queryDetails.variant._id",
+                                                        "$$variantid"
                                                     ]
                                                 }
                                             }
@@ -1195,15 +1203,14 @@ exports.getMyQueries = async (req, res) => {
                     {
                         $project: {
                             _id: 0,
-                            query_data: 1
+                            query_data: 1,
                         }
                     }
                 ]
             )
 
             count = await query_assigned_suppliers.countDocuments({
-                variant_assigned_to: new mongoose.Types.ObjectId(userId),
-                is_selected: true
+                variant_assigned_to: new mongoose.Types.ObjectId(userId)
             })
         }
 
