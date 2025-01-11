@@ -1000,210 +1000,6 @@ exports.addQuery = async (req, res) => {
 
 //Buyer Queries
 
-// exports.getMyQueries = async (req, res) => {
-//     try {
-//         const userId = req.user._id;
-//         console.log("userid is ", userId)
-
-//         const { status, search, offset = 0, limit = 10 } = req.query
-
-//         const filter = {
-//             createdByUser: new mongoose.Types.ObjectId(userId)
-//         }
-
-//         if (status) {
-//             filter.status = status
-//         }
-
-//         if (search) {
-//             filter.query_unique_id = { $regex: search, $options: "i" };
-//         }
-
-
-
-
-//         const agg = [
-//             {
-//                 $match: { ...filter }
-//             },
-//             { $unwind: "$queryDetails" },
-//             {
-//                 $lookup: {
-//                     from: "products",
-//                     let: { sku_id: "$queryDetails.sku_id" },
-//                     pipeline: [
-
-
-
-//                     {
-//                         $lookup: {
-//                             from: "users",
-//                             localField: "user_id",
-//                             foreignField : "_id",
-//                             as: "user"
-
-//                         }
-//                     },
-//                         {
-//                             $project: {
-//                                 variant: 1,
-//                                 user_id:1,
-//                                 name : 1,
-//                             }
-//                         }
-//                     ],
-//                     as: "products"
-//                 }
-//             },
-//             {
-//                 $unwind: {
-//                     path: "$products",
-//                     preserveNullAndEmptyArrays: true
-//                 }
-//             },
-
-//             {
-//                 $addFields: {
-//                     "queryDetails.sku_details": "$products.variant"
-//                 }
-//             },
-//             { $skip: parseInt(offset) || 0 },
-//             { $limit: parseInt(limit) || 10 }
-//         ]
-//         console.log(JSON.stringify(agg))
-//         const myQueries = await Query.aggregate(agg)
-
-//         const count = await Query.countDocuments(agg);
-
-//         return res.status(200).json({
-//             message: "My Queries Fetched Successfully",
-//             data: myQueries,
-//             count: count,
-//             code: 200
-//         })
-//     } catch (error) {
-//         utils.handleError(res, error);
-//     }
-// }
-
-// exports.getMyQueries = async (req, res) => {
-//     try {
-//         const userId = req.user._id;
-//         console.log("userid is ", userId);
-//         const { status, search, offset = 0, limit = 10 } = req.query;
-//         // Base filter
-//         const filter = {
-//             createdByUser: new mongoose.Types.ObjectId(userId),
-//         };
-//         // Additional filters
-//         if (status) {
-//             filter.status = status;
-//         }
-//         if (search) {
-//             filter.query_unique_id = { $regex: search, $options: "i" };
-//         }
-//         // Aggregation pipeline
-//         const agg = [
-//             {
-//                 $match: filter,
-//             },
-//             {
-//                 $unwind: {
-//                     path: "$queryDetails",
-//                     preserveNullAndEmptyArrays: true,
-//                 },
-//             },
-//             {
-//                 $lookup: {
-//                     from: "products",
-//                     let: { sku_id: "$queryDetails.variant_id" },
-//                     pipeline: [
-//                         {
-//                             $match: {
-//                                 $expr: { $in: ["$$sku_id", "$variant._id"] },
-//                             },
-//                         },
-//                         {
-//                             $lookup: {
-//                                 from: "users",
-//                                 localField: "user_id",
-//                                 foreignField: "_id",
-//                                 as: "user",
-//                             },
-//                         },
-//                         {
-//                             $unwind: {
-//                                 path: "$user",
-//                                 preserveNullAndEmptyArrays: true,
-//                             },
-//                         },
-//                         {
-//                             $project: {
-//                                 name: 1,
-//                                 variant: {
-//                                     $filter: {
-//                                         input: "$variant",
-//                                         as: "v",
-//                                         cond: { $eq: ["$$v._id", "$$sku_id"] },
-//                                     },
-//                                 },
-//                                 user: 1,
-//                             },
-//                         },
-//                     ],
-//                     as: "product",
-//                 },
-//             },
-//             {
-//                 $unwind: {
-//                     path: "$product",
-//                     preserveNullAndEmptyArrays: true,
-//                 },
-//             },
-//             {
-//                 $addFields: {
-//                     "queryDetails.product": {
-//                         name : "$product.name",
-//                         variant: {
-//                             $arrayElemAt: ["$product.variant", 0],
-//                         },
-//                         user: "$product.user",
-
-//                     },
-
-//                 },
-//             },
-//             {
-//                 $project: {
-//                     "queryDetails.product.user.password": 0, // Avoid sending sensitive user data
-//                     product: 0, // Remove intermediate lookup data
-//                 },
-//             },
-//             {
-//                 $skip: parseInt(offset) || 0,
-//             },
-//             {
-//                 $limit: parseInt(limit) || 10,
-//             },
-//         ];
-//         // Aggregation result
-//         const myQueries = await Query.aggregate(agg);
-//         // Count documents
-//         const countAgg = [...agg, { $count: "total" }];
-//         const countResult = await Query.aggregate(countAgg);
-//         const count = countResult.length > 0 ? countResult[0].total : 0;
-//         return res.status(200).json({
-//             message: "My Queries Fetched Successfully",
-//             data: myQueries,
-//             count: count,
-//             code: 200,
-//         });
-//     } catch (error) {
-//         console.error(error);
-//         utils.handleError(res, error);
-//     }
-// };
-
 exports.getMyQueries = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -1223,93 +1019,103 @@ exports.getMyQueries = async (req, res) => {
             filter.query_unique_id = { $regex: search, $options: "i" };
         }
 
-        const userMatchCondition = userDetails.user_type === "buyer"
-            ? { createdByUser: new mongoose.Types.ObjectId(userId) }
-            : { 'queryDetails.assigned_to.variant_assigned': new mongoose.Types.ObjectId(userId) }
-        //{ 'queryDetails.assigned_to.variant_assigned': { $eq: new mongoose.Types.ObjectId(userId) } };
+        let data = []
+        let count = 0
+        if (userDetails.user_type === "buyer") {
+            const userMatchCondition = { createdByUser: new mongoose.Types.ObjectId(userId) }
 
-        const data = await Query.aggregate([
-            {
-                $unwind: {
-                    path: '$queryDetails',
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $match: {
-                    ...filter,
-                    ...userMatchCondition,
-                },
-            },
-            {
-                $unwind: {
-                    path: '$queryDetails.variant',
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $group: {
-                    _id: '$_id',
-                    query_unique_id: { $first: '$query_unique_id' },
-                    status: { $first: '$status' },
-                    queryCreation: { $first: '$queryCreation' },
-                    queryClose: { $first: '$queryClose' },
-                    action: { $first: '$action' },
-                    createdByUser: { $first: '$createdByUser' },
-                    adminApproved: { $first: '$adminApproved' },
-                    adminReview: { $first: '$adminReview' },
-                    queryDetails: {
-                        $push: {
-                            product: '$queryDetails.product',
-                            variant: '$queryDetails.variant',
-                            supplier: '$queryDetails.supplier',
-                            price: '$queryDetails.price',
-                            quantity: '$queryDetails.quantity',
-                            query: '$queryDetails.query',
-                            notes: '$queryDetails.notes',
-                            assigned_to: '$queryDetails.assigned_to',
-                            _id: '$queryDetails._id'
+            data = await Query.aggregate(
+                [
+                    {
+                        $unwind: {
+                            path: '$queryDetails',
+                            preserveNullAndEmptyArrays: true
                         }
                     },
-                    createdAt: { $first: '$createdAt' },
-                    updatedAt: { $first: '$updatedAt' }
-                }
-            },
-            {
-                $lookup: {
-                    from: "bidsettings",
-                    localField: "_id",
-                    foreignField: "query_id",
-                    as: "bid_setting_data"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$bid_setting_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $sort: { createdAt: -1 }
-            },
-            {
-                $skip: +offset,
-            },
-            {
-                $limit: +limit,
-            },
-            // {
-            //     $project: {
-            //         queryDetails: 0,
-            //         queryCreation: 0,
-            //         final_quote: 0
-            //     }
-            // }
-        ]);
+                    {
+                        $match: {
+                            ...filter,
+                            ...userMatchCondition,
+                        },
+                    },
+                    {
+                        $unwind: {
+                            path: '$queryDetails.variant',
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: '$_id',
+                            query_unique_id: { $first: '$query_unique_id' },
+                            status: { $first: '$status' },
+                            queryCreation: { $first: '$queryCreation' },
+                            queryClose: { $first: '$queryClose' },
+                            action: { $first: '$action' },
+                            createdByUser: { $first: '$createdByUser' },
+                            adminApproved: { $first: '$adminApproved' },
+                            adminReview: { $first: '$adminReview' },
+                            queryDetails: {
+                                $push: {
+                                    product: '$queryDetails.product',
+                                    variant: '$queryDetails.variant',
+                                    supplier: '$queryDetails.supplier',
+                                    price: '$queryDetails.price',
+                                    quantity: '$queryDetails.quantity',
+                                    query: '$queryDetails.query',
+                                    notes: '$queryDetails.notes',
+                                    assigned_to: '$queryDetails.assigned_to',
+                                    _id: '$queryDetails._id'
+                                }
+                            },
+                            createdAt: { $first: '$createdAt' },
+                            updatedAt: { $first: '$updatedAt' }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "bidsettings",
+                            localField: "_id",
+                            foreignField: "query_id",
+                            as: "bid_setting_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$bid_setting_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $sort: { createdAt: -1 }
+                    },
+                    {
+                        $skip: +offset,
+                    },
+                    {
+                        $limit: +limit,
+                    }
+                ]
+            );
 
-        const count = await Query.countDocuments({ ...filter, ...userMatchCondition });
+            count = await Query.countDocuments({ ...filter, ...userMatchCondition });
+        } else {
+            const assigned_queries = await query_assigned_suppliers.aggregate(
+                [
+                    {
+                        $match: {
+                            variant_assigned_to: new mongoose.Types.ObjectId(userId),
+                            is_selected: true
+                        }
+                    },
+                    {
+                        $lookup
+                    }
+                ]
+            )
+        }
 
-        res.json({ data, count, code: 200 });
+        return res.json({ data, count, code: 200 });
 
     } catch (error) {
         utils.handleError(res, error);

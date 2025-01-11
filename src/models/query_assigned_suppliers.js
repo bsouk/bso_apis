@@ -20,7 +20,14 @@ const assignedSuppliersSchema = new mongoose.Schema(
         },
         user_type: { type: String, required: false, default: "admin" },
         quantity: {
-            type: Number
+            value: {
+                type: Number,
+                required: true
+            },
+            unit: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'quantity_units'
+            }
         },
         is_selected: {
             type: Boolean,

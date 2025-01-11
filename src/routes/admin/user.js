@@ -23,7 +23,7 @@ router.post(
   trimRequest.all,
   requireAuth,
   controller.addCustomer
-); 
+);
 
 router.get(
   "/getCustomerList",
@@ -247,5 +247,12 @@ router.delete(
   controller.deleteSelectedSupplier
 );
 
+
+router.get(
+  "/getUnit",
+  trimRequest.all,
+  requireAuth,
+  controller.getQuantitiesUnits
+);
 
 module.exports = router;

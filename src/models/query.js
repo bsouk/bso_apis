@@ -98,8 +98,7 @@ const querySchema = new mongoose.Schema({
                 },
                 total_quantity: {
                     value: {
-                        type: Number,
-                        required: true
+                        type: Number
                     },
                     unit: {
                         type: mongoose.Schema.Types.ObjectId,
@@ -108,8 +107,7 @@ const querySchema = new mongoose.Schema({
                 },
                 quantity_assigned: {
                     value: {
-                        type: Number,
-                        required: true
+                        type: Number
                     },
                     unit: {
                         type: mongoose.Schema.Types.ObjectId,

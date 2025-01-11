@@ -1922,3 +1922,39 @@ exports.shareUserCrendentials = async (req, res) => {
     utils.handleError(res, error)
   }
 }
+
+exports.getQuantitiesUnits = async (req, res) => {
+    try {
+        const { search, offset = 0, limit = 10 } = req.query
+        let filter = {}
+        if (search) {
+            filter.unit = { $regex: search, $options: "i" }
+        }
+        const data = await quantity_units.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 10
+            }
+        ])
+
+        const count = await quantity_units.countDocuments(filter)
+        res.status(200).json({
+            message: "Quantities unit fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
