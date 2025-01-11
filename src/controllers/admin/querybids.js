@@ -809,7 +809,7 @@ exports.getAssignedSuppliers = async (req, res) => {
         let filter = {
             variant_id: new mongoose.Types.ObjectId(variant_id)
         }
-        const data = query_assigned_suppliers.aggregate(
+        const data = await query_assigned_suppliers.aggregate(
             [
                 {
                     $match: filter
@@ -881,6 +881,17 @@ exports.getAssignedSuppliers = async (req, res) => {
                     }
                 },
                 {
+                    $sort: {
+                        "quote.price": 1
+                    }
+                },
+                {
+                    $skip: parseInt(offset) || 0
+                },
+                {
+                    $limit: parseInt(limit) || 10
+                },
+                {
                     $project: {
                         supplier_quote: 0,
                         admin_quote: 0,
@@ -922,7 +933,8 @@ exports.getProductVariantdetails = async (req, res) => {
                 $project: {
                     "queryDetails.product": 1,
                     "queryDetails.variant.images": 1,
-                    "queryDetails.quantity" : 1
+                    "queryDetails.quantity": 1,
+                    "queryDetails.split_quantity" : 1
                 }
             }
         ])
@@ -931,6 +943,29 @@ exports.getProductVariantdetails = async (req, res) => {
         return res.status(200).json({
             message: "Product variant data fetched successfully",
             data: data[0],
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.acceptRejectAssignedSupplier = async (req, res) => {
+    try {
+        const { variant_id, supplier_id, status } = req.body
+        const supplier_data = await query_assigned_suppliers.findOne({ variant_id, variant_assigned_to: supplier_id })
+        if (!supplier_data) {
+            return utils.handleError(res, {
+                message: "assigned supplier not found",
+                code: 400,
+            });
+        }
+
+        supplier_data.is_selected = status === true || status === "true" ? true : false
+        await supplier_data.save()
+
+        return res.status(200).json({
+            message: "supplier status changed successfully",
             code: 200
         })
     } catch (error) {

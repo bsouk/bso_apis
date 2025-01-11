@@ -137,10 +137,7 @@ const querySchema = new mongoose.Schema({
                 _id: {
                     type: mongoose.Types.ObjectId,
                 },
-                name: {
-                    type: String
-                },
-                profile_image: {
+                user_type: {
                     type: String
                 }
             },
