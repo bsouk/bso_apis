@@ -1060,8 +1060,8 @@ exports.getProductVariantdetails = async (req, res) => {
 
 exports.acceptRejectAssignedSupplier = async (req, res) => {
     try {
-        const { variant_id, supplier_id, status } = req.body
-        const supplier_data = await query_assigned_suppliers.findOne({ variant_id, variant_assigned_to: supplier_id })
+        const { query_id, variant_id, supplier_id, status } = req.body
+        const supplier_data = await query_assigned_suppliers.findOne({ query_id, variant_id, variant_assigned_to: supplier_id })
         console.log("result : ", supplier_data)
         if (!supplier_data) {
             return utils.handleError(res, {
@@ -1069,8 +1069,7 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
                 code: 400,
             });
         }
-
-        supplier_data.is_selected = status === true || status === "true" ? true : false
+        supplier_data.is_selected = (status === true || status === "true") ? true : false
         await supplier_data.save()
 
         return res.status(200).json({
