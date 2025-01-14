@@ -1013,6 +1013,38 @@ exports.getProductVariantdetails = async (req, res) => {
                 }
             },
             {
+                $lookup: {
+                    from: "quantity_units",
+                    let: { id: "$queryDetails.split_quantity.unit" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$$id", "$_id"]
+                                }
+                            }
+                        }
+                    ],
+                    as: "quantity_units_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$quantity_units_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $addFields: {
+                    "queryDetails.quantity.unit": "$quantity_units_data.unit",
+                    "queryDetails.quantity.unit_id": "$quantity_units_data._id",
+                    "queryDetails.assigned_quantity.unit": "$quantity_units_data.unit",
+                    "queryDetails.assigned_quantity.unit_id": "$quantity_units_data._id",
+                    "queryDetails.split_quantity.unit": "$quantity_units_data.unit",
+                    "queryDetails.split_quantity.unit_id": "$quantity_units_data._id",
+                }
+            },
+            {
                 $project: {
                     "queryDetails.product": 1,
                     "queryDetails.variant._id": 1,
