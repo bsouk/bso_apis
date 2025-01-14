@@ -1062,6 +1062,7 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
     try {
         const { variant_id, supplier_id, status } = req.body
         const supplier_data = await query_assigned_suppliers.findOne({ variant_id, variant_assigned_to: supplier_id })
+        console.log("result : ", supplier_data)
         if (!supplier_data) {
             return utils.handleError(res, {
                 message: "assigned supplier not found",
@@ -1074,6 +1075,7 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
 
         return res.status(200).json({
             message: "supplier status changed successfully",
+            data: supplier_data,
             code: 200
         })
     } catch (error) {
