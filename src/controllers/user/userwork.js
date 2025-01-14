@@ -1196,6 +1196,12 @@ exports.getMyQueries = async (req, res) => {
                     },
                     {
                         $addFields: {
+                            "quantity.unit_id":
+                                "$quantity_unit._id"
+                        }
+                    },
+                    {
+                        $addFields: {
                             "query_data.queryDetails.quantity":
                                 "$quantity"
                         }
@@ -1225,6 +1231,8 @@ exports.getMyQueries = async (req, res) => {
 exports.getQueryById = async (req, res) => {
     try {
         const { id } = req.params
+        const userId = req.user._id
+        console.log("user id : ", userId)
 
         if (!id) {
             return utils.handleError(res, {
@@ -1233,83 +1241,153 @@ exports.getQueryById = async (req, res) => {
             });
         }
 
-        const agg = [
-            {
-                $match: { _id: new mongoose.Types.ObjectId(id) },
-            },
-            // {
-            //     $unwind: {
-            //         path: "$queryDetails",
-            //         preserveNullAndEmptyArrays: true,
-            //     },
-            // },
-            // {
-            //     $lookup: {
-            //         from: "products",
-            //         let: { sku_id: "$queryDetails.variant_id" },
-            //         pipeline: [
-            //             {
-            //                 $match: {
-            //                     $expr: { $in: ["$$sku_id", "$variant._id"] },
-            //                 },
-            //             },
-            //             {
-            //                 $lookup: {
-            //                     from: "users",
-            //                     localField: "user_id",
-            //                     foreignField: "_id",
-            //                     as: "user",
-            //                 },
-            //             },
-            //             {
-            //                 $unwind: {
-            //                     path: "$user",
-            //                     preserveNullAndEmptyArrays: true,
-            //                 },
-            //             },
-            //             {
-            //                 $project: {
-            //                     name: 1,
-            //                     variant: {
-            //                         $filter: {
-            //                             input: "$variant",
-            //                             as: "v",
-            //                             cond: { $eq: ["$$v._id", "$$sku_id"] },
-            //                         },
-            //                     },
-            //                     user: 1,
-            //                 },
-            //             },
-            //         ],
-            //         as: "product",
-            //     },
-            // },
-            // {
-            //     $unwind: {
-            //         path: "$product",
-            //         preserveNullAndEmptyArrays: true,
-            //     },
-            // },
-            // {
-            //     $addFields: {
-            //         "queryDetails.product": {
-            //             name: "$product.name",
-            //             variant: {
-            //                 $arrayElemAt: ["$product.variant", 0],
-            //             },
-            //             user: "$product.user",
+        const user_data = await User.findOne({ _id: userId })
+        let agg = []
+        if (user_data.user_type === "buyer") {
+            agg = [
+                {
+                    $match: {
+                        _id: new mongoose.Types.ObjectId(id)
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$queryDetails",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { id: "$queryDetails.quantity.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "quantity_unit_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$quantity_unit_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        "queryDetails.quantity.unit":
+                            "$quantity_unit_data.unit"
+                    }
+                },
+                {
+                    $addFields: {
+                        "queryDetails.quantity.unit_id":
+                            "$quantity_unit_data._id"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        queryDetails: { $push: "$queryDetails" },
+                        otherFields: { $first: "$$ROOT" }
+                    }
+                },
+                {
+                    $replaceRoot: {
+                        newRoot: {
+                            $mergeObjects: [
+                                "$otherFields",
+                                { queryDetails: "$queryDetails" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        quantity_unit_data: 0
+                    }
+                }
+            ]
+        }
 
-            //         },
-
-            //     },
-            // },
-            // {
-            //     $project: {
-            //         "queryDetails.product.user.password": 0, // Avoid sending sensitive user data
-            //         product: 0, // Remove intermediate lookup data
-            //     },
-            // },
-        ];
+        if (user_data.user_type === "supplier") {
+            agg = [
+                {
+                    $match: {
+                        _id: new mongoose.Types.ObjectId(id)
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$queryDetails",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { id: "$queryDetails.quantity.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "quantity_unit_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$quantity_unit_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        "queryDetails.quantity.unit":
+                            "$quantity_unit_data.unit"
+                    }
+                },
+                {
+                    $addFields: {
+                        "queryDetails.quantity.unit_id":
+                            "$quantity_unit_data._id"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        queryDetails: { $push: "$queryDetails" },
+                        otherFields: { $first: "$$ROOT" }
+                    }
+                },
+                {
+                    $replaceRoot: {
+                        newRoot: {
+                            $mergeObjects: [
+                                "$otherFields",
+                                { queryDetails: "$queryDetails" }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        quantity_unit_data: 0,
+                        "queryDetails.query": 0,
+                        "queryDetails.notes": 0
+                    }
+                }
+            ]
+        }
 
         const queryData = await Query.aggregate(agg)
         if (!queryData) {

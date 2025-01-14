@@ -123,6 +123,34 @@ exports.getquerydetail = async (req, res) => {
                 }
             },
             {
+                $unwind: {
+                    path: "$queryDetails",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "quantity_units",
+                    let: { id: "$queryDetails.quantity.unit" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$$id", "$_id"]
+                                }
+                            }
+                        }
+                    ],
+                    as: "quantity_unit_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$quantity_unit_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
                 $addFields: {
                     user_detail: {
                         $ifNull: [{ $arrayElemAt: ['$user_detail', 0] }, null],
@@ -137,6 +165,31 @@ exports.getquerydetail = async (req, res) => {
                         $ifNull: [{ $arrayElemAt: ['$bid_details', 0] }, null],
                     }
                 },
+            },
+            {
+                $set: {
+                    "queryDetails.quantity.unit":
+                        "$quantity_unit_data.unit",
+                    "queryDetails.quantity.unit_id":
+                        "$quantity_unit_data._id"
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    queryDetails: { $push: "$queryDetails" },
+                    otherFields: { $first: "$$ROOT" }
+                }
+            },
+            {
+                $replaceRoot: {
+                    newRoot: {
+                        $mergeObjects: [
+                            "$otherFields",
+                            { queryDetails: "$queryDetails" }
+                        ]
+                    }
+                }
             },
         ]);
 
@@ -820,6 +873,34 @@ exports.getAssignedSuppliers = async (req, res) => {
             [
                 {
                     $match: filter
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { id: "$quantity.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "quantity_units_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$quantity_units_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        "quantity.unit": "$quantity_units_data.unit",
+                        "quantity.unit_id": "$quantity_units_data._id"
+                    }
                 },
                 {
                     $lookup: {
