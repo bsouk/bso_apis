@@ -53,6 +53,19 @@ const assignedSuppliersSchema = new mongoose.Schema(
                 }
             },
             default: null
+        },
+        logistics_price: {
+            type: Number
+        },
+        admin_margin: {
+            value: {
+                type: Number
+            },
+            margin_type: {
+                type: String,
+                enum: ["flat", "percentage"],
+                default: "flat"
+            }
         }
     },
     { timestamps: true }

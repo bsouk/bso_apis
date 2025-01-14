@@ -805,9 +805,16 @@ exports.updateSplitQuantity = async (req, res) => {
 
 exports.getAssignedSuppliers = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, variant_id } = req.query
+        const { offset = 0, limit = 10, variant_id, query_id } = req.query
+        if (!variant_id && !query_id) {
+            return utils.handleError(res, {
+                message: "Query and Variant id is required",
+                code: 404,
+            });
+        }
         let filter = {
-            variant_id: new mongoose.Types.ObjectId(variant_id)
+            variant_id: new mongoose.Types.ObjectId(variant_id),
+            query_id: new mongoose.Types.ObjectId(query_id)
         }
         const data = await query_assigned_suppliers.aggregate(
             [

@@ -135,4 +135,11 @@ router.get(
     controller.getProductVariantdetails
 );
 
+router.patch(
+    '/acceptRejectAssignedSupplier',
+    trimRequest.all,
+    requireAuth,
+    controller.acceptRejectAssignedSupplier
+);
+
 module.exports = router
