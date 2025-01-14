@@ -97,32 +97,30 @@ const querySchema = new mongoose.Schema({
                     default: false
                 },
                 total_quantity: {
-                    value: {
-                        type: Number
+                    type: {
+                        value: {
+                            type: Number
+                        },
+                        unit: {
+                            type: mongoose.Schema.Types.ObjectId,
+                            ref: 'quantity_units'
+                        }
                     },
-                    unit: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: 'quantity_units'
-                    }
+                    default: null
                 },
                 quantity_assigned: {
-                    value: {
-                        type: Number
+                    type: {
+                        value: {
+                            type: Number
+                        },
+                        unit: {
+                            type: mongoose.Schema.Types.ObjectId,
+                            ref: 'quantity_units'
+                        }
                     },
-                    unit: {
-                        type: mongoose.Schema.Types.ObjectId,
-                        ref: 'quantity_units'
-                    }
-                },
+                    default: null
+                }
             },
-            // final_assigned_to: {
-            //     _id: {
-            //         type: mongoose.Types.ObjectId,
-            //     },
-            //     user_type: {
-            //         type: String
-            //     }
-            // },
             price: {
                 type: Number
             },
