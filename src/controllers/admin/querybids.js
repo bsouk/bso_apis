@@ -287,7 +287,7 @@ exports.deletequery = async (req, res) => {
             });
         }
         const result = await Query.deleteMany({ _id: { $in: ids } });
-
+        const assigned_supplier_result = await query_assigned_suppliers.deleteMany({ query_id: { $in: ids } })
         const query_quotation = await quotation.deleteMany({ query_id: { $in: ids } })
 
         res.json({
@@ -371,14 +371,14 @@ async function createQuotation(final_quotes, query_id, res) {
         date: currentTime,
         detail: 'quotation created',
         product_id: i?.product_id,
-        supplier_id: i?.supplier_id,
+        supplier_id: i?.variant_assigned_to,
         variant_id: i?.variant_id,
         quantity: i?.quantity,
-        price: i?.price,
-        media: i?.media,
-        message: i?.message,
-        document: i?.document,
-        assignedBy: i?.assignedBy
+        price: i?.supplier_quote.price,
+        media: i?.supplier_quote.media,
+        message: i?.supplier_quote.message,
+        document: i?.supplier_quote.document,
+        assignedBy: i?.supplier_quote.assignedBy
     })
     )
     const data = {
@@ -402,7 +402,7 @@ async function createQuotation(final_quotes, query_id, res) {
 
 exports.addFinalQuote = async (req, res) => {
     try {
-        const { query_id, final_quotes } = req.body
+        const { final_quotes } = req.body
         console.log("final_quotes : ", final_quotes)
         const queryData = await Query.findOne({ _id: query_id })
 
@@ -420,18 +420,18 @@ exports.addFinalQuote = async (req, res) => {
             });
         }
 
-        // final_quotes?.forEach((i) => queryData?.final_quote?.push(i));
-        // await queryData.save()
-
-        const result = await Query.findOneAndUpdate(
-            {
-                _id: new mongoose.Types.ObjectId(query_id)
-            },
-            {
-                $set: { 'final_quote': final_quotes }
-            },
-            { new: true }
-        )
+        await final_quotes.map(async i => {
+            const result = await query_assigned_suppliers.findOneAndUpdate(
+                {
+                    _id: new mongoose.Types.ObjectId(i._id)
+                },
+                {
+                    $set: i
+                },
+                { new: true }
+            )
+            console.log("result : ", result)
+        })
 
         await createQuotation(final_quotes, query_id, res)
         queryData.status = "completed"
@@ -637,98 +637,90 @@ exports.adminQuotesById = async (req, res) => {
 exports.generateFinalQuote = async (req, res) => {
     try {
         const { id } = req.params;
-
-        const queryData = await Query.aggregate([
-            { $match: { _id: new mongoose.Types.ObjectId(id) } },
-
-            { $unwind: "$queryDetails" },
-
-            // {
-            //     $lookup: {
-            //         from: "products",
-            //         localField: "queryDetails.product.id",
-            //         foreignField: "_id",
-            //         as: "product_data"
-            //     }
-            // },
-
-            // {
-            //     $addFields: {
-            //         "queryDetails.product_data": { $arrayElemAt: ["$product_data", 0] }
-            //     }
-            // },
-            {
-                $addFields: {
-                    "queryDetails.final_quote": {
-                        $ifNull: ["$queryDetails.admin_quote", "$queryDetails.supplier_quote"]
+        const final_quotes = await query_assigned_suppliers.aggregate(
+            [
+                {
+                    $match: {
+                        query_id: new mongoose.Types.ObjectId(id),
+                        is_selected: false
                     }
-                }
-            },
-            // {
-            //     $addFields: {
-            //         "queryDetails.final_quote.quantity":
-            //             "$queryDetails.quantity"
-            //     }
-            // },
-            {
-                $addFields: {
-                    "queryDetails.final_quote.quantity": {
-                        $cond: {
-                            if: {
-                                $or: [
-                                    {
-                                        $ne: [
-                                            "$queryDetails.admin_quote",
-                                            null
-                                        ]
-                                    },
-                                    {
-                                        $ne: [
-                                            "$queryDetails.supplier_quote",
-                                            null
-                                        ]
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: { id: "$product_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
                                     }
-                                ]
+                                }
                             },
-                            then: "$queryDetails.quantity",
-                            else: null
-                        }
+                            {
+                                $project: {
+                                    _id: 1,
+                                    name: 1
+                                }
+                            }
+                        ],
+                        as: "product_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: { id: "$variant_id" },
+                        pipeline: [
+                            {
+                                $unwind: {
+                                    path: "$variant",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$variant._id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "variant_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$product_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$variant_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $project: {
+                        product_id: 0,
+                        variant_id: 0
                     }
                 }
-            },
-            {
-                $match: {
-                    "queryDetails.final_quote": { $ne: null }
-                }
-            },
-            {
-                $group: {
-                    _id: "$_id",
-                    queryDetails: { $push: "$queryDetails" }
-                }
-            },
-            {
-                $project: {
-                    "queryDetails.product": 1,
-                    "queryDetails.supplier": 1,
-                    "queryDetails.variant": 1,
-                    "queryDetails.final_quote": 1
-                }
-            }
-        ]);
-
-        // if (!queryData.length) {
-        //     return res.status(400).json({
-        //         message: "Query not found",
-        //         code: 400,
-        //     });
-        // }
+            ]
+        )
+        if (!final_quotes || final_quotes.length === 0) {
+            return utils.handleError(res, {
+                message: "No data found",
+                code: 404,
+            });
+        }
 
         return res.status(200).json({
-            message: "Final quote generated successfully",
-            data: queryData[0],
-            code: 200,
-        });
+            message: "final quote list generated successfully",
+            data: final_quotes,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }

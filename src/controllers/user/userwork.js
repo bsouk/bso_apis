@@ -1045,6 +1045,36 @@ exports.getMyQueries = async (req, res) => {
                         }
                     },
                     {
+                        $lookup: {
+                            from: "quantity_units",
+                            let: { id: "$queryDetails.quantity.unit" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$_id"]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: "quantity_unit"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$quantity_unit",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $addFields: {
+                            "queryDetails.quantity.unit":
+                                "$quantity_unit.unit",
+                            "queryDetails.quantity.unit_id":
+                                "$quantity_unit._id"
+                        }
+                    },
+                    {
                         $group: {
                             _id: '$_id',
                             query_unique_id: { $first: '$query_unique_id' },
@@ -1153,7 +1183,7 @@ exports.getMyQueries = async (req, res) => {
                                 },
                                 {
                                     $project: {
-                                        "queryDetails.split_quantity": 0
+                                        "queryDetails.quantity": 0
                                     }
                                 }
                             ],
@@ -1190,9 +1220,14 @@ exports.getMyQueries = async (req, res) => {
                     },
                     {
                         $addFields: {
-                            "query_data.queryDetails.quantity.unit":
+                            "query_data.queryDetails.split_quantity.total_quantity.unit":
                                 "$quantity_unit.unit",
-                            "query_data.queryDetails.quantity.unit_id":
+                            "query_data.queryDetails.split_quantity.total_quantity.unit_id":
+                                "$quantity_unit._id",
+
+                            "query_data.queryDetails.split_quantity.quantity_assigned.unit":
+                                "$quantity_unit.unit",
+                            "query_data.queryDetails.split_quantity.quantity_assigned.unit_id":
                                 "$quantity_unit._id",
                         }
                     },
@@ -1280,12 +1315,18 @@ exports.getQueryById = async (req, res) => {
                 {
                     $addFields: {
                         "queryDetails.quantity.unit":
-                            "$quantity_unit_data.unit"
-                    }
-                },
-                {
-                    $addFields: {
+                            "$quantity_unit_data.unit",
                         "queryDetails.quantity.unit_id":
+                            "$quantity_unit_data._id",
+
+                        "queryDetails.split_quantity.total_quantity.unit":
+                            "$quantity_unit_data.unit",
+                        "queryDetails.split_quantity.total_quantity.unit_id":
+                            "$quantity_unit_data._id",
+
+                        "queryDetails.split_quantity.quantity_assigned.unit":
+                            "$quantity_unit_data.unit",
+                        "queryDetails.split_quantity.quantity_assigned.unit_id":
                             "$quantity_unit_data._id"
                     }
                 },
@@ -1424,12 +1465,66 @@ exports.getQueryById = async (req, res) => {
                                 },
                                 else: null
                             }
+                        },
+                        "queryDetails.supplier_quote": {
+                            $cond: {
+                                if: {
+                                    $gt: [{ $size: "$supplier_quote" }, 0]
+                                },
+                                then: {
+                                    $map: {
+                                        input: {
+                                            $filter: {
+                                                input: "$supplier_quote",
+                                                as: "sq",
+                                                cond: {
+                                                    $and: [
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.query_id",
+                                                                "$_id"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.variant_id",
+                                                                "$queryDetails.variant._id"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.product_id",
+                                                                "$queryDetails.product.id"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.variant_assigned_to",
+                                                                new mongoose.Types.ObjectId(userId)
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        as: "filtered_supplier",
+                                        in: "$$filtered_supplier.supplier_quote"
+                                    }
+                                },
+                                else: null
+                            }
                         }
                     }
                 },
                 {
                     $unwind: {
                         path: "$queryDetails.assigned_id",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$queryDetails.supplier_quote",
                         preserveNullAndEmptyArrays: true
                     }
                 },
@@ -1454,10 +1549,20 @@ exports.getQueryById = async (req, res) => {
                     }
                 },
                 {
-                    $set: {
+                    $addFields: {
                         "queryDetails.quantity.unit":
                             "$quantity_unit_data.unit",
                         "queryDetails.quantity.unit_id":
+                            "$quantity_unit_data._id",
+
+                        "queryDetails.split_quantity.total_quantity.unit":
+                            "$quantity_unit_data.unit",
+                        "queryDetails.split_quantity.total_quantity.unit_id":
+                            "$quantity_unit_data._id",
+
+                        "queryDetails.split_quantity.quantity_assigned.unit":
+                            "$quantity_unit_data.unit",
+                        "queryDetails.split_quantity.quantity_assigned.unit_id":
                             "$quantity_unit_data._id"
                     }
                 },
