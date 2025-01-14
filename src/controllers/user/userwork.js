@@ -1153,8 +1153,7 @@ exports.getMyQueries = async (req, res) => {
                                 },
                                 {
                                     $project: {
-                                        "queryDetails.split_quantity": 0,
-                                        "queryDetails.quantity": 0
+                                        "queryDetails.split_quantity": 0
                                     }
                                 }
                             ],
@@ -1191,9 +1190,10 @@ exports.getMyQueries = async (req, res) => {
                     },
                     {
                         $addFields: {
-                            "quantity.unit": "$quantity_unit.unit",
-                            "quantity.unit_id": "$quantity_unit._id",
-                            "query_data.queryDetails.quantity": "$quantity"
+                            "query_data.queryDetails.quantity.unit":
+                                "$quantity_unit.unit",
+                            "query_data.queryDetails.quantity.unit_id":
+                                "$quantity_unit._id",
                         }
                     },
                     {
