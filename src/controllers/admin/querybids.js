@@ -402,7 +402,7 @@ async function createQuotation(final_quotes, query_id, res) {
 
 exports.addFinalQuote = async (req, res) => {
     try {
-        const { final_quotes } = req.body
+        const { final_quotes, query_id } = req.body
         console.log("final_quotes : ", final_quotes)
         const queryData = await Query.findOne({ _id: query_id })
 
