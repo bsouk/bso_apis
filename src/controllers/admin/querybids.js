@@ -1030,8 +1030,8 @@ exports.getProductVariantdetails = async (req, res) => {
                 $addFields: {
                     "queryDetails.quantity.unit": "$quantity_units_data.unit",
                     "queryDetails.quantity.unit_id": "$quantity_units_data._id",
-                    "queryDetails.assigned_quantity.unit": "$quantity_units_data.unit",
-                    "queryDetails.assigned_quantity.unit_id": "$quantity_units_data._id",
+                    "queryDetails.split_quantity.assigned_quantity.unit": "$quantity_units_data.unit",
+                    "queryDetails.split_quantity.assigned_quantity.unit_id": "$quantity_units_data._id",
                     "queryDetails.split_quantity.total_quantity.unit": "$quantity_units_data.unit",
                     "queryDetails.split_quantity.total_quantity.unit_id": "$quantity_units_data._id",
                 }
