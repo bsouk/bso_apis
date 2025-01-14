@@ -1090,10 +1090,10 @@ exports.getMyQueries = async (req, res) => {
                         $sort: { createdAt: -1 }
                     },
                     {
-                        $skip: +offset,
+                        $skip: parseInt(offset) || 0
                     },
                     {
-                        $limit: +limit,
+                        $limit: parseInt(limit) || 10
                     }
                 ]
             );
@@ -1191,19 +1191,9 @@ exports.getMyQueries = async (req, res) => {
                     },
                     {
                         $addFields: {
-                            "quantity.unit": "$quantity_unit.unit"
-                        }
-                    },
-                    {
-                        $addFields: {
-                            "quantity.unit_id":
-                                "$quantity_unit._id"
-                        }
-                    },
-                    {
-                        $addFields: {
-                            "query_data.queryDetails.quantity":
-                                "$quantity"
+                            "quantity.unit": "$quantity_unit.unit",
+                            "quantity.unit_id": "$quantity_unit._id",
+                            "query_data.queryDetails.quantity": "$quantity"
                         }
                     },
                     {
@@ -1211,6 +1201,15 @@ exports.getMyQueries = async (req, res) => {
                             _id: 0,
                             query_data: 1,
                         }
+                    },
+                    {
+                        $sort: { createdAt: -1 }
+                    },
+                    {
+                        $skip: parseInt(offset) || 0
+                    },
+                    {
+                        $limit: parseInt(limit) || 10
                     }
                 ]
             )
