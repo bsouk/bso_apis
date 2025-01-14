@@ -1015,7 +1015,7 @@ exports.getProductVariantdetails = async (req, res) => {
             {
                 $lookup: {
                     from: "quantity_units",
-                    let: { id: "$queryDetails.split_quantity.unit" },
+                    let: { id: "$queryDetails.quantity.unit" },
                     pipeline: [
                         {
                             $match: {
@@ -1040,8 +1040,8 @@ exports.getProductVariantdetails = async (req, res) => {
                     "queryDetails.quantity.unit_id": "$quantity_units_data._id",
                     "queryDetails.assigned_quantity.unit": "$quantity_units_data.unit",
                     "queryDetails.assigned_quantity.unit_id": "$quantity_units_data._id",
-                    "queryDetails.split_quantity.unit": "$quantity_units_data.unit",
-                    "queryDetails.split_quantity.unit_id": "$quantity_units_data._id",
+                    "queryDetails.split_quantity.total_quantity.unit": "$quantity_units_data.unit",
+                    "queryDetails.split_quantity.total_quantity.unit_id": "$quantity_units_data._id",
                 }
             },
             {
