@@ -642,7 +642,7 @@ exports.generateFinalQuote = async (req, res) => {
                 {
                     $match: {
                         query_id: new mongoose.Types.ObjectId(id),
-                        is_selected: false
+                        is_selected: true
                     }
                 },
                 {
