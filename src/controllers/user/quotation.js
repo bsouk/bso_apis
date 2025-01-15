@@ -424,33 +424,17 @@ exports.getQuotationDetails = async (req, res) => {
                         "final_quote.query_data": {
                             $let: {
                                 vars: {
-                                    matchedQuery: {
+                                    matchingQueryDetail: {
                                         $arrayElemAt: [
                                             {
                                                 $filter: {
                                                     input:
                                                         "$query_data.queryDetails",
-                                                    as: "query",
+                                                    as: "queryDetail",
                                                     cond: {
-                                                        $and: [
-                                                            {
-                                                                $eq: [
-                                                                    "$$query.product.id",
-                                                                    "$final_quote.product_id"
-                                                                ]
-                                                            },
-                                                            {
-                                                                $eq: [
-                                                                    "$$query.supplier._id",
-                                                                    "$final_quote.supplier_id"
-                                                                ]
-                                                            },
-                                                            {
-                                                                $eq: [
-                                                                    "$$query.variant._id",
-                                                                    "$final_quote.variant_id"
-                                                                ]
-                                                            }
+                                                        $eq: [
+                                                            "$$queryDetail.product.id",
+                                                            "$final_quote.product_id"
                                                         ]
                                                     }
                                                 }
@@ -460,9 +444,10 @@ exports.getQuotationDetails = async (req, res) => {
                                     }
                                 },
                                 in: {
-                                    query: "$$matchedQuery.query",
-                                    notes: "$$matchedQuery.notes",
-                                    price: "$$matchedQuery.price"
+                                    $ifNull: [
+                                        "$$matchingQueryDetail",
+                                        0
+                                    ]
                                 }
                             }
                         }
