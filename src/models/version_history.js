@@ -33,7 +33,13 @@ const version_history_schema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
         },
         quantity: {
-            type: Number
+            value: {
+                type: Number
+            },
+            unit: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'quantity_units'
+            }
         },
         price: {
             type: Number
