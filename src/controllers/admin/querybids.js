@@ -426,7 +426,12 @@ exports.addFinalQuote = async (req, res) => {
                     _id: new mongoose.Types.ObjectId(i._id)
                 },
                 {
-                    $set: i
+                    $set: {
+                        quantity: i.quantity,
+                        supplier_quote: i.supplier_quote,
+                        logistics_price: i.logistics_price,
+                        admin_margin: i.admin_margin
+                    }
                 },
                 { new: true }
             )
