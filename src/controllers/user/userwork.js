@@ -1155,8 +1155,7 @@ exports.getMyQueries = async (req, res) => {
                                 },
                                 {
                                     $unwind: {
-                                        path: "$queryDetails",
-                                        preserveNullAndEmptyArrays: true
+                                        path: "$queryDetails"
                                     }
                                 },
                                 {

@@ -870,6 +870,28 @@ exports.generateFinalQuote = async (req, res) => {
                     }
                 },
                 {
+                    $addFields: {
+                        supplier_quote_media: {
+                            $reduce: {
+                                input: "$supplier_quote_media",
+                                initialValue: [],
+                                in: {
+                                    $concatArrays: ["$$value", "$$this"]
+                                }
+                            }
+                        },
+                        supplier_quote_document: {
+                            $reduce: {
+                                input: "$supplier_quote_document",
+                                initialValue: [],
+                                in: {
+                                    $concatArrays: ["$$value", "$$this"]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
                     $project: {
                         _id: 0,
                         product_id: 0
