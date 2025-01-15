@@ -675,6 +675,28 @@ exports.generateFinalQuote = async (req, res) => {
                 },
                 {
                     $lookup: {
+                        from: "queries",
+                        let: { id: "$query_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    status: 1
+                                }
+                            }
+                        ],
+                        as: "query_data"
+                    }
+                },
+                {
+                    $lookup: {
                         from: "products",
                         let: { id: "$variant_id" },
                         pipeline: [
@@ -703,6 +725,12 @@ exports.generateFinalQuote = async (req, res) => {
                 },
                 {
                     $unwind: {
+                        path: "$query_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
                         path: "$variant_data",
                         preserveNullAndEmptyArrays: true
                     }
@@ -710,7 +738,8 @@ exports.generateFinalQuote = async (req, res) => {
                 {
                     $project: {
                         product_id: 0,
-                        variant_id: 0
+                        variant_id: 0,
+                        query_id: 0
                     }
                 }
             ]

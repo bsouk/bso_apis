@@ -1161,24 +1161,53 @@ exports.getMyQueries = async (req, res) => {
                                 },
                                 {
                                     $match: {
-                                        $and: [
-                                            {
-                                                $expr: {
-                                                    $eq: [
-                                                        "$queryDetails.product.id",
-                                                        "$$productid"
-                                                    ]
-                                                }
-                                            },
-                                            {
-                                                $expr: {
-                                                    $eq: [
-                                                        "$queryDetails.variant._id",
-                                                        "$$variantid"
-                                                    ]
-                                                }
-                                            }
-                                        ]
+                                        // $and: [
+                                        //     {
+                                        //         $expr: {
+                                        //             $eq: [
+                                        //                 "$queryDetails.product.id",
+                                        //                 "$$productid"
+                                        //             ]
+                                        //         }
+                                        //     },
+                                        //     {
+                                        //         $expr: {
+                                        //             $eq: [
+                                        //                 "$queryDetails.variant._id",
+                                        //                 "$$variantid"
+                                        //             ]
+                                        //         }
+                                        //     }
+                                        // ]
+
+                                        $expr: {
+                                            $eq: [
+                                                "$queryDetails.product.id",
+                                                "$$productid"
+                                            ]
+                                        }
+                                    }
+                                },
+                                {
+                                    $group: {
+                                        _id: "$_id",
+                                        query_unique_id: {
+                                            $first: "$query_unique_id"
+                                        },
+                                        status: {
+                                            $first: "$status"
+                                        },
+                                        createdByUser: {
+                                            $first: "$createdByUser"
+                                        },
+                                        adminApproved: {
+                                            $first: "$adminApproved"
+                                        },
+                                        queryDetails: {
+                                            $push: "$queryDetails"
+                                        },
+                                        createdAt: { $first: "$createdAt" },
+                                        updatedAt: { $first: "$updatedAt" }
                                     }
                                 },
                                 {
