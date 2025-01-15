@@ -446,7 +446,6 @@ exports.addFinalQuote = async (req, res) => {
 
         return res.status(200).json({
             message: "final quote added successfully",
-            data: result,
             code: 200
         })
     } catch (error) {
