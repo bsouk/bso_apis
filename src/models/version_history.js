@@ -19,10 +19,12 @@ const version_history_schema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'products',
         },
-        supplier_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'users',
-        },
+        supplier_id: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'users',
+            }
+        ],
         logistics_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'users',

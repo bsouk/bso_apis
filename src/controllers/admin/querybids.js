@@ -360,45 +360,100 @@ async function generateUniqueQuotationId() {
     return `#${id}`
 }
 
+// async function createQuotation(final_quotes, query_id, res) {
+
+//     const bidSettingData = await bidsetting.findOne({ query_id: query_id })
+//     console.log('bid setting data : ', bidSettingData)
+
+//     const quoteId = await generateUniqueQuotationId()
+//     const currentTime = await moment(Date.now()).format('lll')
+//     console.log("final quotes : ", final_quotes)
+//     const timeline_data = await final_quotes.map(i => ({
+//         date: currentTime,
+//         detail: 'quotation created',
+//         product_id: i?.product_id,
+//         supplier_id: [...i?.variant_assigned_to],
+//         variant_id: i?.variant_id,
+//         quantity: i?.quantity,
+//         price: i?.supplier_quote.price,
+//         media: i?.supplier_quote.media,
+//         message: i?.supplier_quote.message,
+//         document: i?.supplier_quote.document,
+//         assignedBy: i?.supplier_quote.assignedBy
+//     })
+//     )
+//     const data = {
+//         quotation_unique_id: await quoteId.toString(),
+//         query_id,
+//         final_quote: [...final_quotes]
+//     }
+
+//     if (bidSettingData?._id) {
+//         data.bid_setting = bidSettingData?._id
+//     }
+
+//     const newQuotation = await quotation.create(data)
+//     console.log('new Quotation : ', newQuotation)
+
+//     await timeline_data.map(async i => await version_history.create({
+//         quotation_id: newQuotation._id,
+//         ...i
+//     }))
+// }
+
 async function createQuotation(final_quotes, query_id, res) {
+    const bidSettingData = await bidsetting.findOne({ query_id: query_id });
+    console.log('bid setting data : ', bidSettingData);
 
-    const bidSettingData = await bidsetting.findOne({ query_id: query_id })
-    console.log('bid setting data : ', bidSettingData)
+    const quoteId = await generateUniqueQuotationId();
+    const currentTime = moment().format('lll');
 
-    const quoteId = await generateUniqueQuotationId()
-    const currentTime = await moment(Date.now()).format('lll')
-    const timeline_data = await final_quotes.map(i => ({
+    console.log("final quotes : ", final_quotes);
+
+    if (!Array.isArray(final_quotes)) {
+        return utils.handleError(res, {
+            message: "final_quotes should be an array",
+            code: 400,
+        });
+    }
+
+    const timeline_data = final_quotes.map(i => ({
         date: currentTime,
         detail: 'quotation created',
-        product_id: i?.product_id,
-        supplier_id: i?.variant_assigned_to,
-        variant_id: i?.variant_id,
-        quantity: i?.quantity,
-        price: i?.supplier_quote.price,
-        media: i?.supplier_quote.media,
-        message: i?.supplier_quote.message,
-        document: i?.supplier_quote.document,
-        assignedBy: i?.supplier_quote.assignedBy
-    })
-    )
+        product_id: i?.product_id ?? null,
+        supplier_id: Array.isArray(i?.variant_assigned_to) ? i.variant_assigned_to : [],
+        variant_id: i?.variant_id ?? null,
+        quantity: i?.quantity ?? null,
+        price: i?.supplier_quote?.price ?? null,
+        media: i?.supplier_quote?.media ?? [],
+        message: i?.supplier_quote?.message ?? "",
+        document: i?.supplier_quote?.document ?? [],
+        assignedBy: i?.supplier_quote?.assignedBy ?? null
+    }));
+
     const data = {
-        quotation_unique_id: await quoteId.toString(),
+        quotation_unique_id: quoteId,
         query_id,
-        final_quote: [...final_quotes]
-    }
+        final_quote: final_quotes
+    };
 
     if (bidSettingData?._id) {
-        data.bid_setting = bidSettingData?._id
+        data.bid_setting = bidSettingData._id;
     }
 
-    const newQuotation = await quotation.create(data)
-    console.log('new Quotation : ', newQuotation)
+    const newQuotation = await quotation.create(data);
+    console.log('new Quotation : ', newQuotation);
 
-    await timeline_data.map(async i => await version_history.create({
-        quotation_id: newQuotation._id,
-        ...i
-    }))
+    await Promise.all(
+        timeline_data.map(i =>
+            version_history.create({
+                quotation_id: newQuotation._id,
+                ...i
+            })
+        )
+    );
 }
+
 
 exports.addFinalQuote = async (req, res) => {
     try {
@@ -419,28 +474,30 @@ exports.addFinalQuote = async (req, res) => {
                 code: 400,
             });
         }
-        let result
-        await final_quotes.map(async i => {
-            result = await query_assigned_suppliers.findOneAndUpdate(
-                {
-                    _id: new mongoose.Types.ObjectId(i._id)
-                },
-                {
-                    $set: {
-                        supplier_quote: i.supplier_quote,
-                        logistics_price: i.logistics_price,
-                        admin_margin: {
-                            value: i.admin_margin.value,
-                            margin_type: i.admin_margin.margin_type
+        let result = await Promise.all(
+            final_quotes.map(async i =>
+                query_assigned_suppliers.findOneAndUpdate(
+                    {
+                        query_id: new mongoose.Types.ObjectId(query_id),
+                        is_selected: true
+                    },
+                    {
+                        $set: {
+                            supplier_quote: i?.supplier_quote,
+                            logistics_price: i?.logistics_price,
+                            admin_margin: {
+                                value: i?.admin_margin?.value,
+                                margin_type: i?.admin_margin?.margin_type
+                            }
                         }
-                    }
-                },
-                { new: true }
+                    },
+                    { new: true }
+                )
             )
-            console.log("result : ", result)
-        })
+        );
+        console.log("result : ", result)
 
-        await createQuotation(result, query_id, res)
+        await createQuotation(final_quotes, query_id, res)
         queryData.status = "completed"
         await queryData.save()
 

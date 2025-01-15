@@ -55,7 +55,14 @@ const quotationSchema = new mongoose.Schema({
     logistics_quote: {
         type: {
             quantity: {
-                type: Number
+                value: {
+                    type: Number,
+                    required: true
+                },
+                unit: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'quantity_units'
+                }
             },
             price: {
                 type: Number
@@ -88,10 +95,12 @@ const quotationSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'products',
             },
-            supplier_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'users',
-            },
+            supplier_id: [
+                {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'users',
+                }
+            ],
             logistics_id: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'users',
@@ -100,7 +109,14 @@ const quotationSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
             },
             quantity: {
-                type: Number
+                value: {
+                    type: Number,
+                    required: true
+                },
+                unit: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'quantity_units'
+                }
             },
             price: {
                 type: Number
@@ -146,7 +162,14 @@ const quotationSchema = new mongoose.Schema({
             supplier_quote: {
                 type: {
                     quantity: {
-                        type: Number
+                        value: {
+                            type: Number,
+                            required: true
+                        },
+                        unit: {
+                            type: mongoose.Schema.Types.ObjectId,
+                            ref: 'quantity_units'
+                        }
                     },
                     price: {
                         type: Number
@@ -170,7 +193,14 @@ const quotationSchema = new mongoose.Schema({
             admin_quote: {
                 type: {
                     quantity: {
-                        type: Number
+                        value: {
+                            type: Number,
+                            required: true
+                        },
+                        unit: {
+                            type: mongoose.Schema.Types.ObjectId,
+                            ref: 'quantity_units'
+                        }
                     },
                     price: {
                         type: Number
