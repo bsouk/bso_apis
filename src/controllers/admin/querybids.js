@@ -419,9 +419,9 @@ exports.addFinalQuote = async (req, res) => {
                 code: 400,
             });
         }
-
+        let result
         await final_quotes.map(async i => {
-            const result = await query_assigned_suppliers.findOneAndUpdate(
+            result = await query_assigned_suppliers.findOneAndUpdate(
                 {
                     _id: new mongoose.Types.ObjectId(i._id)
                 },
@@ -440,7 +440,7 @@ exports.addFinalQuote = async (req, res) => {
             console.log("result : ", result)
         })
 
-        await createQuotation(final_quotes, query_id, res)
+        await createQuotation(result, query_id, res)
         queryData.status = "completed"
         await queryData.save()
 
