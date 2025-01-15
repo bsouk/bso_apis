@@ -427,10 +427,6 @@ exports.addFinalQuote = async (req, res) => {
                 },
                 {
                     $set: {
-                        quantity: {
-                            value: i.quantity.value,
-                            unit: i.quantity.unit
-                        },
                         supplier_quote: i.supplier_quote,
                         logistics_price: i.logistics_price,
                         admin_margin: {
