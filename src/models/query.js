@@ -126,8 +126,7 @@ const querySchema = new mongoose.Schema({
             },
             quantity: {
                 value: {
-                    type: Number,
-                    required: true
+                    type: Number
                 },
                 unit: {
                     type: mongoose.Schema.Types.ObjectId,
