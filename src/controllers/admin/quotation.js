@@ -123,11 +123,6 @@ exports.getQuotationList = async (req, res) => {
                 },
                 { $match: { ...filter } },
                 {
-                    $project: {
-                        query_data: 0
-                    }
-                },
-                {
                     $sort: { createdAt: -1 }
                 },
                 {
@@ -549,6 +544,36 @@ exports.getQuotationDetails = async (req, res) => {
                                 },
                                 0
                             ]
+                        },
+                        "final_quote.quantity": {
+                            $let: {
+                                vars: {
+                                    matchingQueryDetail: {
+                                        $arrayElemAt: [
+                                            {
+                                                $filter: {
+                                                    input:
+                                                        "$query_data.queryDetails",
+                                                    as: "queryDetail",
+                                                    cond: {
+                                                        $eq: [
+                                                            "$$queryDetail.product.id",
+                                                            "$final_quote.product_id"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+                                in: {
+                                    $ifNull: [
+                                        "$$matchingQueryDetail.quantity",
+                                        0
+                                    ]
+                                }
+                            }
                         }
                     }
                 },
