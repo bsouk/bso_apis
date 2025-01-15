@@ -142,20 +142,7 @@ exports.getQuotationList = async (req, res) => {
             quotation_unique_id: 1,
         }
         if (user_data.user_type === "supplier") {
-            filter["final_quote.assignedBy.id"] = new mongoose.Types.ObjectId(userId);
-            filter["final_quote.assignedBy.type"] = "supplier";
-            filter_data.final_quote = {
-                $filter: {
-                    input: "$final_quote",
-                    as: "quote",
-                    cond: {
-                        $and: [
-                            { $eq: ["$$quote.assignedBy.id", new mongoose.Types.ObjectId(userId)] },
-                            { $eq: ["$$quote.assignedBy.type", "supplier"] }
-                        ]
-                    }
-                }
-            }
+            filter["final_quote.supplier_id"] = { $in: [new mongoose.Types.ObjectId(userId)] }
         }
 
         if (user_data.user_type === "logistics") {
