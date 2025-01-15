@@ -1130,6 +1130,153 @@ exports.getMyQueries = async (req, res) => {
 
             count = await Query.countDocuments({ ...filter, ...userMatchCondition });
         } else {
+            // data = await query_assigned_suppliers.aggregate(
+            //     [
+            //         {
+            //             $match: {
+            //                 variant_assigned_to: new mongoose.Types.ObjectId(userId)
+            //             }
+            //         },
+            //         {
+            //             $lookup: {
+            //                 from: "queries",
+            //                 let: {
+            //                     id: "$query_id",
+            //                     productid: "$product_id",
+            //                     variantid: "$variant_id"
+            //                 },
+            //                 pipeline: [
+            //                     {
+            //                         $match: {
+            //                             $expr: {
+            //                                 $eq: ["$$id", "$_id"]
+            //                             }
+            //                         }
+            //                     },
+            //                     {
+            //                         $unwind: {
+            //                             path: "$queryDetails"
+            //                         }
+            //                     },
+            //                     {
+            //                         $match: {
+            //                             // $and: [
+            //                             //     {
+            //                             //         $expr: {
+            //                             //             $eq: [
+            //                             //                 "$queryDetails.product.id",
+            //                             //                 "$$productid"
+            //                             //             ]
+            //                             //         }
+            //                             //     },
+            //                             //     {
+            //                             //         $expr: {
+            //                             //             $eq: [
+            //                             //                 "$queryDetails.variant._id",
+            //                             //                 "$$variantid"
+            //                             //             ]
+            //                             //         }
+            //                             //     }
+            //                             // ]
+
+            //                             $expr: {
+            //                                 $eq: [
+            //                                     "$queryDetails.product.id",
+            //                                     "$$productid"
+            //                                 ]
+            //                             }
+            //                         }
+            //                     },
+            //                     {
+            //                         $group: {
+            //                             _id: "$_id",
+            //                             query_unique_id: {
+            //                                 $first: "$query_unique_id"
+            //                             },
+            //                             status: {
+            //                                 $first: "$status"
+            //                             },
+            //                             createdByUser: {
+            //                                 $first: "$createdByUser"
+            //                             },
+            //                             adminApproved: {
+            //                                 $first: "$adminApproved"
+            //                             },
+            //                             queryDetails: {
+            //                                 $push: "$queryDetails"
+            //                             },
+            //                             createdAt: { $first: "$createdAt" },
+            //                             updatedAt: { $first: "$updatedAt" }
+            //                         }
+            //                     },
+            //                     {
+            //                         $project: {
+            //                             "queryDetails.quantity": 0
+            //                         }
+            //                     }
+            //                 ],
+            //                 as: "query_data"
+            //             }
+            //         },
+            //         {
+            //             $lookup: {
+            //                 from: "quantity_units",
+            //                 let: { id: "$quantity.unit" },
+            //                 pipeline: [
+            //                     {
+            //                         $match: {
+            //                             $expr: {
+            //                                 $eq: ["$$id", "$_id"]
+            //                             }
+            //                         }
+            //                     }
+            //                 ],
+            //                 as: "quantity_unit"
+            //             }
+            //         },
+            //         {
+            //             $unwind: {
+            //                 path: "$quantity_unit",
+            //                 preserveNullAndEmptyArrays: true
+            //             }
+            //         },
+            //         {
+            //             $unwind: {
+            //                 path: "$query_data",
+            //                 preserveNullAndEmptyArrays: true
+            //             }
+            //         },
+            //         {
+            //             $addFields: {
+            //                 "query_data.queryDetails.split_quantity.total_quantity.unit":
+            //                     "$quantity_unit.unit",
+            //                 "query_data.queryDetails.split_quantity.total_quantity.unit_id":
+            //                     "$quantity_unit._id",
+
+            //                 "query_data.queryDetails.split_quantity.quantity_assigned.unit":
+            //                     "$quantity_unit.unit",
+            //                 "query_data.queryDetails.split_quantity.quantity_assigned.unit_id":
+            //                     "$quantity_unit._id",
+            //             }
+            //         },
+            //         {
+            //             $project: {
+            //                 _id: 0,
+            //                 query_data: 1,
+            //             }
+            //         },
+            //         {
+            //             $sort: { createdAt: -1 }
+            //         },
+            //         {
+            //             $skip: parseInt(offset) || 0
+            //         },
+            //         {
+            //             $limit: parseInt(limit) || 10
+            //         }
+            //     ]
+            // )
+
             data = await query_assigned_suppliers.aggregate(
                 [
                     {
@@ -1154,59 +1301,26 @@ exports.getMyQueries = async (req, res) => {
                                     }
                                 },
                                 {
-                                    $unwind: {
-                                        path: "$queryDetails"
-                                    }
+                                    $unwind: "$queryDetails"
                                 },
                                 {
                                     $match: {
-                                        // $and: [
-                                        //     {
-                                        //         $expr: {
-                                        //             $eq: [
-                                        //                 "$queryDetails.product.id",
-                                        //                 "$$productid"
-                                        //             ]
-                                        //         }
-                                        //     },
-                                        //     {
-                                        //         $expr: {
-                                        //             $eq: [
-                                        //                 "$queryDetails.variant._id",
-                                        //                 "$$variantid"
-                                        //             ]
-                                        //         }
-                                        //     }
-                                        // ]
-
                                         $expr: {
-                                            $eq: [
-                                                "$queryDetails.product.id",
-                                                "$$productid"
+                                            $and: [
+                                                {
+                                                    $eq: [
+                                                        "$queryDetails.product.id",
+                                                        "$$productid"
+                                                    ]
+                                                },
+                                                {
+                                                    $eq: [
+                                                        "$queryDetails.variant._id",
+                                                        "$$variantid"
+                                                    ]
+                                                }
                                             ]
                                         }
-                                    }
-                                },
-                                {
-                                    $group: {
-                                        _id: "$_id",
-                                        query_unique_id: {
-                                            $first: "$query_unique_id"
-                                        },
-                                        status: {
-                                            $first: "$status"
-                                        },
-                                        createdByUser: {
-                                            $first: "$createdByUser"
-                                        },
-                                        adminApproved: {
-                                            $first: "$adminApproved"
-                                        },
-                                        queryDetails: {
-                                            $push: "$queryDetails"
-                                        },
-                                        createdAt: { $first: "$createdAt" },
-                                        updatedAt: { $first: "$updatedAt" }
                                     }
                                 },
                                 {
@@ -1225,9 +1339,7 @@ exports.getMyQueries = async (req, res) => {
                             pipeline: [
                                 {
                                     $match: {
-                                        $expr: {
-                                            $eq: ["$$id", "$_id"]
-                                        }
+                                        $expr: { $eq: ["$$id", "$_id"] }
                                     }
                                 }
                             ],
@@ -1252,17 +1364,34 @@ exports.getMyQueries = async (req, res) => {
                                 "$quantity_unit.unit",
                             "query_data.queryDetails.split_quantity.total_quantity.unit_id":
                                 "$quantity_unit._id",
-
                             "query_data.queryDetails.split_quantity.quantity_assigned.unit":
                                 "$quantity_unit.unit",
                             "query_data.queryDetails.split_quantity.quantity_assigned.unit_id":
-                                "$quantity_unit._id",
+                                "$quantity_unit._id"
                         }
                     },
                     {
-                        $project: {
-                            _id: 0,
-                            query_data: 1,
+                        $group: {
+                            _id: "$query_id",
+                            query_unique_id: {
+                                $first: "$query_data.query_unique_id"
+                            },
+                            status: { $first: "$query_data.status" },
+                            createdByUser: {
+                                $first: "$query_data.createdByUser"
+                            },
+                            adminApproved: {
+                                $first: "$query_data.adminApproved"
+                            },
+                            queryDetails: {
+                                $push: "$query_data.queryDetails"
+                            },
+                            createdAt: {
+                                $first: "$query_data.createdAt"
+                            },
+                            updatedAt: {
+                                $first: "$query_data.updatedAt"
+                            }
                         }
                     },
                     {
