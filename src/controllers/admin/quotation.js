@@ -34,61 +34,110 @@ exports.getQuotationList = async (req, res) => {
             filter.is_approved = status
         }
 
-        const data = await quotation.aggregate([
-            // { $match: { ...filter } },
-            {
-                $lookup: {
-                    from: 'queries',
-                    localField: 'query_id',
-                    foreignField: '_id',
-                    as: 'query_data'
+        const data = await quotation.aggregate(
+            [
+                // { $match: { ...filter } },
+                {
+                    $lookup: {
+                        from: 'queries',
+                        localField: 'query_id',
+                        foreignField: '_id',
+                        as: 'query_data'
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'bidsettings',
+                        localField: 'bid_setting',
+                        foreignField: '_id',
+                        as: 'bid_setting_data'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$query_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$bid_setting_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        localField: 'query_data.createdByUser',
+                        foreignField: '_id',
+                        as: 'query_user_data'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$query_user_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        final_quote: {
+                            $map: {
+                                input: "$final_quote",
+                                as: "fq",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$fq",
+                                        {
+                                            quantity: {
+                                                $let: {
+                                                    vars: {
+                                                        matchedProduct: {
+                                                            $arrayElemAt: [
+                                                                {
+                                                                    $filter: {
+                                                                        input:
+                                                                            "$query_data.queryDetails",
+                                                                        as: "qd",
+                                                                        cond: {
+                                                                            $eq: [
+                                                                                "$$qd.product.id",
+                                                                                "$$fq.product_id"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                0
+                                                            ]
+                                                        }
+                                                    },
+                                                    in: "$$matchedProduct.quantity"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                { $match: { ...filter } },
+                {
+                    $project: {
+                        query_data: 0
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $skip: parseInt(offset)
+                },
+                {
+                    $limit: parseInt(limit)
                 }
-            },
-            {
-                $lookup: {
-                    from: 'bidsettings',
-                    localField: 'bid_setting',
-                    foreignField: '_id',
-                    as: 'bid_setting_data'
-                }
-            },
-            {
-                $unwind: {
-                    path: "$query_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $unwind: {
-                    path: "$bid_setting_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'query_data.createdByUser',
-                    foreignField: '_id',
-                    as: 'query_user_data'
-                }
-            },
-            {
-                $unwind: {
-                    path: "$query_user_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            { $match: { ...filter } },
-            {
-                $sort: { createdAt: -1 }
-            },
-            {
-                $skip: parseInt(offset)
-            },
-            {
-                $limit: parseInt(limit)
-            }
-        ])
+            ]
+        )
         const count = await quotation.countDocuments(filter)
         return res.status(200).json({
             message: "Quotation list fetched successfully",
