@@ -15,10 +15,14 @@ const assignedSuppliersSchema = new mongoose.Schema(
         variant_id: {
             type: mongoose.Schema.Types.ObjectId,
         },
-        variant_assigned_to: {
-            type: mongoose.Schema.Types.ObjectId, ref: 'users', required: false, default: null
-        },
-        user_type: { type: String, required: false, default: "admin" },
+        variant_assigned_to: [
+            {
+                id: {
+                    type: mongoose.Schema.Types.ObjectId, ref: 'users', required: false
+                },
+                user_type: { type: String, required: false, default: "admin" }
+            }
+        ],
         quantity: {
             value: {
                 type: Number,
@@ -55,7 +59,8 @@ const assignedSuppliersSchema = new mongoose.Schema(
             default: null
         },
         logistics_price: {
-            type: Number
+            type: Number,
+            default: 0
         },
         admin_margin: {
             value: {
