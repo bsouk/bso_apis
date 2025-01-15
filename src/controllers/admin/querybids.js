@@ -644,6 +644,105 @@ exports.generateFinalQuote = async (req, res) => {
     try {
         const { id } = req.params;
         const final_quotes = await query_assigned_suppliers.aggregate(
+            // [
+            //     {
+            //         $match: {
+            //             query_id: new mongoose.Types.ObjectId(id),
+            //             is_selected: true
+            //         }
+            //     },
+            //     {
+            //         $lookup: {
+            //             from: "products",
+            //             let: { id: "$product_id" },
+            //             pipeline: [
+            //                 {
+            //                     $match: {
+            //                         $expr: {
+            //                             $eq: ["$$id", "$_id"]
+            //                         }
+            //                     }
+            //                 },
+            //                 {
+            //                     $project: {
+            //                         _id: 1,
+            //                         name: 1
+            //                     }
+            //                 }
+            //             ],
+            //             as: "product_data"
+            //         }
+            //     },
+            //     {
+            //         $lookup: {
+            //             from: "queries",
+            //             let: { id: "$query_id" },
+            //             pipeline: [
+            //                 {
+            //                     $match: {
+            //                         $expr: {
+            //                             $eq: ["$$id", "$_id"]
+            //                         }
+            //                     }
+            //                 },
+            //                 {
+            //                     $project: {
+            //                         _id: 1,
+            //                         status: 1
+            //                     }
+            //                 }
+            //             ],
+            //             as: "query_data"
+            //         }
+            //     },
+            //     {
+            //         $lookup: {
+            //             from: "products",
+            //             let: { id: "$variant_id" },
+            //             pipeline: [
+            //                 {
+            //                     $unwind: {
+            //                         path: "$variant",
+            //                         preserveNullAndEmptyArrays: true
+            //                     }
+            //                 },
+            //                 {
+            //                     $match: {
+            //                         $expr: {
+            //                             $eq: ["$$id", "$variant._id"]
+            //                         }
+            //                     }
+            //                 }
+            //             ],
+            //             as: "variant_data"
+            //         }
+            //     },
+            //     {
+            //         $unwind: {
+            //             path: "$product_data",
+            //             preserveNullAndEmptyArrays: true
+            //         }
+            //     },
+            //     {
+            //         $unwind: {
+            //             path: "$query_data",
+            //             preserveNullAndEmptyArrays: true
+            //         }
+            //     },
+            //     {
+            //         $unwind: {
+            //             path: "$variant_data",
+            //             preserveNullAndEmptyArrays: true
+            //         }
+            //     },
+            //     {
+            //         $project: {
+            //             product_id: 0,
+            //             variant_id: 0,
+            //             query_id: 0
+            //         }
+            //     }
+            // ]
             [
                 {
                     $match: {
@@ -712,6 +811,11 @@ exports.generateFinalQuote = async (req, res) => {
                                         $eq: ["$$id", "$variant._id"]
                                     }
                                 }
+                            },
+                            {
+                                $project: {
+                                    variant: 1
+                                }
                             }
                         ],
                         as: "variant_data"
@@ -736,10 +840,39 @@ exports.generateFinalQuote = async (req, res) => {
                     }
                 },
                 {
+                    $group: {
+                        _id: {
+                            variant_id: "$variant_id",
+                            query_id: "$query_id",
+                            product_id: "$product_id"
+                        },
+                        variant_assigned_to: {
+                            $push: "$variant_assigned_to"
+                        },
+                        total_quantity: { $sum: "$quantity.value" },
+                        total_quantity_unit: {
+                            $first: "$quantity.unit"
+                        },
+                        is_selected: { $first: "$is_selected" },
+                        logistics_price: {
+                            $sum: "$logistics_price"
+                        },
+                        supplier_quote_price: { $sum: "$supplier_quote.price" },
+                        supplier_quote_media: { $push: "$supplier_quote.media" },
+                        supplier_quote_document: { $push: "$supplier_quote.document" },
+                        product_data: { $first: "$product_data" },
+                        query_data: { $first: "$query_data" },
+                        variant_data: {
+                            $first: "$variant_data.variant"
+                        },
+                        createdAt: { $first: "$createdAt" },
+                        updatedAt: { $first: "$updatedAt" }
+                    }
+                },
+                {
                     $project: {
-                        product_id: 0,
-                        variant_id: 0,
-                        query_id: 0
+                        _id: 0,
+                        product_id: 0
                     }
                 }
             ]
