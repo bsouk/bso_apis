@@ -483,7 +483,7 @@ exports.addFinalQuote = async (req, res) => {
                     },
                     {
                         $set: {
-                            supplier_quote: i?.supplier_quote,
+                            // supplier_quote: i?.supplier_quote,
                             logistics_price: i?.logistics_price,
                             admin_margin: {
                                 value: i?.admin_margin?.value,

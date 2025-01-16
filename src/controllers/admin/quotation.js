@@ -1021,15 +1021,15 @@ exports.approveRejectLogistics = async (req, res) => {
 
 exports.addAdminQuotationNotes = async (req, res) => {
     try {
-        const { quotation_id, quote_id,  note } = req.body
+        const { quotation_id, quote_id, note } = req.body
 
         const data = await quotation.findOneAndUpdate(
             {
                 _id: new mongoose.Types.ObjectId(quotation_id),
-                "final_quote._id" : new mongoose.Types.ObjectId(quote_id)
+                "final_quote._id": new mongoose.Types.ObjectId(quote_id)
             },
             {
-                $set: { 'admin_notes': note }
+                $set: { 'final_quote.$.admin_notes': note }
             },
             { new: true }
         )
@@ -1225,18 +1225,19 @@ exports.getVersionHistory = async (req, res) => {
 
 exports.getQuotationAssignedSupplier = async (req, res) => {
     try {
-        const { quotation_id } = req.query
+        const { quotation_id, quote_id } = req.query
         const data = await quotation.aggregate(
             [
-                {
-                    $match: {
-                        _id: new mongoose.Types.ObjectId(quotation_id)
-                    }
-                },
                 {
                     $unwind: {
                         path: "$final_quote",
                         preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: {
+                        _id: new mongoose.Types.ObjectId(quotation_id),
+                        'final_quote._id': new mongoose.Types.ObjectId(quote_id)
                     }
                 },
                 {
@@ -1347,16 +1348,17 @@ exports.getQuotationAssignedSupplier = async (req, res) => {
                 },
                 {
                     $group: {
-                        _id: "_id",
+                        _id: "$final_quote._id",
                         final_quote: { $push: "$final_quote" },
                         product_data: { $first: "$product_data" },
                         supplier_data: { $first: "$supplier_data" },
-                        variant_data: { $first: "$variant_data.variant" }
+                        variant_data: {
+                            $first: "$variant_data.variant"
+                        }
                     }
                 },
                 {
                     $project: {
-                        _id: 1,
                         final_quote: 1,
                         product_data: 1,
                         variant_data: 1,
