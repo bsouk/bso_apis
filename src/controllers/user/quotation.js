@@ -691,7 +691,7 @@ exports.addQuotationNotes = async (req, res) => {
             })
         }
 
-        const queryData = await query_assigned_suppliers.findOne(
+        const queryData = await query_assigned_suppliers.findOneAndUpdate(
             {
                 quotation_id: new mongoose.Types.ObjectId(quotation_id),
                 variant_assigned_to: new mongoose.Types.ObjectId(supplier_id)
@@ -709,7 +709,6 @@ exports.addQuotationNotes = async (req, res) => {
                 code: 404,
             });
         }
-        console.log('quote : ', quote)
         const currentTime = await moment(Date.now()).format('lll')
         const timeline_data = {
             date: currentTime,
@@ -732,7 +731,7 @@ exports.addQuotationNotes = async (req, res) => {
 
         return res.status(200).json({
             message: "Quotation notes added successfully",
-            data,
+            data : queryData,
             code: 200
         })
 
