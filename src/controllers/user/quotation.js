@@ -9,6 +9,7 @@ const order = require("../../models/order");
 const payment = require("../../models/payment");
 const tracking_order = require("../../models/tracking_order");
 const version_history = require("../../models/version_history");
+const query = require("../../models/query");
 
 exports.getQuotationList = async (req, res) => {
     try {
@@ -36,64 +37,100 @@ exports.getQuotationList = async (req, res) => {
             filter.is_approved = status
         }
 
-        let filter_data = {
-            query_data: 1,
-            bid_setting_data: 1,
-            createdAt: 1,
-            updatedAt: 1,
-            is_approved: 1,
-            quotation_unique_id: 1,
-        }
-        if (user_data.user_type === "supplier") {
-            filter["final_quote.supplier_id"] = { $in: [new mongoose.Types.ObjectId(userId)] }
-        }
+        // let filter_data = {
+        //     query_data: 1,
+        //     bid_setting_data: 1,
+        //     createdAt: 1,
+        //     updatedAt: 1,
+        //     is_approved: 1,
+        //     quotation_unique_id: 1,
+        // }
+        // if (user_data.user_type === "supplier") {
+        //     filter["final_quote.supplier_id"] = { $in: [new mongoose.Types.ObjectId(userId)] }
+        // }
 
-        if (user_data.user_type === "logistics") {
-            filter.decided_logistics_id = new mongoose.Types.ObjectId(userId);
-            filter["final_quote.logistics_id"] = new mongoose.Types.ObjectId(userId);
-        }
+        // if (user_data.user_type === "logistics") {
+        //     filter.decided_logistics_id = new mongoose.Types.ObjectId(userId);
+        //     filter["final_quote.logistics_id"] = new mongoose.Types.ObjectId(userId);
+        // }
 
-        const data = await quotation.aggregate([
-            {
-                $match: { ...filter }
-            },
-            // {
-            //     $lookup: {
-            //         from: "queries",
-            //         localField: "query_id",
-            //         foreignField: "_id",
-            //         as: "query_data",
-            //     },
-            // },
-            // {
-            //     $unwind: {
-            //         path: "$query_data",
-            //         preserveNullAndEmptyArrays: true
-            //     }
-            // },
-            {
-                $lookup: {
-                    from: "bidsettings",
-                    localField: "bid_setting",
-                    foreignField: "_id",
-                    as: "bid_setting_data",
+        // const data = await quotation.aggregate([
+        //     {
+        //         $match: { ...filter }
+        //     },
+        //     {
+        //         $lookup: {
+        //             from: "bidsettings",
+        //             localField: "bid_setting",
+        //             foreignField: "_id",
+        //             as: "bid_setting_data",
+        //         },
+        //     },
+        //     {
+        //         $unwind: {
+        //             path: "$bid_setting_data",
+        //             preserveNullAndEmptyArrays: true
+        //         }
+        //     },
+        //     {
+        //         $project: filter_data
+        //     },
+        //     {
+        //         $sort: { createdAt: -1 },
+        //     },
+        //     { $skip: parseInt(offset) },
+        //     { $limit: parseInt(limit) },
+        // ]);
+        let data = []
+        if (user_data.user_type === "buyer") {
+            data = await query.aggregate([
+                {
+                    $match: { createdByUser: userId }
                 },
-            },
-            {
-                $unwind: {
-                    path: "$bid_setting_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $project: filter_data
-            },
-            {
-                $sort: { createdAt: -1 },
-            },
-            { $skip: parseInt(offset) },
-            { $limit: parseInt(limit) },
-        ]);
+                {
+                    $lookup: {
+                        from: "quotations",
+                        let: { id: '$_id' },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$query_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $match: filter
+                            },
+                        ],
+                        as: "quotations"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$quotations",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        quotations: 1
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 },
+                },
+                { $skip: parseInt(offset) },
+                { $limit: parseInt(limit) }
+            ]);
+
+            console.log("quotations: ", data);
+        }
+
+        if (user_data.user_type === "supplier") {
+
+        }
 
         const count = await quotation.countDocuments(filter);
 
@@ -113,6 +150,11 @@ exports.getQuotationList = async (req, res) => {
 exports.getQuotationDetails = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user._id;
+        console.log("User ID:", userId);
+
+        const user_data = await user.findOne({ _id: userId });
+        console.log("Logged user:", user_data);
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return utils.handleError(res, {
@@ -120,598 +162,473 @@ exports.getQuotationDetails = async (req, res) => {
                 code: 404,
             });
         }
-
-        // const data = await quotation.aggregate([
-        //     {
-        //         $match: { _id: new mongoose.Types.ObjectId(id) },
-        //     },
-        //     {
-        //         $lookup: {
-        //             from: "queries",
-        //             localField: "query_id",
-        //             foreignField: "_id",
-        //             as: "query_data",
-        //         },
-        //     },
-        //     {
-        //         $unwind: {
-        //             path: "$query_data",
-        //             preserveNullAndEmptyArrays: true,
-        //         },
-        //     },
-        //     {
-        //         $lookup: {
-        //             from: "bidsettings",
-        //             localField: "bid_setting",
-        //             foreignField: "_id",
-        //             as: "bid_setting_data",
-        //         },
-        //     },
-        //     {
-        //         $unwind: {
-        //             path: "$bid_setting_data",
-        //             preserveNullAndEmptyArrays: true,
-        //         },
-        //     },
-        //     {
-        //         $lookup: {
-        //             from: "products",
-        //             localField: "final_quote.product_id",
-        //             foreignField: "_id",
-        //             as: "product_data",
-        //         },
-        //     },
-        //     {
-        //         $lookup: {
-        //             from: "users",
-        //             localField: "final_quote.supplier_id",
-        //             foreignField: "_id",
-        //             as: "supplier_data",
-        //         },
-        //     },
-        //     {
-        //         $lookup: {
-        //             from: "variants",
-        //             localField: "final_quote.variant_id",
-        //             foreignField: "_id",
-        //             as: "variant_data",
-        //         },
-        //     },
-        //     {
-        //         $addFields: {
-        //             final_quote: {
-        //                 $map: {
-        //                     input: "$final_quote",
-        //                     as: "quote",
-        //                     in: {
-        //                         $mergeObjects: [
-        //                             "$$quote",
-        //                             {
-        //                                 product: {
-        //                                     $arrayElemAt: [
-        //                                         {
-        //                                             $filter: {
-        //                                                 input: "$product_data",
-        //                                                 as: "product",
-        //                                                 cond: {
-        //                                                     $eq: [
-        //                                                         "$$product._id",
-        //                                                         "$$quote.product_id",
-        //                                                     ],
-        //                                                 },
-        //                                             },
-        //                                         },
-        //                                         0,
-        //                                     ],
-        //                                 },
-        //                                 supplier: {
-        //                                     $arrayElemAt: [
-        //                                         {
-        //                                             $filter: {
-        //                                                 input: "$supplier_data",
-        //                                                 as: "supplier",
-        //                                                 cond: {
-        //                                                     $eq: [
-        //                                                         "$$supplier._id",
-        //                                                         "$$quote.supplier_id",
-        //                                                     ],
-        //                                                 },
-        //                                             },
-        //                                         },
-        //                                         0,
-        //                                     ],
-        //                                 },
-        //                                 variant: {
-        //                                     $arrayElemAt: [
-        //                                         {
-        //                                             $filter: {
-        //                                                 input: "$variant_data",
-        //                                                 as: "variant",
-        //                                                 cond: {
-        //                                                     $eq: [
-        //                                                         "$$variant._id",
-        //                                                         "$$quote.variant_id",
-        //                                                     ],
-        //                                                 },
-        //                                             },
-        //                                         },
-        //                                         0,
-        //                                     ],
-        //                                 },
-        //                             },
-        //                         ],
-        //                     },
-        //                 },
-        //             },
-        //         },
-        //     },
-        //     {
-        //         $project: {
-        //             query_id: 0,
-        //             bid_setting: 0,
-        //             product_data: 0,
-        //             supplier_data: 0,
-        //             variant_data: 0,
-        //         },
-        //     },
-        // ]);
-
-        const data = await quotation.aggregate(
-            [
-                {
-                    $match: {
-                        _id: new mongoose.Types.ObjectId(id)
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "queries",
-                        localField: "query_id",
-                        foreignField: "_id",
-                        as: "query_data"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$query_data",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$final_quote",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                // {
-                //     $lookup: {
-                //         from: "bidsettings",
-                //         localField: "bid_setting",
-                //         foreignField: "_id",
-                //         as: "bid_setting_data"
-                //     }
-                // },
-                // {
-                //     $unwind: {
-                //         path: "$bid_setting_data",
-                //         preserveNullAndEmptyArrays: true
-                //     }
-                // },
-                {
-                    $lookup: {
-                        from: "products",
-                        let: { id: "$final_quote.product_id" },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: ["$$id", "$_id"]
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 1,
-                                    name: 1
-                                }
-                            }
-                        ],
-                        // localField: "final_quote.product_id",
-                        // foreignField: "_id",
-                        as: "product_data"
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "users",
-                        let: { id: "$final_quote.supplier_id" },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: ["$_id", "$$id"]
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 1,
-                                    full_name: 1
-                                }
-                            }
-                        ],
-                        as: "supplier_data"
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "products",
-                        let: {
-                            variantId: "$final_quote.variant_id"
-                        },
-                        pipeline: [
-                            { $unwind: "$variant" },
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: ["$variant._id", "$$variantId"]
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 1,
-                                    variant: 1
-                                }
-                            }
-                        ],
-                        as: "variant_data"
-                    }
-                },
-                {
-                    $addFields: {
-                        "final_quote.product": {
-                            $arrayElemAt: [
+        let data = []
+        if (user_data.user_type === 'supplier') {
+            data = await quotation.aggregate(
+                [
+                    {
+                        $match: {
+                            _id: new mongoose.Types.ObjectId(id)
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "bidsettings",
+                            localField: "bid_setting",
+                            foreignField: "_id",
+                            as: "bid_setting_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$bid_setting_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "decided_logistics_id",
+                            foreignField: "_id",
+                            as: "logistics_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$logistics_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "query_assigned_suppliers",
+                            let: { id: "$_id" },
+                            pipeline: [
                                 {
-                                    $filter: {
-                                        input: "$product_data",
-                                        as: "product",
-                                        cond: {
-                                            $eq: [
-                                                "$$product._id",
-                                                "$final_quote.product_id"
-                                            ]
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$quotation_id", "$$id"]
                                         }
                                     }
                                 },
-                                0
-                            ]
-                        },
-                        "final_quote.supplier": {
-                            $arrayElemAt: [
                                 {
-                                    $filter: {
-                                        input: "$supplier_data",
-                                        as: "supplier",
-                                        cond: {
-                                            $eq: [
-                                                "$$supplier._id",
-                                                "$final_quote.supplier_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "final_quote.variant_data": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$variant_data",
-                                        as: "variant",
-                                        cond: {
-                                            $eq: [
-                                                "$$variant.variant._id",
-                                                "$final_quote.variant_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "final_quote.query_data": {
-                            $let: {
-                                vars: {
-                                    matchingQueryDetail: {
-                                        $arrayElemAt: [
+                                    $lookup: {
+                                        from: "products",
+                                        let: { vid: "$variant_id" },
+                                        pipeline: [
                                             {
-                                                $filter: {
-                                                    input:
-                                                        "$query_data.queryDetails",
-                                                    as: "queryDetail",
-                                                    cond: {
-                                                        $eq: [
-                                                            "$$queryDetail.product.id",
-                                                            "$final_quote.product_id"
-                                                        ]
+                                                $unwind: {
+                                                    path: "$variant"
+                                                }
+                                            },
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$variant._id", "$$vid"]
                                                     }
                                                 }
                                             },
-                                            0
-                                        ]
+                                            {
+                                                $project: {
+                                                    _id: 1,
+                                                    variant: {
+                                                        images: 1,
+                                                        tag: 1
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        as: "variant_data"
                                     }
                                 },
-                                in: {
-                                    $ifNull: [
-                                        "$$matchingQueryDetail",
-                                        0
-                                    ]
-                                }
-                            }
-                        }
-                    }
-                },
-                {
-                    $group: {
-                        _id: "$_id",
-                        data: { $first: "$$ROOT" },
-                        final_quote: { $push: "$final_quote" }
-                    }
-                },
-                {
-                    $replaceRoot: {
-                        newRoot: {
-                            $mergeObjects: [
-                                "$data",
-                                { final_quote: "$final_quote" }
-                            ]
-                        }
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$final_quotation_order",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "products",
-                        let: {
-                            variantId:
-                                "$final_quotation_order.variant_id"
-                        },
-                        pipeline: [
-                            { $unwind: "$variant" },
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: ["$variant._id", "$$variantId"]
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 0,
-                                    variant: 1
-                                }
-                            }
-                        ],
-                        as: "variant_data"
-                    }
-                },
-                {
-                    $addFields: {
-                        "final_quotation_order.product": {
-                            $arrayElemAt: [
                                 {
-                                    $filter: {
-                                        input: "$product_data",
-                                        as: "product",
-                                        cond: {
-                                            $eq: [
-                                                "$$product._id",
-                                                "$final_quotation_order.product_id"
-                                            ]
-                                        }
+                                    $lookup: {
+                                        from: "products",
+                                        let: { pid: "$product_id" },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$_id", "$$pid"]
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    _id: 1,
+                                                    name: 1
+                                                }
+                                            }
+                                        ],
+                                        as: "product_data"
                                     }
                                 },
-                                0
-                            ]
-                        },
-                        "final_quotation_order.supplier": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$supplier_data",
-                                        as: "supplier",
-                                        cond: {
-                                            $eq: [
-                                                "$$supplier._id",
-                                                "$final_quotation_order.supplier_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        },
-                        "final_quotation_order.variant": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$variant_data",
-                                        as: "variant",
-                                        cond: {
-                                            $eq: [
-                                                "$$variant.variant._id",
-                                                "$final_quotation_order.variant_id"
-                                            ]
-                                        }
-                                    }
-                                },
-                                0
-                            ]
-                        }
-                    }
-                },
-                {
-                    $group: {
-                        _id: "$_id",
-                        data: { $first: "$$ROOT" },
-                        final_quotation_order: {
-                            $push: "$final_quotation_order"
-                        }
-                    }
-                },
-                {
-                    $replaceRoot: {
-                        newRoot: {
-                            $mergeObjects: [
-                                "$data",
-                                {
-                                    final_quotation_order:
-                                        "$final_quotation_order"
-                                }
-                            ]
-                        }
-                    }
-                },
 
-                // {
-                //     $unwind: {
-                //         path: "$version_history",
-                //         preserveNullAndEmptyArrays: true
-                //     }
-                // },
-                // {
-                //     $lookup: {
-                //         from: "products",
-                //         let: {
-                //             timelineVariantId:
-                //                 "$version_history.variant_id"
-                //         },
-                //         pipeline: [
-                //             { $unwind: "$variant" },
-                //             {
-                //                 $match: {
-                //                     $expr: {
-                //                         $eq: [
-                //                             "$variant._id",
-                //                             "$$timelineVariantId"
-                //                         ]
-                //                     }
-                //                 }
-                //             },
-                //             {
-                //                 $project: {
-                //                     _id: 0,
-                //                     variant: 1
-                //                 }
-                //             }
-                //         ],
-                //         as: "timeline_variant_data"
-                //     }
-                // },
-                // {
-                //     $addFields: {
-                //         "version_history.product": {
-                //             $arrayElemAt: [
-                //                 {
-                //                     $filter: {
-                //                         input: "$product_data",
-                //                         as: "product",
-                //                         cond: {
-                //                             $eq: [
-                //                                 "$$product._id",
-                //                                 "$version_history.product_id"
-                //                             ]
-                //                         }
-                //                     }
-                //                 },
-                //                 0
-                //             ]
-                //         },
-                //         "version_history.supplier": {
-                //             $arrayElemAt: [
-                //                 {
-                //                     $filter: {
-                //                         input: "$supplier_data",
-                //                         as: "supplier",
-                //                         cond: {
-                //                             $eq: [
-                //                                 "$$supplier._id",
-                //                                 "$version_history.supplier_id"
-                //                             ]
-                //                         }
-                //                     }
-                //                 },
-                //                 0
-                //             ]
-                //         },
-                //         "version_history.variant": {
-                //             $arrayElemAt: [
-                //                 {
-                //                     $filter: {
-                //                         input: "$timeline_variant_data",
-                //                         as: "variant",
-                //                         cond: {
-                //                             $eq: [
-                //                                 "$$variant.variant._id",
-                //                                 "$version_history.variant_id"
-                //                             ]
-                //                         }
-                //                     }
-                //                 },
-                //                 0
-                //             ]
-                //         }
-                //     }
-                // },
-                // {
-                //     $group: {
-                //         _id: "$_id",
-                //         data: { $first: "$$ROOT" },
-                //         version_history: {
-                //             $push: "$version_history"
-                //         }
-                //     }
-                // },
-                // {
-                //     $replaceRoot: {
-                //         newRoot: {
-                //             $mergeObjects: [
-                //                 "$data",
-                //                 { version_history: "$version_history" }
-                //             ]
-                //         }
-                //     }
-                // },
-                // {
-                //     $unwind: {
-                //         path: '$query_data',
-                //         preserveNullAndEmptyArrays: true
-                //     }
-                // },
-                {
-                    $project: {
-                        query_id: 0,
-                        bid_setting: 0,
-                        product_data: 0,
-                        supplier_data: 0,
-                        variant_data: 0,
-                        timeline_variant_data: 0,
-                        query_data: 0,
-                        final_quotation_order: 0,
-                        "final_quote.product_id": 0,
-                        "final_quote.supplier_id": 0,
-                        "final_quote.variant_id": 0,
+                                {
+                                    $lookup: {
+                                        from: "users",
+                                        let: { pid: "$variant_assigned_to" },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$_id", "$$pid"]
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    _id: 1,
+                                                    full_name: 1
+                                                }
+                                            }
+                                        ],
+                                        as: "supplier_data"
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$product_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$variant_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$supplier_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "queries",
+                                        let: {
+                                            id: "$query_id",
+                                            vid: "$variant_id"
+                                        },
+                                        pipeline: [
+                                            {
+                                                $unwind: {
+                                                    path: "$queryDetails",
+                                                    preserveNullAndEmptyArrays: true
+                                                }
+                                            },
+                                            {
+                                                $match: {
+                                                    $and: [
+                                                        {
+                                                            $expr: {
+                                                                $eq: ["$$id", "$_id"]
+                                                            }
+                                                        },
+                                                        {
+                                                            $expr: {
+                                                                $eq: [
+                                                                    "$$vid",
+                                                                    "$queryDetails.variant._id"
+                                                                ]
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    "queryDetails.split_quantity": 1
+                                                }
+                                            }
+                                        ],
+                                        as: "query_data"
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        split_quantity: {
+                                            $arrayElemAt: [
+                                                "$query_data.queryDetails.split_quantity",
+                                                0
+                                            ]
+                                        }
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        query_id: 0,
+                                        product_id: 0,
+                                        variant_id: 0,
+                                        admin_margin: 0,
+                                        admin_approved_quotes: 0,
+                                        logistics_price: 0,
+                                        query_data: 0,
+                                        quotation_id: 0,
+                                        is_buyer_approved: 0,
+                                        is_admin_approved: 0,
+                                        is_supplier_approved: 0,
+                                        is_logistics_approved: 0,
+                                        admin_quote: 0
+                                    }
+                                }
+                            ],
+                            as: "final_quote"
+                        }
                     }
-                }
-            ]
-        )
+                ]
+            )
+        }
+
+        if (user_data.user_type === 'buyer') {
+            data = await quotation.aggregate(
+                [
+                    {
+                        $match: {
+                            _id: ObjectId("6788e217a242197d550a0da6")
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "bidsettings",
+                            localField: "bid_setting",
+                            foreignField: "_id",
+                            as: "bid_setting_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$bid_setting_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "decided_logistics_id",
+                            foreignField: "_id",
+                            as: "logistics_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$logistics_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "query_assigned_suppliers",
+                            let: { id: "$_id" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$quotation_id", "$$id"]
+                                        }
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "products",
+                                        let: { vid: "$variant_id" },
+                                        pipeline: [
+                                            {
+                                                $unwind: {
+                                                    path: "$variant"
+                                                }
+                                            },
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$variant._id", "$$vid"]
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    _id: 1,
+                                                    variant: {
+                                                        images: 1,
+                                                        tag: 1
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        as: "variant_data"
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "products",
+                                        let: { pid: "$product_id" },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$_id", "$$pid"]
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    _id: 1,
+                                                    name: 1
+                                                }
+                                            }
+                                        ],
+                                        as: "product_data"
+                                    }
+                                },
+
+                                {
+                                    $lookup: {
+                                        from: "users",
+                                        let: { pid: "$variant_assigned_to" },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$_id", "$$pid"]
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    _id: 1,
+                                                    full_name: 1
+                                                }
+                                            }
+                                        ],
+                                        as: "supplier_data"
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$product_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$variant_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$supplier_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "queries",
+                                        let: {
+                                            id: "$query_id",
+                                            vid: "$variant_id"
+                                        },
+                                        pipeline: [
+                                            {
+                                                $unwind: {
+                                                    path: "$queryDetails",
+                                                    preserveNullAndEmptyArrays: true
+                                                }
+                                            },
+                                            {
+                                                $match: {
+                                                    $and: [
+                                                        {
+                                                            $expr: {
+                                                                $eq: ["$$id", "$_id"]
+                                                            }
+                                                        },
+                                                        {
+                                                            $expr: {
+                                                                $eq: [
+                                                                    "$$vid",
+                                                                    "$queryDetails.variant._id"
+                                                                ]
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    "queryDetails.quantity": 1
+                                                }
+                                            }
+                                        ],
+                                        as: "query_data"
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        quantity: {
+                                            $arrayElemAt: [
+                                                "$query_data.queryDetails.quantity",
+                                                0
+                                            ]
+                                        }
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "quantity_units",
+                                        let: {
+                                            id: "$quantity.unit"
+                                        },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$$id", "$_id"]
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        as: "unit_data"
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$unit_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        "quantity.unit": "$unit_data.unit",
+                                        "quantity.unit_id": "$unit_data._id"
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        query_id: 0,
+                                        product_id: 0,
+                                        variant_id: 0,
+                                        admin_margin: 0,
+                                        supplier_quote: 0,
+                                        logistics_price: 0,
+                                        query_data: 0,
+                                        quotation_id: 0,
+                                        is_buyer_approved: 0,
+                                        is_admin_approved: 0,
+                                        is_supplier_approved: 0,
+                                        is_logistics_approved: 0,
+                                        admin_quote: 0,
+                                        unit_data: 0
+                                    }
+                                }
+                            ],
+                            as: "final_quote"
+                        }
+                    }
+                ]
+            )
+        }
 
         return res.status(200).json({
             message: "Quotation data fetched successfully",
