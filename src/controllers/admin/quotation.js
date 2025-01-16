@@ -931,29 +931,27 @@ exports.addAdminQuotationNotes = async (req, res) => {
         )
         console.log("result : ", result)
 
-        // const quote = await data.final_quote.map(i => (i._id.toString() === final_quote_id.toString() ? i : null)).filter(e => e !== null)[0]
-        // console.log('quote : ', quote)
-        // const currentTime = await moment(Date.now()).format('lll')
-        // const timeline_data = {
-        //     date: currentTime,
-        //     detail: 'Admin quotation note added',
-        //     product_id: quote?.product_id,
-        //     supplier_id: quote?.supplier_id,
-        //     variant_id: quote?.variant_id,
-        //     price: quote?.price,
-        //     media: quote?.media,
-        //     document: quote?.document,
-        //     assignedBy: quote?.assignedBy
-        // }
+        const currentTime = await moment(Date.now()).format('lll')
+        const timeline_data = {
+            date: currentTime,
+            detail: 'Admin quotation note added',
+            product_id: result?.product_id,
+            supplier_id: result?.supplier_id,
+            variant_id: result?.variant_id,
+            price: result?.price,
+            media: result?.media,
+            document: result?.document,
+            assignedBy: result?.assignedBy
+        }
 
-        // await version_history.create({
-        //     quotation_id,
-        //     ...timeline_data
-        // })
+        await version_history.create({
+            quotation_id,
+            ...timeline_data
+        })
 
         return res.status(200).json({
             message: "Admin Quotation notes added successfully",
-            data,
+            data : result,
             code: 200
         })
 
