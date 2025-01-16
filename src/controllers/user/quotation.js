@@ -677,7 +677,7 @@ exports.approveRejectQuotation = async (req, res) => {
 
 exports.addQuotationNotes = async (req, res) => {
     try {
-        const { final_quote_id, note } = req.body
+        const { quotation_id, supplier_id, note } = req.body
         const user_id = req.user._id
         console.log("USER_ID : ", user_id)
 
@@ -691,10 +691,16 @@ exports.addQuotationNotes = async (req, res) => {
             })
         }
 
-        const queryData = await quotation.findOne(
+        const queryData = await query_assigned_suppliers.findOne(
             {
-                'final_quote._id': new mongoose.Types.ObjectId(final_quote_id)
-            }
+                quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                variant_assigned_to: new mongoose.Types.ObjectId(supplier_id)
+            },
+            {
+                $set: {
+                    buyer_notes: note
+                }
+            }, { new: true }
         )
         console.log("query data :", queryData)
         if (!queryData) {
@@ -703,39 +709,19 @@ exports.addQuotationNotes = async (req, res) => {
                 code: 404,
             });
         }
-
-        let filter = {}
-
-        if (user_data.user_type === "supplier") {
-            filter = { 'final_quote.$.supplier_notes': note }
-        } else {
-            filter = { 'final_quote.$.buyer_notes': note }
-        }
-
-        const data = await quotation.findOneAndUpdate(
-            {
-                'final_quote._id': new mongoose.Types.ObjectId(final_quote_id)
-            },
-            {
-                $set: filter
-            },
-            { new: true }
-        )
-
-        const quote = await queryData.final_quote.map(i => (i._id.toString() === final_quote_id.toString() ? i : null)).filter(e => e !== null)[0]
         console.log('quote : ', quote)
         const currentTime = await moment(Date.now()).format('lll')
         const timeline_data = {
             date: currentTime,
             detail: user_data.user_type === "supplier" ? 'Supplier quotation note added' : 'Buyer quotation note added',
-            product_id: quote?.product_id,
-            supplier_id: quote?.supplier_id,
-            variant_id: quote?.variant_id,
-            price: quote?.price,
-            quantity: quote?.quantity,
-            media: quote?.media,
-            document: quote?.document,
-            assignedBy: quote?.assignedBy
+            product_id: queryData?.product_id,
+            supplier_id: queryData?.variant_assigned_to,
+            variant_id: queryData?.variant_id,
+            price: queryData?.price,
+            quantity: queryData?.quantity,
+            media: queryData?.media,
+            document: queryData?.document,
+            assignedBy: queryData?.assignedBy
         }
 
         const result = await version_history.create({
