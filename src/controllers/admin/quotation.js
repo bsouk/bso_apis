@@ -656,6 +656,180 @@ exports.addAdminQuotationQuery = async (req, res) => {
     }
 }
 
+exports.getFinalQuotationList = async (req, res) => {
+    try {
+        const { quotation_id } = req.query
+
+        const data = await query_assigned_suppliers.aggregate(
+            [
+                {
+                    $match: {
+                        quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                        is_selected: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: { id: "$product_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$$id", "$_id"] }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    name: 1
+                                }
+                            }
+                        ],
+                        as: "product_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "queries",
+                        let: { id: "$query_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$$id", "$_id"] }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    status: 1,
+                                    queryDetails: 1
+                                }
+                            }
+                        ],
+                        as: "query_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$query_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: { id: "$variant_id" },
+                        pipeline: [
+                            {
+                                $unwind: {
+                                    path: "$variant",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$variant._id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    variant: 1
+                                }
+                            }
+                        ],
+                        as: "variant_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$product_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$variant_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            variant_id: "$variant_id"
+                        },
+                        variant_assigned_to: {
+                            $push: "$variant_assigned_to"
+                        },
+                        total_quantity: { $sum: "$quantity.value" },
+                        total_quantity_unit: {
+                            $first: "$quantity.unit"
+                        },
+                        is_selected: { $first: "$is_selected" },
+                        logistics_price: {
+                            $sum: "$logistics_price"
+                        },
+                        supplier_quote_price: {
+                            $sum: "$supplier_quote.price"
+                        },
+                        supplier_quote_media: {
+                            $push: "$supplier_quote.media"
+                        },
+                        supplier_quote_document: {
+                            $push: "$supplier_quote.document"
+                        },
+                        admin_margin: { $first: '$admin_margin' },
+                        product_data: { $first: "$product_data" },
+                        query_data: { $first: "$query_data" },
+                        variant_data: {
+                            $first: "$variant_data.variant"
+                        },
+                        createdAt: { $first: "$createdAt" },
+                        updatedAt: { $first: "$updatedAt" }
+                    }
+                },
+                {
+                    $addFields: {
+                        supplier_quote_media: {
+                            $reduce: {
+                                input: "$supplier_quote_media",
+                                initialValue: [],
+                                in: {
+                                    $concatArrays: ["$$value", "$$this"]
+                                }
+                            }
+                        },
+                        supplier_quote_document: {
+                            $reduce: {
+                                input: "$supplier_quote_document",
+                                initialValue: [],
+                                in: {
+                                    $concatArrays: ["$$value", "$$this"]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        product_id: 0
+                    }
+                }
+            ]
+        )
+
+        return res.status(200).json({
+            message: "final quotation quote list generated successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
 //submit final quotation
 
 exports.addFinalQuotationList = async (req, res) => {

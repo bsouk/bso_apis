@@ -93,4 +93,11 @@ router.patch(
     controller.acceptRejectSupplierQuote
 )
 
+router.get(
+    '/getFinalQuotationList',
+    trimRequest.all,
+    requireAuth,
+    controller.getFinalQuotationList
+)
+
 module.exports = router
