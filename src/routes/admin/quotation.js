@@ -79,4 +79,11 @@ router.get(
     controller.getVersionHistory
 )
 
+router.get(
+    '/getQuotationAssignedSupplier',
+    trimRequest.all,
+    requireAuth,
+    controller.getQuotationAssignedSupplier
+)
+
 module.exports = router

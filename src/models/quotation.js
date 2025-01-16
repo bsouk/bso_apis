@@ -98,32 +98,32 @@ const quotationSchema = new mongoose.Schema({
             variant_id: {
                 type: mongoose.Schema.Types.ObjectId,
             },
-            // quantity: {
-            //     value: {
-            //         type: Number,
-            //         required: true
-            //     },
-            //     unit: {
-            //         type: mongoose.Schema.Types.ObjectId,
-            //         ref: 'quantity_units'
-            //     }
-            // },
-            price: {
-                type: Number
-            },
-            message: {
-                type: String
-            },
-            media: [String],
-            document: [String],
-            assignedBy: {
-                id: {
-                    type: mongoose.Schema.Types.ObjectId,
+            quantity: {
+                value: {
+                    type: Number,
+                    required: true
                 },
-                type: {
-                    type: String
+                unit: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'quantity_units'
                 }
             },
+            // price: {
+            //     type: Number
+            // },
+            // message: {
+            //     type: String
+            // },
+            // media: [String],
+            // document: [String],
+            // assignedBy: {
+            //     id: {
+            //         type: mongoose.Schema.Types.ObjectId,
+            //     },
+            //     type: {
+            //         type: String
+            //     }
+            // },
             buyer_notes: {
                 type: String
             },
@@ -240,7 +240,14 @@ const quotationSchema = new mongoose.Schema({
                 type: mongoose.Schema.Types.ObjectId,
             },
             quantity: {
-                type: Number
+                value: {
+                    type: Number,
+                    required: true
+                },
+                unit: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: 'quantity_units'
+                }
             },
             price: {
                 type: Number

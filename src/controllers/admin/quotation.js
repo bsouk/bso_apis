@@ -1222,3 +1222,31 @@ exports.getVersionHistory = async (req, res) => {
 }
 
 
+exports.getQuotationAssignedSupplier = async (req, res) => {
+    try {
+        const { quotation_id } = req.query
+        const data = await quotation.aggregate(
+            [
+                {
+                    $match: {
+                        _id: new mongoose.Types.ObjectId(quotation_id)
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        final_quote: 1
+                    }
+                }
+            ]
+        )
+
+        return res.status(200).json({
+            message: "assigned suppliers data fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

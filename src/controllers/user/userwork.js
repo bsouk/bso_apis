@@ -1325,7 +1325,7 @@ exports.getMyQueries = async (req, res) => {
                                 },
                                 {
                                     $project: {
-                                        "queryDetails.quantity": 0
+                                        "queryDetails.quantity": 0,
                                     }
                                 }
                             ],

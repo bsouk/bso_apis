@@ -470,7 +470,6 @@ exports.getQuotationDetails = async (req, res) => {
                         }
                     }
                 },
-
                 {
                     $unwind: {
                         path: "$final_quotation_order",
