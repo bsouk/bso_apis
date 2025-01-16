@@ -8,6 +8,10 @@ const assignedSuppliersSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'queries'
         },
+        quotation_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'quotation'
+        },
         product_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'products'
@@ -17,6 +21,10 @@ const assignedSuppliersSchema = new mongoose.Schema(
         },
         variant_assigned_to: {
             type: mongoose.Schema.Types.ObjectId, ref: 'users', required: false, default: null
+        },
+        assigned_logistics_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users',
         },
         user_type: { type: String, required: false, default: "admin" },
         quantity: {
@@ -33,7 +41,49 @@ const assignedSuppliersSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
+        admin_approved_quotes: {
+            type: {
+                price: {
+                    type: Number
+                },
+                message: {
+                    type: String
+                },
+                media: [String],
+                document: [String],
+                assignedBy: {
+                    id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                    },
+                    type: {
+                        type: String
+                    }
+                }
+            },
+            default: null
+        },
         supplier_quote: {
+            type: {
+                price: {
+                    type: Number
+                },
+                message: {
+                    type: String
+                },
+                media: [String],
+                document: [String],
+                assignedBy: {
+                    id: {
+                        type: mongoose.Schema.Types.ObjectId,
+                    },
+                    type: {
+                        type: String
+                    }
+                }
+            },
+            default: null
+        },
+        admin_quote: {
             type: {
                 price: {
                     type: Number
@@ -67,7 +117,32 @@ const assignedSuppliersSchema = new mongoose.Schema(
                 enum: ["flat", "percentage"],
                 default: "flat"
             }
-        }
+        },
+        buyer_notes: {
+            type: String
+        },
+        supplier_notes: {
+            type: String
+        },
+        admin_notes: {
+            type: String
+        },
+        is_buyer_approved: {
+            type: Boolean,
+            default: false
+        },
+        is_supplier_approved: {
+            type: Boolean,
+            default: false
+        },
+        is_admin_approved: {
+            type: Boolean,
+            default: false
+        },
+        is_logistics_approved: {
+            type: Boolean,
+            default: false
+        },
     },
     { timestamps: true }
 )

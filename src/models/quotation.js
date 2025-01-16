@@ -52,144 +52,144 @@ const quotationSchema = new mongoose.Schema({
         ref: 'users',
         default: null
     },
-    logistics_quote: {
-        type: {
-            price: {
-                type: Number
-            },
-            message: {
-                type: String
-            },
-            media: [String],
-            document: [String],
-            assignedBy: {
-                id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                },
-                type: {
-                    type: String
-                },
-                date_time: {
-                    type: Date
-                }
-            }
-        },
-        default: null
-    },
-    logistics_price: {
-        type: Number
-    },
+    // logistics_quote: {
+    //     type: {
+    //         price: {
+    //             type: Number
+    //         },
+    //         message: {
+    //             type: String
+    //         },
+    //         media: [String],
+    //         document: [String],
+    //         assignedBy: {
+    //             id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //             },
+    //             type: {
+    //                 type: String
+    //             },
+    //             date_time: {
+    //                 type: Date
+    //             }
+    //         }
+    //     },
+    //     default: null
+    // },
+    // logistics_price: {
+    //     type: Number
+    // },
     // admin_notes: {
     //     type: String
     // },
-    final_quote: [
-        {
-            product_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'products',
-            },
-            supplier_id: [
-                {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'users',
-                }
-            ],
-            logistics_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'users',
-            },
-            variant_id: {
-                type: mongoose.Schema.Types.ObjectId,
-            },
-            quantity: {
-                value: {
-                    type: Number,
-                    required: true
-                },
-                unit: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'quantity_units'
-                }
-            },
-            admin_margin: {
-                value: {
-                    type: Number
-                },
-                margin_type: {
-                    type: String,
-                    enum: ["flat", "percentage"],
-                    default: "flat"
-                }
-            },
-            buyer_notes: {
-                type: String
-            },
-            supplier_notes: {
-                type: String
-            },
-            admin_notes: {
-                type: String
-            },
-            is_buyer_approved: {
-                type: Boolean,
-                default: false
-            },
-            is_supplier_approved: {
-                type: Boolean,
-                default: false
-            },
-            is_admin_approved: {
-                type: Boolean,
-                default: false
-            },
-            is_logistics_approved: {
-                type: Boolean,
-                default: false
-            },
-            supplier_quote: {
-                type: {
-                    price: {
-                        type: Number
-                    },
-                    message: {
-                        type: String
-                    },
-                    media: [String],
-                    document: [String],
-                    assignedBy: {
-                        id: {
-                            type: mongoose.Schema.Types.ObjectId,
-                        },
-                        type: {
-                            type: String
-                        }
-                    }
-                },
-                default: null
-            },
-            admin_quote: {
-                type: {
-                    price: {
-                        type: Number
-                    },
-                    message: {
-                        type: String
-                    },
-                    media: [String],
-                    document: [String],
-                    assignedBy: {
-                        id: {
-                            type: mongoose.Schema.Types.ObjectId,
-                        },
-                        type: {
-                            type: String
-                        }
-                    }
-                },
-                default: null
-            }
-        }
-    ],
+    // final_quote: [
+    //     {
+    //         product_id: {
+    //             type: mongoose.Schema.Types.ObjectId,
+    //             ref: 'products',
+    //         },
+    //         supplier_id: [
+    //             {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'users',
+    //             }
+    //         ],
+    //         logistics_id: {
+    //             type: mongoose.Schema.Types.ObjectId,
+    //             ref: 'users',
+    //         },
+    //         variant_id: {
+    //             type: mongoose.Schema.Types.ObjectId,
+    //         },
+    //         quantity: {
+    //             value: {
+    //                 type: Number,
+    //                 required: true
+    //             },
+    //             unit: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'quantity_units'
+    //             }
+    //         },
+    //         admin_margin: {
+    //             value: {
+    //                 type: Number
+    //             },
+    //             margin_type: {
+    //                 type: String,
+    //                 enum: ["flat", "percentage"],
+    //                 default: "flat"
+    //             }
+    //         },
+    //         buyer_notes: {
+    //             type: String
+    //         },
+    //         supplier_notes: {
+    //             type: String
+    //         },
+    //         admin_notes: {
+    //             type: String
+    //         },
+    //         is_buyer_approved: {
+    //             type: Boolean,
+    //             default: false
+    //         },
+    //         is_supplier_approved: {
+    //             type: Boolean,
+    //             default: false
+    //         },
+    //         is_admin_approved: {
+    //             type: Boolean,
+    //             default: false
+    //         },
+    //         is_logistics_approved: {
+    //             type: Boolean,
+    //             default: false
+    //         },
+    //         supplier_quote: {
+    //             type: {
+    //                 price: {
+    //                     type: Number
+    //                 },
+    //                 message: {
+    //                     type: String
+    //                 },
+    //                 media: [String],
+    //                 document: [String],
+    //                 assignedBy: {
+    //                     id: {
+    //                         type: mongoose.Schema.Types.ObjectId,
+    //                     },
+    //                     type: {
+    //                         type: String
+    //                     }
+    //                 }
+    //             },
+    //             default: null
+    //         },
+    //         admin_quote: {
+    //             type: {
+    //                 price: {
+    //                     type: Number
+    //                 },
+    //                 message: {
+    //                     type: String
+    //                 },
+    //                 media: [String],
+    //                 document: [String],
+    //                 assignedBy: {
+    //                     id: {
+    //                         type: mongoose.Schema.Types.ObjectId,
+    //                     },
+    //                     type: {
+    //                         type: String
+    //                     }
+    //                 }
+    //             },
+    //             default: null
+    //         }
+    //     }
+    // ],
     is_approved: {
         type: String,
         enum: ["processing", "approved", "cancelled"],
@@ -199,121 +199,121 @@ const quotationSchema = new mongoose.Schema({
         type: String
     },
 
-    final_quotation_order: [
-        {
-            product_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'products',
-            },
-            supplier_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'users',
-            },
-            logistics_id: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: 'users',
-            },
-            variant_id: {
-                type: mongoose.Schema.Types.ObjectId,
-            },
-            quantity: {
-                value: {
-                    type: Number,
-                    required: true
-                },
-                unit: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'quantity_units'
-                }
-            },
-            price: {
-                type: Number
-            },
-            message: {
-                type: String
-            },
-            media: [String],
-            document: [String],
-            assignedBy: {
-                id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'users'
-                },
-                type: {
-                    type: String
-                }
-            },
-            // buyer_notes: {
-            //     type: String
-            // },
-            // supplier_notes: {
-            //     type: String
-            // },
-            // admin_notes: {
-            //     type: String
-            // },
-            // is_buyer_approved: {
-            //     type: Boolean,
-            //     default: false
-            // },
-            // is_supplier_approved: {
-            //     type: Boolean,
-            //     default: false
-            // },
-            // is_admin_approved: {
-            //     type: Boolean,
-            //     default: false
-            // },
-            // supplier_quote: {
-            //     type: {
-            //         quantity: {
-            //             type: Number
-            //         },
-            //         price: {
-            //             type: Number
-            //         },
-            //         message: {
-            //             type: String
-            //         },
-            //         media: [String],
-            //         document: [String],
-            //         assignedBy: {
-            //             id: {
-            //                 type: mongoose.Schema.Types.ObjectId,
-            //             },
-            //             type: {
-            //                 type: String
-            //             }
-            //         }
-            //     },
-            //     default: null
-            // },
-            // admin_quote: {
-            //     type: {
-            //         quantity: {
-            //             type: Number
-            //         },
-            //         price: {
-            //             type: Number
-            //         },
-            //         message: {
-            //             type: String
-            //         },
-            //         media: [String],
-            //         document: [String],
-            //         assignedBy: {
-            //             id: {
-            //                 type: mongoose.Schema.Types.ObjectId,
-            //             },
-            //             type: {
-            //                 type: String
-            //             }
-            //         }
-            //     },
-            //     default: null
-            // }
-        }
-    ]
+    // final_quotation_order: [
+    //     {
+    //         product_id: {
+    //             type: mongoose.Schema.Types.ObjectId,
+    //             ref: 'products',
+    //         },
+    //         supplier_id: {
+    //             type: mongoose.Schema.Types.ObjectId,
+    //             ref: 'users',
+    //         },
+    //         logistics_id: {
+    //             type: mongoose.Schema.Types.ObjectId,
+    //             ref: 'users',
+    //         },
+    //         variant_id: {
+    //             type: mongoose.Schema.Types.ObjectId,
+    //         },
+    //         quantity: {
+    //             value: {
+    //                 type: Number,
+    //                 required: true
+    //             },
+    //             unit: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'quantity_units'
+    //             }
+    //         },
+    //         price: {
+    //             type: Number
+    //         },
+    //         message: {
+    //             type: String
+    //         },
+    //         media: [String],
+    //         document: [String],
+    //         assignedBy: {
+    //             id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'users'
+    //             },
+    //             type: {
+    //                 type: String
+    //             }
+    //         },
+    //         // buyer_notes: {
+    //         //     type: String
+    //         // },
+    //         // supplier_notes: {
+    //         //     type: String
+    //         // },
+    //         // admin_notes: {
+    //         //     type: String
+    //         // },
+    //         // is_buyer_approved: {
+    //         //     type: Boolean,
+    //         //     default: false
+    //         // },
+    //         // is_supplier_approved: {
+    //         //     type: Boolean,
+    //         //     default: false
+    //         // },
+    //         // is_admin_approved: {
+    //         //     type: Boolean,
+    //         //     default: false
+    //         // },
+    //         // supplier_quote: {
+    //         //     type: {
+    //         //         quantity: {
+    //         //             type: Number
+    //         //         },
+    //         //         price: {
+    //         //             type: Number
+    //         //         },
+    //         //         message: {
+    //         //             type: String
+    //         //         },
+    //         //         media: [String],
+    //         //         document: [String],
+    //         //         assignedBy: {
+    //         //             id: {
+    //         //                 type: mongoose.Schema.Types.ObjectId,
+    //         //             },
+    //         //             type: {
+    //         //                 type: String
+    //         //             }
+    //         //         }
+    //         //     },
+    //         //     default: null
+    //         // },
+    //         // admin_quote: {
+    //         //     type: {
+    //         //         quantity: {
+    //         //             type: Number
+    //         //         },
+    //         //         price: {
+    //         //             type: Number
+    //         //         },
+    //         //         message: {
+    //         //             type: String
+    //         //         },
+    //         //         media: [String],
+    //         //         document: [String],
+    //         //         assignedBy: {
+    //         //             id: {
+    //         //                 type: mongoose.Schema.Types.ObjectId,
+    //         //             },
+    //         //             type: {
+    //         //                 type: String
+    //         //             }
+    //         //         }
+    //         //     },
+    //         //     default: null
+    //         // }
+    //     }
+    // ]
 },
     {
         timestamps: true

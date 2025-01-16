@@ -433,8 +433,8 @@ async function createQuotation(final_quotes, query_id, res) {
 
     const data = {
         quotation_unique_id: quoteId,
-        query_id,
-        final_quote: final_quotes
+        query_id
+        // final_quote: final_quotes
     };
 
     if (bidSettingData?._id) {
@@ -443,6 +443,19 @@ async function createQuotation(final_quotes, query_id, res) {
 
     const newQuotation = await quotation.create(data);
     console.log('new Quotation : ', newQuotation);
+
+    await query_assigned_suppliers.updateMany(
+        {
+            query_id: new mongoose.Types.ObjectId(query_id),
+            is_selected: true
+        },
+        {
+            $set: {
+                quotation_id: new mongoose.Types.ObjectId(newQuotation._id)
+            }
+        },
+        { new: true }
+    )
 
     await Promise.all(
         timeline_data.map(i =>
@@ -483,7 +496,7 @@ exports.addFinalQuote = async (req, res) => {
                     },
                     {
                         $set: {
-                            // supplier_quote: i?.supplier_quote,
+                            admin_approved_quotes: i?.supplier_quote,
                             logistics_price: i?.logistics_price,
                             admin_margin: {
                                 value: i?.admin_margin?.value,
