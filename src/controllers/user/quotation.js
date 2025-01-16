@@ -10,6 +10,7 @@ const payment = require("../../models/payment");
 const tracking_order = require("../../models/tracking_order");
 const version_history = require("../../models/version_history");
 const query = require("../../models/query");
+const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 
 exports.getQuotationList = async (req, res) => {
     try {
@@ -36,51 +37,6 @@ exports.getQuotationList = async (req, res) => {
         if (status) {
             filter.is_approved = status
         }
-
-        // let filter_data = {
-        //     query_data: 1,
-        //     bid_setting_data: 1,
-        //     createdAt: 1,
-        //     updatedAt: 1,
-        //     is_approved: 1,
-        //     quotation_unique_id: 1,
-        // }
-        // if (user_data.user_type === "supplier") {
-        //     filter["final_quote.supplier_id"] = { $in: [new mongoose.Types.ObjectId(userId)] }
-        // }
-
-        // if (user_data.user_type === "logistics") {
-        //     filter.decided_logistics_id = new mongoose.Types.ObjectId(userId);
-        //     filter["final_quote.logistics_id"] = new mongoose.Types.ObjectId(userId);
-        // }
-
-        // const data = await quotation.aggregate([
-        //     {
-        //         $match: { ...filter }
-        //     },
-        //     {
-        //         $lookup: {
-        //             from: "bidsettings",
-        //             localField: "bid_setting",
-        //             foreignField: "_id",
-        //             as: "bid_setting_data",
-        //         },
-        //     },
-        //     {
-        //         $unwind: {
-        //             path: "$bid_setting_data",
-        //             preserveNullAndEmptyArrays: true
-        //         }
-        //     },
-        //     {
-        //         $project: filter_data
-        //     },
-        //     {
-        //         $sort: { createdAt: -1 },
-        //     },
-        //     { $skip: parseInt(offset) },
-        //     { $limit: parseInt(limit) },
-        // ]);
         let data = []
         if (user_data.user_type === "buyer") {
             data = await query.aggregate([
@@ -129,7 +85,51 @@ exports.getQuotationList = async (req, res) => {
         }
 
         if (user_data.user_type === "supplier") {
-
+            data = await query_assigned_suppliers.aggregate(
+                [
+                    {
+                        $match: {
+                            variant_assigned_to: new mongoose.Types.ObjectId(userId)
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "quotations",
+                            let: { id: "$quotation_id" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$_id"]
+                                        }
+                                    }
+                                },
+                                {
+                                    $match: filter
+                                },
+                            ],
+                            as: "quotations"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$quotations",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $match: {
+                            quotations: { $ne: null }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 0,
+                            quotations: 1
+                        }
+                    }
+                ]
+            )
         }
 
         const count = await quotation.countDocuments(filter);
