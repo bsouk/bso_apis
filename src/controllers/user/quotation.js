@@ -386,7 +386,7 @@ exports.getQuotationDetails = async (req, res) => {
                 [
                     {
                         $match: {
-                            _id: ObjectId("6788e217a242197d550a0da6")
+                            _id: new mongoose.Types.ObjectId(id)
                         }
                     },
                     {
