@@ -951,7 +951,7 @@ exports.addAdminQuotationNotes = async (req, res) => {
 
         return res.status(200).json({
             message: "Admin Quotation notes added successfully",
-            data : result,
+            data: result,
             code: 200
         })
 
@@ -1228,6 +1228,42 @@ exports.getQuotationAssignedSupplier = async (req, res) => {
         return res.status(200).json({
             message: "assigned suppliers data fetched successfully",
             data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.acceptRejectSupplierQuote = async (req, res) => {
+    try {
+        const { quotation_id, supplier_id, quote_id, status } = req.body
+        const queryData = await quotation.findById({ _id: quotation_id })
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Quotation not found",
+                code: 404,
+            });
+        }
+
+        const result = await query_assigned_suppliers.findOneAndUpdate(
+            {
+                quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                variant_assigned_to: new mongoose.Types.ObjectId(supplier_id),
+                _id: new mongoose.Types.ObjectId(quote_id)
+            },
+            {
+                $set: {
+                    is_admin_approved: (status === true || status === "true") ? true : false
+                }
+            },
+            { new: true }
+        )
+        console.log("result : ", result)
+
+        return res.status(200).json({
+            message: "Supplier quote status updated successfully",
+            data: result,
             code: 200
         })
     } catch (error) {

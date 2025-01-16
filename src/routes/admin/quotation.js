@@ -86,4 +86,11 @@ router.get(
     controller.getQuotationAssignedSupplier
 )
 
+router.patch(
+    '/acceptRejectSupplierQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.acceptRejectSupplierQuote
+)
+
 module.exports = router
