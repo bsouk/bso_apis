@@ -1233,9 +1233,133 @@ exports.getQuotationAssignedSupplier = async (req, res) => {
                     }
                 },
                 {
+                    $unwind: {
+                        path: "$final_quote",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: {
+                            id: "$final_quote.product_id"
+                        },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [{ $eq: ["$$id", "$_id"] }]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    name: 1
+                                }
+                            }
+                        ],
+                        as: "product_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "products",
+                        let: { id: "$final_quote.variant_id" },
+                        pipeline: [
+                            {
+                                $unwind: {
+                                    path: "$variant",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$variant._id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    variant: {
+                                        images: 1,
+                                        tag: 1
+                                    }
+                                }
+                            }
+                        ],
+                        as: "variant_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$product_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$variant_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$final_quote.supplier_id",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        let: { id: "$final_quote.supplier_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    full_name: 1
+                                }
+                            }
+                        ],
+                        as: "supplier_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$product_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$supplier_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: "_id",
+                        final_quote: { $push: "$final_quote" },
+                        product_data: { $first: "$product_data" },
+                        supplier_data: { $first: "$supplier_data" },
+                        variant_data: { $first: "$variant_data.variant" }
+                    }
+                },
+                {
                     $project: {
                         _id: 1,
-                        final_quote: 1
+                        final_quote: 1,
+                        product_data: 1,
+                        variant_data: 1,
+                        supplier_data: 1
                     }
                 }
             ]
