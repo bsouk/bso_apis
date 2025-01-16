@@ -1021,11 +1021,12 @@ exports.approveRejectLogistics = async (req, res) => {
 
 exports.addAdminQuotationNotes = async (req, res) => {
     try {
-        const { quotation_id, note } = req.body
+        const { quotation_id, quote_id,  note } = req.body
 
         const data = await quotation.findOneAndUpdate(
             {
-                _id: new mongoose.Types.ObjectId(quotation_id)
+                _id: new mongoose.Types.ObjectId(quotation_id),
+                "final_quote._id" : new mongoose.Types.ObjectId(quote_id)
             },
             {
                 $set: { 'admin_notes': note }
