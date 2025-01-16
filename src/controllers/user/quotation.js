@@ -731,7 +731,7 @@ exports.addQuotationNotes = async (req, res) => {
 
         return res.status(200).json({
             message: "Quotation notes added successfully",
-            data : queryData,
+            data: queryData,
             code: 200
         })
 
@@ -743,7 +743,7 @@ exports.addQuotationNotes = async (req, res) => {
 
 exports.addSupplierQuotationQuery = async (req, res) => {
     try {
-        const { quotation_id, quotation_details_id } = req.body
+        const { quotation_id, supplier_id, quote_id } = req.body
 
         const queryData = await quotation.findById({ _id: quotation_id })
         if (!queryData) {
@@ -753,36 +753,34 @@ exports.addSupplierQuotationQuery = async (req, res) => {
             });
         }
 
-        const result = await quotation.findOneAndUpdate(
+        const result = await query_assigned_suppliers.findOneAndUpdate(
             {
-                _id: quotation_id,
-                'final_quote._id': quotation_details_id
+                quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                variant_assigned_to: new mongoose.Types.ObjectId(supplier_id),
+                _id: new mongoose.Types.ObjectId(quote_id)
             },
             {
                 $set: {
-                    'final_quote.$.supplier_quote': req?.body?.supplier_quote,
-                    'final_quote.$.admin_quote': null
+                    supplier_quote: req?.body?.supplier_quote,
+                    admin_quote: null
                 }
             },
             { new: true }
         )
         console.log("result : ", result)
 
-
-        const quote = await result.final_quote.map(i => (i._id.toString() === quotation_details_id.toString() ? i : null)).filter(e => e !== null)[0]
-        console.log('quote : ', quote)
         const currentTime = await moment(Date.now()).format('lll')
         const timeline_data = {
             date: currentTime,
             detail: 'Supplier quotation quote added',
-            product_id: quote?.product_id,
-            supplier_id: quote?.supplier_id,
-            variant_id: quote?.variant_id,
-            price: quote?.supplier_quote.price,
-            quantity: quote?.supplier_quote?.quantity,
-            media: quote?.supplier_quote.media,
-            document: quote?.supplier_quote.document,
-            assignedBy: quote?.supplier_quote.assignedBy
+            product_id: result?.product_id,
+            supplier_id: result?.supplier_id,
+            variant_id: result?.variant_id,
+            price: result?.supplier_quote.price,
+            quantity: result?.supplier_quote?.quantity,
+            media: result?.supplier_quote.media,
+            document: result?.supplier_quote.document,
+            assignedBy: result?.supplier_quote.assignedBy
         }
 
         const response = await version_history.create({
