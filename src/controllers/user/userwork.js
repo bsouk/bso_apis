@@ -1281,8 +1281,7 @@ exports.getMyQueries = async (req, res) => {
                 [
                     {
                         $match: {
-                            variant_assigned_to: new mongoose.Types.ObjectId(userId),
-                            ...filter
+                            variant_assigned_to: new mongoose.Types.ObjectId(userId)
                         }
                     },
                     {

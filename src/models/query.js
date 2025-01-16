@@ -141,6 +141,20 @@ const querySchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
+            assigned_suppliers: {
+                type: [
+                    {
+                        id: {
+                            type: mongoose.Schema.Types.ObjectId,
+                            ref: 'users'
+                        },
+                        accessed_id: {
+                            type: mongoose.Types.ObjectId
+                        }
+                    }
+                ],
+                default: []
+            }
         }
     ]
 },

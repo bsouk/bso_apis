@@ -1472,6 +1472,7 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
         const { query_id, variant_id, supplier_id, status } = req.body
         const supplier_data = await query_assigned_suppliers.findOne({ query_id, variant_id, variant_assigned_to: supplier_id })
         console.log("result : ", supplier_data)
+
         if (!supplier_data) {
             return utils.handleError(res, {
                 message: "assigned supplier not found",
@@ -1480,6 +1481,25 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
         }
         supplier_data.is_selected = (status === true || status === "true") ? true : false
         await supplier_data.save()
+
+        const result = await Query.findOneAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(query_id),
+                'queryDetails.variant._id': new mongoose.Types.ObjectId(variant_id)
+            },
+            {
+                $push: {
+                    'queryDetails.$.assigned_suppliers': {
+                        id: supplier_data.variant_assigned_to,
+                        accessed_id: supplier_data._id
+                    }
+                }
+            },
+            {
+                new: true
+            }
+        )
+        console.log("result is : ", result)
 
         return res.status(200).json({
             message: "supplier status changed successfully",
