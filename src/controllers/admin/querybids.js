@@ -493,7 +493,7 @@ exports.addFinalQuote = async (req, res) => {
             });
         }
 
-        const query_data = await Query.findOne({ _id: id })
+        const query_data = await Query.findOne({ _id: query_id })
         console.log("query_data : ", query_data)
 
         if (!query_data) {
