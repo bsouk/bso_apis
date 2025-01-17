@@ -925,6 +925,29 @@ exports.addFinalQuotationList = async (req, res) => {
             { new: true }
         )
 
+        let promiseresult = await Promise.all(
+            final_quotation.map(async i =>
+                query_assigned_suppliers.findOneAndUpdate(
+                    {
+                        quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                        is_selected: true
+                    },
+                    {
+                        $set: {
+                            admin_approved_quotes: i?.supplier_quote,
+                            logistics_price: i?.logistics_price,
+                            admin_margin: {
+                                value: i?.admin_margin?.value,
+                                margin_type: i?.admin_margin?.margin_type
+                            }
+                        }
+                    },
+                    { new: true }
+                )
+            )
+        );
+        console.log("promiseresult : ", promiseresult)
+
         const response = await query_assigned_suppliers.updateMany(
             {
                 quotation_id: new mongoose.Types.ObjectId(quotation_id),
