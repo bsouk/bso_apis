@@ -39,47 +39,49 @@ exports.getQuotationList = async (req, res) => {
         }
         let data = []
         if (user_data.user_type === "buyer") {
-            data = await query.aggregate([
-                {
-                    $match: { createdByUser: userId }
-                },
-                {
-                    $lookup: {
-                        from: "quotations",
-                        let: { id: '$_id' },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: ["$$id", "$query_id"]
+            data = await query.aggregate(
+                [
+                    {
+                        $match: { createdByUser: userId }
+                    },
+                    {
+                        $lookup: {
+                            from: "quotations",
+                            let: { id: '$_id' },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$query_id"]
+                                        }
                                     }
-                                }
-                            },
-                            {
-                                $match: filter
-                            },
-                        ],
-                        as: "quotations"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$quotations",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $project: {
-                        _id: 0,
-                        quotations: 1
-                    }
-                },
-                {
-                    $sort: { createdAt: -1 },
-                },
-                { $skip: parseInt(offset) },
-                { $limit: parseInt(limit) }
-            ]);
+                                },
+                                {
+                                    $match: filter
+                                },
+                            ],
+                            as: "quotations"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$quotations",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 0,
+                            quotations: 1
+                        }
+                    },
+                    {
+                        $sort: { createdAt: -1 },
+                    },
+                    { $skip: parseInt(offset) },
+                    { $limit: parseInt(limit) }
+                ]
+            );
 
             console.log("quotations: ", data);
         }
@@ -106,7 +108,7 @@ exports.getQuotationList = async (req, res) => {
                                 },
                                 {
                                     $match: filter
-                                },
+                                }
                             ],
                             as: "quotations"
                         }
@@ -123,9 +125,63 @@ exports.getQuotationList = async (req, res) => {
                         }
                     },
                     {
+                        $group: {
+                            _id: "$quotation_id",
+                            quotation_unique_id: {
+                                $first: "$quotations.quotation_unique_id"
+                            },
+                            quotation_type: {
+                                $first: "$quotations.quotation_type"
+                            },
+                            query_id: {
+                                $first: "$quotations.query_id"
+                            },
+                            bid_setting: {
+                                $first: "$quotations.bid_setting"
+                            },
+                            is_admin_logistics_decided: {
+                                $first:
+                                    "$quotations.is_admin_logistics_decided"
+                            },
+                            rejected_reason: {
+                                $first: "$quotations.rejected_reason"
+                            },
+                            accepted_logistics: {
+                                $first: "$quotations.accepted_logistics"
+                            },
+                            decided_logistics_id: {
+                                $first: "$quotations.decided_logistics_id"
+                            },
+                            is_approved: {
+                                $first: "$quotations.is_approved"
+                            },
+                            createdAt: {
+                                $first: "$quotations.createdAt"
+                            },
+                            updatedAt: {
+                                $first: "$quotations.updatedAt"
+                            },
+                            final_quotation_order: {
+                                $first:
+                                    "$quotations.final_quotation_order"
+                            }
+                        }
+                    },
+                    {
                         $project: {
-                            _id: 0,
-                            quotations: 1
+                            _id: 1,
+                            quotation_unique_id: 1,
+                            quotation_type: 1,
+                            query_id: 1,
+                            bid_setting: 1,
+                            is_admin_logistics_decided: 1,
+                            rejected_reason: 1,
+                            accepted_logistics: 1,
+                            decided_logistics_id: 1,
+                            is_approved: 1,
+                            createdAt: 1,
+                            updatedAt: 1,
+                            final_quotation_order: 1
                         }
                     },
                     {

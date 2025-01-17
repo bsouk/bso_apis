@@ -1131,13 +1131,6 @@ exports.generateFinalQuote = async (req, res) => {
                 }
             ]
         )
-        if (!final_quotes || final_quotes.length === 0) {
-            return utils.handleError(res, {
-                message: "No data found",
-                code: 404,
-            });
-        }
-
         return res.status(200).json({
             message: "final quote list generated successfully",
             data: final_quotes,
