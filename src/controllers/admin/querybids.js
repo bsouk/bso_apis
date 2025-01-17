@@ -542,11 +542,12 @@ exports.addFinalQuote = async (req, res) => {
                 })
                 console.log("newdata : ", newdata)
             })
+            console.log("result : ", result)
         }
 
         await createQuotation(final_quotes, query_id, res)
-        queryData.status = "completed"
-        await queryData.save()
+        query_data.status = "completed"
+        await query_data.save()
 
         return res.status(200).json({
             message: "final quote added successfully",
