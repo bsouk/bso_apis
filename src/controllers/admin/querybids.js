@@ -318,19 +318,19 @@ exports.updateAssignedProduct = async (req, res) => {
             const result = await query_assigned_suppliers.create(i)
             console.log("result : ", result)
 
-            const changestatus = await Query.findOneAndUpdate(
-                {
-                    _id: new mongoose.Types.ObjectId(i.query_id),
-                    'queryDetails.variant._id': new mongoose.Types.ObjectId(i.variant_id)
-                },
-                {
-                    $set: {
-                        'queryDetails.$.split_quantity.is_selected': true,
-                        'queryDetails.$.split_quantity.quantity_assigned': i.quantity
-                    }
-                }, { new: true }
-            )
-            console.log("changestatus : ", changestatus)
+            // const changestatus = await Query.findOneAndUpdate(
+            //     {
+            //         _id: new mongoose.Types.ObjectId(i.query_id),
+            //         'queryDetails.variant._id': new mongoose.Types.ObjectId(i.variant_id)
+            //     },
+            //     {
+            //         $set: {
+            //             'queryDetails.$.split_quantity.is_selected': true,
+            //             'queryDetails.$.split_quantity.quantity_assigned': i.quantity
+            //         }
+            //     }, { new: true }
+            // )
+            // console.log("changestatus : ", changestatus)
         })
 
         return res.status(200).json({
