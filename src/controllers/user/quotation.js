@@ -127,7 +127,12 @@ exports.getQuotationList = async (req, res) => {
                             _id: 0,
                             quotations: 1
                         }
-                    }
+                    },
+                    {
+                        $sort: { createdAt: -1 },
+                    },
+                    { $skip: parseInt(offset) },
+                    { $limit: parseInt(limit) }
                 ]
             )
         }
