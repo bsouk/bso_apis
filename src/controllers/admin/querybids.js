@@ -511,17 +511,29 @@ exports.addFinalQuote = async (req, res) => {
                     { new: true }
                 )
                 console.log("response : ", response)
-                if (response === null) {
+                // if (response === null) {
+                //     const newquote = await query_assigned_suppliers.create({
+                //         query_id,
+                //         product_id: i?.product_id,
+                //         variant_id: i?.variant_id,
+                //         logistics_price: i?.logistics_price,
+                //         admin_margin: i?.admin_margin,
+                //         admin_approved_quotes: i?.supplier_quotes
+                //     })
+                //     console.log('newquote : ', newquote)
+                // }
+                if (!response || response.admin_approved_quotes === null) {
                     const newquote = await query_assigned_suppliers.create({
                         query_id,
                         product_id: i?.product_id,
                         variant_id: i?.variant_id,
                         logistics_price: i?.logistics_price,
                         admin_margin: i?.admin_margin,
-                        admin_approved_quotes: i?.supplier_quotes
-                    })
-                    console.log('newquote : ', newquote)
+                        admin_approved_quotes: i?.supplier_quotes ?? null
+                    });
+                    console.log('newquote : ', newquote);
                 }
+
             }
             )
             console.log("result : ", result)
