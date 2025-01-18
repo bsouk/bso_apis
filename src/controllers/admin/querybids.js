@@ -872,7 +872,7 @@ exports.generateFinalQuote = async (req, res) => {
 
         return res.status(200).json({
             message: "final quote list generated successfully",
-            data: final_quotes,
+            data: final_quotes[0],
             code: 200
         })
     } catch (error) {
