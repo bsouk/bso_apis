@@ -263,13 +263,28 @@ exports.getQuotationDetails = async (req, res) => {
                     {
                         $lookup: {
                             from: "query_assigned_suppliers",
-                            let: { id: "$_id" },
+                            let: {
+                                id: "$_id",
+                                uid: new mongoose.Types.ObjectId(userId)
+                            },
                             pipeline: [
                                 {
                                     $match: {
-                                        $expr: {
-                                            $eq: ["$quotation_id", "$$id"]
-                                        }
+                                        $and: [
+                                            {
+                                                $expr: {
+                                                    $eq: ["$quotation_id", "$$id"]
+                                                }
+                                            },
+                                            {
+                                                $expr: {
+                                                    $eq: [
+                                                        "$$uid",
+                                                        "$variant_assigned_to"
+                                                    ]
+                                                }
+                                            }
+                                        ]
                                     }
                                 },
                                 {
@@ -348,6 +363,34 @@ exports.getQuotationDetails = async (req, res) => {
                                     }
                                 },
                                 {
+                                    $lookup: {
+                                        from: "quantity_units",
+                                        let: { id: "$quantity.unit" },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$_id", "$$id"]
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        as: "unit_data"
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$unit_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        "quantity.unit": "$unit_data.unit",
+                                        "quantity.unit_id": "$unit_data._id"
+                                    }
+                                },
+                                {
                                     $unwind: {
                                         path: "$product_data",
                                         preserveNullAndEmptyArrays: true
@@ -405,16 +448,6 @@ exports.getQuotationDetails = async (req, res) => {
                                             }
                                         ],
                                         as: "query_data"
-                                    }
-                                },
-                                {
-                                    $addFields: {
-                                        split_quantity: {
-                                            $arrayElemAt: [
-                                                "$query_data.queryDetails.split_quantity",
-                                                0
-                                            ]
-                                        }
                                     }
                                 },
                                 {
@@ -612,6 +645,14 @@ exports.getQuotationDetails = async (req, res) => {
                                                                     "$queryDetails.variant._id"
                                                                 ]
                                                             }
+                                                        },
+                                                        {
+                                                            $expr: {
+                                                                $eq: [
+                                                                    "$createdByUser",
+                                                                    new mongoose.Types.ObjectId(userId)
+                                                                ]
+                                                            }
                                                         }
                                                     ]
                                                 }
@@ -626,13 +667,15 @@ exports.getQuotationDetails = async (req, res) => {
                                     }
                                 },
                                 {
+                                    $unwind: {
+                                        path: "$query_data",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
                                     $addFields: {
-                                        quantity: {
-                                            $arrayElemAt: [
-                                                "$query_data.queryDetails.quantity",
-                                                0
-                                            ]
-                                        }
+                                        quantity:
+                                            "$query_data.queryDetails.quantity"
                                     }
                                 },
                                 {
@@ -666,6 +709,29 @@ exports.getQuotationDetails = async (req, res) => {
                                     }
                                 },
                                 {
+                                    $group: {
+                                        _id: "$variant_id",
+                                        variant_assigned_to: {
+                                            $push: "$variant_assigned_to"
+                                        },
+                                        quantity: { $first: "$quantity" },
+                                        admin_approved_quotes: {
+                                            $push: "$admin_approved_quotes"
+                                        },
+                                        createdAt: { $first: "$createdAt" },
+                                        updatedAt: { $first: "$updatedAt" },
+                                        variant_data: {
+                                            $first: "$variant_data"
+                                        },
+                                        product_data: {
+                                            $first: "$product_data"
+                                        },
+                                        supplier_data: {
+                                            $push: "$supplier_data"
+                                        }
+                                    }
+                                },
+                                {
                                     $project: {
                                         query_id: 0,
                                         product_id: 0,
@@ -673,7 +739,7 @@ exports.getQuotationDetails = async (req, res) => {
                                         admin_margin: 0,
                                         supplier_quote: 0,
                                         logistics_price: 0,
-                                        query_data: 0,
+                                        // query_data: 0,
                                         quotation_id: 0,
                                         is_buyer_approved: 0,
                                         is_admin_approved: 0,
