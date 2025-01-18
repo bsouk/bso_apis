@@ -459,7 +459,10 @@ exports.addFinalQuote = async (req, res) => {
                     product_id: i?.product_id,
                     variant_id: i?.variant_id,
                     logistics_price: i?.logistics_price,
-                    admin_margin: i?.admin_margin,
+                    admin_margin: {
+                        value: i?.admin_margin?.value,
+                        margin_type: i?.admin_margin?.margin_type
+                    },
                     admin_approved_quotes: i?.supplier_quotes
                 })
                 console.log('newquote : ', newquote)
@@ -519,7 +522,10 @@ exports.addFinalQuote = async (req, res) => {
                         product_id: i?.product_id,
                         variant_id: i?.variant_id,
                         logistics_price: i?.logistics_price,
-                        admin_margin: i?.admin_margin,
+                        admin_margin: {
+                            value: i?.admin_margin?.value,
+                            margin_type: i?.admin_margin?.margin_type
+                        },
                         admin_approved_quotes: i?.supplier_quotes ?? null
                     });
                     console.log('newquote : ', newquote);
