@@ -472,6 +472,8 @@ exports.addFinalQuote = async (req, res) => {
                     query_assigned_suppliers.findOneAndUpdate(
                         {
                             query_id: new mongoose.Types.ObjectId(query_id),
+                            variant_id : new mongoose.Types.ObjectId(i?.variant_id),
+                            product_id : new mongoose.Types.ObjectId(i?.product_id),
                             is_selected: true
                         },
                         {
