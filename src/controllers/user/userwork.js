@@ -1277,164 +1277,164 @@ exports.getMyQueries = async (req, res) => {
             //     ]
             // )
 
-            data = await query_assigned_suppliers.aggregate(
-                [
-                    {
-                        $match: {
-                            variant_assigned_to: new mongoose.Types.ObjectId(userId)
-                        }
-                    },
-                    {
-                        $lookup: {
-                            from: "queries",
-                            let: {
-                                id: "$query_id",
-                                productid: "$product_id",
-                                variantid: "$variant_id"
+            const aggregate_data = [
+                {
+                    $match: {
+                        variant_assigned_to: new mongoose.Types.ObjectId(userId)
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "queries",
+                        let: {
+                            id: "$query_id",
+                            productid: "$product_id",
+                            variantid: "$variant_id"
+                        },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
                             },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $eq: ["$$id", "$_id"]
-                                        }
-                                    }
-                                },
-                                {
-                                    $unwind: "$queryDetails"
-                                },
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $and: [
-                                                {
-                                                    $eq: [
-                                                        "$queryDetails.product.id",
-                                                        "$$productid"
-                                                    ]
-                                                },
-                                                {
-                                                    $eq: [
-                                                        "$queryDetails.variant._id",
-                                                        "$$variantid"
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    }
-                                },
-                                {
-                                    $project: {
-                                        // "queryDetails.quantity": 0,
-                                        "queryDetails.split_quantity": 0
-                                    }
-                                }
-                            ],
-                            as: "query_data"
-                        }
-                    },
-                    {
-                        $lookup: {
-                            from: "quantity_units",
-                            let: { id: "$quantity.unit" },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: { $eq: ["$$id", "$_id"] }
-                                    }
-                                }
-                            ],
-                            as: "quantity_unit"
-                        }
-                    },
-                    {
-                        $unwind: {
-                            path: "$quantity_unit",
-                            preserveNullAndEmptyArrays: true
-                        }
-                    },
-                    {
-                        $unwind: {
-                            path: "$query_data",
-                            preserveNullAndEmptyArrays: true
-                        }
-                    },
-                    {
-                        $addFields: {
-                            "query_data.queryDetails.quantity": {
-                                $cond: {
-                                    if: {
+                            {
+                                $unwind: "$queryDetails"
+                            },
+                            {
+                                $match: {
+                                    $expr: {
                                         $and: [
                                             {
                                                 $eq: [
-                                                    "$query_data.queryDetails.product.id",
-                                                    "$product_id"
+                                                    "$queryDetails.product.id",
+                                                    "$$productid"
                                                 ]
                                             },
                                             {
                                                 $eq: [
-                                                    "$query_data.queryDetails.variant._id",
-                                                    "$variant_id"
+                                                    "$queryDetails.variant._id",
+                                                    "$$variantid"
                                                 ]
                                             }
                                         ]
-                                    },
-                                    then: "$quantity",
-                                    else: "$query_data.queryDetails.quantity"
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    // "queryDetails.quantity": 0,
+                                    "queryDetails.split_quantity": 0
                                 }
                             }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            "query_data.queryDetails.quantity.unit":
-                                "$quantity_unit.unit",
-                            "query_data.queryDetails.quantity.unit_id":
-                                "$quantity_unit._id"
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: "$query_id",
-                            query_unique_id: {
-                                $first: "$query_data.query_unique_id"
-                            },
-                            status: { $first: "$query_data.status" },
-                            createdByUser: {
-                                $first: "$query_data.createdByUser"
-                            },
-                            adminApproved: {
-                                $first: "$query_data.adminApproved"
-                            },
-                            queryDetails: {
-                                $push: "$query_data.queryDetails"
-                            },
-                            createdAt: {
-                                $first: "$query_data.createdAt"
-                            },
-                            updatedAt: {
-                                $first: "$query_data.updatedAt"
+                        ],
+                        as: "query_data"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { id: "$quantity.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$$id", "$_id"] }
+                                }
+                            }
+                        ],
+                        as: "quantity_unit"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$quantity_unit",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$query_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        "query_data.queryDetails.quantity": {
+                            $cond: {
+                                if: {
+                                    $and: [
+                                        {
+                                            $eq: [
+                                                "$query_data.queryDetails.product.id",
+                                                "$product_id"
+                                            ]
+                                        },
+                                        {
+                                            $eq: [
+                                                "$query_data.queryDetails.variant._id",
+                                                "$variant_id"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                then: "$quantity",
+                                else: "$query_data.queryDetails.quantity"
                             }
                         }
-                    },
-                    {
-                        $match : {...filter}
-                    },
-                    {
-                        $sort: { createdAt: -1 }
-                    },
-                    {
-                        $skip: parseInt(offset) || 0
-                    },
-                    {
-                        $limit: parseInt(limit) || 10
                     }
-                ]
+                },
+                {
+                    $addFields: {
+                        "query_data.queryDetails.quantity.unit":
+                            "$quantity_unit.unit",
+                        "query_data.queryDetails.quantity.unit_id":
+                            "$quantity_unit._id"
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$query_id",
+                        query_unique_id: {
+                            $first: "$query_data.query_unique_id"
+                        },
+                        status: { $first: "$query_data.status" },
+                        createdByUser: {
+                            $first: "$query_data.createdByUser"
+                        },
+                        adminApproved: {
+                            $first: "$query_data.adminApproved"
+                        },
+                        queryDetails: {
+                            $push: "$query_data.queryDetails"
+                        },
+                        createdAt: {
+                            $first: "$query_data.createdAt"
+                        },
+                        updatedAt: {
+                            $first: "$query_data.updatedAt"
+                        }
+                    }
+                },
+                {
+                    $match: { ...filter }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $skip: parseInt(offset) || 0
+                },
+                {
+                    $limit: parseInt(limit) || 10
+                }
+            ]
+
+            data = await query_assigned_suppliers.aggregate(
+                aggregate_data
             )
 
-            count = await query_assigned_suppliers.countDocuments({
-                variant_assigned_to: new mongoose.Types.ObjectId(userId)
-            })
+            count = await Query.countDocuments(filter)
         }
 
         return res.json({ data, count, code: 200 });
