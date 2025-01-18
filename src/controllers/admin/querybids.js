@@ -467,29 +467,63 @@ exports.addFinalQuote = async (req, res) => {
         }
 
         if (is_supplier_assigned.length !== 0) {
-            let result = await Promise.all(
-                final_quotes.map(async i =>
-                    query_assigned_suppliers.findOneAndUpdate(
-                        {
-                            query_id: new mongoose.Types.ObjectId(query_id),
-                            variant_id : new mongoose.Types.ObjectId(i?.variant_id),
-                            product_id : new mongoose.Types.ObjectId(i?.product_id),
-                            is_selected: true
-                        },
-                        {
-                            $set: {
-                                admin_approved_quotes: i?.supplier_quote,
-                                logistics_price: i?.logistics_price,
-                                admin_margin: {
-                                    value: i?.admin_margin?.value,
-                                    margin_type: i?.admin_margin?.margin_type
-                                }
+            // let result = await Promise.all(
+            //     final_quotes.map(async i =>
+            //         query_assigned_suppliers.findOneAndUpdate(
+            //             {
+            //                 query_id: new mongoose.Types.ObjectId(query_id),
+            //                 variant_id : new mongoose.Types.ObjectId(i?.variant_id),
+            //                 product_id : new mongoose.Types.ObjectId(i?.product_id),
+            //                 is_selected: true
+            //             },
+            //             {
+            //                 $set: {
+            //                     admin_approved_quotes: i?.supplier_quote,
+            //                     logistics_price: i?.logistics_price,
+            //                     admin_margin: {
+            //                         value: i?.admin_margin?.value,
+            //                         margin_type: i?.admin_margin?.margin_type
+            //                     }
+            //                 }
+            //             },
+            //             { new: true }
+            //         )
+            //     )
+            // );
+            let result = await final_quotes.map(async i => {
+                const response = await query_assigned_suppliers.findOneAndUpdate(
+                    {
+                        query_id: new mongoose.Types.ObjectId(query_id),
+                        variant_id: new mongoose.Types.ObjectId(i?.variant_id),
+                        product_id: new mongoose.Types.ObjectId(i?.product_id),
+                        is_selected: true
+                    },
+                    {
+                        $set: {
+                            admin_approved_quotes: i?.supplier_quote,
+                            logistics_price: i?.logistics_price,
+                            admin_margin: {
+                                value: i?.admin_margin?.value,
+                                margin_type: i?.admin_margin?.margin_type
                             }
-                        },
-                        { new: true }
-                    )
+                        }
+                    },
+                    { new: true }
                 )
-            );
+                console.log("response : ", response)
+                if (response === null) {
+                    const newquote = await query_assigned_suppliers.create({
+                        query_id,
+                        product_id: i?.product_id,
+                        variant_id: i?.variant_id,
+                        logistics_price: i?.logistics_price,
+                        admin_margin: i?.admin_margin,
+                        admin_approved_quotes: i?.supplier_quotes
+                    })
+                    console.log('newquote : ', newquote)
+                }
+            }
+            )
             console.log("result : ", result)
         }
 
