@@ -1325,7 +1325,8 @@ exports.getMyQueries = async (req, res) => {
                                 },
                                 {
                                     $project: {
-                                        "queryDetails.quantity": 0,
+                                        // "queryDetails.quantity": 0,
+                                        "queryDetails.split_quantity": 0
                                     }
                                 }
                             ],
@@ -1360,13 +1361,35 @@ exports.getMyQueries = async (req, res) => {
                     },
                     {
                         $addFields: {
-                            "query_data.queryDetails.split_quantity.total_quantity.unit":
+                            "query_data.queryDetails.quantity": {
+                                $cond: {
+                                    if: {
+                                        $and: [
+                                            {
+                                                $eq: [
+                                                    "$query_data.queryDetails.product.id",
+                                                    "$product_id"
+                                                ]
+                                            },
+                                            {
+                                                $eq: [
+                                                    "$query_data.queryDetails.variant._id",
+                                                    "$variant_id"
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                    then: "$quantity",
+                                    else: "$query_data.queryDetails.quantity"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $addFields: {
+                            "query_data.queryDetails.quantity.unit":
                                 "$quantity_unit.unit",
-                            "query_data.queryDetails.split_quantity.total_quantity.unit_id":
-                                "$quantity_unit._id",
-                            "query_data.queryDetails.split_quantity.quantity_assigned.unit":
-                                "$quantity_unit.unit",
-                            "query_data.queryDetails.split_quantity.quantity_assigned.unit_id":
+                            "query_data.queryDetails.quantity.unit_id":
                                 "$quantity_unit._id"
                         }
                     },
