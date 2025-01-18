@@ -1301,9 +1301,6 @@ exports.getMyQueries = async (req, res) => {
                                     }
                                 },
                                 {
-                                    $match : filter
-                                },
-                                {
                                     $unwind: "$queryDetails"
                                 },
                                 {
@@ -1419,6 +1416,9 @@ exports.getMyQueries = async (req, res) => {
                                 $first: "$query_data.updatedAt"
                             }
                         }
+                    },
+                    {
+                        $match : {...filter}
                     },
                     {
                         $sort: { createdAt: -1 }
