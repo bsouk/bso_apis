@@ -42,12 +42,14 @@ exports.getQuotationList = async (req, res) => {
             data = await query.aggregate(
                 [
                     {
-                        $match: { createdByUser: userId }
+                        $match: {
+                            createdByUser: new mongoose.Types.ObjectId(userId)
+                        }
                     },
                     {
                         $lookup: {
                             from: "quotations",
-                            let: { id: '$_id' },
+                            let: { id: "$_id" },
                             pipeline: [
                                 {
                                     $match: {
@@ -57,8 +59,30 @@ exports.getQuotationList = async (req, res) => {
                                     }
                                 },
                                 {
-                                    $match: filter
+                                    $lookup: {
+                                        from: 'bidsettings',
+                                        let: { id: '$bid_setting' },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$$id", '$_id']
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        as: 'bid_setting_data'
+                                    }
                                 },
+                                {
+                                    $unwind: {
+                                        path: '$bid_setting_data',
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $match: filter
+                                }
                             ],
                             as: "quotations"
                         }
@@ -72,14 +96,23 @@ exports.getQuotationList = async (req, res) => {
                     {
                         $project: {
                             _id: 0,
-                            quotations: 1
+                            'quotations.final_quotation_order': 0,
+                            query_unique_id: 0,
+                            status: 0,
+                            createdByUser: 0,
+                            queryDetails: 0,
+                            adminApproved: 0,
+                            queryCreation: 0,
+                            createdAt: 0,
+                            updatedAt: 0,
+                            __v: 0
                         }
                     },
                     {
                         $sort: { createdAt: -1 },
                     },
                     { $skip: parseInt(offset) },
-                    { $limit: parseInt(limit) }
+                    { $limit: parseInt(limit) },
                 ]
             );
 
@@ -104,6 +137,28 @@ exports.getQuotationList = async (req, res) => {
                                         $expr: {
                                             $eq: ["$$id", "$_id"]
                                         }
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "bidsettings",
+                                        let: { id: "$bid_setting" },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $eq: ["$$id", "$_id"]
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        as: "bid_setting_data"
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$bid_setting_data",
+                                        preserveNullAndEmptyArrays: true
                                     }
                                 },
                                 {
@@ -155,16 +210,17 @@ exports.getQuotationList = async (req, res) => {
                             is_approved: {
                                 $first: "$quotations.is_approved"
                             },
+                            bid_setting_data: { $first: '$quotations.bid_setting_data' },
                             createdAt: {
                                 $first: "$quotations.createdAt"
                             },
                             updatedAt: {
                                 $first: "$quotations.updatedAt"
                             },
-                            final_quotation_order: {
-                                $first:
-                                    "$quotations.final_quotation_order"
-                            }
+                            // final_quotation_order: {
+                            //   $first:
+                            //     "$quotations.final_quotation_order"
+                            // }
                         }
                     },
                     {
@@ -181,7 +237,8 @@ exports.getQuotationList = async (req, res) => {
                             is_approved: 1,
                             createdAt: 1,
                             updatedAt: 1,
-                            final_quotation_order: 1
+                            quotations: 1,
+                            bid_setting_data: 1
                         }
                     },
                     {
