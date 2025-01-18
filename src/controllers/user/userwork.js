@@ -1301,6 +1301,9 @@ exports.getMyQueries = async (req, res) => {
                                     }
                                 },
                                 {
+                                    $match : filter
+                                },
+                                {
                                     $unwind: "$queryDetails"
                                 },
                                 {
