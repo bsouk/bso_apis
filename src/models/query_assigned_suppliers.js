@@ -38,7 +38,7 @@ const assignedSuppliersSchema = new mongoose.Schema(
         },
         is_selected: {
             type: Boolean,
-            default: false
+            default: null
         },
         admin_approved_quotes: {
             type: {
