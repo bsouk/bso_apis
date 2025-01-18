@@ -463,7 +463,7 @@ exports.addFinalQuote = async (req, res) => {
                         value: i?.admin_margin?.value,
                         margin_type: i?.admin_margin?.margin_type
                     },
-                    admin_approved_quotes: i?.supplier_quotes
+                    admin_approved_quotes: i?.admin_final_price
                 })
                 console.log('newquote : ', newquote)
             })
@@ -504,7 +504,7 @@ exports.addFinalQuote = async (req, res) => {
                     },
                     {
                         $set: {
-                            admin_approved_quotes: i?.supplier_quote,
+                            admin_approved_quotes: i?.admin_final_price,
                             logistics_price: i?.logistics_price,
                             admin_margin: {
                                 value: i?.admin_margin?.value,
@@ -526,7 +526,7 @@ exports.addFinalQuote = async (req, res) => {
                             value: i?.admin_margin?.value,
                             margin_type: i?.admin_margin?.margin_type
                         },
-                        admin_approved_quotes: i?.supplier_quotes ?? null
+                        admin_approved_quotes: i?.admin_final_price ?? null
                     });
                     console.log('newquote : ', newquote);
                 }
