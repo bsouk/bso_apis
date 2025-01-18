@@ -317,20 +317,6 @@ exports.updateAssignedProduct = async (req, res) => {
         await data.selected_supplier.map(async i => {
             const result = await query_assigned_suppliers.create(i)
             console.log("result : ", result)
-
-            // const changestatus = await Query.findOneAndUpdate(
-            //     {
-            //         _id: new mongoose.Types.ObjectId(i.query_id),
-            //         'queryDetails.variant._id': new mongoose.Types.ObjectId(i.variant_id)
-            //     },
-            //     {
-            //         $set: {
-            //             'queryDetails.$.split_quantity.is_selected': true,
-            //             'queryDetails.$.split_quantity.quantity_assigned': i.quantity
-            //         }
-            //     }, { new: true }
-            // )
-            // console.log("changestatus : ", changestatus)
         })
 
         return res.status(200).json({
@@ -462,70 +448,48 @@ exports.addFinalQuote = async (req, res) => {
             });
         }
 
-        // const is_split_quantity = query_data.queryDetails.every(i => i.split_quantity && i.split_quantity.is_selected);
-        // console.log("is_split_quantity : ", is_split_quantity)
+        const is_supplier_assigned = await query_assigned_suppliers.find({ query_id, is_selected: true })
+        console.log('is_supplier_assigned : ', is_supplier_assigned)
 
-        // if (is_split_quantity) {
-        //     let result = await Promise.all(
-        //         final_quotes.map(async i =>
-        //             query_assigned_suppliers.findOneAndUpdate(
-        //                 {
-        //                     query_id: new mongoose.Types.ObjectId(query_id),
-        //                     is_selected: true
-        //                 },
-        //                 {
-        //                     $set: {
-        //                         admin_approved_quotes: i?.supplier_quote,
-        //                         logistics_price: i?.logistics_price,
-        //                         admin_margin: {
-        //                             value: i?.admin_margin?.value,
-        //                             margin_type: i?.admin_margin?.margin_type
-        //                         }
-        //                     }
-        //                 },
-        //                 { new: true }
-        //             )
-        //         )
-        //     );
-        //     console.log("result : ", result)
-        // }
+        if (is_supplier_assigned.length === 0) {
+            const response = await final_quotes.map(async (i) => {
+                const newquote = await query_assigned_suppliers.create({
+                    query_id,
+                    product_id: i?.product_id,
+                    variant_id: i?.variant_id,
+                    logistics_price: i?.logistics_price,
+                    admin_margin: i?.admin_margin,
+                    admin_approved_quotes: i?.supplier_quotes
+                })
+                console.log('newquote : ', newquote)
+            })
+            console.log('response : ', response)
+        }
 
-        // if(!is_split_quantity){
-        //     const result = await final_quotes.map(async i => {
-        //         const newdata = await query_assigned_suppliers.create({
-        //             query_id : query_id,
-        //             product_id : i?.product_id,
-        //             variant_id : i?.variant_id,
-        //             logistics_price : i?.logistics_price,
-        //             admin_margin : i?.admin_margin
-        //         })
-        //         console.log("newdata : ", newdata)
-        //     })
-        //     console.log("result : ", result)
-        // }
-
-        let result = await Promise.all(
-            final_quotes.map(async i =>
-                query_assigned_suppliers.findOneAndUpdate(
-                    {
-                        query_id: new mongoose.Types.ObjectId(query_id),
-                        is_selected: true
-                    },
-                    {
-                        $set: {
-                            admin_approved_quotes: i?.supplier_quote,
-                            logistics_price: i?.logistics_price,
-                            admin_margin: {
-                                value: i?.admin_margin?.value,
-                                margin_type: i?.admin_margin?.margin_type
+        if (is_supplier_assigned.length !== 0) {
+            let result = await Promise.all(
+                final_quotes.map(async i =>
+                    query_assigned_suppliers.findOneAndUpdate(
+                        {
+                            query_id: new mongoose.Types.ObjectId(query_id),
+                            is_selected: true
+                        },
+                        {
+                            $set: {
+                                admin_approved_quotes: i?.supplier_quote,
+                                logistics_price: i?.logistics_price,
+                                admin_margin: {
+                                    value: i?.admin_margin?.value,
+                                    margin_type: i?.admin_margin?.margin_type
+                                }
                             }
-                        }
-                    },
-                    { new: true }
+                        },
+                        { new: true }
+                    )
                 )
-            )
-        );
-        console.log("result : ", result)
+            );
+            console.log("result : ", result)
+        }
 
         await createQuotation(final_quotes, query_id, res)
         query_data.status = "completed"
