@@ -740,6 +740,134 @@ exports.generateFinalQuote = async (req, res) => {
         }
 
         const final_quotes = await Query.aggregate(
+            // [
+            //     {
+            //         $match: {
+            //             _id: new mongoose.Types.ObjectId(id)
+            //         }
+            //     },
+            //     {
+            //         $lookup: {
+            //             from: "query_assigned_suppliers",
+            //             let: { id: "$_id" },
+            //             pipeline: [
+            //                 {
+            //                     $match: {
+            //                         $expr: {
+            //                             $eq: ["$$id", "$query_id"]
+            //                         },
+            //                         is_selected: true
+            //                     }
+            //                 },
+            //                 {
+            //                     $project: {
+            //                         supplier_quote: 1,
+            //                         admin_approved_quotes: 1,
+            //                         admin_margin: 1,
+            //                         product_id: 1,
+            //                         variant_id: 1,
+            //                         logistics_price: 1
+            //                     }
+            //                 }
+            //             ],
+            //             as: "assigned_suppliers"
+            //         }
+            //     },
+            //     {
+            //         $addFields: {
+            //             queryDetails: {
+            //                 $map: {
+            //                     input: "$queryDetails",
+            //                     as: "qd",
+            //                     in: {
+            //                         $mergeObjects: [
+            //                             "$$qd",
+            //                             {
+            //                                 supplier_quotes: {
+            //                                     $map: {
+            //                                         input: {
+            //                                             $filter: {
+            //                                                 input:
+            //                                                     "$assigned_suppliers",
+            //                                                 as: "sq",
+            //                                                 cond: {
+            //                                                     $and: [
+            //                                                         {
+            //                                                             $eq: [
+            //                                                                 "$$sq.product_id",
+            //                                                                 "$$qd.product.id"
+            //                                                             ]
+            //                                                         },
+            //                                                         {
+            //                                                             $eq: [
+            //                                                                 "$$sq.variant_id",
+            //                                                                 "$$qd.variant._id"
+            //                                                             ]
+            //                                                         }
+            //                                                     ]
+            //                                                 }
+            //                                             }
+            //                                         },
+            //                                         as: "filtered_supplier",
+            //                                         in: {
+            //                                             quote_details:
+            //                                                 "$$filtered_supplier.supplier_quote",
+            //                                             matched_variant_id:
+            //                                                 "$$filtered_supplier.variant_id"
+            //                                         }
+            //                                     }
+            //                                 },
+            //                                 final_quote: {
+            //                                     $map: {
+            //                                         input: {
+            //                                             $filter: {
+            //                                                 input:
+            //                                                     "$assigned_suppliers",
+            //                                                 as: "sq",
+            //                                                 cond: {
+            //                                                     $and: [
+            //                                                         {
+            //                                                             $eq: [
+            //                                                                 "$$sq.product_id",
+            //                                                                 "$$qd.product.id"
+            //                                                             ]
+            //                                                         },
+            //                                                         {
+            //                                                             $eq: [
+            //                                                                 "$$sq.variant_id",
+            //                                                                 "$$qd.variant._id"
+            //                                                             ]
+            //                                                         }
+            //                                                     ]
+            //                                                 }
+            //                                             }
+            //                                         },
+            //                                         as: "filtered_supplier",
+            //                                         in: {
+            //                                             final_price_by_admin:
+            //                                                 "$$filtered_supplier.admin_approved_quotes",
+            //                                             logistics_price:
+            //                                                 "$$filtered_supplier.logistics_price",
+            //                                             admin_margin:
+            //                                                 "$$filtered_supplier.admin_margin",
+            //                                             matched_variant_id:
+            //                                                 "$$filtered_supplier.variant_id"
+            //                                         }
+            //                                     }
+            //                                 }
+            //                             }
+            //                         ]
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     },
+            //     {
+            //         $project: {
+            //             assigned_suppliers: 0
+            //         }
+            //     }
+            // ]
             [
                 {
                     $match: {
@@ -818,40 +946,69 @@ exports.generateFinalQuote = async (req, res) => {
                                                 }
                                             },
                                             final_quote: {
-                                                $map: {
-                                                    input: {
-                                                        $filter: {
-                                                            input:
-                                                                "$assigned_suppliers",
-                                                            as: "sq",
-                                                            cond: {
-                                                                $and: [
-                                                                    {
-                                                                        $eq: [
-                                                                            "$$sq.product_id",
-                                                                            "$$qd.product.id"
-                                                                        ]
-                                                                    },
-                                                                    {
-                                                                        $eq: [
-                                                                            "$$sq.variant_id",
-                                                                            "$$qd.variant._id"
-                                                                        ]
+                                                $let: {
+                                                    vars: {
+                                                        approved_supplier: {
+                                                            $arrayElemAt: [
+                                                                {
+                                                                    $filter: {
+                                                                        input:
+                                                                            "$assigned_suppliers",
+                                                                        as: "sq",
+                                                                        cond: {
+                                                                            $and: [
+                                                                                {
+                                                                                    $eq: [
+                                                                                        "$$sq.product_id",
+                                                                                        "$$qd.product.id"
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    $eq: [
+                                                                                        "$$sq.variant_id",
+                                                                                        "$$qd.variant._id"
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    $ne: [
+                                                                                        "$$sq.admin_approved_quotes",
+                                                                                        null
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    $ne: [
+                                                                                        "$$sq.admin_margin.value",
+                                                                                        null
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
                                                                     }
-                                                                ]
-                                                            }
+                                                                },
+                                                                0
+                                                            ]
                                                         }
                                                     },
-                                                    as: "filtered_supplier",
                                                     in: {
-                                                        final_price_by_admin:
-                                                            "$$filtered_supplier.admin_approved_quotes",
-                                                        logistics_price:
-                                                            "$$filtered_supplier.logistics_price",
-                                                        admin_margin:
-                                                            "$$filtered_supplier.admin_margin",
-                                                        matched_variant_id:
-                                                            "$$filtered_supplier.variant_id"
+                                                        $cond: {
+                                                            if: {
+                                                                $ne: [
+                                                                    "$$approved_supplier",
+                                                                    null
+                                                                ]
+                                                            },
+                                                            then: {
+                                                                final_price_by_admin:
+                                                                    "$$approved_supplier.admin_approved_quotes",
+                                                                logistics_price:
+                                                                    "$$approved_supplier.logistics_price",
+                                                                admin_margin:
+                                                                    "$$approved_supplier.admin_margin",
+                                                                matched_variant_id:
+                                                                    "$$approved_supplier.variant_id"
+                                                            },
+                                                            else: null
+                                                        }
                                                     }
                                                 }
                                             }
