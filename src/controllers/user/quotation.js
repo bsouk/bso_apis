@@ -942,7 +942,13 @@ exports.getQuotationDetails = async (req, res) => {
                                 {
                                     $addFields: {
                                         quantity:
-                                            "$query_data.queryDetails.quantity"
+                                            "$query_data.queryDetails.quantity",
+                                        price: {
+                                            $add: [
+                                                "$admin_approved_quotes.price",
+                                                "$admin_margin.value"
+                                            ]
+                                        }
                                     }
                                 },
                                 {
@@ -982,9 +988,7 @@ exports.getQuotationDetails = async (req, res) => {
                                             $push: "$variant_assigned_to"
                                         },
                                         quantity: { $first: "$quantity" },
-                                        admin_approved_quotes: {
-                                            $push: "$admin_approved_quotes"
-                                        },
+                                        price: { $first: "$price" },
                                         createdAt: { $first: "$createdAt" },
                                         updatedAt: { $first: "$updatedAt" },
                                         variant_data: {
