@@ -1075,7 +1075,7 @@ exports.approveRejectQuotation = async (req, res) => {
 
 exports.addQuotationNotes = async (req, res) => {
     try {
-        const { quotation_id, supplier_id, note } = req.body
+        const { quotation_id, variant_id, note } = req.body
         const user_id = req.user._id
         console.log("USER_ID : ", user_id)
 
@@ -1089,10 +1089,10 @@ exports.addQuotationNotes = async (req, res) => {
             })
         }
 
-        const queryData = await query_assigned_suppliers.findOneAndUpdate(
+        const queryData = await query_assigned_suppliers.updateMany(
             {
                 quotation_id: new mongoose.Types.ObjectId(quotation_id),
-                variant_assigned_to: new mongoose.Types.ObjectId(supplier_id)
+                variant_id: new mongoose.Types.ObjectId(variant_id)
             },
             {
                 $set: {
