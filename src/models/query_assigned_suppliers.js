@@ -12,6 +12,10 @@ const assignedSuppliersSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'quotation'
         },
+        final_quotation_submit : {
+            type : Boolean,
+            default : false
+        },
         product_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'products'

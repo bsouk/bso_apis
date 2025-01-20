@@ -1098,53 +1098,6 @@ exports.addFinalQuotationList = async (req, res) => {
             });
         }
 
-        // const result = await quotation.findOneAndUpdate(
-        //     {
-        //         _id: new mongoose.Types.ObjectId(quotation_id)
-        //     },
-        //     {
-        //         $set: { 'final_quotation_order': final_quotation }
-        //     },
-        //     { new: true }
-        // )
-
-        // let promiseresult = await Promise.all(
-        //     final_quotation.map(async i =>
-        //         query_assigned_suppliers.findOneAndUpdate(
-        //             {
-        //                 quotation_id: new mongoose.Types.ObjectId(quotation_id),
-        //                 is_selected: true
-        //             },
-        //             {
-        //                 $set: {
-        //                     admin_approved_quotes: i?.supplier_quote,
-        //                     logistics_price: i?.logistics_price,
-        //                     admin_margin: {
-        //                         value: i?.admin_margin?.value,
-        //                         margin_type: i?.admin_margin?.margin_type
-        //                     }
-        //                 }
-        //             },
-        //             { new: true }
-        //         )
-        //     )
-        // );
-        // console.log("promiseresult : ", promiseresult)
-
-        // const response = await query_assigned_suppliers.updateMany(
-        //     {
-        //         quotation_id: new mongoose.Types.ObjectId(quotation_id),
-        //         is_selected: true
-        //     },
-        //     {
-        //         $set: {
-        //             buyer_notes: null
-        //         }
-        //     }
-        // )
-        // console.log("response : ", response)
-
-
         const is_supplier_assigned = await query_assigned_suppliers.find({ quotation_id, is_selected: true })
         console.log('is_supplier_assigned : ', is_supplier_assigned)
 
@@ -1154,6 +1107,7 @@ exports.addFinalQuotationList = async (req, res) => {
                     query_id,
                     quotation_id,
                     is_selected: true,
+                    final_quotation_submit : true,
                     product_id: i?.product_id,
                     variant_id: i?.variant_id,
                     logistics_price: i?.logistics_price,
@@ -1186,7 +1140,8 @@ exports.addFinalQuotationList = async (req, res) => {
                                 value: i?.admin_margin?.value,
                                 margin_type: i?.admin_margin?.margin_type
                             },
-                            buyer_notes: null
+                            buyer_notes: null,
+                            final_quotation_submit : true
                         }
                     },
                     { new: true }
@@ -1197,6 +1152,7 @@ exports.addFinalQuotationList = async (req, res) => {
                         query_id,
                         quotation_id,
                         is_selected: true,
+                        final_quotation_submit : true,
                         product_id: i?.product_id,
                         variant_id: i?.variant_id,
                         logistics_price: i?.logistics_price,
