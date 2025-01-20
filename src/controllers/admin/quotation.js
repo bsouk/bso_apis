@@ -904,7 +904,8 @@ exports.getFinalQuotationList = async (req, res) => {
                                     admin_margin: 1,
                                     product_id: 1,
                                     variant_id: 1,
-                                    logistics_price: 1
+                                    logistics_price: 1,
+                                    is_admin_approved: 1
                                 }
                             }
                         ],
@@ -1002,9 +1003,18 @@ exports.getFinalQuotationList = async (req, res) => {
                                                     in: {
                                                         $cond: {
                                                             if: {
-                                                                $ne: [
-                                                                    "$$approved_supplier",
-                                                                    null
+                                                                $and: [
+                                                                    {
+                                                                        $ne: [
+                                                                            "$$approved_supplier",
+                                                                            null
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        $not: [
+                                                                            "$$approved_supplier.is_admin_approved"
+                                                                        ]
+                                                                    }
                                                                 ]
                                                             },
                                                             then: {
@@ -1060,7 +1070,7 @@ exports.getFinalQuotationList = async (req, res) => {
                 },
                 {
                     $project: {
-                        assigned_suppliers: 0,
+                        //assigned_suppliers: 0,
                         query_data: 0
                     }
                 }
