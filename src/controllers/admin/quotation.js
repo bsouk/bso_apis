@@ -1169,6 +1169,7 @@ exports.addFinalQuotationList = async (req, res) => {
 
             }
             )
+            console.log("result : ", result)
         }
 
         return res.status(200).json({
