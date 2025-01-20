@@ -565,6 +565,28 @@ exports.getQuotationDetails = async (req, res) => {
                                     path: "$supplier_data",
                                     preserveNullAndEmptyArrays: true
                                 }
+                            },
+                            {
+                                $group: {
+                                    _id: '$variant_id',
+                                    query_id: { $first: '$query_id' },
+                                    product_id: { $first: '$product_id' },
+                                    variant_id: { $first: '$variant_id' },
+                                    variant_assigned_to: { $push: '$variant_assigned_to' },
+                                    user_type: { $first: '$user_type' },
+                                    // quantity : {$push : '$quantity'},
+                                    // is_selected : {$first : '$is_selected'},
+                                    // admin_approved_quotes : {$push : '$admin_approved_quotes'},
+                                    // supplier_quote : {$push : '$supplier_quote'},
+                                    // admin_quote : {$push : '$admin_quote'},
+                                    //logistics_price : {$push : '$logistics_price'},
+                                    //admin_margin : {$push : '$admin_margin'},
+                                    createdAt: { $first: '$createdAt' },
+                                    updatedAt: { $first: '$updatedAt' },
+                                    variant_data: { $first: '$variant_data.variant' },
+                                    product_data: { $first: '$product_data' },
+                                    supplier_data: { $first: '$supplier_data' }
+                                }
                             }
                         ],
                         as: "final_quote"
