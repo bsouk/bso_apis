@@ -21,7 +21,8 @@ const companySchema = mongoose.Schema({
         type: String
     },
     company_industry: {
-        type: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref : 'industry_types'
     },
     company_size: {
         type: Number

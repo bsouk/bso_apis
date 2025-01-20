@@ -189,17 +189,32 @@ router.post(
 );
 
 router.post(
-  "/addUnit",
-  trimRequest.all,
-  requireAuth,
-  controller.addQuantityUnit
+    "/addUnit",
+    trimRequest.all,
+    requireAuth,
+    controller.addQuantityUnit
 );
 
 router.get(
-  "/getUnit",
-  trimRequest.all,
-  requireAuth,
-  controller.getQuantitiesUnits
+    "/getUnit",
+    trimRequest.all,
+    requireAuth,
+    controller.getQuantitiesUnits
+);
+
+
+router.post(
+    "/addIndustryType",
+    trimRequest.all,
+    requireAuth,
+    controller.addIndustryTypes
+);
+
+router.get(
+    "/getIndustryType",
+    trimRequest.all,
+    requireAuth,
+    controller.getIndustryTypes
 );
 
 module.exports = router;

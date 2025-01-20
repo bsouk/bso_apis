@@ -1169,12 +1169,10 @@ exports.addFinalQuotationList = async (req, res) => {
 
             }
             )
-            console.log("result : ", result)
         }
 
         return res.status(200).json({
             message: "final quotation added successfully",
-            data: result,
             code: 200
         })
     } catch (error) {

@@ -17,6 +17,7 @@ const ads = require("../../models/ads");
 const Product = require("../../models/product");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 const quantity_units = require("../../models/quantity_units");
+const industry_type = require("../../models/industry_type");
 
 //create password for users
 function createNewPassword() {
@@ -1431,7 +1432,7 @@ exports.getQueryById = async (req, res) => {
                 {
                     $project: {
                         quantity_unit_data: 0,
-                        'queryDetails.split_quantity' : 0
+                        'queryDetails.split_quantity': 0
                     }
                 }
             ]
@@ -1987,6 +1988,66 @@ exports.getQuantitiesUnits = async (req, res) => {
         ])
 
         const count = await quantity_units.countDocuments(filter)
+        res.status(200).json({
+            message: "Quantities unit fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+// add company industry types
+exports.addIndustryTypes = async (req, res) => {
+    try {
+        const { name } = req.body
+        const check = await industry_type.findOne({ name })
+        if (check) {
+            return utils.handleError(res, {
+                message: "industry category already existed",
+                code: 404,
+            });
+        }
+        const newtype = await industry_type.create({ name })
+        console.log("new industry type : ", newtype)
+        return res.status(200).json({
+            message: "Industry category added successfully",
+            data: newtype,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getIndustryTypes = async (req, res) => {
+    try {
+        const { search, offset = 0, limit = 10 } = req.query
+        let filter = {}
+        if (search) {
+            filter.name = { $regex: search, $options: "i" }
+        }
+        const data = await industry_type.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 10
+            }
+        ])
+
+        const count = await industry_type.countDocuments(filter)
         res.status(200).json({
             message: "Quantities unit fetched successfully",
             data,

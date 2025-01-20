@@ -9,7 +9,8 @@ const jobSchema = new mongoose.Schema({
         type: String
     },
     job_category: {
-
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'industry_types'
     },
     company_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -43,8 +44,9 @@ const jobSchema = new mongoose.Schema({
         enum: ['active', 'inactive', 'expired'],
         default: 'inactive'
     }
-})
-
+},
+    { timestamps: true }
+)
 
 jobSchema.plugin(mongoosePaginate);
 module.exports = mongoose.model("jobs", jobSchema);

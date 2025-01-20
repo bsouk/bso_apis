@@ -35,7 +35,9 @@ const jobApplicationSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     }
-})
+},
+    { timestamps: true }
+)
 
 jobApplicationSchema.plugin(mongoosePaginate);
 module.exports = mongoose.model("job_applications", jobApplicationSchema);
