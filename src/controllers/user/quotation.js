@@ -814,7 +814,8 @@ exports.getQuotationDetails = async (req, res) => {
                                                         _id: 1,
                                                         images: 1,
                                                         tag: 1
-                                                    }
+                                                    },
+                                                    buyer_notes: 1
                                                 }
                                             }
                                         ],
@@ -990,11 +991,13 @@ exports.getQuotationDetails = async (req, res) => {
                                         },
                                         quantity: { $first: "$quantity" },
                                         price: { $first: "$price" },
+                                        logistics_price: { $first: '$logistics_price' },
                                         createdAt: { $first: "$createdAt" },
                                         updatedAt: { $first: "$updatedAt" },
                                         variant_data: {
                                             $first: "$variant_data"
                                         },
+                                        buyer_notes: { $first: '$buyer_notes' },
                                         product_data: {
                                             $first: "$product_data"
                                         },
@@ -1010,7 +1013,7 @@ exports.getQuotationDetails = async (req, res) => {
                                         variant_id: 0,
                                         admin_margin: 0,
                                         supplier_quote: 0,
-                                        logistics_price: 0,
+                                        //logistics_price: 0,
                                         // query_data: 0,
                                         quotation_id: 0,
                                         is_buyer_approved: 0,

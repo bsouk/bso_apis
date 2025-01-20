@@ -7,8 +7,9 @@ const jobApplicationSchema = new mongoose.Schema({
     },
     job_id : {
         type : mongoose.Schema.Types.ObjectId,
-        ref : ''
-    }
+        ref : 'jobs'
+    },
+    
 })
 
 jobApplicationSchema.plugin(mongoosePaginate);

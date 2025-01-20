@@ -477,6 +477,7 @@ exports.getQuotationDetails = async (req, res) => {
                                     supplier_data: {
                                         $first: "$supplier_data"
                                     },
+                                    buyer_notes: { $first: '$buyer_notes' },
                                     createdAt: { $first: "$createdAt" },
                                     updatedAt: { $first: "$updatedAt" }
                                 }
@@ -1068,7 +1069,7 @@ exports.getFinalQuotationList = async (req, res) => {
 
         return res.status(200).json({
             message: "final quotation quote list generated successfully",
-            data : data[0],
+            data: data[0],
             code: 200
         })
     } catch (error) {
@@ -1107,7 +1108,7 @@ exports.addFinalQuotationList = async (req, res) => {
                     query_id,
                     quotation_id,
                     is_selected: true,
-                    final_quotation_submit : true,
+                    final_quotation_submit: true,
                     product_id: i?.product_id,
                     variant_id: i?.variant_id,
                     logistics_price: i?.logistics_price,
@@ -1141,7 +1142,7 @@ exports.addFinalQuotationList = async (req, res) => {
                                 margin_type: i?.admin_margin?.margin_type
                             },
                             buyer_notes: null,
-                            final_quotation_submit : true
+                            final_quotation_submit: true
                         }
                     },
                     { new: true }
@@ -1152,7 +1153,7 @@ exports.addFinalQuotationList = async (req, res) => {
                         query_id,
                         quotation_id,
                         is_selected: true,
-                        final_quotation_submit : true,
+                        final_quotation_submit: true,
                         product_id: i?.product_id,
                         variant_id: i?.variant_id,
                         logistics_price: i?.logistics_price,
