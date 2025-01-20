@@ -1696,12 +1696,66 @@ exports.getQueryById = async (req, res) => {
                                 },
                                 else: null
                             }
+                        },
+                        "queryDetails.quantity": {
+                            $cond: {
+                                if: {
+                                    $gt: [{ $size: "$supplier_quote" }, 0]
+                                },
+                                then: {
+                                    $map: {
+                                        input: {
+                                            $filter: {
+                                                input: "$supplier_quote",
+                                                as: "sq",
+                                                cond: {
+                                                    $and: [
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.query_id",
+                                                                "$_id"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.variant_id",
+                                                                "$queryDetails.variant._id"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.product_id",
+                                                                "$queryDetails.product.id"
+                                                            ]
+                                                        },
+                                                        {
+                                                            $eq: [
+                                                                "$$sq.variant_assigned_to",
+                                                                new mongoose.Types.ObjectId(userId)
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        as: "filtered_supplier",
+                                        in: "$$filtered_supplier.quantity"
+                                    }
+                                },
+                                else: null
+                            }
                         }
                     }
                 },
                 {
                     $unwind: {
                         path: "$queryDetails.assigned_id",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$queryDetails.quantity",
                         preserveNullAndEmptyArrays: true
                     }
                 },
