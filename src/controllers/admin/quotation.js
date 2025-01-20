@@ -1068,7 +1068,7 @@ exports.getFinalQuotationList = async (req, res) => {
 
         return res.status(200).json({
             message: "final quotation quote list generated successfully",
-            data,
+            data : data[0],
             code: 200
         })
     } catch (error) {
