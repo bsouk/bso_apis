@@ -5,11 +5,36 @@ const jobApplicationSchema = new mongoose.Schema({
     application_id: {
         type: String
     },
-    job_id : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'jobs'
+    job_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'jobs'
     },
-    
+    canditate_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    },
+    is_saved: {
+        type: Boolean,
+        default: false
+    },
+    resume: {
+        type: String
+    },
+    cover_letter: {
+        type: String
+    },
+    experience: {
+        type: String
+    },
+    status: {
+        type: String,
+        enum: ['active', 'inactive', 'expired'],
+        default: 'active'
+    },
+    is_accepted_by_company: {
+        type: Boolean,
+        default: false
+    }
 })
 
 jobApplicationSchema.plugin(mongoosePaginate);

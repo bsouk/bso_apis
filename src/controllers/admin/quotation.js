@@ -1399,12 +1399,13 @@ exports.approveRejectLogistics = async (req, res) => {
 
 exports.addAdminQuotationNotes = async (req, res) => {
     try {
-        const { quotation_id, supplier_id, note } = req.body
+        const { quotation_id, supplier_id, variant_id, note } = req.body
 
         const result = await query_assigned_suppliers.findOneAndUpdate(
             {
                 quotation_id: new mongoose.Types.ObjectId(quotation_id),
                 variant_assigned_to: new mongoose.Types.ObjectId(supplier_id),
+                variant_id: new mongoose.Types.ObjectId(variant_id),
                 is_selected: true
             },
             {
