@@ -811,6 +811,7 @@ exports.getQuotationDetails = async (req, res) => {
                                                 $project: {
                                                     _id: 1,
                                                     variant: {
+                                                        _id: 1,
                                                         images: 1,
                                                         tag: 1
                                                     }

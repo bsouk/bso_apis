@@ -43,7 +43,6 @@ const jobSchema = new mongoose.Schema({
         enum: ['active', 'inactive', 'expired'],
         default: 'inactive'
     }
-
 })
 
 
