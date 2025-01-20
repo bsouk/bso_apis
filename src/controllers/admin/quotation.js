@@ -632,32 +632,233 @@ exports.getFinalQuotationList = async (req, res) => {
     try {
         const { quotation_id } = req.query
 
-        const data = await query_assigned_suppliers.aggregate(
+        // const data = await query_assigned_suppliers.aggregate(
+        //     [
+        //         {
+        //             $match: {
+        //                 quotation_id: new mongoose.Types.ObjectId(quotation_id),
+        //                 is_selected: true
+        //             }
+        //         },
+        //         {
+        //             $lookup: {
+        //                 from: "products",
+        //                 let: { id: "$product_id" },
+        //                 pipeline: [
+        //                     {
+        //                         $match: {
+        //                             $expr: { $eq: ["$$id", "$_id"] }
+        //                         }
+        //                     },
+        //                     {
+        //                         $project: {
+        //                             _id: 1,
+        //                             name: 1
+        //                         }
+        //                     }
+        //                 ],
+        //                 as: "product_data"
+        //             }
+        //         },
+        //         {
+        //             $lookup: {
+        //                 from: "queries",
+        //                 let: { id: "$query_id" },
+        //                 pipeline: [
+        //                     {
+        //                         $match: {
+        //                             $expr: { $eq: ["$$id", "$_id"] }
+        //                         }
+        //                     },
+        //                     {
+        //                         $project: {
+        //                             _id: 1,
+        //                             status: 1,
+        //                             queryDetails: 1
+        //                         }
+        //                     }
+        //                 ],
+        //                 as: "query_data"
+        //             }
+        //         },
+        //         {
+        //             $unwind: {
+        //                 path: "$query_data",
+        //                 preserveNullAndEmptyArrays: true
+        //             }
+        //         },
+        //         {
+        //             $lookup: {
+        //                 from: "products",
+        //                 let: { id: "$variant_id" },
+        //                 pipeline: [
+        //                     {
+        //                         $unwind: {
+        //                             path: "$variant",
+        //                             preserveNullAndEmptyArrays: true
+        //                         }
+        //                     },
+        //                     {
+        //                         $match: {
+        //                             $expr: {
+        //                                 $eq: ["$$id", "$variant._id"]
+        //                             }
+        //                         }
+        //                     },
+        //                     {
+        //                         $project: {
+        //                             variant: 1
+        //                         }
+        //                     }
+        //                 ],
+        //                 as: "variant_data"
+        //             }
+        //         },
+        //         {
+        //             $unwind: {
+        //                 path: "$product_data",
+        //                 preserveNullAndEmptyArrays: true
+        //             }
+        //         },
+        //         {
+        //             $unwind: {
+        //                 path: "$variant_data",
+        //                 preserveNullAndEmptyArrays: true
+        //             }
+        //         },
+        //         {
+        //             $addFields: {
+        //                 buyer_quantity: {
+        //                     $cond: {
+        //                         if: {
+        //                             $gt: [
+        //                                 {
+        //                                     $size: "$query_data.queryDetails"
+        //                                 },
+        //                                 0
+        //                             ]
+        //                         },
+        //                         then: {
+        //                             $map: {
+        //                                 input: {
+        //                                     $filter: {
+        //                                         input:
+        //                                             "$query_data.queryDetails",
+        //                                         as: "sq",
+        //                                         cond: {
+        //                                             $and: [
+        //                                                 {
+        //                                                     $eq: [
+        //                                                         "$$sq.product.id",
+        //                                                         "$product_id"
+        //                                                     ]
+        //                                                 },
+        //                                                 {
+        //                                                     $eq: [
+        //                                                         "$$sq.variant._id",
+        //                                                         "$variant_id"
+        //                                                     ]
+        //                                                 }
+        //                                             ]
+        //                                         }
+        //                                     }
+        //                                 },
+        //                                 as: "filtered_supplier",
+        //                                 in: "$$filtered_supplier.quantity"
+        //                             }
+        //                         },
+        //                         else: []
+        //                     }
+        //                 }
+        //             }
+        //         },
+        //         {
+        //             $unwind: {
+        //                 path: "$buyer_quantity",
+        //                 preserveNullAndEmptyArrays: true
+        //             }
+        //         },
+        //         {
+        //             $group: {
+        //                 _id: {
+        //                     variant_id: "$variant_id"
+        //                 },
+        //                 variant_assigned_to: {
+        //                     $push: "$variant_assigned_to"
+        //                 },
+        //                 total_quantity: { $sum: "$quantity.value" },
+        //                 total_quantity_unit: {
+        //                     $first: "$quantity.unit"
+        //                 },
+        //                 is_selected: { $first: "$is_selected" },
+        //                 logistics_price: {
+        //                     $sum: "$logistics_price"
+        //                 },
+        //                 supplier_quote_price: {
+        //                     $sum: "$supplier_quote.price"
+        //                 },
+        //                 supplier_quote_media: {
+        //                     $push: "$supplier_quote.media"
+        //                 },
+        //                 supplier_quote_document: {
+        //                     $push: "$supplier_quote.document"
+        //                 },
+        //                 admin_margin_value: {
+        //                     $sum: "$admin_margin.value"
+        //                 },
+        //                 admin_margin_margin_type: {
+        //                     $first: "$admin_margin.margin_type"
+        //                 },
+        //                 quotation_id: { $first: "$quotation_id" },
+        //                 buyer_notes: { $push: "$buyer_notes" },
+        //                 admin_notes: { $push: "$admin_notes" },
+        //                 product_data: { $first: "$product_data" },
+        //                 // query_data: { $first: "$query_data" },
+        //                 variant_data: {
+        //                     $first: "$variant_data.variant"
+        //                 },
+        //                 buyer_quantity: {
+        //                     $first: "$buyer_quantity"
+        //                 },
+        //                 createdAt: { $first: "$createdAt" },
+        //                 updatedAt: { $first: "$updatedAt" }
+        //             }
+        //         },
+        //         {
+        //             $addFields: {
+        //                 supplier_quote_media: {
+        //                     $reduce: {
+        //                         input: "$supplier_quote_media",
+        //                         initialValue: [],
+        //                         in: {
+        //                             $concatArrays: ["$$value", "$$this"]
+        //                         }
+        //                     }
+        //                 },
+        //                 supplier_quote_document: {
+        //                     $reduce: {
+        //                         input: "$supplier_quote_document",
+        //                         initialValue: [],
+        //                         in: {
+        //                             $concatArrays: ["$$value", "$$this"]
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         },
+        //         {
+        //             $project: {
+        //                 _id: 1,
+        //                 product_id: 0
+        //             }
+        //         }
+        //     ]
+        // )
+        const data = await quotation.aggregate(
             [
                 {
                     $match: {
-                        quotation_id: new mongoose.Types.ObjectId(quotation_id),
-                        is_selected: true
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "products",
-                        let: { id: "$product_id" },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: { $eq: ["$$id", "$_id"] }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 1,
-                                    name: 1
-                                }
-                            }
-                        ],
-                        as: "product_data"
+                        _id: new mongoose.Types.ObjectId(quotation_id)
                     }
                 },
                 {
@@ -667,14 +868,9 @@ exports.getFinalQuotationList = async (req, res) => {
                         pipeline: [
                             {
                                 $match: {
-                                    $expr: { $eq: ["$$id", "$_id"] }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 1,
-                                    status: 1,
-                                    queryDetails: 1
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
                                 }
                             }
                         ],
@@ -689,158 +885,173 @@ exports.getFinalQuotationList = async (req, res) => {
                 },
                 {
                     $lookup: {
-                        from: "products",
-                        let: { id: "$variant_id" },
+                        from: "query_assigned_suppliers",
+                        let: { id: "$_id" },
                         pipeline: [
-                            {
-                                $unwind: {
-                                    path: "$variant",
-                                    preserveNullAndEmptyArrays: true
-                                }
-                            },
                             {
                                 $match: {
                                     $expr: {
-                                        $eq: ["$$id", "$variant._id"]
-                                    }
+                                        $eq: ["$$id", "$quotation_id"]
+                                    },
+                                    is_selected: true
                                 }
                             },
                             {
                                 $project: {
-                                    variant: 1
+                                    supplier_quote: 1,
+                                    admin_approved_quotes: 1,
+                                    admin_margin: 1,
+                                    product_id: 1,
+                                    variant_id: 1,
+                                    logistics_price: 1
                                 }
                             }
                         ],
-                        as: "variant_data"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$product_data",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$variant_data",
-                        preserveNullAndEmptyArrays: true
+                        as: "assigned_suppliers"
                     }
                 },
                 {
                     $addFields: {
-                        buyer_quantity: {
-                            $cond: {
-                                if: {
-                                    $gt: [
+                        queryDetails: {
+                            $map: {
+                                input: "$query_data.queryDetails",
+                                as: "qd",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$qd",
                                         {
-                                            $size: "$query_data.queryDetails"
-                                        },
-                                        0
-                                    ]
-                                },
-                                then: {
-                                    $map: {
-                                        input: {
-                                            $filter: {
-                                                input:
-                                                    "$query_data.queryDetails",
-                                                as: "sq",
-                                                cond: {
-                                                    $and: [
-                                                        {
-                                                            $eq: [
-                                                                "$$sq.product.id",
-                                                                "$product_id"
-                                                            ]
-                                                        },
-                                                        {
-                                                            $eq: [
-                                                                "$$sq.variant._id",
-                                                                "$variant_id"
+                                            supplier_quotes: {
+                                                $map: {
+                                                    input: {
+                                                        $filter: {
+                                                            input:
+                                                                "$assigned_suppliers",
+                                                            as: "sq",
+                                                            cond: {
+                                                                $and: [
+                                                                    {
+                                                                        $eq: [
+                                                                            "$$sq.product_id",
+                                                                            "$$qd.product.id"
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        $eq: [
+                                                                            "$$sq.variant_id",
+                                                                            "$$qd.variant._id"
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }
+                                                    },
+                                                    as: "filtered_supplier",
+                                                    in: {
+                                                        quote_details:
+                                                            "$$filtered_supplier.supplier_quote",
+                                                        matched_variant_id:
+                                                            "$$filtered_supplier.variant_id"
+                                                    }
+                                                }
+                                            },
+                                            final_quote: {
+                                                $let: {
+                                                    vars: {
+                                                        approved_supplier: {
+                                                            $arrayElemAt: [
+                                                                {
+                                                                    $filter: {
+                                                                        input:
+                                                                            "$assigned_suppliers",
+                                                                        as: "sq",
+                                                                        cond: {
+                                                                            $and: [
+                                                                                {
+                                                                                    $eq: [
+                                                                                        "$$sq.product_id",
+                                                                                        "$$qd.product.id"
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    $eq: [
+                                                                                        "$$sq.variant_id",
+                                                                                        "$$qd.variant._id"
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    $ne: [
+                                                                                        "$$sq.admin_approved_quotes",
+                                                                                        null
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    $ne: [
+                                                                                        "$$sq.admin_margin.value",
+                                                                                        null
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                0
                                                             ]
                                                         }
-                                                    ]
+                                                    },
+                                                    in: {
+                                                        $cond: {
+                                                            if: {
+                                                                $ne: [
+                                                                    "$$approved_supplier",
+                                                                    null
+                                                                ]
+                                                            },
+                                                            then: {
+                                                                final_price_by_admin:
+                                                                    "$$approved_supplier.admin_approved_quotes",
+                                                                logistics_price:
+                                                                    "$$approved_supplier.logistics_price",
+                                                                admin_margin:
+                                                                    "$$approved_supplier.admin_margin",
+                                                                matched_variant_id:
+                                                                    "$$approved_supplier.variant_id"
+                                                            },
+                                                            else: null
+                                                        }
+                                                    }
                                                 }
                                             }
-                                        },
-                                        as: "filtered_supplier",
-                                        in: "$$filtered_supplier.quantity"
-                                    }
-                                },
-                                else: []
+                                        }
+                                    ]
+                                }
                             }
                         }
                     }
                 },
                 {
-                    $unwind: {
-                        path: "$buyer_quantity",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $group: {
-                        _id: {
-                            variant_id: "$variant_id"
-                        },
-                        variant_assigned_to: {
-                            $push: "$variant_assigned_to"
-                        },
-                        total_quantity: { $sum: "$quantity.value" },
-                        total_quantity_unit: {
-                            $first: "$quantity.unit"
-                        },
-                        is_selected: { $first: "$is_selected" },
-                        logistics_price: {
-                            $sum: "$logistics_price"
-                        },
-                        supplier_quote_price: {
-                            $sum: "$supplier_quote.price"
-                        },
-                        supplier_quote_media: {
-                            $push: "$supplier_quote.media"
-                        },
-                        supplier_quote_document: {
-                            $push: "$supplier_quote.document"
-                        },
-                        admin_margin_value: {
-                            $sum: "$admin_margin.value"
-                        },
-                        admin_margin_margin_type: {
-                            $first: "$admin_margin.margin_type"
-                        },
-                        quotation_id: { $first: "$quotation_id" },
-                        buyer_notes: { $push: "$buyer_notes" },
-                        admin_notes: { $push: "$admin_notes" },
-                        product_data: { $first: "$product_data" },
-                        // query_data: { $first: "$query_data" },
-                        variant_data: {
-                            $first: "$variant_data.variant"
-                        },
-                        buyer_quantity: {
-                            $first: "$buyer_quantity"
-                        },
-                        createdAt: { $first: "$createdAt" },
-                        updatedAt: { $first: "$updatedAt" }
-                    }
-                },
-                {
                     $addFields: {
-                        supplier_quote_media: {
-                            $reduce: {
-                                input: "$supplier_quote_media",
-                                initialValue: [],
+                        queryDetails: {
+                            $map: {
+                                input: "$queryDetails",
+                                as: "qd",
                                 in: {
-                                    $concatArrays: ["$$value", "$$this"]
-                                }
-                            }
-                        },
-                        supplier_quote_document: {
-                            $reduce: {
-                                input: "$supplier_quote_document",
-                                initialValue: [],
-                                in: {
-                                    $concatArrays: ["$$value", "$$this"]
+                                    $mergeObjects: [
+                                        "$$qd",
+                                        {
+                                            final_quote: {
+                                                $cond: {
+                                                    if: {
+                                                        $eq: [
+                                                            "$$qd.final_quote",
+                                                            {}
+                                                        ]
+                                                    },
+                                                    then: null,
+                                                    else: "$$qd.final_quote"
+                                                }
+                                            }
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -848,8 +1059,8 @@ exports.getFinalQuotationList = async (req, res) => {
                 },
                 {
                     $project: {
-                        _id: 1,
-                        product_id: 0
+                        assigned_suppliers: 0,
+                        query_data: 0
                     }
                 }
             ]
@@ -887,51 +1098,122 @@ exports.addFinalQuotationList = async (req, res) => {
             });
         }
 
-        const result = await quotation.findOneAndUpdate(
-            {
-                _id: new mongoose.Types.ObjectId(quotation_id)
-            },
-            {
-                $set: { 'final_quotation_order': final_quotation }
-            },
-            { new: true }
-        )
+        // const result = await quotation.findOneAndUpdate(
+        //     {
+        //         _id: new mongoose.Types.ObjectId(quotation_id)
+        //     },
+        //     {
+        //         $set: { 'final_quotation_order': final_quotation }
+        //     },
+        //     { new: true }
+        // )
 
-        let promiseresult = await Promise.all(
-            final_quotation.map(async i =>
-                query_assigned_suppliers.findOneAndUpdate(
+        // let promiseresult = await Promise.all(
+        //     final_quotation.map(async i =>
+        //         query_assigned_suppliers.findOneAndUpdate(
+        //             {
+        //                 quotation_id: new mongoose.Types.ObjectId(quotation_id),
+        //                 is_selected: true
+        //             },
+        //             {
+        //                 $set: {
+        //                     admin_approved_quotes: i?.supplier_quote,
+        //                     logistics_price: i?.logistics_price,
+        //                     admin_margin: {
+        //                         value: i?.admin_margin?.value,
+        //                         margin_type: i?.admin_margin?.margin_type
+        //                     }
+        //                 }
+        //             },
+        //             { new: true }
+        //         )
+        //     )
+        // );
+        // console.log("promiseresult : ", promiseresult)
+
+        // const response = await query_assigned_suppliers.updateMany(
+        //     {
+        //         quotation_id: new mongoose.Types.ObjectId(quotation_id),
+        //         is_selected: true
+        //     },
+        //     {
+        //         $set: {
+        //             buyer_notes: null
+        //         }
+        //     }
+        // )
+        // console.log("response : ", response)
+
+
+        const is_supplier_assigned = await query_assigned_suppliers.find({ quotation_id, is_selected: true })
+        console.log('is_supplier_assigned : ', is_supplier_assigned)
+
+        if (is_supplier_assigned.length === 0) {
+            const response = await final_quotation.map(async (i) => {
+                const newquote = await query_assigned_suppliers.create({
+                    query_id,
+                    quotation_id,
+                    is_selected: true,
+                    product_id: i?.product_id,
+                    variant_id: i?.variant_id,
+                    logistics_price: i?.logistics_price,
+                    admin_margin: {
+                        value: i?.admin_margin?.value,
+                        margin_type: i?.admin_margin?.margin_type
+                    },
+                    admin_approved_quotes: i?.admin_final_price,
+                    quantity: i?.quantity
+                })
+                console.log('newquote : ', newquote)
+            })
+            console.log('response : ', response)
+        }
+
+        if (is_supplier_assigned.length !== 0) {
+            let result = await final_quotation.map(async i => {
+                const response = await query_assigned_suppliers.findOneAndUpdate(
                     {
                         quotation_id: new mongoose.Types.ObjectId(quotation_id),
+                        variant_id: new mongoose.Types.ObjectId(i?.variant_id),
+                        product_id: new mongoose.Types.ObjectId(i?.product_id),
                         is_selected: true
                     },
                     {
                         $set: {
-                            admin_approved_quotes: i?.supplier_quote,
+                            admin_approved_quotes: i?.admin_final_price,
                             logistics_price: i?.logistics_price,
                             admin_margin: {
                                 value: i?.admin_margin?.value,
                                 margin_type: i?.admin_margin?.margin_type
-                            }
+                            },
+                            buyer_notes: null
                         }
                     },
                     { new: true }
                 )
-            )
-        );
-        console.log("promiseresult : ", promiseresult)
-
-        const response = await query_assigned_suppliers.updateMany(
-            {
-                quotation_id: new mongoose.Types.ObjectId(quotation_id),
-                is_selected: true
-            },
-            {
-                $set: {
-                    buyer_notes: null
+                console.log("response : ", response)
+                if (!response || response.admin_approved_quotes === null) {
+                    const newquote = await query_assigned_suppliers.create({
+                        query_id,
+                        quotation_id,
+                        is_selected: true,
+                        product_id: i?.product_id,
+                        variant_id: i?.variant_id,
+                        logistics_price: i?.logistics_price,
+                        admin_margin: {
+                            value: i?.admin_margin?.value,
+                            margin_type: i?.admin_margin?.margin_type
+                        },
+                        admin_approved_quotes: i?.admin_final_price ?? null,
+                        quantity: i?.quantity ?? null
+                    });
+                    console.log('newquote : ', newquote);
                 }
+
             }
-        )
-        console.log("response : ", response)
+            )
+            console.log("result : ", result)
+        }
 
         return res.status(200).json({
             message: "final quotation added successfully",
