@@ -1031,6 +1031,35 @@ exports.generateFinalQuote = async (req, res) => {
                     }
                 },
                 {
+                    $addFields: {
+                        queryDetails: {
+                            $map: {
+                                input: "$queryDetails",
+                                as: "qd",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$qd",
+                                        {
+                                            final_quote: {
+                                                $cond: {
+                                                    if: {
+                                                        $eq: [
+                                                            "$$qd.final_quote",
+                                                            {}
+                                                        ]
+                                                    },
+                                                    then: null,
+                                                    else: "$$qd.final_quote"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                {
                     $project: {
                         assigned_suppliers: 0
                     }

@@ -12,6 +12,270 @@ const version_history = require("../../models/version_history");
 const query = require("../../models/query");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 
+// exports.getQuotationList = async (req, res) => {
+//     try {
+//         const { offset = 0, limit = 10, search, status } = req.query;
+//         const userId = req.user._id;
+//         console.log("User ID:", userId);
+
+//         const user_data = await user.findOne({ _id: userId });
+//         console.log("Logged user:", user_data);
+
+//         if (!user_data) {
+//             return utils.handleError(res, {
+//                 message: "User not found",
+//                 code: 404,
+//             });
+//         }
+
+//         let filter = {};
+
+//         if (search) {
+//             filter.quotation_unique_id = { $regex: search, $options: "i" };
+//         }
+
+//         if (status) {
+//             filter.is_approved = status
+//         }
+//         let data = []
+//         let aggregate_data = []
+//         let count = 0
+//         if (user_data.user_type === "buyer") {
+//             aggregate_data = [
+//                 {
+//                     $match: {
+//                         createdByUser: new mongoose.Types.ObjectId(userId)
+//                     }
+//                 },
+//                 {
+//                     $lookup: {
+//                         from: "quotations",
+//                         let: { id: "$_id" },
+//                         pipeline: [
+//                             {
+//                                 $match: {
+//                                     $expr: {
+//                                         $eq: ["$$id", "$query_id"]
+//                                     }
+//                                 }
+//                             },
+//                             {
+//                                 $lookup: {
+//                                     from: 'bidsettings',
+//                                     let: { id: '$bid_setting' },
+//                                     pipeline: [
+//                                         {
+//                                             $match: {
+//                                                 $expr: {
+//                                                     $eq: ["$$id", '$_id']
+//                                                 }
+//                                             }
+//                                         }
+//                                     ],
+//                                     as: 'bid_setting_data'
+//                                 }
+//                             },
+//                             {
+//                                 $unwind: {
+//                                     path: '$bid_setting_data',
+//                                     preserveNullAndEmptyArrays: true
+//                                 }
+//                             },
+//                             {
+//                                 $match: filter
+//                             }
+//                         ],
+//                         as: "quotations"
+//                     }
+//                 },
+//                 {
+//                     $unwind: {
+//                         path: "$quotations",
+//                         preserveNullAndEmptyArrays: true
+//                     }
+//                 },
+//                 {
+//                     $match: {
+//                         "quotations.bid_setting_data": {
+//                             $ne: null
+//                         },
+//                         quotations: { $ne: null }
+//                     }
+//                 },
+//                 {
+//                     $project: {
+//                         _id: 0,
+//                         'quotations.final_quotation_order': 0,
+//                         query_unique_id: 0,
+//                         status: 0,
+//                         createdByUser: 0,
+//                         queryDetails: 0,
+//                         adminApproved: 0,
+//                         queryCreation: 0,
+//                         createdAt: 0,
+//                         updatedAt: 0,
+//                         __v: 0
+//                     }
+//                 },
+//                 {
+//                     $sort: { createdAt: -1 },
+//                 },
+//                 { $skip: parseInt(offset) },
+//                 { $limit: parseInt(limit) },
+//             ]
+//             data = await query.aggregate(
+//                 aggregate_data
+//             );
+
+//             console.log("quotations: ", data);
+//             count = await query.countDocuments(aggregate_data);
+//         }
+
+//         if (user_data.user_type === "supplier") {
+//             aggregate_data = [
+//                 {
+//                     $match: {
+//                         variant_assigned_to: new mongoose.Types.ObjectId(userId)
+//                     }
+//                 },
+//                 {
+//                     $lookup: {
+//                         from: "quotations",
+//                         let: { id: "$quotation_id" },
+//                         pipeline: [
+//                             {
+//                                 $match: {
+//                                     $expr: {
+//                                         $eq: ["$$id", "$_id"]
+//                                     }
+//                                 }
+//                             },
+//                             {
+//                                 $lookup: {
+//                                     from: "bidsettings",
+//                                     let: { id: "$bid_setting" },
+//                                     pipeline: [
+//                                         {
+//                                             $match: {
+//                                                 $expr: {
+//                                                     $eq: ["$$id", "$_id"]
+//                                                 }
+//                                             }
+//                                         }
+//                                     ],
+//                                     as: "bid_setting_data"
+//                                 }
+//                             },
+//                             {
+//                                 $unwind: {
+//                                     path: "$bid_setting_data",
+//                                     preserveNullAndEmptyArrays: true
+//                                 }
+//                             },
+//                             {
+//                                 $match: filter
+//                             }
+//                         ],
+//                         as: "quotations"
+//                     }
+//                 },
+//                 {
+//                     $unwind: {
+//                         path: "$quotations",
+//                         preserveNullAndEmptyArrays: true
+//                     }
+//                 },
+//                 {
+//                     $match: {
+//                         quotations: { $ne: null }
+//                     }
+//                 },
+//                 {
+//                     $group: {
+//                         _id: "$quotation_id",
+//                         quotation_unique_id: {
+//                             $first: "$quotations.quotation_unique_id"
+//                         },
+//                         quotation_type: {
+//                             $first: "$quotations.quotation_type"
+//                         },
+//                         query_id: {
+//                             $first: "$quotations.query_id"
+//                         },
+//                         bid_setting: {
+//                             $first: "$quotations.bid_setting"
+//                         },
+//                         is_admin_logistics_decided: {
+//                             $first:
+//                                 "$quotations.is_admin_logistics_decided"
+//                         },
+//                         rejected_reason: {
+//                             $first: "$quotations.rejected_reason"
+//                         },
+//                         accepted_logistics: {
+//                             $first: "$quotations.accepted_logistics"
+//                         },
+//                         decided_logistics_id: {
+//                             $first: "$quotations.decided_logistics_id"
+//                         },
+//                         is_approved: {
+//                             $first: "$quotations.is_approved"
+//                         },
+//                         bid_setting_data: { $first: '$quotations.bid_setting_data' },
+//                         createdAt: {
+//                             $first: "$quotations.createdAt"
+//                         },
+//                         updatedAt: {
+//                             $first: "$quotations.updatedAt"
+//                         },
+//                         // final_quotation_order: {
+//                         //   $first:
+//                         //     "$quotations.final_quotation_order"
+//                         // }
+//                     }
+//                 },
+//                 {
+//                     $project: {
+//                         _id: 1,
+//                         quotation_unique_id: 1,
+//                         quotation_type: 1,
+//                         query_id: 1,
+//                         bid_setting: 1,
+//                         is_admin_logistics_decided: 1,
+//                         rejected_reason: 1,
+//                         accepted_logistics: 1,
+//                         decided_logistics_id: 1,
+//                         is_approved: 1,
+//                         createdAt: 1,
+//                         updatedAt: 1,
+//                         quotations: 1,
+//                         bid_setting_data: 1
+//                     }
+//                 },
+//                 {
+//                     $sort: { createdAt: -1 },
+//                 },
+//                 { $skip: parseInt(offset) },
+//                 { $limit: parseInt(limit) }
+//             ]
+//             data = await query_assigned_suppliers.aggregate(
+//                 aggregate_data
+//             )
+//             count = await query_assigned_suppliers.countDocuments(aggregate_data);
+//         }
+
+//         return res.status(200).json({
+//             message: "Quotation list fetched successfully",
+//             data: data,
+//             count: count,
+//             code: 200,
+//         });
+//     } catch (error) {
+//         console.error("Error in getQuotationList:", error);
+//         utils.handleError(res, error);
+//     }
+// };
+
 exports.getQuotationList = async (req, res) => {
     try {
         const { offset = 0, limit = 10, search, status } = req.query;
@@ -35,235 +299,173 @@ exports.getQuotationList = async (req, res) => {
         }
 
         if (status) {
-            filter.is_approved = status
+            filter.is_approved = status;
         }
-        let data = []
+
+        let data = [];
+        let count = 0;
+
+        const commonPipeline = (matchStage, queryCollection) => [
+            matchStage,
+            {
+                $lookup: {
+                    from: "quotations",
+                    let: { id: user_data.user_type === "buyer" ? "$_id" : "$quotation_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$$id", user_data.user_type === "buyer" ? "$query_id" : "$_id"],
+                                },
+                            },
+                        },
+                        {
+                            $lookup: {
+                                from: "bidsettings",
+                                let: { id: "$bid_setting" },
+                                pipeline: [
+                                    {
+                                        $match: {
+                                            $expr: {
+                                                $eq: ["$$id", "$_id"],
+                                            },
+                                        },
+                                    },
+                                ],
+                                as: "bid_setting_data",
+                            },
+                        },
+                        {
+                            $unwind: {
+                                path: "$bid_setting_data",
+                                preserveNullAndEmptyArrays: true,
+                            },
+                        },
+                        {
+                            $match: filter,
+                        },
+                    ],
+                    as: "quotations",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$quotations",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $match: {
+                    quotations: { $ne: null },
+                    "quotations.bid_setting_data": { $ne: null },
+                },
+            },
+        ];
+
         if (user_data.user_type === "buyer") {
-            data = await query.aggregate(
-                [
-                    {
-                        $match: {
-                            createdByUser: new mongoose.Types.ObjectId(userId)
-                        }
-                    },
-                    {
-                        $lookup: {
-                            from: "quotations",
-                            let: { id: "$_id" },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $eq: ["$$id", "$query_id"]
-                                        }
-                                    }
-                                },
-                                {
-                                    $lookup: {
-                                        from: 'bidsettings',
-                                        let: { id: '$bid_setting' },
-                                        pipeline: [
-                                            {
-                                                $match: {
-                                                    $expr: {
-                                                        $eq: ["$$id", '$_id']
-                                                    }
-                                                }
-                                            }
-                                        ],
-                                        as: 'bid_setting_data'
-                                    }
-                                },
-                                {
-                                    $unwind: {
-                                        path: '$bid_setting_data',
-                                        preserveNullAndEmptyArrays: true
-                                    }
-                                },
-                                {
-                                    $match: filter
-                                }
-                            ],
-                            as: "quotations"
-                        }
-                    },
-                    {
-                        $unwind: {
-                            path: "$quotations",
-                            preserveNullAndEmptyArrays: true
-                        }
-                    },
-                    {
-                        $match: {
-                            "quotations.bid_setting_data": {
-                                $ne: null
-                            },
-                            quotations: { $ne: null }
-                        }
-                    },
-                    {
-                        $project: {
-                            _id: 0,
-                            'quotations.final_quotation_order': 0,
-                            query_unique_id: 0,
-                            status: 0,
-                            createdByUser: 0,
-                            queryDetails: 0,
-                            adminApproved: 0,
-                            queryCreation: 0,
-                            createdAt: 0,
-                            updatedAt: 0,
-                            __v: 0
-                        }
-                    },
-                    {
-                        $sort: { createdAt: -1 },
-                    },
-                    { $skip: parseInt(offset) },
-                    { $limit: parseInt(limit) },
-                ]
-            );
+            const matchStage = {
+                $match: {
+                    createdByUser: new mongoose.Types.ObjectId(userId),
+                },
+            };
 
-            console.log("quotations: ", data);
+            const pipeline = [
+                ...commonPipeline(matchStage, query),
+                {
+                    $project: {
+                        _id: 0,
+                        "quotations.final_quotation_order": 0,
+                        query_unique_id: 0,
+                        status: 0,
+                        createdByUser: 0,
+                        queryDetails: 0,
+                        adminApproved: 0,
+                        queryCreation: 0,
+                        createdAt: 0,
+                        updatedAt: 0,
+                        __v: 0,
+                    },
+                },
+                { $sort: { createdAt: -1 } },
+                { $skip: parseInt(offset) },
+                { $limit: parseInt(limit) },
+            ];
+
+            data = await query.aggregate(pipeline);
+
+            const countPipeline = [
+                ...commonPipeline(matchStage, query),
+                { $count: "total" },
+            ];
+            const countResult = await query.aggregate(countPipeline);
+            count = countResult[0]?.total || 0;
+        } else if (user_data.user_type === "supplier") {
+            const matchStage = {
+                $match: {
+                    variant_assigned_to: new mongoose.Types.ObjectId(userId),
+                },
+            };
+
+            const pipeline = [
+                ...commonPipeline(matchStage, query_assigned_suppliers),
+                {
+                    $group: {
+                        _id: "$quotation_id",
+                        quotation_unique_id: { $first: "$quotations.quotation_unique_id" },
+                        quotation_type: { $first: "$quotations.quotation_type" },
+                        query_id: { $first: "$quotations.query_id" },
+                        bid_setting: { $first: "$quotations.bid_setting" },
+                        is_admin_logistics_decided: {
+                            $first: "$quotations.is_admin_logistics_decided",
+                        },
+                        rejected_reason: { $first: "$quotations.rejected_reason" },
+                        accepted_logistics: { $first: "$quotations.accepted_logistics" },
+                        decided_logistics_id: {
+                            $first: "$quotations.decided_logistics_id",
+                        },
+                        is_approved: { $first: "$quotations.is_approved" },
+                        bid_setting_data: { $first: "$quotations.bid_setting_data" },
+                        createdAt: { $first: "$quotations.createdAt" },
+                        updatedAt: { $first: "$quotations.updatedAt" },
+                    },
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        quotation_unique_id: 1,
+                        quotation_type: 1,
+                        query_id: 1,
+                        bid_setting: 1,
+                        is_admin_logistics_decided: 1,
+                        rejected_reason: 1,
+                        accepted_logistics: 1,
+                        decided_logistics_id: 1,
+                        is_approved: 1,
+                        createdAt: 1,
+                        updatedAt: 1,
+                        quotations: 1,
+                        bid_setting_data: 1,
+                    },
+                },
+                { $sort: { createdAt: -1 } },
+                { $skip: parseInt(offset) },
+                { $limit: parseInt(limit) },
+            ];
+
+            data = await query_assigned_suppliers.aggregate(pipeline);
+
+            const countPipeline = [
+                ...commonPipeline(matchStage, query_assigned_suppliers),
+                { $count: "total" },
+            ];
+            const countResult = await query_assigned_suppliers.aggregate(countPipeline);
+            count = countResult[0]?.total || 0;
         }
-
-        if (user_data.user_type === "supplier") {
-            data = await query_assigned_suppliers.aggregate(
-                [
-                    {
-                        $match: {
-                            variant_assigned_to: new mongoose.Types.ObjectId(userId)
-                        }
-                    },
-                    {
-                        $lookup: {
-                            from: "quotations",
-                            let: { id: "$quotation_id" },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $eq: ["$$id", "$_id"]
-                                        }
-                                    }
-                                },
-                                {
-                                    $lookup: {
-                                        from: "bidsettings",
-                                        let: { id: "$bid_setting" },
-                                        pipeline: [
-                                            {
-                                                $match: {
-                                                    $expr: {
-                                                        $eq: ["$$id", "$_id"]
-                                                    }
-                                                }
-                                            }
-                                        ],
-                                        as: "bid_setting_data"
-                                    }
-                                },
-                                {
-                                    $unwind: {
-                                        path: "$bid_setting_data",
-                                        preserveNullAndEmptyArrays: true
-                                    }
-                                },
-                                {
-                                    $match: filter
-                                }
-                            ],
-                            as: "quotations"
-                        }
-                    },
-                    {
-                        $unwind: {
-                            path: "$quotations",
-                            preserveNullAndEmptyArrays: true
-                        }
-                    },
-                    {
-                        $match: {
-                            quotations: { $ne: null }
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: "$quotation_id",
-                            quotation_unique_id: {
-                                $first: "$quotations.quotation_unique_id"
-                            },
-                            quotation_type: {
-                                $first: "$quotations.quotation_type"
-                            },
-                            query_id: {
-                                $first: "$quotations.query_id"
-                            },
-                            bid_setting: {
-                                $first: "$quotations.bid_setting"
-                            },
-                            is_admin_logistics_decided: {
-                                $first:
-                                    "$quotations.is_admin_logistics_decided"
-                            },
-                            rejected_reason: {
-                                $first: "$quotations.rejected_reason"
-                            },
-                            accepted_logistics: {
-                                $first: "$quotations.accepted_logistics"
-                            },
-                            decided_logistics_id: {
-                                $first: "$quotations.decided_logistics_id"
-                            },
-                            is_approved: {
-                                $first: "$quotations.is_approved"
-                            },
-                            bid_setting_data: { $first: '$quotations.bid_setting_data' },
-                            createdAt: {
-                                $first: "$quotations.createdAt"
-                            },
-                            updatedAt: {
-                                $first: "$quotations.updatedAt"
-                            },
-                            // final_quotation_order: {
-                            //   $first:
-                            //     "$quotations.final_quotation_order"
-                            // }
-                        }
-                    },
-                    {
-                        $project: {
-                            _id: 1,
-                            quotation_unique_id: 1,
-                            quotation_type: 1,
-                            query_id: 1,
-                            bid_setting: 1,
-                            is_admin_logistics_decided: 1,
-                            rejected_reason: 1,
-                            accepted_logistics: 1,
-                            decided_logistics_id: 1,
-                            is_approved: 1,
-                            createdAt: 1,
-                            updatedAt: 1,
-                            quotations: 1,
-                            bid_setting_data: 1
-                        }
-                    },
-                    {
-                        $sort: { createdAt: -1 },
-                    },
-                    { $skip: parseInt(offset) },
-                    { $limit: parseInt(limit) }
-                ]
-            )
-        }
-
-        const count = await quotation.countDocuments(filter);
 
         return res.status(200).json({
             message: "Quotation list fetched successfully",
-            data: data,
-            count: count,
+            data,
+            count,
             code: 200,
         });
     } catch (error) {
