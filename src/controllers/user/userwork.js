@@ -1130,153 +1130,6 @@ exports.getMyQueries = async (req, res) => {
 
             count = await Query.countDocuments({ ...filter, ...userMatchCondition });
         } else {
-            // data = await query_assigned_suppliers.aggregate(
-            //     [
-            //         {
-            //             $match: {
-            //                 variant_assigned_to: new mongoose.Types.ObjectId(userId)
-            //             }
-            //         },
-            //         {
-            //             $lookup: {
-            //                 from: "queries",
-            //                 let: {
-            //                     id: "$query_id",
-            //                     productid: "$product_id",
-            //                     variantid: "$variant_id"
-            //                 },
-            //                 pipeline: [
-            //                     {
-            //                         $match: {
-            //                             $expr: {
-            //                                 $eq: ["$$id", "$_id"]
-            //                             }
-            //                         }
-            //                     },
-            //                     {
-            //                         $unwind: {
-            //                             path: "$queryDetails"
-            //                         }
-            //                     },
-            //                     {
-            //                         $match: {
-            //                             // $and: [
-            //                             //     {
-            //                             //         $expr: {
-            //                             //             $eq: [
-            //                             //                 "$queryDetails.product.id",
-            //                             //                 "$$productid"
-            //                             //             ]
-            //                             //         }
-            //                             //     },
-            //                             //     {
-            //                             //         $expr: {
-            //                             //             $eq: [
-            //                             //                 "$queryDetails.variant._id",
-            //                             //                 "$$variantid"
-            //                             //             ]
-            //                             //         }
-            //                             //     }
-            //                             // ]
-
-            //                             $expr: {
-            //                                 $eq: [
-            //                                     "$queryDetails.product.id",
-            //                                     "$$productid"
-            //                                 ]
-            //                             }
-            //                         }
-            //                     },
-            //                     {
-            //                         $group: {
-            //                             _id: "$_id",
-            //                             query_unique_id: {
-            //                                 $first: "$query_unique_id"
-            //                             },
-            //                             status: {
-            //                                 $first: "$status"
-            //                             },
-            //                             createdByUser: {
-            //                                 $first: "$createdByUser"
-            //                             },
-            //                             adminApproved: {
-            //                                 $first: "$adminApproved"
-            //                             },
-            //                             queryDetails: {
-            //                                 $push: "$queryDetails"
-            //                             },
-            //                             createdAt: { $first: "$createdAt" },
-            //                             updatedAt: { $first: "$updatedAt" }
-            //                         }
-            //                     },
-            //                     {
-            //                         $project: {
-            //                             "queryDetails.quantity": 0
-            //                         }
-            //                     }
-            //                 ],
-            //                 as: "query_data"
-            //             }
-            //         },
-            //         {
-            //             $lookup: {
-            //                 from: "quantity_units",
-            //                 let: { id: "$quantity.unit" },
-            //                 pipeline: [
-            //                     {
-            //                         $match: {
-            //                             $expr: {
-            //                                 $eq: ["$$id", "$_id"]
-            //                             }
-            //                         }
-            //                     }
-            //                 ],
-            //                 as: "quantity_unit"
-            //             }
-            //         },
-            //         {
-            //             $unwind: {
-            //                 path: "$quantity_unit",
-            //                 preserveNullAndEmptyArrays: true
-            //             }
-            //         },
-            //         {
-            //             $unwind: {
-            //                 path: "$query_data",
-            //                 preserveNullAndEmptyArrays: true
-            //             }
-            //         },
-            //         {
-            //             $addFields: {
-            //                 "query_data.queryDetails.split_quantity.total_quantity.unit":
-            //                     "$quantity_unit.unit",
-            //                 "query_data.queryDetails.split_quantity.total_quantity.unit_id":
-            //                     "$quantity_unit._id",
-
-            //                 "query_data.queryDetails.split_quantity.quantity_assigned.unit":
-            //                     "$quantity_unit.unit",
-            //                 "query_data.queryDetails.split_quantity.quantity_assigned.unit_id":
-            //                     "$quantity_unit._id",
-            //             }
-            //         },
-            //         {
-            //             $project: {
-            //                 _id: 0,
-            //                 query_data: 1,
-            //             }
-            //         },
-            //         {
-            //             $sort: { createdAt: -1 }
-            //         },
-            //         {
-            //             $skip: parseInt(offset) || 0
-            //         },
-            //         {
-            //             $limit: parseInt(limit) || 10
-            //         }
-            //     ]
-            // )
-
             const aggregate_data = [
                 {
                     $match: {
@@ -1297,6 +1150,20 @@ exports.getMyQueries = async (req, res) => {
                                     $expr: {
                                         $eq: ["$$id", "$_id"]
                                     }
+                                }
+                            },
+                            {
+                                $lookup: {
+                                    from: "bidsettings",
+                                    localField: "_id",
+                                    foreignField: "query_id",
+                                    as: "bid_setting_data"
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$bid_setting_data",
+                                    preserveNullAndEmptyArrays: true
                                 }
                             },
                             {
@@ -1408,6 +1275,9 @@ exports.getMyQueries = async (req, res) => {
                         queryDetails: {
                             $push: "$query_data.queryDetails"
                         },
+                        bid_setting_data: {
+                            $first: "$query_data.bid_setting_data"
+                        },
                         createdAt: {
                             $first: "$query_data.createdAt"
                         },
@@ -1433,8 +1303,35 @@ exports.getMyQueries = async (req, res) => {
             data = await query_assigned_suppliers.aggregate(
                 aggregate_data
             )
+            const countAggregation = await query_assigned_suppliers.aggregate([
+                { $match: { variant_assigned_to: new mongoose.Types.ObjectId(userId) } },
+                {
+                    $lookup: {
+                        from: "queries",
+                        let: { id: "$query_id", productid: "$product_id", variantid: "$variant_id" },
+                        pipeline: [
+                            { $match: { $expr: { $eq: ["$$id", "$_id"] } } },
+                            { $unwind: "$queryDetails" },
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            { $eq: ["$queryDetails.product.id", "$$productid"] },
+                                            { $eq: ["$queryDetails.variant._id", "$$variantid"] }
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "query_data"
+                    }
+                },
+                { $unwind: { path: "$query_data", preserveNullAndEmptyArrays: true } },
+                { $group: { _id: "$query_id" } },
+                { $count: "total" }
+            ]);
 
-            count = await Query.countDocuments(filter)
+            count = countAggregation.length > 0 ? countAggregation[0].total : 0;
         }
 
         return res.json({ data, count, code: 200 });
@@ -1443,6 +1340,7 @@ exports.getMyQueries = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
 
 //get query by id
 exports.getQueryById = async (req, res) => {
@@ -1532,7 +1430,8 @@ exports.getQueryById = async (req, res) => {
                 },
                 {
                     $project: {
-                        quantity_unit_data: 0
+                        quantity_unit_data: 0,
+                        'queryDetails.split_quantity' : 0
                     }
                 }
             ]
