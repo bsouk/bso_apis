@@ -204,212 +204,133 @@ exports.getQuotationDetails = async (req, res) => {
             //     },
             //     {
             //         $lookup: {
-            //             from: "products",
-            //             localField: "final_quote.product_id",
-            //             foreignField: "_id",
-            //             as: "product_data"
-            //         }
-            //     },
-            //     {
-            //         $lookup: {
-            //             from: "users",
-            //             localField: "final_quote.supplier_id",
-            //             foreignField: "_id",
-            //             as: "supplier_data"
-            //         }
-            //     },
-            //     {
-            //         $unwind: {
-            //             path: "$final_quote",
-            //             preserveNullAndEmptyArrays: true
-            //         }
-            //     },
-            //     {
-            //         $lookup: {
-            //             from: "products",
-            //             let: { variantId: "$final_quote.variant_id" },
+            //             from: "query_assigned_suppliers",
+            //             let: { id: "$_id" },
             //             pipeline: [
-            //                 { $unwind: "$variant" },
             //                 {
             //                     $match: {
-            //                         $expr: { $eq: ["$variant._id", "$$variantId"] }
+            //                         $expr: {
+            //                             $eq: ["$quotation_id", "$$id"]
+            //                         }
             //                     }
             //                 },
             //                 {
-            //                     $project: {
-            //                         _id: 0,
-            //                         variant: 1
+            //                     $lookup: {
+            //                         from: "products",
+            //                         let: { vid: "$variant_id" },
+            //                         pipeline: [
+            //                             {
+            //                                 $unwind: {
+            //                                     path: "$variant"
+            //                                 }
+            //                             },
+            //                             {
+            //                                 $match: {
+            //                                     $expr: {
+            //                                         $eq: ["$variant._id", "$$vid"]
+            //                                     }
+            //                                 }
+            //                             },
+            //                             {
+            //                                 $project: {
+            //                                     _id: 1,
+            //                                     variant: {
+            //                                         images: 1,
+            //                                         tag: 1
+            //                                     }
+            //                                 }
+            //                             }
+            //                         ],
+            //                         as: "variant_data"
+            //                     }
+            //                 },
+            //                 {
+            //                     $lookup: {
+            //                         from: "products",
+            //                         let: { pid: "$product_id" },
+            //                         pipeline: [
+            //                             {
+            //                                 $match: {
+            //                                     $expr: {
+            //                                         $eq: ["$_id", "$$pid"]
+            //                                     }
+            //                                 }
+            //                             },
+            //                             {
+            //                                 $project: {
+            //                                     _id: 1,
+            //                                     name: 1
+            //                                 }
+            //                             }
+            //                         ],
+            //                         as: "product_data"
+            //                     }
+            //                 },
+
+            //                 {
+            //                     $lookup: {
+            //                         from: "users",
+            //                         let: { pid: "$variant_assigned_to" },
+            //                         pipeline: [
+            //                             {
+            //                                 $match: {
+            //                                     $expr: {
+            //                                         $eq: ["$_id", "$$pid"]
+            //                                     }
+            //                                 }
+            //                             },
+            //                             {
+            //                                 $project: {
+            //                                     _id: 1,
+            //                                     full_name: 1
+            //                                 }
+            //                             }
+            //                         ],
+            //                         as: "supplier_data"
+            //                     }
+            //                 },
+            //                 {
+            //                     $unwind: {
+            //                         path: "$product_data",
+            //                         preserveNullAndEmptyArrays: true
+            //                     }
+            //                 },
+            //                 {
+            //                     $unwind: {
+            //                         path: "$variant_data",
+            //                         preserveNullAndEmptyArrays: true
+            //                     }
+            //                 },
+            //                 {
+            //                     $unwind: {
+            //                         path: "$supplier_data",
+            //                         preserveNullAndEmptyArrays: true
+            //                     }
+            //                 },
+            //                 {
+            //                     $group: {
+            //                         _id: '$variant_id',
+            //                         query_id: { $first: '$query_id' },
+            //                         product_id: { $first: '$product_id' },
+            //                         variant_id: { $first: '$variant_id' },
+            //                         variant_assigned_to: { $push: '$variant_assigned_to' },
+            //                         user_type: { $first: '$user_type' },
+            //                         quantity: { $push: '$quantity' },
+            //                         // is_selected : {$first : '$is_selected'},
+            //                         // admin_approved_quotes : {$push : '$admin_approved_quotes'},
+            //                         // supplier_quote : {$push : '$supplier_quote'},
+            //                         // admin_quote : {$push : '$admin_quote'},
+            //                         //logistics_price : {$push : '$logistics_price'},
+            //                         //admin_margin : {$push : '$admin_margin'},
+            //                         createdAt: { $first: '$createdAt' },
+            //                         updatedAt: { $first: '$updatedAt' },
+            //                         variant_data: { $first: '$variant_data.variant' },
+            //                         product_data: { $first: '$product_data' },
+            //                         supplier_data: { $first: '$supplier_data' }
             //                     }
             //                 }
             //             ],
-            //             as: "variant_data"
-            //         }
-            //     },
-            //     {
-            //         $addFields: {
-            //             "final_quote.product": {
-            //                 $arrayElemAt: [
-            //                     {
-            //                         $filter: {
-            //                             input: "$product_data",
-            //                             as: "product",
-            //                             cond: { $eq: ["$$product._id", "$final_quote.product_id"] }
-            //                         }
-            //                     },
-            //                     0
-            //                 ]
-            //             },
-            //             "final_quote.supplier": {
-            //                 $arrayElemAt: [
-            //                     {
-            //                         $filter: {
-            //                             input: "$supplier_data",
-            //                             as: "supplier",
-            //                             cond: { $eq: ["$$supplier._id", "$final_quote.supplier_id"] }
-            //                         }
-            //                     },
-            //                     0
-            //                 ]
-            //             },
-            //             "final_quote.variant": {
-            //                 $arrayElemAt: [
-            //                     {
-            //                         $filter: {
-            //                             input: "$variant_data",
-            //                             as: "variant",
-            //                             cond: { $eq: ["$$variant.variant._id", "$final_quote.variant_id"] }
-            //                         }
-            //                     },
-            //                     0
-            //                 ]
-            //             },
-            //             "final_quote.quantity": {
-            //                 $let: {
-            //                     vars: {
-            //                         matchingQueryDetail: {
-            //                             $arrayElemAt: [
-            //                                 {
-            //                                     $filter: {
-            //                                         input:
-            //                                             "$query_data.queryDetails",
-            //                                         as: "queryDetail",
-            //                                         cond: {
-            //                                             $eq: [
-            //                                                 "$$queryDetail.product.id",
-            //                                                 "$final_quote.product_id"
-            //                                             ]
-            //                                         }
-            //                                     }
-            //                                 },
-            //                                 0
-            //                             ]
-            //                         }
-            //                     },
-            //                     in: {
-            //                         $ifNull: [
-            //                             "$$matchingQueryDetail.quantity",
-            //                             0
-            //                         ]
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     },
-            //     {
-            //         $group: {
-            //             _id: "$_id",
-            //             data: { $first: "$$ROOT" },
-            //             final_quote: { $push: "$final_quote" }
-            //         }
-            //     },
-            //     {
-            //         $replaceRoot: { newRoot: { $mergeObjects: ["$data", { final_quote: "$final_quote" }] } }
-            //     },
-            //     // {
-            //     //     $unwind: {
-            //     //         path: "$version_history",
-            //     //         preserveNullAndEmptyArrays: true
-            //     //     }
-            //     // },
-            //     // {
-            //     //     $lookup: {
-            //     //         from: "products",
-            //     //         let: { timelineVariantId: "$version_history.variant_id" },
-            //     //         pipeline: [
-            //     //             { $unwind: "$variant" },
-            //     //             {
-            //     //                 $match: {
-            //     //                     $expr: { $eq: ["$variant._id", "$$timelineVariantId"] }
-            //     //                 }
-            //     //             },
-            //     //             {
-            //     //                 $project: {
-            //     //                     _id: 0,
-            //     //                     variant: 1
-            //     //                 }
-            //     //             }
-            //     //         ],
-            //     //         as: "timeline_variant_data"
-            //     //     }
-            //     // },
-            //     // {
-            //     //     $addFields: {
-            //     //         "version_history.product": {
-            //     //             $arrayElemAt: [
-            //     //                 {
-            //     //                     $filter: {
-            //     //                         input: "$product_data",
-            //     //                         as: "product",
-            //     //                         cond: { $eq: ["$$product._id", "$version_history.product_id"] }
-            //     //                     }
-            //     //                 },
-            //     //                 0
-            //     //             ]
-            //     //         },
-            //     //         "version_history.supplier": {
-            //     //             $arrayElemAt: [
-            //     //                 {
-            //     //                     $filter: {
-            //     //                         input: "$supplier_data",
-            //     //                         as: "supplier",
-            //     //                         cond: { $eq: ["$$supplier._id", "$version_history.supplier_id"] }
-            //     //                     }
-            //     //                 },
-            //     //                 0
-            //     //             ]
-            //     //         },
-            //     //         "version_history.variant": {
-            //     //             $arrayElemAt: [
-            //     //                 {
-            //     //                     $filter: {
-            //     //                         input: "$timeline_variant_data",
-            //     //                         as: "variant",
-            //     //                         cond: { $eq: ["$$variant.variant._id", "$version_history.variant_id"] }
-            //     //                     }
-            //     //                 },
-            //     //                 0
-            //     //             ]
-            //     //         }
-            //     //     }
-            //     // },
-            //     // {
-            //     //     $group: {
-            //     //         _id: "$_id",
-            //     //         data: { $first: "$$ROOT" },
-            //     //         version_history: { $push: "$version_history" }
-            //     //     }
-            //     // },
-            //     // {
-            //     //     $replaceRoot: { newRoot: { $mergeObjects: ["$data", { version_history: "$version_history" }] } }
-            //     // },
-            //     {
-            //         $project: {
-            //             query_id: 0,
-            //             bid_setting: 0,
-            //             product_data: 0,
-            //             supplier_data: 0,
-            //             variant_data: 0,
-            //             timeline_variant_data: 0
+            //             as: "final_quote"
             //         }
             //     }
             // ]
@@ -430,34 +351,6 @@ exports.getQuotationDetails = async (req, res) => {
                 {
                     $unwind: {
                         path: "$query_data",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "bidsettings",
-                        localField: "bid_setting",
-                        foreignField: "_id",
-                        as: "bid_setting_data"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$bid_setting_data",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "users",
-                        localField: "decided_logistics_id",
-                        foreignField: "_id",
-                        as: "logistics_data"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$logistics_data",
                         preserveNullAndEmptyArrays: true
                     }
                 },
@@ -568,28 +461,85 @@ exports.getQuotationDetails = async (req, res) => {
                             },
                             {
                                 $group: {
-                                    _id: '$variant_id',
-                                    query_id: { $first: '$query_id' },
-                                    product_id: { $first: '$product_id' },
-                                    variant_id: { $first: '$variant_id' },
-                                    variant_assigned_to: { $push: '$variant_assigned_to' },
-                                    user_type: { $first: '$user_type' },
-                                    // quantity : {$push : '$quantity'},
-                                    // is_selected : {$first : '$is_selected'},
-                                    // admin_approved_quotes : {$push : '$admin_approved_quotes'},
-                                    // supplier_quote : {$push : '$supplier_quote'},
-                                    // admin_quote : {$push : '$admin_quote'},
-                                    //logistics_price : {$push : '$logistics_price'},
-                                    //admin_margin : {$push : '$admin_margin'},
-                                    createdAt: { $first: '$createdAt' },
-                                    updatedAt: { $first: '$updatedAt' },
-                                    variant_data: { $first: '$variant_data.variant' },
-                                    product_data: { $first: '$product_data' },
-                                    supplier_data: { $first: '$supplier_data' }
+                                    _id: "$variant_id",
+                                    query_id: { $first: "$query_id" },
+                                    product_id: { $first: "$product_id" },
+                                    variant_id: { $first: "$variant_id" },
+                                    variant_assigned_to: {
+                                        $push: "$variant_assigned_to"
+                                    },
+                                    product_data: {
+                                        $first: "$product_data"
+                                    },
+                                    variant_data: {
+                                        $first: "$variant_data"
+                                    },
+                                    supplier_data: {
+                                        $first: "$supplier_data"
+                                    },
+                                    createdAt: { $first: "$createdAt" },
+                                    updatedAt: { $first: "$updatedAt" }
                                 }
                             }
                         ],
                         as: "final_quote"
+                    }
+                },
+                {
+                    $addFields: {
+                        final_quote: {
+                            $map: {
+                                input: "$final_quote",
+                                as: "fq",
+                                in: {
+                                    $mergeObjects: [
+                                        "$$fq",
+                                        {
+                                            quantity: {
+                                                $let: {
+                                                    vars: {
+                                                        matched_query: {
+                                                            $arrayElemAt: [
+                                                                {
+                                                                    $filter: {
+                                                                        input:
+                                                                            "$query_data.queryDetails",
+                                                                        as: "qd",
+                                                                        cond: {
+                                                                            $and: [
+                                                                                {
+                                                                                    $eq: [
+                                                                                        "$$qd.product.id",
+                                                                                        "$$fq.product_id"
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    $eq: [
+                                                                                        "$$qd.variant._id",
+                                                                                        "$$fq.variant_id"
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                0
+                                                            ]
+                                                        }
+                                                    },
+                                                    in: {
+                                                        $ifNull: [
+                                                            "$$matched_query.quantity",
+                                                            null
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             ]
