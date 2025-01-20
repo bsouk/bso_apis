@@ -94,6 +94,14 @@ exports.getQuotationList = async (req, res) => {
                         }
                     },
                     {
+                        $match: {
+                            "quotations.bid_setting_data": {
+                                $ne: null
+                            },
+                            quotations: { $ne: null }
+                        }
+                    },
+                    {
                         $project: {
                             _id: 0,
                             'quotations.final_quotation_order': 0,
