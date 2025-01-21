@@ -9,6 +9,11 @@ const requireAuth = passport.authenticate('jwt', {
 const controller = require('../../controllers/user/jobs')
 const trimRequest = require('trim-request');
 
-
+router.post(
+    '/createJob',
+    trimRequest.all,
+    requireAuth,
+    controller.createJob
+)
 
 module.exports = router

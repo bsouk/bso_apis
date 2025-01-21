@@ -1,6 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const utils = require("../../utils/utils");
 const jobs = require("../../models/jobs");
+const User = require("../../models/user")
 
 async function generateUniqueJobId() {
     const id = await Math.floor(Math.random() * 1000000)
@@ -9,6 +10,16 @@ async function generateUniqueJobId() {
 
 exports.createJob = async (req, res) => {
     try {
+        const userId = req.user._id
+        console.log('user id : ', userId)
+
+        const user_data = await User.findOne({ _id: userId })
+        if (user_data.user_type !== 'company') {
+            return utils.handleError(res, {
+                message: "Only authorised company can create job",
+                code: 404,
+            });
+        }
         const data = req.body
         const job_id = await generateUniqueJobId()
 

@@ -1182,6 +1182,28 @@ exports.addFinalQuotationList = async (req, res) => {
             console.log("result : ", result)
         }
 
+        const version_history_data = await final_quotation.map(async i => {
+            const currentTime = await moment(Date.now()).format('lll')
+            const timeline_data = {
+                date: currentTime,
+                detail: 'Final Quotation submited',
+                product_id: i?.product_id,
+                supplier_id: i?.variant_assigned_to,
+                variant_id: i?.variant_id,
+                price: i?.admin_approved_quotes?.price,
+                quantity: i?.quantity,
+                media: i?.admin_approved_quotes?.media,
+                document: i?.admin_approved_quotes?.document,
+                assignedBy: i?.admin_quote.assignedBy ?? null
+            }
+            const save_data = await version_history.create({
+                quotation_id,
+                ...timeline_data
+            })
+            console.log("save_data : ", save_data)
+        })
+        console.log("version history : ", version_history_data)
+
         return res.status(200).json({
             message: "final quotation added successfully",
             code: 200
