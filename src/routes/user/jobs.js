@@ -16,4 +16,32 @@ router.post(
     controller.createJob
 )
 
+router.get(
+    '/getJob',
+    trimRequest.all,
+    requireAuth,
+    controller.getJobs
+)
+
+router.get(
+    '/getJobData/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getJobData
+)
+
+router.post(
+    '/createJobApplication',
+    trimRequest.all,
+    requireAuth,
+    controller.createJobApplication
+)
+
+router.get(
+    '/getAppliedJob',
+    trimRequest.all,
+    requireAuth,
+    controller.getappliedJobs
+)
+
 module.exports = router

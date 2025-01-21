@@ -13,10 +13,10 @@ const jobApplicationSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'users'
     },
-    is_saved: {
-        type: Boolean,
-        default: false
-    },
+    // is_saved: {
+    //     type: Boolean,
+    //     default: false
+    // },
     resume: {
         type: String
     },

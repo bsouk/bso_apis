@@ -1003,18 +1003,22 @@ exports.getFinalQuotationList = async (req, res) => {
                                                     in: {
                                                         $cond: {
                                                             if: {
-                                                                $and: [
-                                                                    {
-                                                                        $ne: [
-                                                                            "$$approved_supplier",
-                                                                            null
-                                                                        ]
-                                                                    },
-                                                                    {
-                                                                        $not: [
-                                                                            "$$approved_supplier.is_admin_approved"
-                                                                        ]
-                                                                    }
+                                                                // $and: [
+                                                                //     {
+                                                                //         $ne: [
+                                                                //             "$$approved_supplier",
+                                                                //             null
+                                                                //         ]
+                                                                //     },
+                                                                //     {
+                                                                //         $not: [
+                                                                //             "$$approved_supplier.is_admin_approved"
+                                                                //         ]
+                                                                //     }
+                                                                // ]
+                                                                $ne: [
+                                                                    "$$approved_supplier",
+                                                                    null
                                                                 ]
                                                             },
                                                             then: {
@@ -1031,7 +1035,75 @@ exports.getFinalQuotationList = async (req, res) => {
                                                         }
                                                     }
                                                 }
-                                            }
+                                            },
+                                            // updated_final_quote: {
+                                            //     $let: {
+                                            //         vars: {
+                                            //             approved_supplier: {
+                                            //                 $arrayElemAt: [
+                                            //                     {
+                                            //                         $filter: {
+                                            //                             input:
+                                            //                                 "$assigned_suppliers",
+                                            //                             as: "sq",
+                                            //                             cond: {
+                                            //                                 $and: [
+                                            //                                     {
+                                            //                                         $eq: [
+                                            //                                             "$$sq.product_id",
+                                            //                                             "$$qd.product.id"
+                                            //                                         ]
+                                            //                                     },
+                                            //                                     {
+                                            //                                         $eq: [
+                                            //                                             "$$sq.variant_id",
+                                            //                                             "$$qd.variant._id"
+                                            //                                         ]
+                                            //                                     },
+                                            //                                     {
+                                            //                                         $ne: [
+                                            //                                             "$$sq.admin_approved_quotes",
+                                            //                                             null
+                                            //                                         ]
+                                            //                                     },
+                                            //                                     {
+                                            //                                         $ne: [
+                                            //                                             "$$sq.admin_margin.value",
+                                            //                                             null
+                                            //                                         ]
+                                            //                                     }
+                                            //                                 ]
+                                            //                             }
+                                            //                         }
+                                            //                     },
+                                            //                     0
+                                            //                 ]
+                                            //             }
+                                            //         },
+                                            //         in: {
+                                            //             $cond: {
+                                            //                 if: {
+
+                                            //                     $ne: [
+                                            //                         "$$approved_supplier",
+                                            //                         null
+                                            //                     ]
+                                            //                 },
+                                            //                 then: {
+                                            //                     final_price_by_admin:
+                                            //                         "$$approved_supplier.admin_approved_quotes",
+                                            //                     logistics_price:
+                                            //                         "$$approved_supplier.logistics_price",
+                                            //                     admin_margin:
+                                            //                         "$$approved_supplier.admin_margin",
+                                            //                     matched_variant_id:
+                                            //                         "$$approved_supplier.variant_id"
+                                            //                 },
+                                            //                 else: null
+                                            //             }
+                                            //         }
+                                            //     }
+                                            // },
                                         }
                                     ]
                                 }
