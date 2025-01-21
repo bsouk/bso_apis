@@ -73,4 +73,25 @@ router.delete(
 )
 
 
+router.get(
+    '/getInventoryList',
+    trimRequest.all,
+    requireAuth,
+    controller.getInventoryList
+)
+
+router.patch(
+    '/restock',
+    trimRequest.all,
+    requireAuth,
+    controller.changeInventoryQuantity
+)
+
+router.patch(
+    '/addThresholdValue',
+    trimRequest.all,
+    requireAuth,
+    controller.addThresholdValue
+)
+
 module.exports = router

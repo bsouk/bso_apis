@@ -44,4 +44,11 @@ router.get(
     controller.getappliedJobs
 )
 
+router.patch(
+    '/acceptApplication',
+    trimRequest.all,
+    requireAuth,
+    controller.acceptApplication
+)
+
 module.exports = router

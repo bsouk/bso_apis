@@ -9,6 +9,10 @@ const jobApplicationSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'jobs'
     },
+    company_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'company_data'
+    },
     canditate_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'users'

@@ -7,6 +7,9 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'users'
     },
+    product_of: {
+      type: String
+    },
     name: {
       type: String
     },
@@ -47,6 +50,13 @@ const productSchema = new mongoose.Schema(
         },
         inventory_quantity: {
           type: Number,
+        },
+        Threshold_value: {
+          type: Number
+        },
+        remind_on_low_stock: {
+          type: Boolean,
+          default: false
         },
         discount: {
           type: Number,

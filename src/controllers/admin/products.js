@@ -58,6 +58,8 @@ const utils = require("../../utils/utils");
 
 exports.addProduct = async (req, res) => {
     try {
+        const adminId = req.user._id
+        console.log('admin id : ', adminId)
         const user_id = req.body.supplier_id;
         const { id } = req.body
         console.log("id is ", id)
@@ -115,7 +117,8 @@ exports.addProduct = async (req, res) => {
             }
 
             const productData = {
-                user_id: user_id,
+                user_id: user_id ? user_id : adminId,
+                product_of: user_id ? 'supplier' : 'admin',
                 name: data.name,
                 brand_id: data.brand_id,
                 category_id: data.category_id,
@@ -526,6 +529,172 @@ exports.getSkuList = async (req, res) => {
             code: 200
         })
 
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getInventoryList = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10, search, low_stock, out_of_stock } = req.query
+        let filter = {}
+        if (search) {
+            filter['$or'] = [
+                {
+                    name: { $regex: search, $options: "i" }
+                },
+                {
+                    'variant.inventory_quantity': { $regex: search, $options: "i" }
+                }
+            ]
+        }
+        if (low_stock) {
+            filter['$expr'] = {
+                $lte: ["$variant.inventory_quantity", "$variant.Threshold_value"]
+            };
+        }
+
+        if (out_of_stock) {
+            filter['variant.inventory_quantity'] = { $eq: 0 };
+        }
+        const data = await Product.aggregate(
+            [
+                {
+                    $match: filter
+                },
+                {
+                    $lookup: {
+                        from: "product_categories",
+                        let: { categoryIds: "$category_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $in: ["$_id", "$$categoryIds"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "categories"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$variant',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'users',
+                        let: { id: '$user_id' },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    full_name: 1,
+                                    email: 1
+                                }
+                            }
+                        ],
+                        as: 'supplier_data'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$supplier_data',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $skip: parseInt(offset) || 0
+                },
+                {
+                    $limit: parseInt(limit) || 10
+                }
+            ]
+        )
+
+        const count = await Product.countDocuments(filter)
+
+        return res.status(200).json({
+            message: "Inventory list fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.addThresholdValue = async (req, res) => {
+    try {
+        const { product_id, variant_id, value, reminder } = req.body
+        const product_data = await Product.findOne({ _id: product_id })
+        if (!product_data) {
+            return utils.handleError(res, {
+                message: "Product not found",
+                code: 404,
+            });
+        }
+
+        const data = await Product.findOneAndUpdate(
+            { _id: product_id, 'variant._id': variant_id },
+            {
+                $set: {
+                    'variant.$.Threshold_value': value,
+                    'variant.$.remind_on_low_stock': (reminder === true || reminder === "true") ? true : false
+                }
+            }, { new: true }
+        )
+
+        return res.status(200).json({
+            message: "Threshold value added successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.changeInventoryQuantity = async (req, res) => {
+    try {
+        const { product_id, variant_id, stock } = req.body
+        const product_data = await Product.findOne({ _id: product_id })
+        console.log("product data : ", product_data)
+        if (!product_data) {
+            return utils.handleError(res, {
+                message: "Product not found",
+                code: 404,
+            });
+        }
+
+        const data = await Product.findOneAndUpdate(
+            { _id: product_id, 'variant._id': variant_id },
+            {
+                $set: {
+                    'variant.$.inventory_quantity': stock
+                }
+            }, { new: true }
+        )
+
+        return res.status(200).json({
+            message: "Inventory Quantity changed successfully",
+            data,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }
