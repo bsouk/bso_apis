@@ -134,12 +134,12 @@ router.post(
     controller.deleteMedia
 );
 
-router.post(
-    "/addQuery",
-    trimRequest.all,
-    requireAuth,
-    controller.addQuery
-);
+// router.post(
+//     "/addQuery",
+//     trimRequest.all,
+//     requireAuth,
+//     controller.addQuery
+// );
 
 router.get(
     "/getMyQueries",
@@ -215,6 +215,15 @@ router.get(
     trimRequest.all,
     requireAuth,
     controller.getIndustryTypes
+);
+
+
+//changes
+router.post(
+    "/addQuery",
+    trimRequest.all,
+    requireAuth,
+    controller.createEnquiry
 );
 
 module.exports = router;

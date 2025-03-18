@@ -699,3 +699,12 @@ exports.changeInventoryQuantity = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+// exports.getProductVariantData = async (req, res) => {
+//     try {
+//         const {product_id, variant_id} = req.query
+//         const data = await Product.aggregate
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }

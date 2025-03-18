@@ -18,6 +18,7 @@ const Product = require("../../models/product");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 const quantity_units = require("../../models/quantity_units");
 const industry_type = require("../../models/industry_type");
+const Enquiry = require("../../models/Enquiry");
 
 //create password for users
 function createNewPassword() {
@@ -2054,6 +2055,71 @@ exports.getIndustryTypes = async (req, res) => {
             count,
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+//BSO New changes
+
+async function EnquiryId() {
+    const token = Math.floor(Math.random() * 1000000)
+    console.log("token : ", token)
+    return `#${token}`
+}
+
+exports.createEnquiry = async (req, res) => {
+    try {
+        const id = req.user._id
+        console.log("id : ", id)
+        const data = req.body
+        console.log("data : ", data)
+        let enquiryId = await EnquiryId();
+        let newdata = {
+            ...data,
+            enquiry_unique_id: enquiryId,
+            user_id: id
+        }
+        console.log("newdata : ", newdata)
+        const newquery = await Enquiry.create(newdata);
+        console.log("newquery : ", newquery)
+
+        return res.status(200).json({
+            message: "Enquiry created successfully",
+            data: newquery,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getMyAllEnquires = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log("userid is", userId);
+
+        const userDetails = await User.findById(userId);
+        console.log("userdetails:", userDetails);
+
+        const { status, search, offset = 0, limit = 10 } = req.query;
+        console.log('offset : ', offset, " limit : ", limit)
+        const filter = {};
+
+        if (status) {
+            filter.status = status;
+        }
+        if (search) {
+            filter.query_unique_id = { $regex: search, $options: "i" };
+        }
+
+        let data = []
+        let count = 0
+        if (userDetails.user_type === "buyer") {
+            
+        }
     } catch (error) {
         utils.handleError(res, error);
     }
