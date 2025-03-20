@@ -2118,8 +2118,188 @@ exports.getMyAllEnquires = async (req, res) => {
         let data = []
         let count = 0
         if (userDetails.user_type === "buyer") {
-            
+
         }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getMyEnquiry = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        console.log("userid is", userId);
+
+        const userDetails = await User.findById(userId);
+        console.log("userdetails:", userDetails);
+
+        const { status, search, offset = 0, limit = 10 } = req.query;
+        console.log('offset : ', offset, " limit : ", limit)
+        const filter = {};
+
+        if (status) {
+            filter.status = status;
+        }
+        if (search) {
+            filter.query_unique_id = { $regex: search, $options: "i" };
+        }
+
+        let data = []
+        let count = 0
+        if (userDetails.user_type === "supplier") {
+            const userMatchCondition = { user_id: new mongoose.Types.ObjectId(userId) }
+            // console.log('if condition block')
+            data = await Enquiry.aggregate(
+                [
+                    {
+                        $unwind: {
+                            path: "$enquiry_items",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "quantity_units",
+                            let: { unitId: "$enquiry_items.unit_weight.unit" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: { $eq: ["$_id", "$$unitId"] }
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        _id: 1,
+                                        unit: 1
+                                    }
+                                }
+                            ],
+                            as: "enquiry_items.quantity_unit_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$enquiry_items.quantity_unit_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $match: {
+                            ...filter,
+                            ...userMatchCondition,
+                        },
+                    },
+                    {
+                        $group: {
+                            _id: "$_id",
+                            user_id: { $first: "$user_id" },
+                            enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                            status: { $first: "$status" },
+                            expiry_date: { $first: "$expiry_date" },
+                            priority: { $first: "$priority" },
+                            shipping_address: { $first: "$shipping_address" },
+                            currency: { $first: "$currency" },
+                            documents: { $first: "$documents" },
+                            enquiry_items: { $push: "$enquiry_items" },
+                            delivery_charges: { $first: "$delivery_charges" },
+                            reply: { $first: "$reply" },
+                            createdAt: { $first: "$createdAt" },
+                            updatedAt: { $first: "$updatedAt" },
+                        }
+                    },
+                    {
+                        $sort: { createdAt: -1 }
+                    },
+                    {
+                        $skip: parseInt(offset) || 0
+                    },
+                    {
+                        $limit: parseInt(limit) || 10
+                    }
+                ]
+            );
+
+            count = await Enquiry.countDocuments({ ...filter, ...userMatchCondition });
+        } else {
+            // console.log("else condition")
+            const aggregate_data = [
+
+                {
+                    $match: {
+                        ...filter,
+                    },
+                },
+                {
+                    $unwind: {
+                        path: "$enquiry_items",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { unitId: "$enquiry_items.unit_weight.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$_id", "$$unitId"] }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    unit: 1
+                                }
+                            }
+                        ],
+                        as: "enquiry_items.quantity_unit_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$enquiry_items.quantity_unit_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        user_id: { $first: "$user_id" },
+                        enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        status: { $first: "$status" },
+                        expiry_date: { $first: "$expiry_date" },
+                        priority: { $first: "$priority" },
+                        shipping_address: { $first: "$shipping_address" },
+                        currency: { $first: "$currency" },
+                        documents: { $first: "$documents" },
+                        enquiry_items: { $push: "$enquiry_items" },
+                        delivery_charges: { $first: "$delivery_charges" },
+                        reply: { $first: "$reply" },
+                        createdAt: { $first: "$createdAt" },
+                        updatedAt: { $first: "$updatedAt" },
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $skip: parseInt(offset) || 0
+                },
+                {
+                    $limit: parseInt(limit) || 10
+                },
+            ]
+
+            data = await Enquiry.aggregate(
+                aggregate_data
+            )
+
+            count = data.length > 0 ? data[0].total : 0;
+        }
+
+        return res.json({ data, count, code: 200 });
+
     } catch (error) {
         utils.handleError(res, error);
     }

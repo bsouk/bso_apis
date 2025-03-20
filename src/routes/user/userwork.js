@@ -141,12 +141,12 @@ router.post(
 //     controller.addQuery
 // );
 
-router.get(
-    "/getMyQueries",
-    trimRequest.all,
-    requireAuth,
-    controller.getMyQueries
-);
+// router.get(
+//     "/getMyQueries",
+//     trimRequest.all,
+//     requireAuth,
+//     controller.getMyQueries
+// );
 
 //Home Api
 router.get(
@@ -225,5 +225,20 @@ router.post(
     requireAuth,
     controller.createEnquiry
 );
+
+router.get(
+    "/getMyQueries",
+    trimRequest.all,
+    requireAuth,
+    controller.getMyEnquiry
+);
+
+// router.get(
+//     "/getQueryDetails/:id",
+//     trimRequest.all,
+//     requireAuth,
+//     controller.getenquiryById
+// );
+
 
 module.exports = router;
