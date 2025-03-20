@@ -2096,36 +2096,6 @@ exports.createEnquiry = async (req, res) => {
     }
 }
 
-exports.getMyAllEnquires = async (req, res) => {
-    try {
-        const userId = req.user._id;
-        console.log("userid is", userId);
-
-        const userDetails = await User.findById(userId);
-        console.log("userdetails:", userDetails);
-
-        const { status, search, offset = 0, limit = 10 } = req.query;
-        console.log('offset : ', offset, " limit : ", limit)
-        const filter = {};
-
-        if (status) {
-            filter.status = status;
-        }
-        if (search) {
-            filter.query_unique_id = { $regex: search, $options: "i" };
-        }
-
-        let data = []
-        let count = 0
-        if (userDetails.user_type === "buyer") {
-
-        }
-    } catch (error) {
-        utils.handleError(res, error);
-    }
-}
-
-
 exports.getMyEnquiry = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -2300,6 +2270,29 @@ exports.getMyEnquiry = async (req, res) => {
 
         return res.json({ data, count, code: 200 });
 
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getEnquiryDetails = async (req, res) => {
+    try {
+        const { id } = req.params
+        console.log("id : ", id)
+        const data = await Enquiry.findOne({ _id: id }).populate("enquiry_items.unit_weight.unit")
+        console.log("data : ", data)
+        if (!data) {
+            return utils.handleError(res, {
+                message: "Query data not found",
+                code: 404,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Query details fetched successfully",
+            data,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }

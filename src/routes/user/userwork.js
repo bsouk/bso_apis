@@ -157,12 +157,12 @@ router.get(
 );
 
 
-router.get(
-    "/getQueryDetails/:id",
-    trimRequest.all,
-    requireAuth,
-    controller.getQueryById
-);
+// router.get(
+//     "/getQueryDetails/:id",
+//     trimRequest.all,
+//     requireAuth,
+//     controller.getQueryById
+// );
 
 
 //edit query
@@ -233,12 +233,12 @@ router.get(
     controller.getMyEnquiry
 );
 
-// router.get(
-//     "/getQueryDetails/:id",
-//     trimRequest.all,
-//     requireAuth,
-//     controller.getenquiryById
-// );
+router.get(
+    "/getQueryDetails/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getEnquiryDetails
+);
 
 
 module.exports = router;
