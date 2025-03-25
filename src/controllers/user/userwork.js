@@ -2111,9 +2111,7 @@ exports.getMyEnquiry = async (req, res) => {
 
         if (brand) {
             brandfilter = {
-                $match: {
-                    'enquiry_items.brand': { $regex: 'her', $options: "i" }
-                }
+                'enquiry_items.brand': { $regex: 'her', $options: "i" }
             }
         }
 
@@ -2138,7 +2136,9 @@ exports.getMyEnquiry = async (req, res) => {
                             preserveNullAndEmptyArrays: true
                         }
                     },
-                    brandfilter,
+                    {
+                        $match: brandfilter
+                    },
                     {
                         $lookup: {
                             from: "quantity_units",
@@ -2217,7 +2217,9 @@ exports.getMyEnquiry = async (req, res) => {
                         preserveNullAndEmptyArrays: true
                     }
                 },
-                brandfilter,
+                {
+                    $match: brandfilter
+                },
                 {
                     $lookup: {
                         from: "quantity_units",
@@ -2285,7 +2287,9 @@ exports.getMyEnquiry = async (req, res) => {
                             preserveNullAndEmptyArrays: true
                         }
                     },
-                    brandfilter,
+                    {
+                        $match: brandfilter
+                    },
                     {
                         $lookup: {
                             from: "quantity_units",
