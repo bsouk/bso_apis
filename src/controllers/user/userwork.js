@@ -2142,7 +2142,7 @@ exports.getMyEnquiry = async (req, res) => {
                     {
                         $lookup: {
                             from: "quantity_units",
-                            let: { unitId: "$enquiry_items.unit_weight.unit" },
+                            let: { unitId: "$enquiry_items.quantity.unit" },
                             pipeline: [
                                 {
                                     $match: {
@@ -2205,7 +2205,6 @@ exports.getMyEnquiry = async (req, res) => {
         } else {
             // console.log("else condition")
             const aggregate_data = [
-
                 {
                     $match: {
                         ...filter,
@@ -2223,7 +2222,7 @@ exports.getMyEnquiry = async (req, res) => {
                 {
                     $lookup: {
                         from: "quantity_units",
-                        let: { unitId: "$enquiry_items.unit_weight.unit" },
+                        let: { unitId: "$enquiry_items.quantity.unit" },
                         pipeline: [
                             {
                                 $match: {
@@ -2280,70 +2279,7 @@ exports.getMyEnquiry = async (req, res) => {
             )
 
             count = await Enquiry.countDocuments(
-                [
-                    {
-                        $unwind: {
-                            path: "$enquiry_items",
-                            preserveNullAndEmptyArrays: true
-                        }
-                    },
-                    {
-                        $match: brandfilter
-                    },
-                    {
-                        $lookup: {
-                            from: "quantity_units",
-                            let: { unitId: "$enquiry_items.unit_weight.unit" },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: { $eq: ["$_id", "$$unitId"] }
-                                    }
-                                },
-                                {
-                                    $project: {
-                                        _id: 1,
-                                        unit: 1
-                                    }
-                                }
-                            ],
-                            as: "enquiry_items.quantity_unit_data"
-                        }
-                    },
-                    {
-                        $unwind: {
-                            path: "$enquiry_items.quantity_unit_data",
-                            preserveNullAndEmptyArrays: true
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: "$_id",
-                            user_id: { $first: "$user_id" },
-                            enquiry_unique_id: { $first: "$enquiry_unique_id" },
-                            status: { $first: "$status" },
-                            expiry_date: { $first: "$expiry_date" },
-                            priority: { $first: "$priority" },
-                            shipping_address: { $first: "$shipping_address" },
-                            currency: { $first: "$currency" },
-                            documents: { $first: "$documents" },
-                            enquiry_items: { $push: "$enquiry_items" },
-                            delivery_charges: { $first: "$delivery_charges" },
-                            reply: { $first: "$reply" },
-                            createdAt: { $first: "$createdAt" },
-                            updatedAt: { $first: "$updatedAt" },
-                        }
-                    },
-                    {
-                        $sort: { createdAt: -1 }
-                    },
-                    {
-                        $skip: parseInt(offset) || 0
-                    },
-                    {
-                        $limit: parseInt(limit) || 10
-                    },
-                ]
+                aggregate_data
             )
             console.log("count : ", count)
         }
@@ -2359,7 +2295,7 @@ exports.getEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("enquiry_items.unit_weight.unit")
+        const data = await Enquiry.findOne({ _id: id }).populate("enquiry_items.quantity.unit")
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {

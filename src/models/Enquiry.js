@@ -65,9 +65,9 @@ const EnquirySchema = new mongoose.Schema({
                     ],
                     default: []
                 },
-                quantity: {
-                    type: Number
-                },
+                // quantity: {
+                //     type: Number
+                // },
                 available_quantity: {
                     type: Number
                 },
@@ -75,7 +75,7 @@ const EnquirySchema = new mongoose.Schema({
                     type: Number
                 },
                 amount: Number,
-                unit_weight: {
+                quantity: {
                     unit: {
                         type: mongoose.Schema.Types.ObjectId,
                         ref: 'quantity_units'
