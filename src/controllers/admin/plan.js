@@ -83,21 +83,3 @@ exports.getSinglePlan = async (req, res) => {
         message: "plan data fetched successfully", data: plandata, code: 200
     })
 }
-
-
-async function getCustomerByEmail(email) {
-    const customers = await stripe.customers.list({
-        email: email,
-        limit: 1,
-    });
-    return customers.data.length > 0 ? customers.data[0] : null;
-}
-
-// exports.createSubscription = async (req, res) => {
-//     try {
-//         const userid = req.user._id
-//         const data = req.body
-//     } catch (error) {
-//         utils.handleError(res, error);
-//     }
-// }

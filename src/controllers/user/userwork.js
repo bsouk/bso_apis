@@ -2104,9 +2104,18 @@ exports.getMyEnquiry = async (req, res) => {
         const userDetails = await User.findById(userId);
         console.log("userdetails:", userDetails);
 
-        const { status, search, offset = 0, limit = 10 } = req.query;
+        const { status, search, offset = 0, limit = 10, brand } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
         const filter = {};
+        let brandfilter = {}
+
+        if (brand) {
+            brandfilter = {
+                $match: {
+                    'enquiry_items.brand': { $regex: 'her', $options: "i" }
+                }
+            }
+        }
 
         if (status) {
             filter.status = status;
@@ -2117,6 +2126,7 @@ exports.getMyEnquiry = async (req, res) => {
 
         let data = []
         let count = 0
+        console.log("brandfilter : ", brandfilter, " filter : ", filter)
         if (userDetails.user_type === "supplier") {
             const userMatchCondition = { user_id: new mongoose.Types.ObjectId(userId) }
             // console.log('if condition block')
@@ -2206,6 +2216,7 @@ exports.getMyEnquiry = async (req, res) => {
                         preserveNullAndEmptyArrays: true
                     }
                 },
+                brandfilter,
                 {
                     $lookup: {
                         from: "quantity_units",
@@ -2265,7 +2276,71 @@ exports.getMyEnquiry = async (req, res) => {
                 aggregate_data
             )
 
-            count = data.length > 0 ? data[0].total : 0;
+            count = await Enquiry.countDocuments(
+                [
+                    {
+                        $unwind: {
+                            path: "$enquiry_items",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    brandfilter,
+                    {
+                        $lookup: {
+                            from: "quantity_units",
+                            let: { unitId: "$enquiry_items.unit_weight.unit" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: { $eq: ["$_id", "$$unitId"] }
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        _id: 1,
+                                        unit: 1
+                                    }
+                                }
+                            ],
+                            as: "enquiry_items.quantity_unit_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$enquiry_items.quantity_unit_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $group: {
+                            _id: "$_id",
+                            user_id: { $first: "$user_id" },
+                            enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                            status: { $first: "$status" },
+                            expiry_date: { $first: "$expiry_date" },
+                            priority: { $first: "$priority" },
+                            shipping_address: { $first: "$shipping_address" },
+                            currency: { $first: "$currency" },
+                            documents: { $first: "$documents" },
+                            enquiry_items: { $push: "$enquiry_items" },
+                            delivery_charges: { $first: "$delivery_charges" },
+                            reply: { $first: "$reply" },
+                            createdAt: { $first: "$createdAt" },
+                            updatedAt: { $first: "$updatedAt" },
+                        }
+                    },
+                    {
+                        $sort: { createdAt: -1 }
+                    },
+                    {
+                        $skip: parseInt(offset) || 0
+                    },
+                    {
+                        $limit: parseInt(limit) || 10
+                    },
+                ]
+            )
+            console.log("count : ", count)
         }
 
         return res.json({ data, count, code: 200 });
