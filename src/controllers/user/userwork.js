@@ -2104,10 +2104,11 @@ exports.getMyEnquiry = async (req, res) => {
         const userDetails = await User.findById(userId);
         console.log("userdetails:", userDetails);
 
-        const { status, search, offset = 0, limit = 10, brand } = req.query;
+        const { status, search, offset = 0, limit = 10, brand, countries } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
         const filter = {};
         let brandfilter = {}
+        let countryFilter = {};
 
         if (brand) {
             brandfilter = {
@@ -2120,6 +2121,18 @@ exports.getMyEnquiry = async (req, res) => {
         }
         if (search) {
             filter.query_unique_id = { $regex: search, $options: "i" };
+        }
+
+        if (countries) {
+            const countryList = countries.split(',').map(country => country.trim());
+            console.log("countryList : ", countryList)
+            countryFilter = {
+                shipping_address: {
+                    $regex: countryList.join('|'),
+                    $options: 'i'
+                }
+            };
+            console.log("countryFilter : ", countryFilter)
         }
 
         let data = []
@@ -2169,6 +2182,7 @@ exports.getMyEnquiry = async (req, res) => {
                         $match: {
                             ...filter,
                             ...userMatchCondition,
+                            ...countryFilter
                         },
                     },
                     {
@@ -2201,13 +2215,14 @@ exports.getMyEnquiry = async (req, res) => {
                 ]
             );
 
-            count = await Enquiry.countDocuments({ ...filter, ...userMatchCondition, ...brandfilter });
+            count = await Enquiry.countDocuments({ ...filter, ...userMatchCondition, ...brandfilter, ...countryFilter });
         } else {
             // console.log("else condition")
             const aggregate_data = [
                 {
                     $match: {
                         ...filter,
+                        ...countryFilter
                     },
                 },
                 {
@@ -2278,9 +2293,10 @@ exports.getMyEnquiry = async (req, res) => {
                 aggregate_data
             )
 
-            count = await Enquiry.countDocuments(
-                aggregate_data
-            )
+            count = await Enquiry.countDocuments({
+                ...filter,
+                ...countryFilter
+            });
             console.log("count : ", count)
         }
 
