@@ -2138,6 +2138,7 @@ exports.getMyEnquiry = async (req, res) => {
                             preserveNullAndEmptyArrays: true
                         }
                     },
+                    brandfilter,
                     {
                         $lookup: {
                             from: "quantity_units",
@@ -2200,7 +2201,7 @@ exports.getMyEnquiry = async (req, res) => {
                 ]
             );
 
-            count = await Enquiry.countDocuments({ ...filter, ...userMatchCondition });
+            count = await Enquiry.countDocuments({ ...filter, ...userMatchCondition, ...brandfilter });
         } else {
             // console.log("else condition")
             const aggregate_data = [
