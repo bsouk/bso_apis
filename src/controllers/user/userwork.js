@@ -2111,7 +2111,7 @@ exports.getMyEnquiry = async (req, res) => {
 
         if (brand) {
             brandfilter = {
-                'enquiry_items.brand': { $regex: 'her', $options: "i" }
+                'enquiry_items.brand': { $regex: brand, $options: "i" }
             }
         }
 
