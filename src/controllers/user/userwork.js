@@ -145,7 +145,8 @@ exports.editProfile = async (req, res) => {
                     code: 400,
                 });
             }
-            data.user_type = user.user_type.push(data.switch_to)
+            types.push(data.switch_to)
+            data.user_type = types
             data.current_user_type = data.switch_to
         }
         console.log("data : ", data)
