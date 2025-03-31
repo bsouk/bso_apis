@@ -16,7 +16,7 @@ exports.createJob = async (req, res) => {
 
         const user_data = await User.findOne({ _id: userId })
         console.log("user data : ", user_data)
-        if (user_data.user_type !== 'company') {
+        if (!user_data.user_type.includes("company")) {
             return utils.handleError(res, {
                 message: "Only authorised company can create job",
                 code: 404,
@@ -251,7 +251,7 @@ exports.acceptApplication = async (req, res) => {
 
         const { job_application_id, status } = req.body
 
-        if (user_data.user_type !== "company") {
+        if (!user_data.user_type.includes("company")) {
             return utils.handleError(res, {
                 message: "Only valid company accept applications",
                 code: 404,

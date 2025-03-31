@@ -310,12 +310,12 @@ exports.getQuotationList = async (req, res) => {
             {
                 $lookup: {
                     from: "quotations",
-                    let: { id: user_data.user_type === "buyer" ? "$_id" : "$quotation_id" },
+                    let: { id: user_data.user_type.includes("buyer") ? "$_id" : "$quotation_id" },
                     pipeline: [
                         {
                             $match: {
                                 $expr: {
-                                    $eq: ["$$id", user_data.user_type === "buyer" ? "$query_id" : "$_id"],
+                                    $eq: ["$$id", user_data.user_type.includes("buyer")? "$query_id" : "$_id"],
                                 },
                             },
                         },
@@ -362,7 +362,7 @@ exports.getQuotationList = async (req, res) => {
             },
         ];
 
-        if (user_data.user_type === "buyer") {
+        if (user_data.user_type.includes("buyer")) {
             const matchStage = {
                 $match: {
                     createdByUser: new mongoose.Types.ObjectId(userId),
@@ -399,7 +399,7 @@ exports.getQuotationList = async (req, res) => {
             ];
             const countResult = await query.aggregate(countPipeline);
             count = countResult[0]?.total || 0;
-        } else if (user_data.user_type === "supplier") {
+        } else if (user_data.user_type.includes("supplier")) {
             const matchStage = {
                 $match: {
                     variant_assigned_to: new mongoose.Types.ObjectId(userId),
@@ -491,7 +491,7 @@ exports.getQuotationDetails = async (req, res) => {
             });
         }
         let data = []
-        if (user_data.user_type === 'supplier') {
+        if (user_data.user_type.includes('supplier')) {
             data = await quotation.aggregate(
                 [
                     {
@@ -742,7 +742,7 @@ exports.getQuotationDetails = async (req, res) => {
             )
         }
 
-        if (user_data.user_type === 'buyer') {
+        if (user_data.user_type.includes('buyer')) {
             data = await quotation.aggregate(
                 [
                     {
@@ -1114,7 +1114,7 @@ exports.addQuotationNotes = async (req, res) => {
         const currentTime = await moment(Date.now()).format('lll')
         const timeline_data = {
             date: currentTime,
-            detail: user_data.user_type === "supplier" ? 'Supplier quotation note added' : 'Buyer quotation note added',
+            detail: user_data.user_type.includes("supplier") ? 'Supplier quotation note added' : 'Buyer quotation note added',
             product_id: queryData?.product_id,
             supplier_id: queryData?.variant_assigned_to,
             variant_id: queryData?.variant_id,

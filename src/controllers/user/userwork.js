@@ -76,7 +76,8 @@ exports.createBuyerProfile = async (req, res) => {
             unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
-            user_type: "buyer",
+            user_type: ["buyer"],
+            current_user_type: "buyer",
             //profile_completed: true,
             //is_user_approved_by_admin: true,
         };
@@ -165,7 +166,7 @@ exports.editProfile = async (req, res) => {
             return { path, code: true };
         };
 
-        switch (updatedUser.user_type) {
+        switch (updatedUser.current_user_type) {
             case "buyer": {
                 if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
                     console.log("condition data is ", updatedUser.profile_completed)
@@ -324,6 +325,167 @@ exports.editProfile = async (req, res) => {
             }
         }
 
+        // updatedUser.user_type.forEach(async i => {
+        //     switch (i) {
+        //         case "buyer": {
+        //             if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+        //                 console.log("condition data is ", updatedUser.profile_completed)
+        //                 updatedUser.profile_completed = true;
+        //                 await updatedUser.save()
+        //             }
+        //         }
+        //             break;
+        //         case "supplier": {
+        //             const requiredFields = [
+        //                 'full_name',
+        //                 'profile_image',
+        //                 'email',
+        //                 'phone_number',
+        //                 'bank_details.account_holder_name',
+        //                 'bank_details.account_number',
+        //                 'bank_details.bank_name',
+        //                 'bank_details.swift_code',
+        //                 'bank_details.iban_number',
+        //                 'bank_details.address.line1',
+        //                 'bank_details.address.line2',
+        //                 'bank_details.address.city',
+        //                 'bank_details.address.state',
+        //                 'bank_details.address.zip_code',
+        //                 'bank_details.address.country',
+        //                 'company_data.company_logo',
+        //                 'company_data.name',
+        //                 'company_data.business_category',
+        //                 'company_data.phone_number',
+        //                 'company_data.name',
+        //                 'company_data.registration_number',
+        //                 'company_data.incorporation_date',
+        //                 'company_data.vat_number',
+        //                 'company_data.business_category',
+        //                 'company_data.phone_number',
+        //                 'company_data.email',
+        //                 'company_data.address.line1',
+        //                 'company_data.address.line2',
+        //                 'company_data.address.city',
+        //                 'company_data.address.state',
+        //                 'company_data.address.zip_code',
+        //                 'company_data.address.country',
+        //                 'beneficiary_address.line1',
+        //                 'beneficiary_address.line2',
+        //                 'beneficiary_address.city',
+        //                 'beneficiary_address.state',
+        //                 'beneficiary_address.zip_code',
+        //                 'beneficiary_address.country',
+        //                 'additional_notes',
+        //             ];
+
+        //             console.log("supplier check fields is ", requiredFields)
+
+        //             const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        //             const hasRequiredArrays =
+        //                 Array.isArray(updatedUser.sample_products) && updatedUser.sample_products.length > 0 &&
+        //                 Array.isArray(updatedUser.business_certificates) && updatedUser.business_certificates.length > 0 &&
+        //                 Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+        //             console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+        //             if (isProfileComplete && hasRequiredArrays) {
+        //                 updatedUser.profile_completed = true;
+        //             } else {
+        //                 updatedUser.profile_completed = false;
+        //             }
+
+        //             await updatedUser.save();
+        //         }
+        //             break;
+        //         case "logistics": {
+        //             const requiredFields = [
+        //                 'full_name',
+        //                 'profile_image',
+        //                 'email',
+        //                 'phone_number',
+        //                 'company_data.company_logo',
+        //                 'company_data.name',
+        //                 'company_data.business_category',
+        //                 'company_data.phone_number',
+        //                 'company_data.email',
+        //                 'company_data.address.line1',
+        //                 'company_data.address.line2',
+        //                 'company_data.address.city',
+        //                 'company_data.address.zip_code',
+        //                 'company_data.address.state',
+        //                 'company_data.address.country',
+        //                 'company_data.address.service_area',
+        //                 'delivery_type'
+        //             ];
+
+        //             console.log("logistics check fields is ", requiredFields)
+
+        //             const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        //             const hasRequiredArrays =
+        //                 Array.isArray(updatedUser.insurances) && updatedUser.insurances.length > 0 &&
+        //                 Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+        //             console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+        //             if (isProfileComplete && hasRequiredArrays) {
+        //                 updatedUser.profile_completed = true;
+        //             } else {
+        //                 updatedUser.profile_completed = false;
+        //             }
+
+        //             await updatedUser.save();
+
+        //         }
+        //             break;
+        //         case "resource": {
+        //             const requiredFields = [
+        //                 "full_name",
+        //                 "email",
+        //                 "phone_number",
+        //                 "profile_image",
+        //                 "profile_title",
+        //                 "profile_description",
+        //                 "specialisations",
+        //                 "rate_per_hour",
+        //                 "project_pricing_model",
+        //                 "resource_availability"
+        //             ]
+
+        //             console.log("resource check fields is ", requiredFields)
+
+        //             const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        //             const hasRequiredArrays =
+        //                 Array.isArray(updatedUser.work_exprience) && updatedUser.work_exprience.length > 0 &&
+        //                 Array.isArray(updatedUser.education) && updatedUser.education.length > 0 &&
+        //                 Array.isArray(updatedUser.portfolio) && updatedUser.portfolio.length > 0 &&
+        //                 Array.isArray(updatedUser.skills) && updatedUser.skills.length > 0 &&
+        //                 Array.isArray(updatedUser.certifications) && updatedUser.certifications.length > 0 &&
+        //                 Array.isArray(updatedUser.languages) && updatedUser.languages.length > 0 &&
+        //                 Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
+        //                 Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
+
+        //             console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+        //             if (isProfileComplete && hasRequiredArrays) {
+        //                 updatedUser.profile_completed = true;
+        //             } else {
+        //                 updatedUser.profile_completed = false;
+        //             }
+
+        //             await updatedUser.save();
+
+        //         }
+        //             break;
+        //         default: {
+        //             updatedUser.profile_completed = false
+        //             await updatedUser.save()
+        //         }
+        //     }
+        // })
+
         res.json({ message: "Profile edit successfully", code: 200 });
     } catch (error) {
         utils.handleError(res, error);
@@ -456,7 +618,8 @@ exports.createSupplierProfile = async (req, res) => {
             unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
-            user_type: "supplier",
+            user_type: ["supplier"],
+            current_user_type: "supplier",
             //profile_completed: true,
             // is_user_approved_by_admin: true,
         };
@@ -633,7 +796,8 @@ exports.createLogisticsProfile = async (req, res) => {
             unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
-            user_type: "logistics",
+            user_type: ["logistics"],
+            current_user_type: "logistics",
             //profile_completed: true,
             // is_user_approved_by_admin: true,
         };
@@ -883,7 +1047,8 @@ exports.createResourceProfile = async (req, res) => {
             unique_user_id: await getUniqueId(),
             password,
             decoded_password: password,
-            user_type: "resource",
+            user_type: ["resource"],
+            current_user_type: "resource",
             //profile_completed: true,
             // is_user_approved_by_admin: true,
         };
@@ -1023,7 +1188,7 @@ exports.getMyQueries = async (req, res) => {
 
         let data = []
         let count = 0
-        if (userDetails.user_type === "buyer") {
+        if (userDetails.user_type.includes("buyer")) {
             const userMatchCondition = { createdByUser: new mongoose.Types.ObjectId(userId) }
 
             data = await Query.aggregate(
@@ -1360,7 +1525,7 @@ exports.getQueryById = async (req, res) => {
 
         const user_data = await User.findOne({ _id: userId })
         let agg = []
-        if (user_data.user_type === "buyer") {
+        if (user_data.user_type.includes("buyer")) {
             agg = [
                 {
                     $match: {
@@ -1439,7 +1604,7 @@ exports.getQueryById = async (req, res) => {
             ]
         }
 
-        if (user_data.user_type === "supplier") {
+        if (user_data.user_type.includes("supplier")) {
             agg = [
                 {
                     $match: {
@@ -2138,7 +2303,7 @@ exports.getMyEnquiry = async (req, res) => {
         let data = []
         let count = 0
         console.log("brandfilter : ", brandfilter, " filter : ", filter)
-        if (userDetails.user_type === "supplier") {
+        if (userDetails.current_user_type = "supplier") {
             const userMatchCondition = { user_id: new mongoose.Types.ObjectId(userId) }
             // console.log('if condition block')
             data = await Enquiry.aggregate(
@@ -2216,7 +2381,7 @@ exports.getMyEnquiry = async (req, res) => {
             );
 
             count = await Enquiry.countDocuments({ ...filter, ...userMatchCondition, ...brandfilter, ...countryFilter });
-        } else {
+        } else if (userDetails.current_user_type = "buyer") {
             // console.log("else condition")
             const aggregate_data = [
                 {

@@ -1325,7 +1325,7 @@ exports.selectLogistics = async (req, res) => {
         }
 
         const logistics_list = await User.find({
-            user_type: 'logistics',
+            user_type: {$in : ['logistics']},
             company_data: { $exists: true, $ne: null }
         });
         console.log("Logistics List: ", logistics_list);

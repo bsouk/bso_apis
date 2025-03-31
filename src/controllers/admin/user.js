@@ -215,9 +215,11 @@ exports.addCustomer = async (req, res) => {
 
     if (data.company_data) {
       if (data.company_data.name && data.company_data.registration_number && data.company_data.vat_number && data.company_data.incorporation_date) {
-        userData.user_type = "company"
+        userData.user_type = ["company"]
+        userData.current_user_type = "company"
       } else {
-        userData.user_type = "buyer"
+        userData.user_type = ["buyer"]
+        userData.current_user_type = "buyer"
       }
     }
     const user = new User(userData);
@@ -258,7 +260,8 @@ exports.getCustomerList = async (req, res) => {
     const { limit = 10, offset = 0, search = "" } = req.query;
 
     const condition = {
-      $or: [{ user_type: "buyer" }, { user_type: "company" }],
+      // $or: [{ user_type: "buyer" }, { user_type: "company" }],
+      user_type: { $in: ["buyer", "company"] },
       profile_completed: true,
       is_deleted: false,
     };
@@ -308,7 +311,8 @@ exports.getCustomerList = async (req, res) => {
           unique_user_id: 1,
           is_company_approved: 1,
           is_user_approved_by_admin: 1,
-          user_type: 1
+          user_type: 1,
+          current_user_type: 1
         },
       },
     ]);
@@ -412,9 +416,13 @@ exports.editCustomer = async (req, res) => {
 
     if (data.company_data) {
       if (data.company_data.name && data.company_data.registration_number && data.company_data.vat_number && data.company_data.incorporation_date) {
-        userData.user_type = "company"
+        // userData.user_type = "company"
+        userData['$push'] = { user_type: "company" }
+        userData.current_user_type = "company"
       } else {
-        userData.user_type = "buyer"
+        // userData.user_type = "buyer"
+        userData['$push'] = { user_type: "buyer" }
+        userData.current_user_type = "buyer"
       }
     }
 
@@ -541,7 +549,8 @@ exports.addResource = async (req, res) => {
       unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
-      user_type: "resource",
+      user_type: ["resource"],
+      current_user_type : "resource",
       profile_completed: true,
       //is_user_approved_by_admin: true,
     };
@@ -606,7 +615,7 @@ exports.getResourceList = async (req, res) => {
     const { limit = 10, offset = 0, search = "" } = req.query;
 
     const condition = {
-      user_type: "resource",
+      user_type: { $in: ["resource"] },
       profile_completed: true,
       is_deleted: false,
     };
@@ -874,7 +883,8 @@ exports.addSupplier = async (req, res) => {
       unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
-      user_type: "supplier",
+      user_type: ["supplier"],
+      current_user_type : "supplier",
       profile_completed: true,
       // is_user_approved_by_admin: true,
     };
@@ -1190,7 +1200,7 @@ exports.getSupplierList = async (req, res) => {
     const { limit = 10, offset = 0, search = "" } = req.query;
 
     const condition = {
-      user_type: "supplier",
+      user_type: { $in: ["supplier"] },
       profile_completed: true,
       is_deleted: false,
     };
@@ -1384,7 +1394,8 @@ exports.addLogisticsUser = async (req, res) => {
       unique_user_id: await getUniqueId(),
       password,
       decoded_password: password,
-      user_type: "logistics",
+      user_type: ["logistics"],
+      current_user_type : "logistics",
       profile_completed: true,
       // is_user_approved_by_admin: true,
     };
@@ -1515,7 +1526,7 @@ exports.getLogisticsUserList = async (req, res) => {
     const { limit = 10, offset = 0, search = "" } = req.query;
 
     const condition = {
-      user_type: "logistics",
+      user_type: { $in: ["logistics"] },
       profile_completed: true,
       is_deleted: false,
     };
@@ -1816,7 +1827,7 @@ exports.changeAvailabilityStatus = async (req, res) => {
       });
     }
 
-    if (Userdata.user_type === "resource") {
+    if (Userdata.user_type.includes("resource")) {
       Userdata.availability_status = req.body.status
     } else {
       return utils.handleError(res, {
@@ -1859,7 +1870,7 @@ exports.supplierListForm = async (req, res) => {
       }
 
       data = await User.aggregate([
-        { $match: { user_type: 'supplier', _id: new mongoose.Types.ObjectId(productData?.user_id), is_deleted: false } },
+        { $match: { user_type: { $in: ['supplier'] }, _id: new mongoose.Types.ObjectId(productData?.user_id), is_deleted: false } },
         {
           $project: {
             _id: 1,
@@ -1872,7 +1883,7 @@ exports.supplierListForm = async (req, res) => {
       console.log("data is ", data)
     } else {
       data = await User.aggregate([
-        { $match: { user_type: 'supplier', is_deleted: false } },
+        { $match: { user_type: { $in: ['supplier'] }, is_deleted: false } },
         {
           $project: {
             _id: 1,
@@ -1924,37 +1935,37 @@ exports.shareUserCrendentials = async (req, res) => {
 }
 
 exports.getQuantitiesUnits = async (req, res) => {
-    try {
-        const { search, offset = 0, limit = 10 } = req.query
-        let filter = {}
-        if (search) {
-            filter.unit = { $regex: search, $options: "i" }
-        }
-        const data = await quantity_units.aggregate([
-            {
-                $match: filter
-            },
-            {
-                $sort: {
-                    createdAt: -1
-                }
-            },
-            {
-                $skip: parseInt(offset) || 0
-            },
-            {
-                $limit: parseInt(limit) || 10
-            }
-        ])
-
-        const count = await quantity_units.countDocuments(filter)
-        res.status(200).json({
-            message: "Quantities unit fetched successfully",
-            data,
-            count,
-            code: 200
-        })
-    } catch (error) {
-        utils.handleError(res, error);
+  try {
+    const { search, offset = 0, limit = 10 } = req.query
+    let filter = {}
+    if (search) {
+      filter.unit = { $regex: search, $options: "i" }
     }
+    const data = await quantity_units.aggregate([
+      {
+        $match: filter
+      },
+      {
+        $sort: {
+          createdAt: -1
+        }
+      },
+      {
+        $skip: parseInt(offset) || 0
+      },
+      {
+        $limit: parseInt(limit) || 10
+      }
+    ])
+
+    const count = await quantity_units.countDocuments(filter)
+    res.status(200).json({
+      message: "Quantities unit fetched successfully",
+      data,
+      count,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
 }

@@ -50,9 +50,14 @@ const UserSchema = new mongoose.Schema(
       select: false,
     },
     user_type: {
-      type: String,
+      type: [String],
       enum: ["buyer", "supplier", "logistics", "resource", "company"],
       required: true,
+    },
+    current_user_type: {
+      type: String,
+      enum: ["buyer", "supplier", "logistics", "resource", "company"],
+      default: "buyer"
     },
     joining_date: {
       type: Date
@@ -265,19 +270,19 @@ const UserSchema = new mongoose.Schema(
     },
     health_and_saftey_procedures: {
       type: String,
-      default : ""
+      default: ""
     },
     quality_procedures: {
       type: String,
-      default : ""
+      default: ""
     },
     anti_correcuptin_procedures: {
       type: String,
-      default : ""
+      default: ""
     },
     environment_policy: {
       type: String,
-      default : ""
+      default: ""
     },
     business_document: {
       type: String
