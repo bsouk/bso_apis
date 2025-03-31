@@ -241,4 +241,10 @@ router.get(
 );
 
 
+router.get(
+    "/getContinent",
+    trimRequest.all,
+    controller.getContinent
+)
+
 module.exports = router;

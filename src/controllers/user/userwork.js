@@ -19,6 +19,7 @@ const query_assigned_suppliers = require("../../models/query_assigned_suppliers"
 const quantity_units = require("../../models/quantity_units");
 const industry_type = require("../../models/industry_type");
 const Enquiry = require("../../models/Enquiry");
+const Continent = require("../../models/continents")
 
 //create password for users
 function createNewPassword() {
@@ -200,7 +201,6 @@ exports.editProfile = async (req, res) => {
                     'bank_details.swift_code',
                     'bank_details.iban_number',
                     'bank_details.address.line1',
-                    'bank_details.address.line2',
                     'bank_details.address.city',
                     'bank_details.address.state',
                     'bank_details.address.zip_code',
@@ -217,13 +217,11 @@ exports.editProfile = async (req, res) => {
                     'company_data.phone_number',
                     'company_data.email',
                     'company_data.address.line1',
-                    'company_data.address.line2',
                     'company_data.address.city',
                     'company_data.address.state',
                     'company_data.address.zip_code',
                     'company_data.address.country',
                     'beneficiary_address.line1',
-                    'beneficiary_address.line2',
                     'beneficiary_address.city',
                     'beneficiary_address.state',
                     'beneficiary_address.zip_code',
@@ -263,7 +261,6 @@ exports.editProfile = async (req, res) => {
                     'company_data.phone_number',
                     'company_data.email',
                     'company_data.address.line1',
-                    'company_data.address.line2',
                     'company_data.address.city',
                     'company_data.address.zip_code',
                     'company_data.address.state',
@@ -2503,6 +2500,23 @@ exports.getEnquiryDetails = async (req, res) => {
             data,
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getContinent = async (req, res) => {
+    try {
+        const data = await Continent.find();
+        console.log("data : ", data)
+        return res.status(200).json(
+            {
+                message: "Continent data fetched successfully",
+                data,
+                code: 200
+            }
+        )
     } catch (error) {
         utils.handleError(res, error);
     }

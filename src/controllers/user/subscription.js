@@ -5,11 +5,17 @@ const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require('generate-password');
 const Brand = require("../../models/brand");
-const utils = require("../../utils/utils");
 const crypto = require("crypto");
 const plan = require("../../models/plan");
+const Subscription = require("../../models/subscription")
 // const stripe = require('stripe')('your_stripe_secret_key');
 
+
+
+async function genrateSubscriptionId() {
+    const token = crypto.randomBytes(5).toString('hex')
+    return `sub-${token}`
+}
 
 async function getCustomerByEmail(email) {
     const customers = await stripe.customers.list({
@@ -26,10 +32,94 @@ async function getCustomerByEmail(email) {
 //         const userdata = await User.findOne({ _id: userid })
 //         console.log("userdata : ", userdata)
 //         if(!userdata){
-            
+
 //         }
 //         const is_customer_existed = await getCustomerByEmail(req.user.email)
 //     } catch (error) {
 //         utils.handleError(res, error);
 //     }
 // }
+
+exports.createSubscription = async (req, res) => {
+    try {
+        const userid = req.user._id
+        const data = req.body
+        const userdata = await User.findOne({ _id: userid })
+        console.log("userdata : ", userdata)
+        if (!userdata) {
+            return utils.handleError(res, {
+                message: "user not found",
+                code: 404,
+            });
+        }
+        const plandata = await plan.findOne({ plan_id: data?.plan_id })
+        console.log("plandata : ", plandata)
+        if (!plandata) {
+            return utils.handleError(res, {
+                message: "Plan not found",
+                code: 404,
+            });
+        }
+        let today = new Date();
+        let start
+        let end
+        if (plandata?.interval === "monthly") {
+            start = new Date()
+            end = new Date().setMonth(today.getMonth() + 2)
+        } else {
+            start = new Date()
+            end = new Date().setMonth(today.getFullYear() + 1)
+        }
+
+        let newdata = {
+            user_id: userdata?._id,
+            subscription_id: await genrateSubscriptionId(),
+            plan_id: data.plan_id,
+            start_at: start,
+            end_at: end,
+            status: 'active'
+        }
+
+        console.log("newdata : ", newdata)
+        const newsubscription = await Subscription.create(newdata);
+        console.log("subscription : ", newsubscription)
+        return res.status(200).json({
+            message: "Subscription created successfully",
+            data: newsubscription,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+exports.getAllPlan = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10 } = req.query
+        const plandata = await plan.find({ selected: true }).skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
+        console.log("plandata : ", plandata)
+        const count = await plan.countDocuments()
+        return res.status(200).json({
+            message: "plan data fetched successfully", data: plandata, count, code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getSinglePlan = async (req, res) => {
+    const { id } = req.params
+    const plandata = await plan.findOne({ _id: id })
+    console.log("plandata : ", plandata)
+    if (!plandata) {
+        return utils.handleError(res, {
+            message: "Plan not found",
+            code: 404,
+        });
+    }
+    return res.status(200).json({
+        message: "plan data fetched successfully", data: plandata, code: 200
+    })
+}
