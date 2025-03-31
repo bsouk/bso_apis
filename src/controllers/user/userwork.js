@@ -137,6 +137,11 @@ exports.editProfile = async (req, res) => {
                 });
         }
 
+        if (data.switch_to) {
+            data.user_type = user.user_type.push(data.switch_to)
+            data.current_user_type = data.switch_to
+        }
+        console.log("data : ", data)
         const updatedUser = await User.findByIdAndUpdate(id, data);
         console.log("updated user is ", updatedUser);
 
@@ -2494,3 +2499,4 @@ exports.getEnquiryDetails = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
