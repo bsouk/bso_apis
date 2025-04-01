@@ -20,6 +20,7 @@ const quantity_units = require("../../models/quantity_units");
 const industry_type = require("../../models/industry_type");
 const Enquiry = require("../../models/Enquiry");
 const Continent = require("../../models/continents")
+const { Country, State, City } = require('country-state-city');
 
 //create password for users
 function createNewPassword() {
@@ -317,7 +318,7 @@ exports.editProfile = async (req, res) => {
                     Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
                     // Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
 
-                console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+                    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
 
                 if (isProfileComplete && hasRequiredArrays) {
                     updatedUser.profile_completed = true;
@@ -2521,4 +2522,58 @@ exports.getContinent = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+exports.getCountry = async (req, res) => {
+    try {
+        const data = await Country.getAllCountries()
+        console.log("data : ", data)
+
+        return res.status(200).json(
+            {
+                message: "Countries data fetched successfully",
+                data,
+                code: 200
+            }
+        )
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getStates = async (req, res) => {
+    try {
+        const { country } = req.params;
+        const data = State.getStatesOfCountry(country);
+        console.log("data : ", data)
+        return res.status(200).json(
+            {
+                message: "Countries data fetched successfully",
+                data,
+                code: 200
+            }
+        )
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getCities = async (req, res) => {
+    try {
+        const { countryCode, stateCode } = req.query;
+        const data = City.getCitiesOfState(countryCode, stateCode);
+        console.log("data : ", data)
+        return res.status(200).json(
+            {
+                message: "Countries data fetched successfully",
+                data,
+                code: 200
+            }
+        )
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
 

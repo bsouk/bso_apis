@@ -247,4 +247,22 @@ router.get(
     controller.getContinent
 )
 
+router.get(
+    "/getCountries",
+    trimRequest.all,
+    controller.getCountry
+)
+
+router.get(
+    "/getStates/:country",
+    trimRequest.all,
+    controller.getStates
+)
+
+router.get(
+    "/getCities",
+    trimRequest.all,
+    controller.getCities
+)
+
 module.exports = router;
