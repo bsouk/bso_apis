@@ -19,15 +19,21 @@ router.post(
 router.get(
     "/getAllPlan",
     trimRequest.all,
-    requireAuth,
     controller.getAllPlan
 )
 
 router.get(
     "/getSinglePlan/:id",
     trimRequest.all,
-    requireAuth,
     controller.getSinglePlan
+)
+
+
+router.delete(
+    "/deletePlan/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.deletePlan
 )
 
 module.exports = router;

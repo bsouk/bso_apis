@@ -61,14 +61,14 @@ exports.createSubscription = async (req, res) => {
             });
         }
         let today = new Date();
-        let start
+        let start = new Date(today);
         let end
         if (plandata?.interval === "monthly") {
-            start = new Date()
-            end = new Date().setMonth(today.getMonth() + 2)
-        } else {
-            start = new Date()
-            end = new Date().setMonth(today.getFullYear() + 1)
+            end = new Date(today);
+            end.setMonth(today.getMonth() + 1);
+        } else if (plandata?.interval === "yearly") {
+            end = new Date(today);
+            end.setFullYear(today.getFullYear() + 1);
         }
 
         let newdata = {
@@ -110,16 +110,29 @@ exports.getAllPlan = async (req, res) => {
 }
 
 exports.getSinglePlan = async (req, res) => {
-    const { id } = req.params
-    const plandata = await plan.findOne({ _id: id })
-    console.log("plandata : ", plandata)
-    if (!plandata) {
-        return utils.handleError(res, {
-            message: "Plan not found",
-            code: 404,
-        });
+    try {
+        const { id } = req.params
+        const plandata = await plan.findOne({ _id: id })
+        console.log("plandata : ", plandata)
+        if (!plandata) {
+            return utils.handleError(res, {
+                message: "Plan not found",
+                code: 404,
+            });
+        }
+        return res.status(200).json({
+            message: "plan data fetched successfully", data: plandata, code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
     }
-    return res.status(200).json({
-        message: "plan data fetched successfully", data: plandata, code: 200
-    })
 }
+
+
+// exports.getActiveSubscription = async (req, res) => {
+//     try {
+
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }

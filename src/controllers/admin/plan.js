@@ -83,3 +83,21 @@ exports.getSinglePlan = async (req, res) => {
         message: "plan data fetched successfully", data: plandata, code: 200
     })
 }
+
+
+exports.deletePlan = async (req, res) => {
+    const { id } = req.params
+    const plandata = await plan.findOne({ _id: id })
+    console.log("plandata : ", plandata)
+    if (!plandata) {
+        return utils.handleError(res, {
+            message: "Plan not found",
+            code: 404,
+        });
+    }
+    const result = await plan.deleteOne({ _id: id });
+    console.log("result : ", result)
+    return res.status(200).json({
+        message: "plan data deleted successfully", data: plandata, code: 200
+    })
+}

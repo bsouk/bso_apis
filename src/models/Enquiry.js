@@ -25,8 +25,11 @@ const EnquirySchema = new mongoose.Schema({
         enum: ["high", "medium", "low"],
         default: "low"
     },
+    address: {
+        type: mongoose.Schema.Types.ObjectId
+    },
     shipping_address: {
-        type: String
+        type: mongoose.Schema.Types.ObjectId
     },
     quotation_end_date: {
         type: String

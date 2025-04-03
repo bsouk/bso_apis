@@ -661,6 +661,8 @@ exports.addAddress = async (req, res) => {
             data.default_address = true
         }
 
+        data.user_id = userId;
+
         const newaddressdata = await Address.create(data);
         console.log("created address data is ", newaddressdata);
 
@@ -694,11 +696,12 @@ exports.editAddress = async (req, res) => {
             });
         }
 
-        const result = await Address.findByIdAndUpdate(id, data);
+        const result = await Address.findByIdAndUpdate(id, data, { new: true });
 
         res.status(200).json({
             status: true,
             message: "Address edited Successfully",
+            data: result,
             code: 200
         })
     } catch (err) {
