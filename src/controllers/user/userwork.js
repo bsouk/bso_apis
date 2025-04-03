@@ -662,6 +662,7 @@ exports.addAddress = async (req, res) => {
         }
 
         data.user_id = userId;
+        console.log("data : ", data)
 
         const newaddressdata = await Address.create(data);
         console.log("created address data is ", newaddressdata);
