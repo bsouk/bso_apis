@@ -5,7 +5,27 @@ const addressSchema = new mongoose.Schema(
     {
         user_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref : 'users'
+            ref: 'users'
+        },
+        first_name: {
+            type: String,
+            default: "",
+        },
+        last_name: {
+            type: String,
+            default: "",
+        },
+        company_name: {
+            type: String,
+            default: "",
+        },
+        website: {
+            type: String,
+            default: "",
+        },
+        fax: {
+            type: String,
+            default: "",
         },
         phone_number: {
             type: String
@@ -23,16 +43,34 @@ const addressSchema = new mongoose.Schema(
                 default: "",
             },
             city: {
-                type: String,
-                default: "",
+                name: {
+                    type: String,
+                    default: "",
+                },
+                iso_code: {
+                    type: String,
+                    default: "",
+                }
             },
             state: {
-                type: String,
-                default: "",
+                name: {
+                    type: String,
+                    default: "",
+                },
+                iso_code: {
+                    type: String,
+                    default: "",
+                }
             },
             country: {
-                type: String,
-                default: "",
+                name: {
+                    type: String,
+                    default: "",
+                },
+                iso_code: {
+                    type: String,
+                    default: "",
+                }
             },
             pin_code: {
                 type: String,
@@ -56,10 +94,10 @@ const addressSchema = new mongoose.Schema(
             type: Boolean,
             default: false
         },
-        address_type : {
-            type : String,
-            enum : ["Home", "Work"],
-            default : "Home"
+        address_type: {
+            type: String,
+            enum: ["Home", "Work"],
+            default: "Home"
         }
     },
     {
