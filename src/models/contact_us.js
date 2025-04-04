@@ -16,6 +16,12 @@ const UserSchema = new mongoose.Schema({
   full_name: {
     type: String
   },
+  phone_number: {
+    type: String
+  },
+  subject: {
+    type: String
+  },
   status:{
     type: String,
     default:'Pending',

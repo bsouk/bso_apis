@@ -264,5 +264,16 @@ router.get(
     trimRequest.all,
     controller.getCities
 )
+router.get(
+    "/homepageenquiry",
+    trimRequest.all,
+    controller.homepageenquiry
+)
+router.post(
+    "/addTeamMember",
+    trimRequest.all,
+    requireAuth,
+    controller.AddTeamMember
+)
 
 module.exports = router;

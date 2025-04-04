@@ -9,6 +9,9 @@ const EnquirySchema = new mongoose.Schema({
     enquiry_unique_id: {
         type: String,
     },
+    enquiry_number: {
+        type: String,
+    },
     quotation_number: {
         type: String,
     },

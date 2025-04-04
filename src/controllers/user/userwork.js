@@ -18,6 +18,8 @@ const Product = require("../../models/product");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 const quantity_units = require("../../models/quantity_units");
 const industry_type = require("../../models/industry_type");
+const TeamMember = require("../../models/team_member");
+const UserMember = require("../../models/user_member");
 const Enquiry = require("../../models/Enquiry");
 const Continent = require("../../models/continents")
 const { Country, State, City } = require('country-state-city');
@@ -2296,6 +2298,7 @@ exports.getMyEnquiry = async (req, res) => {
             }
         }
 
+
         if (status) {
             filter.status = status;
         }
@@ -2307,7 +2310,8 @@ exports.getMyEnquiry = async (req, res) => {
             const countryList = countries.split(',').map(country => country.trim());
             console.log("countryList : ", countryList)
             countryFilter = {
-                shipping_address: {
+                // shipping_address: {
+                "shipping_address_data.address.country.name": {
                     $regex: countryList.join('|'),
                     $options: 'i'
                 }
@@ -2358,6 +2362,21 @@ exports.getMyEnquiry = async (req, res) => {
                             preserveNullAndEmptyArrays: true
                         }
                     },
+
+                    {
+                        $lookup: {
+                            from: "addresses",
+                            localField: "shipping_address",
+                            foreignField: "_id",
+                            as: "shipping_address_data"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$shipping_address_data",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
                     {
                         $match: {
                             ...filter,
@@ -2373,7 +2392,9 @@ exports.getMyEnquiry = async (req, res) => {
                             status: { $first: "$status" },
                             expiry_date: { $first: "$expiry_date" },
                             priority: { $first: "$priority" },
-                            shipping_address: { $first: "$shipping_address" },
+                            enquiry_number: { $first: "$enquiry_number" },
+                            // shipping_address: { $first: "$shipping_address" },
+                            shipping_address: { $first: "$shipping_address_data" },
                             currency: { $first: "$currency" },
                             documents: { $first: "$documents" },
                             enquiry_items: { $push: "$enquiry_items" },
@@ -2441,6 +2462,20 @@ exports.getMyEnquiry = async (req, res) => {
                     }
                 },
                 {
+                    $lookup: {
+                        from: "addresses",
+                        localField: "shipping_address",
+                        foreignField: "_id",
+                        as: "shipping_address_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$shipping_address_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
                     $group: {
                         _id: "$_id",
                         user_id: { $first: "$user_id" },
@@ -2448,7 +2483,9 @@ exports.getMyEnquiry = async (req, res) => {
                         status: { $first: "$status" },
                         expiry_date: { $first: "$expiry_date" },
                         priority: { $first: "$priority" },
-                        shipping_address: { $first: "$shipping_address" },
+                        enquiry_number: { $first: "$enquiry_number" },
+                        // shipping_address: { $first: "$shipping_address" },
+                        shipping_address: { $first: "$shipping_address_data" },
                         currency: { $first: "$currency" },
                         documents: { $first: "$documents" },
                         enquiry_items: { $push: "$enquiry_items" },
@@ -2580,4 +2617,130 @@ exports.getCities = async (req, res) => {
     }
 }
 
+
+exports.homepageenquiry = async (req, res) => {
+    try {
+        const data = await Enquiry.aggregate(
+            [
+                {
+                    $unwind: {
+                        path: "$enquiry_items",
+                        preserveNullAndEmptyArrays: false
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { unitId: "$enquiry_items.quantity.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$_id", "$$unitId"] }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    unit: 1
+                                }
+                            }
+                        ],
+                        as: "enquiry_items.quantity_unit_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$enquiry_items.quantity_unit_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $lookup: {
+                        from: "addresses",
+                        localField: "shipping_address",
+                        foreignField: "_id",
+                        as: "shipping_address_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$shipping_address_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        user_id: { $first: "$user_id" },
+                        enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        status: { $first: "$status" },
+                        expiry_date: { $first: "$expiry_date" },
+                        priority: { $first: "$priority" },
+                        enquiry_number: { $first: "$enquiry_number" },
+                        // shipping_address: { $first: "$shipping_address" },
+                        shipping_address: { $first: "$shipping_address_data" },
+                        currency: { $first: "$currency" },
+                        documents: { $first: "$documents" },
+                        enquiry_items: { $push: "$enquiry_items" },
+                        delivery_charges: { $first: "$delivery_charges" },
+                        reply: { $first: "$reply" },
+                        createdAt: { $first: "$createdAt" },
+                        updatedAt: { $first: "$updatedAt" },
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $skip:0
+                },
+                {
+                    $limit:10
+                }
+            ]
+        );
+        return res.status(200).json(
+            {
+                data,
+                code: 200
+            }
+        )
+       
+     }catch(error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.AddTeamMember = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const data = req.body;
+
+        const teamCount = await TeamMember.countDocuments({ user_id: userId });
+
+        if (teamCount >= 3) {
+            const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
+
+            if (!Member || Member.member_count <= (teamCount - 3)) {
+                return res.status(402).json({
+                    message: "You have reached the free limit of 3 team members.",
+                    code: 402
+                });
+            }
+        }
+        // Add new team member
+        data.user_id = userId;
+        const team = await TeamMember.create(data);
+
+        return res.status(200).json({
+            message: "Team Member Added successfully",
+            data: team,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
 

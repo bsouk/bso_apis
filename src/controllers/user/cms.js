@@ -52,14 +52,16 @@ exports.getContactUsDetails = async (req, res) => {
 
 exports.contactUs = async (req, res) => {
   try {
-    const { email, full_name, message } = req.body;
+    const { email, full_name, message,phone_number,subject } = req.body;
     // const user_id = req.user._id
 
     const data = {
       // user_id,
       email,
       full_name,
-      message
+      message,
+      phone_number,
+      subject
     }
 
     const contactUs = await ContactUs(data);
