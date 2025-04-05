@@ -437,7 +437,30 @@ const UserSchema = new mongoose.Schema(
     },
     additional_notes: {
       type: String
-    }
+    },
+    user_id : {
+      type : mongoose.Schema.Types.ObjectId
+    },
+    message: {
+      type: String,
+    },
+    permission_role: {
+      type: String,
+      enum: ["custom", "administrator", "super_manager","manager"],
+    },
+    permission: {
+      request: { type: String, enum: ["all", "own", "none"], default: "none" },
+      quotation: { type: String, enum: ["all", "own", "none"], default: "none" },
+      inventory: { type: String, enum: ["all", "own", "none"], default: "none" },
+      address: { type: String, enum: ["all", "own", "none"], default: "none" },
+      invoice: { type: String, enum: ["all", "own", "none"], default: "none" },
+      member: { type: String, enum: ["all", "own", "none"], default: "none" },
+    },
+    member_status: {
+      type: String,
+      enum: ["pending","accept", "decline","suspend"],
+      default: "pending",
+    },
   },
   {
     timestamps: true,

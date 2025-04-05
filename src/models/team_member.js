@@ -21,7 +21,7 @@ const TeamMemberSchema = new mongoose.Schema(
     message: {
       type: String,
     },
-    role: {
+    permission_role: {
       type: String,
       enum: ["custom", "administrator", "super_manager","manager"],
     },

@@ -32,7 +32,8 @@ const EnquirySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId
     },
     shipping_address: {
-        type: mongoose.Schema.Types.ObjectId
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'address'
     },
     quotation_end_date: {
         type: String

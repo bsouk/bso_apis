@@ -275,5 +275,41 @@ router.post(
     requireAuth,
     controller.AddTeamMember
 )
+router.post(
+    "/Addusermember",
+    trimRequest.all,
+    requireAuth,
+    controller.usermember
+)
+router.get(
+    "/GetTeamMember",
+    trimRequest.all,
+    requireAuth,
+    controller.GetTeamMember
+)
+router.post(
+    "/TeamMemberDetail/:Id",
+    trimRequest.all,
+    requireAuth,
+    controller.editTeamMember
+)
+router.get(
+    "/deleteTeamMember/:Id",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteTeamMember
+)
+router.get(
+    "/searchenquiry",
+    trimRequest.all,
+    requireAuth,
+    controller.searchenquiry
+)
+router.post(
+    "/addenquiryquotes",
+    trimRequest.all,
+    requireAuth,
+    controller.addenquiryquotes
+)
 
 module.exports = router;

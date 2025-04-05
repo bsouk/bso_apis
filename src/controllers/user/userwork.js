@@ -8,7 +8,6 @@ const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
 const company_details = require("../../models/company_details");
 const jwt = require("jsonwebtoken")
-
 const fs = require('fs');
 const path = require('path');
 const Query = require("../../models/query");
@@ -21,8 +20,10 @@ const industry_type = require("../../models/industry_type");
 const TeamMember = require("../../models/team_member");
 const UserMember = require("../../models/user_member");
 const Enquiry = require("../../models/Enquiry");
+const EnquiryQuotes = require("../../models/EnquiryQuotes");
 const Continent = require("../../models/continents")
 const { Country, State, City } = require('country-state-city');
+const exp = require("constants");
 
 //create password for users
 function createNewPassword() {
@@ -2528,7 +2529,7 @@ exports.getEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("enquiry_items.quantity.unit")
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit")
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {
@@ -2693,10 +2694,10 @@ exports.homepageenquiry = async (req, res) => {
                     $sort: { createdAt: -1 }
                 },
                 {
-                    $skip:0
+                    $skip: 0
                 },
                 {
-                    $limit:10
+                    $limit: 10
                 }
             ]
         );
@@ -2706,8 +2707,8 @@ exports.homepageenquiry = async (req, res) => {
                 code: 200
             }
         )
-       
-     }catch(error) {
+
+    } catch (error) {
         utils.handleError(res, error);
     }
 }
@@ -2717,25 +2718,47 @@ exports.AddTeamMember = async (req, res) => {
         const userId = req.user._id;
         const data = req.body;
 
-        const teamCount = await TeamMember.countDocuments({ user_id: userId });
+        const teamCount = await User.countDocuments({ user_id: userId });
 
         if (teamCount >= 3) {
             const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
 
             if (!Member || Member.member_count <= (teamCount - 3)) {
                 return res.status(402).json({
-                    message: "You have reached the free limit of 3 team members.",
+                    message: "You have reached your member limit",
                     code: 402
                 });
             }
         }
+        const doesEmailExists = await emailer.emailExists(data.email);
+        if (doesEmailExists)
+            return utils.handleError(res, {
+                message: "This email address is already registered",
+                code: 400,
+            });
+        const user = await User.findOne(userId);
+        console.log(user)
         // Add new team member
         data.user_id = userId;
-        const team = await TeamMember.create(data);
+        data.user_type = user.user_type;
+
+
+        const password = createNewPassword();
+        const userData = {
+            ...data,
+            password,
+            decoded_password: password,
+            company_data: {
+                name: data.company, // or whatever the field is
+            },
+        };
+
+        const Adduser = new User(userData);
+        await Adduser.save();
 
         return res.status(200).json({
             message: "Team Member Added successfully",
-            data: team,
+            data: Adduser,
             code: 200
         });
 
@@ -2743,4 +2766,153 @@ exports.AddTeamMember = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+exports.usermember = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const data = req.body;
 
+        // Check if a paid member already exists for this user
+        let member = await UserMember.findOne({ user_id: userId, status: "paid" });
+
+        if (member) {
+            // Update existing member
+            member = await UserMember.findOneAndUpdate(
+                { user_id: userId, status: "paid" },
+                { $set: data },
+                { new: true }
+            );
+        } else {
+            // Create new member
+            data.user_id = userId;
+            data.status = "paid";
+            member = await UserMember.create(data);
+        }
+
+        return res.status(200).json({
+            message: "Team Member added/updated successfully",
+            data: member,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+exports.GetTeamMember = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const offset = parseInt(req.query.offset) || 0;
+        const limit = parseInt(req.query.limit) || 3;
+
+        const teamMembers = await User.find({ user_id: userId })
+            .skip(offset)
+            .limit(limit);
+
+        const total = await User.countDocuments({ user_id: userId });
+
+        return res.status(200).json({
+            message: "Team Members fetched successfully",
+            data: teamMembers,
+            count: total,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+exports.editTeamMember = async (req, res) => {
+    try {
+        const Id = req.params.Id;
+        const updateData = req.body;
+
+        const updatedMember = await User.findByIdAndUpdate(Id, updateData, {
+            new: true,
+            runValidators: true
+        });
+
+        if (!updatedMember) {
+            return res.status(404).json({
+                message: "Team Member not found",
+                code: 404
+            });
+        }
+
+        return res.status(200).json({
+            message: "Team Member updated successfully",
+            data: updatedMember,
+            code: 200
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+exports.deleteTeamMember = async (req, res) => {
+    try {
+        const Id = req.params.Id;
+
+        const deletedMember = await User.findByIdAndDelete(Id);
+
+        if (!deletedMember) {
+            return res.status(404).json({
+                message: "Team Member not found",
+                code: 404
+            });
+        }
+
+        return res.status(200).json({
+            message: "Team Member deleted successfully",
+            data: deletedMember,
+            code: 200
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+exports.searchenquiry = async (req, res) => {
+    try {
+        const { search } = req.query;
+        const userId = req.user._id;
+        if (!search) {
+            return res.status(400).json({ message: 'search parameter is required' });
+        }
+        const enquiry = await Enquiry.findOne({
+            user_id: userId,
+            $or: [
+                { enquiry_unique_id: search },
+                { enquiry_number: search }
+            ]
+        });
+
+        if (!enquiry) {
+            return res.status(404).json({ message: 'Enquiry not found' });
+        }
+        return res.status(200).json({
+            data: enquiry,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.addenquiryquotes = async (req, res) => {
+    try {
+        const data = req.body;
+        const userId = req.user._id;
+        const enquiry = await EnquiryQuotes.create({
+            ...data,
+            user_id: userId,
+        });
+        return res.status(200).json({
+            message:"Quotation Submit Successfully",
+            data: enquiry,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
