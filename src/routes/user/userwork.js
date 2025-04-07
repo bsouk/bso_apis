@@ -232,7 +232,11 @@ router.get(
     requireAuth,
     controller.getMyEnquiry
 );
-
+router.get(
+    "/getAllQueries",
+    trimRequest.all,
+    controller.getAllEnquiry
+);
 router.get(
     "/getQueryDetails/:id",
     trimRequest.all,
