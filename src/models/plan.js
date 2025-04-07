@@ -6,6 +6,10 @@ const planSchema = new mongoose.Schema(
         plan_id: {
             type: String,
         },
+        plan_type : {
+            type : String,
+            enum : ["paid", "unpaid"]
+        },
         plan_name: {
             type: String,
         },
@@ -49,6 +53,11 @@ const planSchema = new mongoose.Schema(
         access_level: {
             type: String,
             enum: ["partial", "fully"]
+        },
+        status: {
+            type: String,
+            enum: ["active", "inactive"],
+            default: "active"
         }
     },
     {

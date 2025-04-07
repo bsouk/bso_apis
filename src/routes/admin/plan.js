@@ -16,6 +16,14 @@ router.post(
     controller.createPlan
 )
 
+
+router.patch(
+    '/editPlan/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.editPlan
+)
+
 router.get(
     "/getAllPlan",
     trimRequest.all,

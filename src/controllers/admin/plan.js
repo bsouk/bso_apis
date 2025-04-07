@@ -55,6 +55,36 @@ exports.createPlan = async (req, res) => {
 }
 
 
+exports.editPlan = async (req, res) => {
+    try {
+        const { id } = req.params
+        const plandata = await plan.findOne({ _id: id })
+        console.log("plandata : ", plandata)
+        if (!plandata) {
+            return utils.handleError(res, {
+                message: "Plan not found",
+                code: 404,
+            });
+        }
+        const data = req.body
+        console.log("data : ", data)
+        const response = await plan.findOneAndUpdate(
+            { _id: id },
+            { $set: data },
+            { new: true }
+        )
+        console.log("response : ", response)
+        return res.status(200).json({
+            message: "Plan updated successfully",
+            data: response,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
 exports.getAllPlan = async (req, res) => {
     try {
         const { offset = 0, limit = 10 } = req.query
