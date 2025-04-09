@@ -44,37 +44,37 @@ function createNewPassword() {
 
 
 const generateToken = (_id) => {
-  const expiration =
-    Math.floor(Date.now() / 1000) +
-    60 * 60 * 24 * process.env.JWT_EXPIRATION_DAY;
-  return utils.encrypt(
-    jwt.sign(
-      {
-        data: {
-          _id,
-          type: "user",
-        },
-        // exp: expiration
-      },
-      process.env.JWT_SECRET
-    )
-  );
+    const expiration =
+        Math.floor(Date.now() / 1000) +
+        60 * 60 * 24 * process.env.JWT_EXPIRATION_DAY;
+    return utils.encrypt(
+        jwt.sign(
+            {
+                data: {
+                    _id,
+                    type: "user",
+                },
+                // exp: expiration
+            },
+            process.env.JWT_SECRET
+        )
+    );
 };
 
 const saveUserAccessAndReturnToken = async (req, user) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const userAccess = new UserAccess({
-        user_id: user._id,
-        ip: utils.getIP(req),
-        browser: utils.getBrowserInfo(req),
-      });
-      await userAccess.save();
-      resolve(generateToken(user._id));
-    } catch (error) {
-      reject(error);
-    }
-  });
+    return new Promise(async (resolve, reject) => {
+        try {
+            const userAccess = new UserAccess({
+                user_id: user._id,
+                ip: utils.getIP(req),
+                browser: utils.getBrowserInfo(req),
+            });
+            await userAccess.save();
+            resolve(generateToken(user._id));
+        } catch (error) {
+            reject(error);
+        }
+    });
 };
 
 const getUniqueId = async () => {
@@ -3309,6 +3309,16 @@ exports.changeInviteStatus = async (req, res) => {
         }
         userdata.invite_status = "accepted"
         await userdata.save()
+
+        const response = await User.findOneAndUpdate(
+            { _id: userdata._id },
+            {
+                $set: {
+                    invite_status: "accepted"
+                }
+            }, { new: true }
+        )
+        console.log("response : ", response)
 
         return res.status(200).json({
             message: `Invite ${data.status} successfully`,
