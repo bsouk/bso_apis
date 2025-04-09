@@ -25,7 +25,10 @@ const Subscription = require("../../models/subscription");
 const Continent = require("../../models/continents")
 const { Country, State, City } = require('country-state-city');
 const exp = require("constants");
-const { saveUserAccessAndReturnToken } = require("./auth");
+const UserAccess = require("../../models/userAccess");
+const uuid = require("uuid");
+const bcrypt = require('bcrypt');
+
 
 //create password for users
 function createNewPassword() {
@@ -38,6 +41,41 @@ function createNewPassword() {
     });
     return password;
 }
+
+
+const generateToken = (_id) => {
+  const expiration =
+    Math.floor(Date.now() / 1000) +
+    60 * 60 * 24 * process.env.JWT_EXPIRATION_DAY;
+  return utils.encrypt(
+    jwt.sign(
+      {
+        data: {
+          _id,
+          type: "user",
+        },
+        // exp: expiration
+      },
+      process.env.JWT_SECRET
+    )
+  );
+};
+
+const saveUserAccessAndReturnToken = async (req, user) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const userAccess = new UserAccess({
+        user_id: user._id,
+        ip: utils.getIP(req),
+        browser: utils.getBrowserInfo(req),
+      });
+      await userAccess.save();
+      resolve(generateToken(user._id));
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 const getUniqueId = async () => {
     return new Promise(async (resolve, reject) => {
