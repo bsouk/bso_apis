@@ -3333,7 +3333,7 @@ exports.SuspendTeamMember = async (req, res) => {
         const Id = req.params.Id;
         const SuspendedMember = await User.findByIdAndUpdate(
             Id,
-            { $$set: { member_status: "suspend" } },
+            { $set: { member_status: "suspend" } },
             { new: true });
 
         if (!SuspendedMember) {
