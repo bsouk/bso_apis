@@ -98,9 +98,9 @@ exports.getAllPlan = async (req, res) => {
     try {
         const { offset = 0, limit = 10, type } = req.query
         let query = { selected: true ,status:'active'};
-        if (type) {
-            query.type = type;
-        }
+        // if (type) {
+        //     query.type = type;
+        // }
 
         const plandata = await plan.find(query)
             .skip(Number(offset))
