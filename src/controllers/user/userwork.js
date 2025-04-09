@@ -3058,11 +3058,14 @@ exports.GetTeamMember = async (req, res) => {
         const offset = parseInt(req.query.offset) || 0;
         const limit = parseInt(req.query.limit) || 3;
 
-        const teamMembers = await User.find({ user_id: userId })
+        const teamMembers = await User.find({
+            user_id: userId,
+            member_status: { $nin: ['decline', 'suspend'] }
+        })
             .skip(offset)
             .limit(limit);
 
-        const total = await User.countDocuments({ user_id: userId });
+        const total = await User.countDocuments({ user_id: userId, member_status: { $nin: ['decline', 'suspend'] } });
 
         return res.status(200).json({
             message: "Team Members fetched successfully",
