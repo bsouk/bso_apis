@@ -22,6 +22,10 @@ const subscriptionSchema = new mongoose.Schema(
             type: Date,
             required: true
         },
+        type: {
+            type: String,
+            enum: ["supplier", "buyer", "logistics"]
+        },
         status: {
             type: String,
             enum: ["created", "authenticated", "active", "paused", "pending", "halted", "cancelled", "completed", "expired"]

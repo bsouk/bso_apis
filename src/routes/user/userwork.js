@@ -315,5 +315,11 @@ router.post(
     requireAuth,
     controller.addenquiryquotes
 )
+router.get(
+    "/checksubscriptions",
+    trimRequest.all,
+    requireAuth,
+    controller.checksubscriptions
+)
 
 module.exports = router;

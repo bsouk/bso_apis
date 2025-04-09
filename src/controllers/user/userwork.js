@@ -21,6 +21,7 @@ const TeamMember = require("../../models/team_member");
 const UserMember = require("../../models/user_member");
 const Enquiry = require("../../models/Enquiry");
 const EnquiryQuotes = require("../../models/EnquiryQuotes");
+const Subscription = require("../../models/subscription");
 const Continent = require("../../models/continents")
 const { Country, State, City } = require('country-state-city');
 const exp = require("constants");
@@ -742,7 +743,8 @@ exports.getUserAddressList = async (req, res) => {
         if (!addresslist || addresslist.length === 0) {
             return utils.handleError(res, {
                 message: "Address Not Found",
-                code: 400,
+                // code: 400,
+                code: 204,
             });
         }
 
@@ -3126,6 +3128,33 @@ exports.addenquiryquotes = async (req, res) => {
         return res.status(200).json({
             message: "Quotation Submit Successfully",
             data: enquiry,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.checksubscriptions = async (req, res) => {
+    try {
+        const userId = req.user._id;
+console.log(userId)
+        const subscription = await Subscription.findOne({
+            user_id: userId,
+            status: 'active',
+        });
+
+        if (!subscription) {
+            return res.status(201).json({
+                message: "No active subscription found",
+                code: 201
+            });
+        }
+
+        return res.status(200).json({
+            message: "Active subscription found",
+            data: subscription,
             code: 200
         });
 

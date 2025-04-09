@@ -97,8 +97,17 @@ exports.createSubscription = async (req, res) => {
 
 exports.getAllPlan = async (req, res) => {
     try {
-        const { offset = 0, limit = 10 } = req.query
-        const plandata = await plan.find({ selected: true }).skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
+        const { offset = 0, limit = 10, type } = req.query
+        let query = { selected: true ,status:'active'};
+        if (type) {
+            query.type = type;
+        }
+
+        const plandata = await plan.find(query)
+            .skip(Number(offset))
+            .limit(Number(limit))
+            .sort({ createdAt: -1 });
+        // const plandata = await plan.find({ selected: true }).skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
         console.log("plandata : ", plandata)
         const count = await plan.countDocuments()
         return res.status(200).json({
