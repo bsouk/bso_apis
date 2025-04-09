@@ -3105,11 +3105,9 @@ exports.editTeamMember = async (req, res) => {
 exports.deleteTeamMember = async (req, res) => {
     try {
         const Id = req.params.Id;
-        const deletedMember = await User.findByIdAndUpdate(
-            Id,
-            { $unset: { user_id: "" } },
-            { new: true });
-
+        const deletedMember = await User.findOneAndDelete(
+            { _id: Id },
+        );
         if (!deletedMember) {
             return res.status(404).json({
                 message: "Team Member not found",
