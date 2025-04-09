@@ -3280,3 +3280,29 @@ exports.changeInviteStatus = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.SuspendTeamMember = async (req, res) => {
+    try {
+        const Id = req.params.Id;
+        const SuspendedMember = await User.findByIdAndUpdate(
+            Id,
+            { $$set: { member_status: "suspend" } },
+            { new: true });
+
+        if (!SuspendedMember) {
+            return res.status(404).json({
+                message: "Team Member not found",
+                code: 404
+            });
+        }
+
+        return res.status(200).json({
+            message: "Team Member suspended successfully",
+            data: SuspendedMember,
+            code: 200
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};

@@ -305,7 +305,7 @@ router.post(
     requireAuth,
     controller.editTeamMember
 )
-router.get(
+router.delete(
     "/deleteTeamMember/:Id",
     trimRequest.all,
     requireAuth,
@@ -336,6 +336,14 @@ router.patch(
     trimRequest.all,
     requireAuth,
     controller.changeInviteStatus
+)
+
+
+router.patch(
+    "/suspendTeamMember/:Id",
+    trimRequest.all,
+    requireAuth,
+    controller.SuspendTeamMember
 )
 
 module.exports = router;

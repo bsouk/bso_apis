@@ -350,6 +350,13 @@ exports.login = async (req, res) => {
         code: 400,
       });
 
+    if (user.member_status === "suspend") {
+      return utils.handleError(res, {
+        message: "Account is suspended",
+        code: 400,
+      });
+    }
+
     const isPasswordMatch = await utils.checkPassword(password, user);
     if (!isPasswordMatch)
       return utils.handleError(res, {
@@ -469,7 +476,7 @@ exports.resetPassword = async (req, res) => {
     const { email, otp, password } = req.body;
     const user = await User.findOne({ email: email });
     const checkpass = await User.findOne({ email: email }).select("password");
-   
+
     const otpData = await OTP.findOne({ email, otp });
     if (!otpData)
       return utils.handleError(res, {
@@ -479,14 +486,14 @@ exports.resetPassword = async (req, res) => {
     if (!otpData.verified)
       return utils.handleError(res, {
         message: "The OTP you entered has not verified",
-        code: 400,             
+        code: 400,
       });
-      const isPasswordMatch = await utils.checkPassword(password, checkpass);
-      if (isPasswordMatch)
-        return utils.handleError(res, {
-          message: "New password must be different from the old password",
-          code: 400,
-        });
+    const isPasswordMatch = await utils.checkPassword(password, checkpass);
+    if (isPasswordMatch)
+      return utils.handleError(res, {
+        message: "New password must be different from the old password",
+        code: 400,
+      });
 
     user.password = password;
     user.decoded_password = password;

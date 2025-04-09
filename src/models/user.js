@@ -463,7 +463,7 @@ const UserSchema = new mongoose.Schema(
     },
     invite_status: {
       type: String,
-      enum: ["pending", "accepted"],
+      enum: ["pending", "accepted", "rejected"],
       default: "pending",
     }
   },
