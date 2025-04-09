@@ -279,6 +279,14 @@ router.post(
     requireAuth,
     controller.AddTeamMember
 )
+
+router.patch(
+    "/editTeamMember",
+    trimRequest.all,
+    requireAuth,
+    controller.editTeamMember
+)
+
 router.post(
     "/Addusermember",
     trimRequest.all,

@@ -28,7 +28,7 @@ const generateToken = (_id) => {
   );
 };
 
-const saveUserAccessAndReturnToken = async (req, user) => {
+exports.saveUserAccessAndReturnToken = async (req, user) => {
   return new Promise(async (resolve, reject) => {
     try {
       const userAccess = new UserAccess({

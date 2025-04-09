@@ -25,6 +25,7 @@ const Subscription = require("../../models/subscription");
 const Continent = require("../../models/continents")
 const { Country, State, City } = require('country-state-city');
 const exp = require("constants");
+const { saveUserAccessAndReturnToken } = require("./auth");
 
 //create password for users
 function createNewPassword() {
@@ -2938,7 +2939,6 @@ exports.AddTeamMember = async (req, res) => {
         data.user_id = userId;
         data.user_type = user.user_type;
 
-
         const password = createNewPassword();
         const userData = {
             ...data,
@@ -2952,6 +2952,26 @@ exports.AddTeamMember = async (req, res) => {
         const Adduser = new User(userData);
         await Adduser.save();
 
+
+        const token = await saveUserAccessAndReturnToken(req, Adduser);
+        console.log("token : ", token);
+        Adduser.last_login = new Date();
+        await Adduser.save();
+
+        let link = `${process.env.APP_URL}team-invitation?token=${token}&id=${Adduser._id}`
+        console.log("link : ", link)
+        const mailOptions = {
+            to: Adduser.email,
+            subject: "Team Invitation from Blue Sky",
+            app_name: process.env.APP_NAME,
+            name: Adduser.full_name,
+            company_name: Adduser.company_data.name,
+            app_url: process.env.APP_URL,
+            invitation_link: link,
+            email: Adduser.email,
+            password: Adduser.decoded_password
+        };
+        emailer.sendEmail(null, mailOptions, "teamInvite");
         return res.status(200).json({
             message: "Team Member Added successfully",
             data: Adduser,
