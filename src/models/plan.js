@@ -10,6 +10,10 @@ const planSchema = new mongoose.Schema(
         //     type : String,
         //     enum : ["paid", "unpaid"]
         // },
+        type: {
+            type: String,
+            enum: ["supplier", "buyer", "logistics", "resource"]
+        },
         plan_name: {
             type: String,
         },
@@ -59,9 +63,9 @@ const planSchema = new mongoose.Schema(
             enum: ["active", "inactive"],
             default: "active"
         },
-        plan_step : {
-            type : String,
-            enum : ["direct", "admin_involved"],
+        plan_step: {
+            type: String,
+            enum: ["direct", "admin_involved"],
         }
     },
     {
