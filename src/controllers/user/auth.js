@@ -28,7 +28,7 @@ const generateToken = (_id) => {
   );
 };
 
-exports.saveUserAccessAndReturnToken = async (req, user) => {
+const saveUserAccessAndReturnToken = async (req, user) => {
   return new Promise(async (resolve, reject) => {
     try {
       const userAccess = new UserAccess({
@@ -542,3 +542,6 @@ exports.changePassword = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+
+export { saveUserAccessAndReturnToken }
