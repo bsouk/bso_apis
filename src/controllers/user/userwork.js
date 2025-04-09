@@ -3307,8 +3307,6 @@ exports.changeInviteStatus = async (req, res) => {
                 code: 200
             })
         }
-        userdata.invite_status = "accepted"
-        await userdata.save()
 
         const response = await User.findOneAndUpdate(
             { _id: userdata._id },
