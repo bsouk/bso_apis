@@ -6,6 +6,11 @@ const EnquirySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
+    is_approved: {
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: "pending"
+    },
     enquiry_unique_id: {
         type: String,
     },

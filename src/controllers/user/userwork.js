@@ -2259,8 +2259,67 @@ exports.createEnquiry = async (req, res) => {
     try {
         const id = req.user._id
         console.log("id : ", id)
+        const subscription = await Subscription.aggregate([
+            {
+                $match: {
+                    user_id: new mongoose.Types.ObjectId(id),
+                    status: "active"
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'user_id',
+                    foreignField: '_id',
+                    as: 'user',
+                    pipeline: [
+                        {
+                            $project: {
+                                _id: 1,
+                                email: 1,
+                                user_type: 1,
+                                current_user_type: 1
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: 'plans',
+                    localField: 'plan_id',
+                    foreignField: 'plan_id',
+                    as: 'plan'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$plan',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $unwind: {
+                    path: "$user",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $limit: 1
+            }
+        ])
         const data = req.body
         console.log("data : ", data)
+        if (Array.isArray(subscription) && subscription.length > 0) {
+            if (subscription[0].user && subscription[0].user.current_user_type === 'buyer' && subscription[0].plan.plan_step === "direct")
+                data.is_approved = "approved"
+            else data.is_approved = "pending"
+        }
         let enquiryId = await EnquiryId();
         let newdata = {
             ...data,
@@ -2530,7 +2589,9 @@ exports.getAllEnquiry = async (req, res) => {
     try {
         const { status, search, offset = 0, limit = 10, brand, countries } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
-        const filter = {};
+        const filter = {
+            is_approved: "approved"
+        };
         let brandfilter = {}
         let countryFilter = {};
 
@@ -3091,7 +3152,7 @@ exports.searchenquiry = async (req, res) => {
             {
                 $sort: { createdAt: -1 }
             },
-            
+
         );
 
         const data = await Enquiry.aggregate(aggregationPipeline);
@@ -3139,7 +3200,7 @@ exports.addenquiryquotes = async (req, res) => {
 exports.checksubscriptions = async (req, res) => {
     try {
         const userId = req.user._id;
-console.log(userId)
+        console.log(userId)
         const subscription = await Subscription.findOne({
             user_id: userId,
             status: 'active',

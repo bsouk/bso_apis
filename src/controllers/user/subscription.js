@@ -94,7 +94,6 @@ exports.createSubscription = async (req, res) => {
 }
 
 
-
 exports.getAllPlan = async (req, res) => {
     try {
         const { offset = 0, limit = 10, type } = req.query
