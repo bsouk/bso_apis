@@ -2317,7 +2317,7 @@ exports.createEnquiry = async (req, res) => {
         const data = req.body
         console.log("data : ", data)
         if (Array.isArray(subscription) && subscription.length > 0) {
-            if (subscription[0].user && subscription[0].user.user_type.include("buyer") && subscription[0].plan.plan_step === "direct")
+            if (subscription[0].user && subscription[0].user.user_type.includes("buyer") && subscription[0].plan.plan_step === "direct")
                 data.is_approved = "approved"
             else data.is_approved = "pending"
         }
