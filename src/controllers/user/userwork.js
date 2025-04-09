@@ -2952,7 +2952,6 @@ exports.AddTeamMember = async (req, res) => {
         const Adduser = new User(userData);
         await Adduser.save();
 
-
         const token = await saveUserAccessAndReturnToken(req, Adduser);
         console.log("token : ", token);
         Adduser.last_login = new Date();
@@ -2982,6 +2981,7 @@ exports.AddTeamMember = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
 exports.usermember = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -3063,6 +3063,7 @@ exports.editTeamMember = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
 exports.deleteTeamMember = async (req, res) => {
     try {
         const Id = req.params.Id;
@@ -3240,6 +3241,41 @@ exports.checksubscriptions = async (req, res) => {
             code: 200
         });
 
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.changeInviteStatus = async (req, res) => {
+    try {
+        const data = req.body;
+        const userdata = User.findOne({ _id: data.user_id })
+        console.log("userdata : ", userdata)
+
+        if (!userdata) {
+            return utils.handleError(res, {
+                message: "User not found",
+                code: 400,
+            });
+        }
+
+        if (!data.status || data.status !== 'accepted') {
+            const result = await User.deleteOne({ _id: userdata._id })
+            console.log("result : ", result)
+
+            return res.status(200).json({
+                message: `Invite ${data.status} successfully`,
+                code: 200
+            })
+        }
+        userdata.invite_status = "accepted"
+        await userdata.save()
+
+        return res.status(200).json({
+            message: `Invite ${data.status} successfully`,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }

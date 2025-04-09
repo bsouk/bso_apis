@@ -330,4 +330,12 @@ router.get(
     controller.checksubscriptions
 )
 
+
+router.patch(
+    "/changeInviteStatus",
+    trimRequest.all,
+    requireAuth,
+    controller.changeInviteStatus
+)
+
 module.exports = router;

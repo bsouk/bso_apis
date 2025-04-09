@@ -438,15 +438,15 @@ const UserSchema = new mongoose.Schema(
     additional_notes: {
       type: String
     },
-    user_id : {
-      type : mongoose.Schema.Types.ObjectId
+    user_id: {
+      type: mongoose.Schema.Types.ObjectId
     },
     message: {
       type: String,
     },
     permission_role: {
       type: String,
-      enum: ["custom", "administrator", "super_manager","manager"],
+      enum: ["custom", "administrator", "super_manager", "manager"],
     },
     permission: {
       request: { type: String, enum: ["all", "own", "none"], default: "none" },
@@ -458,9 +458,14 @@ const UserSchema = new mongoose.Schema(
     },
     member_status: {
       type: String,
-      enum: ["pending","accept", "decline","suspend"],
+      enum: ["pending", "accept", "decline", "suspend"],
       default: "pending",
     },
+    invite_status: {
+      type: String,
+      enum: ["pending", "accepted"],
+      default: "pending",
+    }
   },
   {
     timestamps: true,
