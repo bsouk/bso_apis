@@ -2313,6 +2313,7 @@ exports.createEnquiry = async (req, res) => {
                 $limit: 1
             }
         ])
+        console.log("subscription : ", subscription)
         const data = req.body
         console.log("data : ", data)
         if (Array.isArray(subscription) && subscription.length > 0) {
