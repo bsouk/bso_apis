@@ -10,7 +10,7 @@ exports.getCMS = async (req, res) => {
   try {
     const { type } = req.query;
 
-    if (!["privacy_policy", "terms_and_conditions", "about_us", "support"].includes(type))
+    if (!['privacy_policy', 'terms_and_conditions', 'about_us', "support", "quality_procedures", "health_and_safety_procedures", "anti_corruption_policy", "environmental_policy"].includes(type))
       return utils.handleError(res, {
         message: "Please provide valid type",
         code: 400,
