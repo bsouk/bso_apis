@@ -62,6 +62,23 @@ const generateToken = (_id) => {
     );
 };
 
+const expireToken = (_id) => {
+    const expiredTime = Math.floor(Date.now() / 1000) - 10;
+
+    return utils.encrypt(
+        jwt.sign(
+            {
+                data: {
+                    _id,
+                    type: "user",
+                },
+                exp: expiredTime,
+            },
+            process.env.JWT_SECRET
+        )
+    );
+};
+
 const saveUserAccessAndReturnToken = async (req, user) => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -2973,7 +2990,7 @@ exports.AddTeamMember = async (req, res) => {
         if (teamdata.members.length >= 3) {
             const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
 
-            if (!Member || Member.member_count <= (teamCount - 3)) {
+            if (!Member || Member.member_count <= (teamdata.members.length - 3)) {
                 return res.status(402).json({
                     message: "You have reached your member limit",
                     code: 402
@@ -3424,6 +3441,9 @@ exports.SuspendTeamMember = async (req, res) => {
                 code: 404
             });
         }
+
+        const result = await expireToken(Id)
+        console.log("result : ", result)
 
         return res.status(200).json({
             message: "Team Member suspended successfully",
