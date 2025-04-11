@@ -95,7 +95,7 @@ exports.getAllPlan = async (req, res) => {
         }
         const plandata = await plan.find(filter).skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
         console.log("plandata : ", plandata)
-        const count = await plan.countDocuments()
+        const count = await plan.countDocuments(filter)
         return res.status(200).json({
             message: "plan data fetched successfully", data: plandata, count, code: 200
         })
