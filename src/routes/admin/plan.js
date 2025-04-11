@@ -60,4 +60,11 @@ router.post(
     controller.exportSubscription
 )
 
+router.get(
+    "/getTeam/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getTeamMember
+)
+
 module.exports = router;

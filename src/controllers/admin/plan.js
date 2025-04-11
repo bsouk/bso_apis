@@ -3,6 +3,7 @@ const utils = require("../../utils/utils");
 const crypto = require("crypto");
 const plan = require("../../models/plan");
 const subscription = require("../../models/subscription");
+const Team = require("../../models/team");
 // const stripe = require('stripe')('your_stripe_secret_key');
 
 async function genratePlanId() {
@@ -186,7 +187,7 @@ exports.getAllSubscription = async (req, res) => {
                                     plan_id: 1,
                                     plan_name: 1,
                                     price: 1,
-                                    is_auto_renewal : 1
+                                    is_auto_renewal: 1
                                 }
                             }
                         ]
@@ -461,6 +462,33 @@ exports.exportSubscription = async (req, res) => {
         } else {
             return res.send(claendataList)
         }
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getTeamMember = async (req, res) => {
+    try {
+        const teamId = req.params.id;
+        const teamdata = await Team.findOne({
+            $or: [
+                {
+                    admin_id: new mongoose.Types.ObjectId(teamId)
+                },
+                {
+                    members: { $in: [new mongoose.Types.ObjectId(teamId)] }
+                }
+            ]
+        }).populate('admin_id members')
+        console.log("teamdata : ", teamdata)
+
+        return res.status(200).json({
+            message: "Team fetched successfully",
+            data: teamdata,
+            code: 200
+        })
 
     } catch (error) {
         utils.handleError(res, error);
