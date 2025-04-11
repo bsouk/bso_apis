@@ -281,7 +281,7 @@ router.post(
 )
 
 router.patch(
-    "/editTeamMember",
+    "/editTeamMember/:Id",
     trimRequest.all,
     requireAuth,
     controller.editTeamMember
