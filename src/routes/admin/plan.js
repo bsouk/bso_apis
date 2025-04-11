@@ -52,4 +52,12 @@ router.get(
     controller.getAllSubscription
 )
 
+
+router.post(
+    "/exportSubscription",
+    trimRequest.all,
+    requireAuth,
+    controller.exportSubscription
+)
+
 module.exports = router;

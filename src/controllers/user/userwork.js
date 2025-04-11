@@ -3067,9 +3067,13 @@ exports.GetTeamMember = async (req, res) => {
 
         const total = await User.countDocuments({ user_id: userId, member_status: { $nin: ['decline', 'suspend'] } });
 
+        const teamLimit = await UserMember.findOne({ user_id: userId })
+        console.log("teamLimit : ", teamLimit)
+
         return res.status(200).json({
             message: "Team Members fetched successfully",
             data: teamMembers,
+            team_limit: teamLimit?.member_count ? teamLimit.member_count : 0,
             count: total,
             code: 200
         });

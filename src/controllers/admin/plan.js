@@ -214,11 +214,252 @@ exports.getAllSubscription = async (req, res) => {
             ]
         )
 
+        const count = await subscription.aggregate(
+            [
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "user_id",
+                        foreignField: "_id",
+                        as: "user",
+                        pipeline: [
+                            {
+                                $project: {
+                                    full_name: 1,
+                                    email: 1,
+                                    user_type: 1,
+                                    company_data: 1
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "plans",
+                        localField: "plan_id",
+                        foreignField: "plan_id",
+                        as: "plan",
+                        pipeline: [
+                            {
+                                $project: {
+                                    plan_id: 1,
+                                    plan_name: 1,
+                                    price: 1
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$plan",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: filter
+                },
+                {
+                    $sort: {
+                        createdAt: -1
+                    }
+                },
+                {
+                    $count: "total"
+                }
+            ]
+        )
+
         return res.status(200).json({
             message: "Subscription data fetched successfully",
             data,
+            count : count[0].total,
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.exportSubscription = async (req, res) => {
+    try {
+        const { format } = req.body
+        console.log("file format is ", format)
+
+        if (!['excel', 'csv', 'pdf'].includes(format)) {
+            return utils.handleError(res, {
+                message: "unavailable download format",
+                code: 404,
+            });
+        }
+
+        let dataList = []
+        if (req.body.fromDate && req.body.toDate) {
+            const newFromDate = new Date(req.body.fromDate);
+            const newToDate = new Date(req.body.toDate);
+            if (isNaN(newFromDate) || isNaN(newToDate)) {
+                return res.status(400).json({ error: "Invalid date format" });
+            }
+            // dataList = await subscription.find({
+            //     createdAt: { $gte: newFromDate, $lte: newToDate }
+            // })
+
+            dataList = await subscription.aggregate(
+                [
+                    {
+                        $match: {
+                            createdAt: { $gte: newFromDate, $lte: newToDate }
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        full_name: 1,
+                                        email: 1,
+                                        user_type: 1,
+                                        company_data: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$user",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "plans",
+                            localField: "plan_id",
+                            foreignField: "plan_id",
+                            as: "plan",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        plan_id: 1,
+                                        plan_name: 1,
+                                        price: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$plan",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $sort: {
+                            createdAt: -1
+                        }
+                    }
+                ]
+            )
+        } else {
+            dataList = await subscription.aggregate(
+                [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        full_name: 1,
+                                        email: 1,
+                                        user_type: 1,
+                                        company_data: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$user",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "plans",
+                            localField: "plan_id",
+                            foreignField: "plan_id",
+                            as: "plan",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        plan_id: 1,
+                                        plan_name: 1,
+                                        price: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$plan",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $sort: {
+                            createdAt: -1
+                        }
+                    }
+                ]
+            )
+        }
+        console.log("data list is", dataList);
+
+        if (dataList.length === 0) {
+            return res.status(401).json({
+                message: "No subscription data found",
+                code: 401
+            })
+        }
+
+        const claendataList = dataList.map((data) => ({
+            'User Name': data?.user?.full_name,
+            'Email': data?.user?.email,
+            'Company Name': data?.user?.company_data?.name,
+            'Subscription Id': data?.subscription_id,
+            'Plan Name': data?.plan?.plan_name,
+            'Price': data?.plan?.price,
+            'Plan Id': data?.plan?.plan_id,
+            'Subscription Status': data?.status,
+            'Start Date': data?.start_at,
+            'End Date': data?.end_at
+        }))
+
+        if (format === "excel") {
+            return utils.generateExcel(claendataList, res)
+        } else if (format === "csv") {
+            return utils.generateCSV(claendataList, res)
+        } else {
+            return res.send(claendataList)
+        }
+
     } catch (error) {
         utils.handleError(res, error);
     }

@@ -11,7 +11,6 @@ const UserMemberSchema = new mongoose.Schema(
       type: String,
     },
     member_count: { type: Number, default: 0 }
-   
   },
   {
     versionKey: false,
