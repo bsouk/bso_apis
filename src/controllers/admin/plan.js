@@ -276,11 +276,12 @@ exports.getAllSubscription = async (req, res) => {
                 }
             ]
         )
+        // console.log("count : ", count, " data : ", data)
 
         return res.status(200).json({
             message: "Subscription data fetched successfully",
             data,
-            count : count[0].total,
+            count: count.length !== 0 ? count[0].total : 0,
             code: 200
         })
     } catch (error) {

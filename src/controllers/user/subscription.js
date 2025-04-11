@@ -136,11 +136,3 @@ exports.getSinglePlan = async (req, res) => {
     }
 }
 
-
-// exports.getActiveSubscription = async (req, res) => {
-//     try {
-
-//     } catch (error) {
-//         utils.handleError(res, error);
-//     }
-// }
