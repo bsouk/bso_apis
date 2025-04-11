@@ -3134,6 +3134,7 @@ exports.usermember = async (req, res) => {
 exports.GetTeamMember = async (req, res) => {
     try {
         const userId = req.user._id;
+        console.log("userId : ", userId)
         const offset = parseInt(req.query.offset) || 0;
         const limit = parseInt(req.query.limit) || 3;
 
@@ -3161,11 +3162,22 @@ exports.GetTeamMember = async (req, res) => {
         const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id })
         console.log("teamLimit : ", teamLimit)
 
+        let teamLimitCount = 3;
+        let teamMemberCount = 0
+
+        if (teamLimit) {
+            teamLimitCount += teamLimit?.member_count ? teamLimit.member_count : 0
+        }
+
+        if (teamMembers) {
+            teamMemberCount = teamMembers?.members?.length === 0 ? 0 : teamMembers.members?.length
+        }
+
         return res.status(200).json({
             message: "Team Members fetched successfully",
             data: teamMembers,
-            team_limit: teamLimit?.member_count ? teamLimit.member_count : 0,
-            count: teamMembers?.members?.length === 0 ? 0 : teamMembers.members?.length,
+            team_limit: teamLimitCount,
+            count: teamMemberCount,
             code: 200
         });
 
