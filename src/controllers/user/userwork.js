@@ -3047,8 +3047,8 @@ exports.AddTeamMember = async (req, res) => {
 exports.ResendInvite = async (req, res) => {
     try {
         const { member_id } = req.body
-        const teamdata = await Team.findOne({ members: { $in: [new mongoose.Types.ObjectId(member_id)] } }).populate('members');
-        console.log("teamdata : ", teamdata)
+        // const teamdata = await Team.findOne({ members: { $in: [new mongoose.Types.ObjectId(member_id)] } }).populate('members');
+        // console.log("teamdata : ", teamdata)
 
         memberdata = await User.findOne({ _id: new mongoose.Types.ObjectId(member_id) });
         console.log("memberdata : ", memberdata)
