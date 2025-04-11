@@ -3044,6 +3044,43 @@ exports.AddTeamMember = async (req, res) => {
     }
 };
 
+exports.ResendInvite = async (req, res) => {
+    try {
+        const { member_id } = req.body
+        const teamdata = await Team.findOne({ members: { $in: [new mongoose.Types.ObjectId(member_id)] } }).populate('members');
+        console.log("teamdata : ", teamdata)
+
+        memberdata = await User.findOne({ _id: new mongoose.Types.ObjectId(member_id) });
+        console.log("memberdata : ", memberdata)
+
+        const token = await saveUserAccessAndReturnToken(req, memberdata);
+        console.log("token : ", token);
+        memberdata.last_login = new Date();
+        await memberdata.save();
+
+        let link = `${process.env.APP_URL}team-invitation?token=${token}&id=${memberdata._id}`
+        console.log("link : ", link)
+        const mailOptions = {
+            to: memberdata.email,
+            subject: "Team Invitation from Blue Sky",
+            app_name: process.env.APP_NAME,
+            name: memberdata.full_name,
+            company_name: memberdata.company_data.name,
+            app_url: process.env.APP_URL,
+            invitation_link: link,
+            email: memberdata.email,
+            password: memberdata.decoded_password
+        };
+        emailer.sendEmail(null, mailOptions, "teamInvite");
+        return res.status(200).json({
+            message: "Invite resent successfully",
+            code: 200
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
 exports.usermember = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -3119,6 +3156,8 @@ exports.GetTeamMember = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+
 exports.editTeamMember = async (req, res) => {
     try {
         const Id = req.params.Id;
@@ -3354,7 +3393,8 @@ exports.changeInviteStatus = async (req, res) => {
             { _id: new mongoose.Types.ObjectId(data.user_id) },
             {
                 $set: {
-                    invite_status: "accepted"
+                    invite_status: "accepted",
+                    member_status: "accepted"
                 }
             }, { new: true }
         )
@@ -3387,6 +3427,32 @@ exports.SuspendTeamMember = async (req, res) => {
 
         return res.status(200).json({
             message: "Team Member suspended successfully",
+            data: SuspendedMember,
+            code: 200
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
+exports.ActivateTeamMember = async (req, res) => {
+    try {
+        const Id = req.params.Id;
+        const SuspendedMember = await User.findByIdAndUpdate(
+            Id,
+            { $set: { member_status: "accepted" } },
+            { new: true });
+
+        if (!SuspendedMember) {
+            return res.status(404).json({
+                message: "Team Member not found",
+                code: 404
+            });
+        }
+
+        return res.status(200).json({
+            message: "Team Member activated successfully",
             data: SuspendedMember,
             code: 200
         });

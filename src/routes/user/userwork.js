@@ -346,4 +346,19 @@ router.patch(
     controller.SuspendTeamMember
 )
 
+router.patch(
+    "/activateTeamMember/:Id",
+    trimRequest.all,
+    requireAuth,
+    controller.ActivateTeamMember
+)
+
+
+router.post(
+    "/resendTeamInvite",
+    trimRequest.all,
+    requireAuth,
+    controller.ResendInvite
+)
+
 module.exports = router;
