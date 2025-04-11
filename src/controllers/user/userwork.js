@@ -3092,13 +3092,13 @@ exports.GetTeamMember = async (req, res) => {
 
         // const total = await User.countDocuments({ user_id: userId, member_status: { $nin: ['decline', 'suspend'] } });
 
-        const teamMembers = await Team.findOne({
-            '$or': [
+        const teamMembers = await Team.find({
+            $or: [
                 {
                     admin_id: new mongoose.Types.ObjectId(userId)
                 },
                 {
-                    members: { $in: [userId] }
+                    members: { $in: [new mongoose.Types.ObjectId(userId)] }
                 }
             ]
         }).populate('admin_id members')
@@ -3111,7 +3111,7 @@ exports.GetTeamMember = async (req, res) => {
             message: "Team Members fetched successfully",
             data: teamMembers,
             team_limit: teamLimit?.member_count ? teamLimit.member_count : 0,
-            count: teamMembers?.members?.length === 0 ? 0 : teamMembers.members.length,
+            count: teamMembers?.length === 0 ? 0 : teamMembers.members.length,
             code: 200
         });
 
