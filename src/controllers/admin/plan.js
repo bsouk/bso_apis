@@ -443,7 +443,7 @@ exports.exportSubscription = async (req, res) => {
         }
 
         const claendataList = dataList.map((data) => ({
-            'User Name': data?.user?.full_name,
+            'User Name': data?.user?.full_name ? data?.user?.full_name : `${data?.user?.first_name} ${data?.user?.last_name}`,
             'Email': data?.user?.email,
             'Company Name': data?.user?.company_data?.name,
             'Subscription Id': data?.subscription_id,
