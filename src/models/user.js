@@ -441,6 +441,9 @@ const UserSchema = new mongoose.Schema(
     user_id: {
       type: mongoose.Schema.Types.ObjectId
     },
+    team_id: {
+      type: String
+    },
     message: {
       type: String,
     },

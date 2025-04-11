@@ -28,6 +28,7 @@ const exp = require("constants");
 const UserAccess = require("../../models/userAccess");
 const uuid = require("uuid");
 const bcrypt = require('bcrypt');
+const Team = require("../../models/team")
 
 
 //create password for users
@@ -2948,14 +2949,28 @@ exports.homepageenquiry = async (req, res) => {
     }
 }
 
+async function genTeamId() {
+    const token = Math.floor(Math.random() * 1000000)
+    return `Team-${token}`
+}
+
 exports.AddTeamMember = async (req, res) => {
     try {
         const userId = req.user._id;
         const data = req.body;
 
-        const teamCount = await User.countDocuments({ user_id: userId });
+        let teamdata = await Team.findOne({ admin_id: userId }).populate('admin_id')
+        console.log("teamdata : ", teamdata)
 
-        if (teamCount >= 3) {
+        if (!teamdata) {
+            let tid = await genTeamId()
+            teamdata = await Team.create({
+                team_id: tid,
+                admin_id: userId
+            })
+        }
+
+        if (teamdata.members.length >= 3) {
             const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
 
             if (!Member || Member.member_count <= (teamCount - 3)) {
@@ -2989,6 +3004,15 @@ exports.AddTeamMember = async (req, res) => {
 
         const Adduser = new User(userData);
         await Adduser.save();
+
+        const teammemberadd = await Team.findOneAndUpdate(
+            { admin_id: new mongoose.Types.ObjectId(userId) },
+            {
+                $push: { members: Adduser._id }
+            },
+            { new: true }
+        )
+        console.log("teammemberadd : ", teammemberadd)
 
         const token = await saveUserAccessAndReturnToken(req, Adduser);
         console.log("token : ", token);
@@ -3052,20 +3076,33 @@ exports.usermember = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
 exports.GetTeamMember = async (req, res) => {
     try {
         const userId = req.user._id;
         const offset = parseInt(req.query.offset) || 0;
         const limit = parseInt(req.query.limit) || 3;
 
-        const teamMembers = await User.find({
-            user_id: userId,
-            member_status: { $nin: ['decline', 'suspend'] }
-        })
-            .skip(offset)
-            .limit(limit);
+        // const teamMembers = await User.find({
+        //     user_id: userId,
+        //     member_status: { $nin: ['decline', 'suspend'] }
+        // })
+        //     .skip(offset)
+        //     .limit(limit);
 
-        const total = await User.countDocuments({ user_id: userId, member_status: { $nin: ['decline', 'suspend'] } });
+        // const total = await User.countDocuments({ user_id: userId, member_status: { $nin: ['decline', 'suspend'] } });
+
+        const teamMembers = await Team.findOne({
+            '$or': [
+                {
+                    admin_id: new mongoose.Types.ObjectId(userId)
+                },
+                {
+                    members: { $in: [userId] }
+                }
+            ]
+        }).populate('admin_id members')
+        console.log("teamMembers : ", teamMembers)
 
         const teamLimit = await UserMember.findOne({ user_id: userId })
         console.log("teamLimit : ", teamLimit)
@@ -3074,7 +3111,7 @@ exports.GetTeamMember = async (req, res) => {
             message: "Team Members fetched successfully",
             data: teamMembers,
             team_limit: teamLimit?.member_count ? teamLimit.member_count : 0,
-            count: total,
+            count: teamMembers.members.length,
             code: 200
         });
 
