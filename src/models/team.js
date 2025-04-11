@@ -10,10 +10,8 @@ const TeamSchema = new mongoose.Schema(
         },
         members: [
             {
-                user_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'users'
-                }
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'users'
             }
         ]
     },
