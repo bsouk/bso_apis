@@ -3111,7 +3111,7 @@ exports.GetTeamMember = async (req, res) => {
             message: "Team Members fetched successfully",
             data: teamMembers,
             team_limit: teamLimit?.member_count ? teamLimit.member_count : 0,
-            count: teamMembers.length === 0 ? 0 : teamMembers?.members?.length,
+            count: teamMembers?.members?.length === 0 ? 0 : teamMembers.members.length,
             code: 200
         });
 
