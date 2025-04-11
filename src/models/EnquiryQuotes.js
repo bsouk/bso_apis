@@ -76,8 +76,11 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                             default: false
                         },
                         replaced: {
-                            type: Boolean,
-                            default: false
+                            selected: {
+                                type: Boolean,
+                                default: false
+                            },
+                            part_no: String
                         },
                         additional_notes: String
                     },
@@ -95,6 +98,9 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                             type: Boolean,
                             default: false
                         },
+                        brand: String,
+                        part_no: String,
+                        note: String
                     }
                 }
             }

@@ -123,6 +123,9 @@ const EnquirySchema = new mongoose.Schema({
                             type: Boolean,
                             default: false
                         },
+                        brand: String,
+                        part_no: String,
+                        note: String
                     }
                 }
             }
