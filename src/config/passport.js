@@ -43,9 +43,18 @@ const jwtLogin = new JwtStrategy(jwtOptions, (payload, done) => {
   collection.findOne({
     _id: payload.data._id
   }).then(user => {
-    return !user ? done(null, false) : done(null, user)
+    // return !user ? done(null, false) : done(null, user)
+    if (!user) {
+      return done(null, false);
+    }
+
+    if (payload.data.type === "user" && user.member_status === "suspend") {
+      return done(null, false, { message: "Account suspended" });
+    }
+
+    return done(null, user);
   }).catch(err => {
-    console.log("err" , err)
+    console.log("err", err)
     return done(err, false)
   })
 })
