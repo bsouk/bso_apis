@@ -185,7 +185,8 @@ exports.getAllSubscription = async (req, res) => {
                                 $project: {
                                     plan_id: 1,
                                     plan_name: 1,
-                                    price: 1
+                                    price: 1,
+                                    is_auto_renewal : 1
                                 }
                             }
                         ]
