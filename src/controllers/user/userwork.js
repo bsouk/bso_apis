@@ -2976,7 +2976,18 @@ exports.AddTeamMember = async (req, res) => {
         const userId = req.user._id;
         const data = req.body;
 
-        let teamdata = await Team.findOne({ admin_id: userId }).populate('admin_id')
+        let teamdata = await Team.findOne(
+            {
+                $or: [
+                    {
+                        admin_id: new mongoose.Types.ObjectId(userId)
+                    },
+                    {
+                        members: { $in: [new mongoose.Types.ObjectId(userId)] }
+                    }
+                ]
+            }
+        ).populate('admin_id')
         console.log("teamdata : ", teamdata)
 
         if (!teamdata) {
