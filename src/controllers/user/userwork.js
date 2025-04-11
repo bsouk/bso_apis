@@ -3314,7 +3314,7 @@ exports.changeInviteStatus = async (req, res) => {
         }
 
         const response = await User.findOneAndUpdate(
-            { _id: userdata._id },
+            { _id: new mongoose.Types.ObjectId(data.user_id) },
             {
                 $set: {
                     invite_status: "accepted"
