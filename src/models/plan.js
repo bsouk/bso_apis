@@ -23,6 +23,9 @@ const planSchema = new mongoose.Schema(
         price: {
             type: Number,
         },
+        price_per_person: {
+            type: Number
+        },
         currency: {
             type: String,
             default: "USD"

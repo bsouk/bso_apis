@@ -44,4 +44,12 @@ router.delete(
     controller.deletePlan
 )
 
+
+router.get(
+    "/getSubscription",
+    trimRequest.all,
+    requireAuth,
+    controller.getAllSubscription
+)
+
 module.exports = router;

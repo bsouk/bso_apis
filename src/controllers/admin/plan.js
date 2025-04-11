@@ -2,6 +2,7 @@ const { default: mongoose } = require("mongoose");
 const utils = require("../../utils/utils");
 const crypto = require("crypto");
 const plan = require("../../models/plan");
+const subscription = require("../../models/subscription");
 // const stripe = require('stripe')('your_stripe_secret_key');
 
 async function genratePlanId() {
@@ -87,8 +88,12 @@ exports.editPlan = async (req, res) => {
 
 exports.getAllPlan = async (req, res) => {
     try {
-        const { offset = 0, limit = 10 } = req.query
-        const plandata = await plan.find().skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
+        const { offset = 0, limit = 10, type } = req.query
+        let filter = {}
+        if (type) {
+            filter.type = type
+        }
+        const plandata = await plan.find(filter).skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
         console.log("plandata : ", plandata)
         const count = await plan.countDocuments()
         return res.status(200).json({
@@ -130,4 +135,91 @@ exports.deletePlan = async (req, res) => {
     return res.status(200).json({
         message: "plan data deleted successfully", data: plandata, code: 200
     })
+}
+
+
+exports.getAllSubscription = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10, search } = req.query
+        let filter = {}
+        if (search) {
+            filter['$or'] = [
+                { 'user.company_data.name': { $regex: search, $options: 'i' } },
+                { 'plan.plan_name': { $regex: search, $options: 'i' } }
+            ]
+        }
+        const data = await subscription.aggregate(
+            [
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "user_id",
+                        foreignField: "_id",
+                        as: "user",
+                        pipeline: [
+                            {
+                                $project: {
+                                    full_name: 1,
+                                    email: 1,
+                                    user_type: 1,
+                                    company_data: 1
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "plans",
+                        localField: "plan_id",
+                        foreignField: "plan_id",
+                        as: "plan",
+                        pipeline: [
+                            {
+                                $project: {
+                                    plan_id: 1,
+                                    plan_name: 1,
+                                    price: 1
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$plan",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: filter
+                },
+                {
+                    $sort: {
+                        createdAt: -1
+                    }
+                },
+                {
+                    $skip: Number(offset)
+                },
+                {
+                    $limit: Number(limit)
+                }
+            ]
+        )
+
+        return res.status(200).json({
+            message: "Subscription data fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
 }
