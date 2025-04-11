@@ -3227,6 +3227,28 @@ exports.deleteTeamMember = async (req, res) => {
             });
         }
 
+        const result = await Team.findByIdAndUpdate(
+            {
+                $or: [
+                    {
+                        admin_id: new mongoose.Types.ObjectId(Id)
+                    },
+                    {
+                        members: { $in: [new mongoose.Types.ObjectId(Id)] }
+                    }
+                ]
+            },
+            {
+                $pull: {
+                    members: new mongoose.Types.ObjectId(Id)
+                }
+            }, { new: true }
+        )
+
+        console.log("result : ", result)
+
+        await Team.deleteMany({ admin_id: new mongoose.Types.ObjectId(Id) });
+
         return res.status(200).json({
             message: "Team Member deleted successfully",
             code: 200
