@@ -3141,7 +3141,7 @@ exports.GetTeamMember = async (req, res) => {
         }).populate('admin_id members')
         console.log("teamMembers : ", teamMembers)
 
-        const teamLimit = await UserMember.findOne({ user_id: userId })
+        const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id })
         console.log("teamLimit : ", teamLimit)
 
         return res.status(200).json({
