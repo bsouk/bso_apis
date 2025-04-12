@@ -10,6 +10,7 @@ const quotation = require("../../models/quotation");
 const moment = require("moment");
 const version_history = require("../../models/version_history");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
+const subscription = require("../../models/subscription");
 
 exports.getquery = async (req, res) => {
     try {
@@ -1612,9 +1613,36 @@ exports.getEnquiryDetails = async (req, res) => {
             });
         }
 
+        const subscriptiondata = await subscription.aggregate(
+            [
+                {
+                    $match: {
+                        user_id: ObjectId(data?.user_id)
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'plans',
+                        localField: 'plan_id',
+                        foreignField: 'plan_id',
+                        as: 'plan'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$plan',
+                        preserveNullAndEmptyArrays: true
+                    }
+                }
+            ]
+        )
+
+        console.log("subscriptiondata : ", subscriptiondata)
+
         return res.status(200).json({
             message: "Query details fetched successfully",
             data,
+            subscription_data : subscriptiondata[0],
             code: 200
         })
     } catch (error) {
