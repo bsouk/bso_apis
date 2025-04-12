@@ -53,10 +53,8 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                     type: Number
                 },
                 unit_price: {
-                    value: {
-                        type: Number,
-                        default: 0
-                    }
+                    type: Number,
+                    default: 0
                 },
                 amount: Number,
                 quantity: {
