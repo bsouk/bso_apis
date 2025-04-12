@@ -1639,7 +1639,8 @@ exports.getEnquiryDetails = async (req, res) => {
             [
                 {
                     $match: {
-                        user_id: new mongoose.Types.ObjectId(data?.user_id)
+                        user_id: new mongoose.Types.ObjectId(data?.user_id),
+                        status : "active"
                     }
                 },
                 {
@@ -1655,6 +1656,14 @@ exports.getEnquiryDetails = async (req, res) => {
                         path: '$plan',
                         preserveNullAndEmptyArrays: true
                     }
+                },
+                {
+                    $sort : {
+                        createdAt : -1
+                    }
+                },
+                {
+                    $limit : 1
                 }
             ]
         )
