@@ -1533,7 +1533,29 @@ exports.getAllEnquiry = async (req, res) => {
                         preserveNullAndEmptyArrays: true
                     }
                 },
-
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "user_id",
+                        foreignField: "_id",
+                        as: "user",
+                        pipeline: [
+                            {
+                                $project: {
+                                    _id : 1,
+                                    full_name: 1,
+                                    email: 1,
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
                 {
                     $lookup: {
                         from: "addresses",
@@ -1557,7 +1579,7 @@ exports.getAllEnquiry = async (req, res) => {
                 {
                     $group: {
                         _id: "$_id",
-                        user_id: { $first: "$user_id" },
+                        user: { $first: "$user" },
                         enquiry_unique_id: { $first: "$enquiry_unique_id" },
                         status: { $first: "$status" },
                         expiry_date: { $first: "$expiry_date" },
@@ -1642,7 +1664,7 @@ exports.getEnquiryDetails = async (req, res) => {
         return res.status(200).json({
             message: "Query details fetched successfully",
             data,
-            subscription_data : subscriptiondata[0],
+            subscription_data: subscriptiondata[0],
             code: 200
         })
     } catch (error) {
