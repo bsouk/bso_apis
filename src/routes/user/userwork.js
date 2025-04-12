@@ -368,4 +368,12 @@ router.get(
     controller.getAllSupplierQuotes
 )
 
+
+router.patch(
+    "/selectSupplierQuote",
+    trimRequest.all,
+    requireAuth,
+    controller.selectSupplierQuote
+)
+
 module.exports = router;

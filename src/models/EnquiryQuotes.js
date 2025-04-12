@@ -8,7 +8,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     },
     enquiry_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Enquiry"
+        ref: "enquires"
     },
     quotation_number: {
         type: String,
@@ -137,6 +137,18 @@ const EnquiryQuotesSchema = new mongoose.Schema({
             default: []
         },
         message: String
+    },
+    admin_charge: {
+        charge_type: {
+            type: String,
+            enum: ["flat", "percentage"],
+            default: "percentage"
+        },
+        value: Number
+    },
+    is_selected: {
+        type: Boolean,
+        default: false
     }
 },
     {

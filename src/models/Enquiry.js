@@ -157,6 +157,12 @@ const EnquirySchema = new mongoose.Schema({
             default: []
         },
         message: String
+    },
+    selected_supplier : {
+        quote_id : {
+            type : mongoose.Schema.Types.ObjectId,
+            ref : "enquiry_quotes"
+        }
     }
 },
     {

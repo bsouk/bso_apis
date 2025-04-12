@@ -3532,7 +3532,7 @@ exports.getAllSupplierQuotes = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
 
-        const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id','full_name email user_type current_user_type')
+        const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type')
         console.log("data : ", data)
 
         const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
@@ -3548,3 +3548,38 @@ exports.getAllSupplierQuotes = async (req, res) => {
     }
 }
 
+exports.selectSupplierQuote = async (req, res) => {
+    try {
+        const { quote_id } = req.body
+        console.log("data : ", req.body)
+
+        const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id')
+        console.log("quotedata : ", quotedata)
+
+        const selected = await Enquiry.findByIdAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(quotedata?.enquiry_id?._id)
+            },
+            {
+                $set: {
+                    selected_supplier: {
+                        quote_id: new mongoose.Types.ObjectId(quote_id)
+                    }
+                }
+            }, { new: true }
+        )
+
+        console.log("selected : ", selected)
+
+        quotedata.is_selected = true
+        await quotedata.save()
+
+        return res.status(200).json({
+            message: "Supplier quote selected successfully",
+            code: 200
+        })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
