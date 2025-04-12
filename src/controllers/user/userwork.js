@@ -3571,7 +3571,15 @@ exports.selectSupplierQuote = async (req, res) => {
 
         console.log("selected : ", selected)
 
+        let totalprice = 0
+        quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.quantity.value))
+        console.log("totalprice : ", totalprice)
+
+        totalprice += (quotedata?.custom_charges_one?.value + quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
+        console.log("totalprice : ", totalprice)
+
         quotedata.is_selected = true
+        quotedata.final_price = totalprice
         await quotedata.save()
 
         return res.status(200).json({

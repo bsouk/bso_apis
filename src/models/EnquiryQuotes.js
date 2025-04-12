@@ -53,7 +53,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                     type: Number
                 },
                 unit_price: {
-                    type: Number
+                    value: {
+                        type: Number,
+                        default: 0
+                    }
                 },
                 amount: Number,
                 quantity: {
@@ -61,7 +64,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                         type: mongoose.Schema.Types.ObjectId,
                         ref: 'quantity_units'
                     },
-                    value: Number
+                    value: {
+                        type: Number,
+                        default: 0
+                    }
                 },
                 unit_weight: {
                     type: Number
@@ -111,7 +117,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         field_name: {
             type: String,
         },
-        value: Number,
+        value: {
+            type: Number,
+            default: 0
+        }
     },
     custom_charges_two: {
         field_name: {
@@ -121,14 +130,20 @@ const EnquiryQuotesSchema = new mongoose.Schema({
             type: String,
             enum: ["flat", "percentage"]
         },
-        value: Number
+        value: {
+            type: Number,
+            default: 0
+        }
     },
     discount: {
         charge_type: {
             type: String,
             enum: ["flat", "percentage"]
         },
-        value: Number
+        value: {
+            type: Number,
+            default: 0
+        }
     },
     grand_total: Number,
     reply: {
@@ -144,11 +159,18 @@ const EnquiryQuotesSchema = new mongoose.Schema({
             enum: ["flat", "percentage"],
             default: "percentage"
         },
-        value: Number
+        value: {
+            type: Number,
+            default: 0
+        }
     },
     is_selected: {
         type: Boolean,
         default: false
+    },
+    final_price: {
+        type: Number,
+        default: 0
     }
 },
     {
