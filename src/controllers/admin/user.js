@@ -6,6 +6,7 @@ const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
 const product = require("../../models/product");
+const commision = require("../../models/commision");
 
 function createNewPassword() {
   const password = generatePassword.generate({
@@ -550,7 +551,7 @@ exports.addResource = async (req, res) => {
       password,
       decoded_password: password,
       user_type: ["resource"],
-      current_user_type : "resource",
+      current_user_type: "resource",
       profile_completed: true,
       //is_user_approved_by_admin: true,
     };
@@ -884,7 +885,7 @@ exports.addSupplier = async (req, res) => {
       password,
       decoded_password: password,
       user_type: ["supplier"],
-      current_user_type : "supplier",
+      current_user_type: "supplier",
       profile_completed: true,
       // is_user_approved_by_admin: true,
     };
@@ -1395,7 +1396,7 @@ exports.addLogisticsUser = async (req, res) => {
       password,
       decoded_password: password,
       user_type: ["logistics"],
-      current_user_type : "logistics",
+      current_user_type: "logistics",
       profile_completed: true,
       // is_user_approved_by_admin: true,
     };
@@ -1966,6 +1967,51 @@ exports.getQuantitiesUnits = async (req, res) => {
       code: 200
     })
   } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.editAddCommision = async (req, res) => {
+  try {
+    const data = req.body
+    console.log("data : ", data)
+    let commisiondata = await commision.findOne()
+    console.log("commisiondata : ", commisiondata)
+    if (!commisiondata) {
+      commisiondata = await commision.create(data);
+      console.log("commisiondata : ", commisiondata)
+
+      return res.status(200).json({
+        message: "Commission added successfully",
+        data: commisiondata,
+        code: 200
+      })
+    }
+    const result = await commision.findOneAndUpdate({ _id: commisiondata._id }, { $set: data }, { new: true })
+    console.log("result : ", result)
+
+    return res.status(200).json({
+      message: "Commission updated successfully",
+      data: result,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+exports.getCommission = async(req,res)=>{
+  try{
+    let commisiondata = await commision.findOne()
+    console.log("commisiondata : ", commisiondata)
+
+    return res.status(200).json({
+      message : "Commission data fetched successfully",
+      data : commisiondata,
+      code : 200
+    })
+  }catch (error) {
     utils.handleError(res, error);
   }
 }

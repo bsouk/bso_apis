@@ -255,4 +255,20 @@ router.get(
   controller.getQuantitiesUnits
 );
 
+
+router.post(
+  "/editAddCommission",
+  trimRequest.all,
+  requireAuth,
+  controller.editAddCommision
+);
+
+
+router.get(
+  "/getCommission",
+  trimRequest.all,
+  requireAuth,
+  controller.getCommission
+);
+
 module.exports = router;

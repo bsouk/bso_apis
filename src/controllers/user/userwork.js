@@ -3532,7 +3532,7 @@ exports.getAllSupplierQuotes = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
 
-        const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type')
+        const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit')
         console.log("data : ", data)
 
         const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
@@ -3591,3 +3591,7 @@ exports.selectSupplierQuote = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+// exports.getLogisticsList = async(req,res)=>{
+
+// }
