@@ -1,6 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const Query = require("../../models/query");
+const Enquiry = require("../../models/Enquiry");
 const BidSetting = require("../../models/bidsetting");
 const utils = require("../../utils/utils");
 const admin = require("../../models/admin");
