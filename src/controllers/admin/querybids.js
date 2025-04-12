@@ -1452,3 +1452,171 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
+// New Flow
+
+exports.getAllEnquiry = async (req, res) => {
+    try {
+        const { status, search, offset = 0, limit = 10, brand, countries } = req.query;
+        console.log('offset : ', offset, " limit : ", limit)
+        const filter = {
+            is_approved: "approved"
+        };
+        let brandfilter = {}
+        let countryFilter = {};
+
+        if (brand) {
+            brandfilter = {
+                'enquiry_items.brand': { $regex: brand, $options: "i" }
+            }
+        }
+        if (status) {
+            filter.status = status;
+        }
+        if (search) {
+            filter.query_unique_id = { $regex: search, $options: "i" };
+        }
+
+        if (countries) {
+            const countryList = countries.split(',').map(country => country.trim());
+            console.log("countryList : ", countryList)
+            countryFilter = {
+                // shipping_address: {
+                "shipping_address_data.address.country.name": {
+                    $regex: countryList.join('|'),
+                    $options: 'i'
+                }
+            };
+            console.log("countryFilter : ", countryFilter)
+        }
+
+        let count = 0
+        console.log("brandfilter : ", brandfilter, " filter : ", filter)
+        const data = await Enquiry.aggregate(
+            [
+                {
+                    $unwind: {
+                        path: "$enquiry_items",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: brandfilter
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { unitId: "$enquiry_items.quantity.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$_id", "$$unitId"] }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    unit: 1
+                                }
+                            }
+                        ],
+                        as: "enquiry_items.quantity_unit_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$enquiry_items.quantity_unit_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $lookup: {
+                        from: "addresses",
+                        localField: "shipping_address",
+                        foreignField: "_id",
+                        as: "shipping_address_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$shipping_address_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: {
+                        ...filter,
+                        ...countryFilter
+                    },
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        user_id: { $first: "$user_id" },
+                        enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        status: { $first: "$status" },
+                        expiry_date: { $first: "$expiry_date" },
+                        priority: { $first: "$priority" },
+                        enquiry_number: { $first: "$enquiry_number" },
+                        // shipping_address: { $first: "$shipping_address" },
+                        shipping_address: { $first: "$shipping_address_data" },
+                        currency: { $first: "$currency" },
+                        documents: { $first: "$documents" },
+                        enquiry_items: { $push: "$enquiry_items" },
+                        delivery_charges: { $first: "$delivery_charges" },
+                        reply: { $first: "$reply" },
+                        createdAt: { $first: "$createdAt" },
+                        updatedAt: { $first: "$updatedAt" },
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $skip: parseInt(offset) || 0
+                },
+                {
+                    $limit: parseInt(limit) || 10
+                }
+            ]
+        );
+
+        count = await Enquiry.countDocuments({ ...filter, ...brandfilter, ...countryFilter });
+
+        const totalCount = await Enquiry.countDocuments()
+        const pendingCount = await Enquiry.countDocuments({ status: "pending" })
+        const splitCount = await Enquiry.countDocuments({ selected_supplier: { $exists: true } })
+
+        return res.json({ data, count, totalCount, pendingCount, splitCount, code: 200 });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getEnquiryDetails = async (req, res) => {
+    try {
+        const { id } = req.params
+        console.log("id : ", id)
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+        console.log("data : ", data)
+        if (!data) {
+            return utils.handleError(res, {
+                message: "Query data not found",
+                code: 404,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Query details fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

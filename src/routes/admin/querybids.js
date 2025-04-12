@@ -10,18 +10,33 @@ const controller = require('../../controllers/admin/querybids')
 const trimRequest = require('trim-request');
 
 
+// router.get(
+//     '/getquery',
+//     trimRequest.all,
+//     requireAuth,
+//     controller.getquery
+// )
+// router.get(
+//     '/getquerydetail/:id',
+//     trimRequest.all,
+//     requireAuth,
+//     controller.getquerydetail
+// );
+
+
 router.get(
     '/getquery',
     trimRequest.all,
     requireAuth,
-    controller.getquery
+    controller.getAllEnquiry
 )
 router.get(
     '/getquerydetail/:id',
     trimRequest.all,
     requireAuth,
-    controller.getquerydetail
+    controller.getEnquiryDetails
 );
+
 router.put(
     '/addbidexpiration',
     trimRequest.all,
