@@ -1478,7 +1478,7 @@ exports.getAllEnquiry = async (req, res) => {
             filter.status = status;
         }
         if (search) {
-            filter.query_unique_id = { $regex: search, $options: "i" };
+            filter.enquiry_unique_id = { $regex: search, $options: "i" };
         }
 
         if (countries) {
