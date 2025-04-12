@@ -1617,7 +1617,7 @@ exports.getEnquiryDetails = async (req, res) => {
             [
                 {
                     $match: {
-                        user_id: ObjectId(data?.user_id)
+                        user_id: new mongoose.Types.ObjectId(data?.user_id)
                     }
                 },
                 {
