@@ -361,4 +361,11 @@ router.post(
     controller.ResendInvite
 )
 
+
+router.get(
+    "/getSupplierQuotes/:id",
+    trimRequest.all,
+    controller.getAllSupplierQuotes
+)
+
 module.exports = router;
