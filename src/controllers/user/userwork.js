@@ -2734,31 +2734,57 @@ exports.getAllEnquiry = async (req, res) => {
                     }
                 },
                 {
+                    $lookup: {
+                        from: "enquiry_quotes",
+                        let: { id: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$enquiry_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "quotes"
+                    }
+                },
+                {
+                    $addFields: {
+                        total_quotes: { $size: "$quotes" }
+                    }
+                },
+                {
                     $match: {
                         ...filter,
                         ...countryFilter
                     },
                 },
                 {
-                    $group: {
-                        _id: "$_id",
-                        user_id: { $first: "$user_id" },
-                        enquiry_unique_id: { $first: "$enquiry_unique_id" },
-                        status: { $first: "$status" },
-                        expiry_date: { $first: "$expiry_date" },
-                        priority: { $first: "$priority" },
-                        enquiry_number: { $first: "$enquiry_number" },
-                        // shipping_address: { $first: "$shipping_address" },
-                        shipping_address: { $first: "$shipping_address_data" },
-                        currency: { $first: "$currency" },
-                        documents: { $first: "$documents" },
-                        enquiry_items: { $push: "$enquiry_items" },
-                        delivery_charges: { $first: "$delivery_charges" },
-                        reply: { $first: "$reply" },
-                        createdAt: { $first: "$createdAt" },
-                        updatedAt: { $first: "$updatedAt" },
+                    $project: {
+                        quotes: 0
                     }
                 },
+                // {
+                //     $group: {
+                //         _id: "$_id",
+                //         user_id: { $first: "$user_id" },
+                //         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                //         status: { $first: "$status" },
+                //         expiry_date: { $first: "$expiry_date" },
+                //         priority: { $first: "$priority" },
+                //         enquiry_number: { $first: "$enquiry_number" },
+                //         // shipping_address: { $first: "$shipping_address" },
+                //         shipping_address: { $first: "$shipping_address_data" },
+                //         currency: { $first: "$currency" },
+                //         documents: { $first: "$documents" },
+                //         enquiry_items: { $push: "$enquiry_items" },
+                //         delivery_charges: { $first: "$delivery_charges" },
+                //         reply: { $first: "$reply" },
+                //         createdAt: { $first: "$createdAt" },
+                //         updatedAt: { $first: "$updatedAt" },
+                //     }
+                // },
                 {
                     $sort: { createdAt: -1 }
                 },
