@@ -28,7 +28,8 @@ const exp = require("constants");
 const UserAccess = require("../../models/userAccess");
 const uuid = require("uuid");
 const bcrypt = require('bcrypt');
-const Team = require("../../models/team")
+const Team = require("../../models/team");
+const payment_terms = require("../../models/payment_terms");
 
 
 //create password for users
@@ -3808,6 +3809,29 @@ exports.getMyAllQuotes = async (req, res) => {
 
         return res.status(200).json({
             message: "All quotes fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getPaymentTerms = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10, search } = req.query
+        let filter = {}
+
+        if (search) {
+            filter.name = new RegExp(search, 'i')
+        }
+        const data = await payment_terms.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+        const count = await payment_terms.countDocuments(filter)
+        console.log("data : ", data)
+        return res.status(200).json({
+            message: "Payment terms fetched successfully",
             data,
             count,
             code: 200

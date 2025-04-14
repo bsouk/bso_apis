@@ -133,6 +133,9 @@ const EnquiryQuotesSchema = new mongoose.Schema({
             default: 0
         }
     },
+    payment_terms: {
+        type: mongoose.Schema.Types.Mixed
+    },
     discount: {
         charge_type: {
             type: String,

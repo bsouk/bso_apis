@@ -384,4 +384,11 @@ router.get(
     controller.getMyAllQuotes
 )
 
+router.get(
+    "/getPaymentTerms",
+    requireAuth,
+    trimRequest.all,
+    controller.getPaymentTerms
+)
+
 module.exports = router;
