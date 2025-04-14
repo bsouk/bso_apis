@@ -5,6 +5,7 @@ const Walkthrough = require("../../models/walkthrough");
 const ContactUs = require("../../models/contact_us");
 const SupportDetails = require("../../models/support_details");
 const { response } = require("express");
+const payment_terms = require("../../models/payment_terms");
 
 exports.addFaq = async (req, res) => {
   try {
@@ -282,6 +283,91 @@ exports.addContactUsDetails = async (req, res) => {
     }
 
     res.json({ message: "Data updated successfully", code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.addPaymentTerm = async (req, res) => {
+  try {
+    const data = req.body
+    console.log("data : ", data)
+
+    const newterms = await payment_terms.create(data)
+    console.log("newterms : ", newterms)
+
+    return res.status(200).json({
+      message: "Payment terms added successfully",
+      data: newterms,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+exports.editPaymentTerm = async (req, res) => {
+  try {
+    const data = req.body
+    console.log("data : ", data)
+
+    const updatedata = await payment_terms.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(data.id) }, { $set: data }, { new: true })
+    console.log("updatedata : ", updatedata)
+
+    if (!updatedata) {
+      return utils.handleError(res, { message: "data not found", code: 404 });
+    }
+
+    return res.status(200).json({
+      message: "Payment terms edited successfully",
+      data: updatedata,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+exports.getPaymentTerms = async (req, res) => {
+  try {
+    const { offset = 0, limit = 10, search } = req.query
+    let filter = {}
+
+    if (search) {
+      filter.name = new RegExp(search, 'i')
+    }
+    const data = await payment_terms.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+    const count = await payment_terms.countDocuments(filter)
+    console.log("data : ", data)
+    return res.status(200).json({
+      message: "Payment terms fetched successfully",
+      data,
+      count,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.deletePaymentTerm = async (req, res) => {
+  try {
+    const { id } = req.params
+    console.log("id : ", id)
+
+    const deletedata = await payment_terms.findOneAndDelete({ _id: new mongoose.Types.ObjectId(data.id) })
+    console.log("deletedata : ", deletedata)
+
+    if (!deletedata) {
+      return utils.handleError(res, { message: "data not found", code: 404 });
+    }
+
+    return res.status(200).json({
+      message: "Payment terms deleted successfully",
+      code: 200
+    })
   } catch (error) {
     utils.handleError(res, error);
   }

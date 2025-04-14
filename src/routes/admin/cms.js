@@ -95,7 +95,39 @@ router.post(
   trimRequest.all,
   controller.addContactUsDetails
 )
-router.post("/query-reply",trimRequest.all,requireAuth,controller.queryReply);
-router.patch("/change-query-status",trimRequest.all,requireAuth,controller.changeQueryStatus);
-router.delete("/delete-query/:id",trimRequest.all,requireAuth,controller.deleteQuery)
+router.post("/query-reply", trimRequest.all, requireAuth, controller.queryReply);
+router.patch("/change-query-status", trimRequest.all, requireAuth, controller.changeQueryStatus);
+router.delete("/delete-query/:id", trimRequest.all, requireAuth, controller.deleteQuery)
+
+
+router.get(
+  "/getPaymentTerms",
+  requireAuth,
+  trimRequest.all,
+  controller.getPaymentTerms
+)
+
+
+router.patch(
+  "/editPaymentTerms",
+  requireAuth,
+  trimRequest.all,
+  controller.editPaymentTerm
+)
+
+router.post(
+  "/addPaymentTerms",
+  requireAuth,
+  trimRequest.all,
+  controller.addPaymentTerm
+)
+
+router.delete(
+  "/deletePaymentTerms/:id",
+  requireAuth,
+  trimRequest.all,
+  controller.deletePaymentTerm
+)
+
+
 module.exports = router
