@@ -2373,11 +2373,12 @@ exports.createEnquiry = async (req, res) => {
         console.log("subscription : ", subscription)
         const data = req.body
         console.log("data : ", data)
-        if (Array.isArray(subscription) && subscription.length > 0) {
-            if (subscription[0].user && subscription[0].user.user_type.includes("buyer") && subscription[0].plan.plan_step === "direct")
-                data.is_approved = "approved"
-            else data.is_approved = "pending"
-        }
+        // if (Array.isArray(subscription) && subscription.length > 0) {
+        //     if (subscription[0].user && subscription[0].user.user_type.includes("buyer") && subscription[0].plan.plan_step === "direct")
+        //         data.is_approved = "approved"
+        //     else data.is_approved = "pending"
+        // }
+        data.is_approved = "approved"
         let enquiryId = await EnquiryId();
         let newdata = {
             ...data,
@@ -3593,23 +3594,23 @@ exports.selectSupplierQuote = async (req, res) => {
 }
 
 
-exports.getMyAllQuotes = async(req,res)=>{
-    try{
+exports.getMyAllQuotes = async (req, res) => {
+    try {
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        const data = await EnquiryQuotes.find({user_id : new mongoose.Types.ObjectId(userId)})
+        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) })
         console.log("data : ", data)
 
-        const count = await EnquiryQuotes.countDocuments({user_id : new mongoose.Types.ObjectId(userId)})
+        const count = await EnquiryQuotes.countDocuments({ user_id: new mongoose.Types.ObjectId(userId) })
 
         return res.status(200).json({
-            message : "All quotes fetched successfully",
+            message: "All quotes fetched successfully",
             data,
             count,
-            code : 200
+            code: 200
         })
-    }catch(error){
+    } catch (error) {
         utils.handleError(res, error);
     }
 }
