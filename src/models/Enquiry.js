@@ -158,11 +158,16 @@ const EnquirySchema = new mongoose.Schema({
         },
         message: String
     },
-    selected_supplier : {
-        quote_id : {
-            type : mongoose.Schema.Types.ObjectId,
-            ref : "enquiry_quotes"
+    selected_supplier: {
+        quote_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "enquiry_quotes"
         }
+    },
+    shipement_type: {
+        type: String,
+        enum: ["self-pickup", "delhivery"],
+        default: "delhivery"
     }
 },
     {

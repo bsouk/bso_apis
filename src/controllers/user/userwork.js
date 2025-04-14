@@ -2527,8 +2527,8 @@ exports.getMyEnquiry = async (req, res) => {
                         },
                     },
                     {
-                        $project : {
-                            quotes : 0
+                        $project: {
+                            quotes: 0
                         }
                     },
                     {
@@ -2547,7 +2547,7 @@ exports.getMyEnquiry = async (req, res) => {
                             enquiry_items: { $push: "$enquiry_items" },
                             delivery_charges: { $first: "$delivery_charges" },
                             reply: { $first: "$reply" },
-                            total_quotes : {$first : "$total_quotes"},
+                            total_quotes: { $first: "$total_quotes" },
                             createdAt: { $first: "$createdAt" },
                             updatedAt: { $first: "$updatedAt" },
                         }
@@ -2700,7 +2700,7 @@ exports.getMyEnquiry = async (req, res) => {
 }
 exports.getAllEnquiry = async (req, res) => {
     try {
-        const { status, search, offset = 0, limit = 10, brand, countries } = req.query;
+        const { status, search, offset = 0, limit = 10, brand, countries, priority, hide_quote } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
         const filter = {
             is_approved: "approved"
@@ -2718,6 +2718,12 @@ exports.getAllEnquiry = async (req, res) => {
         }
         if (search) {
             filter.enquiry_unique_id = { $regex: search, $options: "i" };
+        }
+        if (priority) {
+            filter.priority = "high"
+        }
+        if (hide_quote) {
+            filter.total_quotes = { $gt: 0 }
         }
 
         if (countries) {
@@ -2852,9 +2858,124 @@ exports.getAllEnquiry = async (req, res) => {
             ]
         );
 
-        count = await Enquiry.countDocuments({ ...filter, ...brandfilter, ...countryFilter });
+        count = await Enquiry.aggregate([
+            {
+                $unwind: {
+                    path: "$enquiry_items",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $match: brandfilter
+            },
+            {
+                $lookup: {
+                    from: "quantity_units",
+                    let: { unitId: "$enquiry_items.quantity.unit" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$_id", "$$unitId"] }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                unit: 1
+                            }
+                        }
+                    ],
+                    as: "enquiry_items.quantity_unit_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$enquiry_items.quantity_unit_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
 
-        return res.json({ data, count, code: 200 });
+            {
+                $lookup: {
+                    from: "addresses",
+                    localField: "shipping_address",
+                    foreignField: "_id",
+                    as: "shipping_address_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$shipping_address_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "enquiry_quotes",
+                    let: { id: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$$id", "$enquiry_id"]
+                                }
+                            }
+                        }
+                    ],
+                    as: "quotes"
+                }
+            },
+            {
+                $addFields: {
+                    total_quotes: { $size: "$quotes" }
+                }
+            },
+            {
+                $match: {
+                    ...filter,
+                    ...countryFilter
+                },
+            },
+            {
+                $project: {
+                    quotes: 0
+                }
+            },
+            // {
+            //     $group: {
+            //         _id: "$_id",
+            //         user_id: { $first: "$user_id" },
+            //         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+            //         status: { $first: "$status" },
+            //         expiry_date: { $first: "$expiry_date" },
+            //         priority: { $first: "$priority" },
+            //         enquiry_number: { $first: "$enquiry_number" },
+            //         // shipping_address: { $first: "$shipping_address" },
+            //         shipping_address: { $first: "$shipping_address_data" },
+            //         currency: { $first: "$currency" },
+            //         documents: { $first: "$documents" },
+            //         enquiry_items: { $push: "$enquiry_items" },
+            //         delivery_charges: { $first: "$delivery_charges" },
+            //         reply: { $first: "$reply" },
+            //         total_quotes: { $first: "$total_quotes" },
+            //         createdAt: { $first: "$createdAt" },
+            //         updatedAt: { $first: "$updatedAt" },
+            //     }
+            // },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                }
+            },
+            {
+                $count: "totalCount"
+            }
+        ]);
+
+        return res.json({ data, count: count.length > 0 ? count[0].totalCount : 0, code: 200 });
 
     } catch (error) {
         utils.handleError(res, error);
