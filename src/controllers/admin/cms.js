@@ -358,7 +358,7 @@ exports.deletePaymentTerm = async (req, res) => {
     const { id } = req.params
     console.log("id : ", id)
 
-    const deletedata = await payment_terms.findOneAndDelete({ _id: new mongoose.Types.ObjectId(data.id) })
+    const deletedata = await payment_terms.findOneAndDelete({ _id: new mongoose.Types.ObjectId(id) })
     console.log("deletedata : ", deletedata)
 
     if (!deletedata) {
