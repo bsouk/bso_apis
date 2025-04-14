@@ -1678,3 +1678,34 @@ exports.getEnquiryDetails = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.approveRejectEnquiry = async (req, res) => {
+    try {
+        const { id, status } = req.body
+        console.log("data : ", req.body)
+
+        let updata = {
+            is_approved: status,
+            status: status === "rejected" ? "rejected" : "pending"
+        }
+        const result = await Enquiry.findOneAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(id)
+            },
+            {
+                $set: updata
+            },
+            { new: true }
+        )
+        console.log("result : ", result)
+
+        return res.status(200).json({
+            message: `Query ${status} successfully`,
+            data: result,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

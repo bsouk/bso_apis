@@ -157,4 +157,13 @@ router.patch(
     controller.acceptRejectAssignedSupplier
 );
 
+
+//New flow
+router.patch(
+    '/approveRejectEnquiry',
+    trimRequest.all,
+    requireAuth,
+    controller.approveRejectEnquiry
+);
+
 module.exports = router
