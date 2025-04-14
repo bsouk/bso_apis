@@ -3592,6 +3592,24 @@ exports.selectSupplierQuote = async (req, res) => {
     }
 }
 
-// exports.getLogisticsList = async(req,res)=>{
 
-// }
+exports.getMyAllQuotes = async(req,res)=>{
+    try{
+        const userId = req.user._id
+        console.log("userId : ", userId)
+
+        const data = await EnquiryQuotes.find({user_id : new mongoose.Types.ObjectId(userId)})
+        console.log("data : ", data)
+
+        const count = await EnquiryQuotes.countDocuments({user_id : new mongoose.Types.ObjectId(userId)})
+
+        return res.status(200).json({
+            message : "All quotes fetched successfully",
+            data,
+            count,
+            code : 200
+        })
+    }catch(error){
+        utils.handleError(res, error);
+    }
+}
