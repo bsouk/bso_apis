@@ -1556,6 +1556,36 @@ exports.getAllEnquiry = async (req, res) => {
                 },
                 {
                     $lookup: {
+                        from: "subscriptions",
+                        localField: "user_id",
+                        foreignField: "user_id",
+                        as: "subscription",
+                        pipeline: [
+                            {
+                                $lookup: {
+                                    from: "plans",
+                                    localField: "plan_id",
+                                    foreignField: "plan_id",
+                                    as: "plan"
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$plan",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$subscription",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
                         from: "addresses",
                         localField: "shipping_address",
                         foreignField: "_id",
@@ -1574,26 +1604,26 @@ exports.getAllEnquiry = async (req, res) => {
                         ...countryFilter
                     },
                 },
-                {
-                    $group: {
-                        _id: "$_id",
-                        user: { $first: "$user" },
-                        enquiry_unique_id: { $first: "$enquiry_unique_id" },
-                        status: { $first: "$status" },
-                        expiry_date: { $first: "$expiry_date" },
-                        priority: { $first: "$priority" },
-                        enquiry_number: { $first: "$enquiry_number" },
-                        // shipping_address: { $first: "$shipping_address" },
-                        shipping_address: { $first: "$shipping_address_data" },
-                        currency: { $first: "$currency" },
-                        documents: { $first: "$documents" },
-                        enquiry_items: { $push: "$enquiry_items" },
-                        delivery_charges: { $first: "$delivery_charges" },
-                        reply: { $first: "$reply" },
-                        createdAt: { $first: "$createdAt" },
-                        updatedAt: { $first: "$updatedAt" },
-                    }
-                },
+                // {
+                //     $group: {
+                //         _id: "$_id",
+                //         user: { $first: "$user" },
+                //         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                //         status: { $first: "$status" },
+                //         expiry_date: { $first: "$expiry_date" },
+                //         priority: { $first: "$priority" },
+                //         enquiry_number: { $first: "$enquiry_number" },
+                //         // shipping_address: { $first: "$shipping_address" },
+                //         shipping_address: { $first: "$shipping_address_data" },
+                //         currency: { $first: "$currency" },
+                //         documents: { $first: "$documents" },
+                //         enquiry_items: { $push: "$enquiry_items" },
+                //         delivery_charges: { $first: "$delivery_charges" },
+                //         reply: { $first: "$reply" },
+                //         createdAt: { $first: "$createdAt" },
+                //         updatedAt: { $first: "$updatedAt" },
+                //     }
+                // },
                 {
                     $sort: { createdAt: -1 }
                 },
