@@ -169,7 +169,11 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     final_price: {
         type: Number,
         default: 0
-    }
+    },
+    pickup_address: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'address'
+    },
 },
     {
         timestamps: true
