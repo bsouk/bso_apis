@@ -1463,9 +1463,7 @@ exports.getAllEnquiry = async (req, res) => {
     try {
         const { status, search, offset = 0, limit = 10, brand, countries } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
-        const filter = {
-            is_approved: "approved"
-        };
+        const filter = {};
         let brandfilter = {}
         let countryFilter = {};
 
@@ -1542,7 +1540,7 @@ exports.getAllEnquiry = async (req, res) => {
                         pipeline: [
                             {
                                 $project: {
-                                    _id : 1,
+                                    _id: 1,
                                     full_name: 1,
                                     email: 1,
                                 }
@@ -1640,7 +1638,7 @@ exports.getEnquiryDetails = async (req, res) => {
                 {
                     $match: {
                         user_id: new mongoose.Types.ObjectId(data?.user_id),
-                        status : "active"
+                        status: "active"
                     }
                 },
                 {
@@ -1658,12 +1656,12 @@ exports.getEnquiryDetails = async (req, res) => {
                     }
                 },
                 {
-                    $sort : {
-                        createdAt : -1
+                    $sort: {
+                        createdAt: -1
                     }
                 },
                 {
-                    $limit : 1
+                    $limit: 1
                 }
             ]
         )
