@@ -2499,11 +2499,37 @@ exports.getMyEnquiry = async (req, res) => {
                         }
                     },
                     {
+                        $lookup: {
+                            from: "enquiry_quotes",
+                            let: { id: "$_id" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$enquiry_id"]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: "quotes"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            total_quotes: { $size: "$quotes" }
+                        }
+                    },
+                    {
                         $match: {
                             ...filter,
                             ...userMatchCondition,
                             ...countryFilter
                         },
+                    },
+                    {
+                        $project : {
+                            quotes : 0
+                        }
                     },
                     {
                         $group: {
@@ -2521,6 +2547,7 @@ exports.getMyEnquiry = async (req, res) => {
                             enquiry_items: { $push: "$enquiry_items" },
                             delivery_charges: { $first: "$delivery_charges" },
                             reply: { $first: "$reply" },
+                            total_quotes : {$first : "$total_quotes"},
                             createdAt: { $first: "$createdAt" },
                             updatedAt: { $first: "$updatedAt" },
                         }
@@ -2597,6 +2624,32 @@ exports.getMyEnquiry = async (req, res) => {
                     }
                 },
                 {
+                    $lookup: {
+                        from: "enquiry_quotes",
+                        let: { id: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$enquiry_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "quotes"
+                    }
+                },
+                {
+                    $addFields: {
+                        total_quotes: { $size: "$quotes" }
+                    }
+                },
+                {
+                    $project: {
+                        quotes: 0
+                    }
+                },
+                {
                     $group: {
                         _id: "$_id",
                         user_id: { $first: "$user_id" },
@@ -2612,6 +2665,7 @@ exports.getMyEnquiry = async (req, res) => {
                         enquiry_items: { $push: "$enquiry_items" },
                         delivery_charges: { $first: "$delivery_charges" },
                         reply: { $first: "$reply" },
+                        total_quotes: { $first: "$total_quotes" },
                         createdAt: { $first: "$createdAt" },
                         updatedAt: { $first: "$updatedAt" },
                     }
