@@ -164,10 +164,10 @@ const EnquirySchema = new mongoose.Schema({
             ref: "enquiry_quotes"
         }
     },
-    shipement_type: {
+    shipment_type: {
         type: String,
-        enum: ["self-pickup", "delhivery"],
-        default: "delhivery"
+        enum: ["self-pickup", "delivery"],
+        default: "delivery"
     }
 },
     {

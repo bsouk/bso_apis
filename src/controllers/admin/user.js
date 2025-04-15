@@ -100,15 +100,20 @@ exports.uploadMedia = async (req, res) => {
     }
 
     let isArray = req.body.isArray;
-    let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif"];
+    let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif", "image/webp", "image/svg", "image/bmp"];
     let supportedOtherTypes = [
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/pdf",
       "audio/mpeg",
+      "audio/wav",
+      "audio/mp3",
+      "audio/ogg",
       "video/mp4",
       "video/quicktime",
-      "video/x-m4v"
+      "video/x-m4v",
+      "video/webm",
+      "video/mov"
     ];
 
     if (Array.isArray(req.files.media)) {
@@ -2002,39 +2007,56 @@ exports.editAddCommision = async (req, res) => {
   }
 }
 
-exports.getCommission = async(req,res)=>{
-  try{
+exports.getCommission = async (req, res) => {
+  try {
     let commisiondata = await commision.findOne()
     console.log("commisiondata : ", commisiondata)
 
     return res.status(200).json({
-      message : "Commission data fetched successfully",
-      data : commisiondata,
-      code : 200
+      message: "Commission data fetched successfully",
+      data: commisiondata,
+      code: 200
     })
-  }catch (error) {
+  } catch (error) {
     utils.handleError(res, error);
   }
 }
 
 
 exports.getAllSupplierQuotes = async (req, res) => {
-    try {
-        const { id } = req.params
-        console.log("id : ", id)
+  try {
+    const { id } = req.params
+    console.log("id : ", id)
 
-        const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
-        console.log("data : ", data)
+    const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+    console.log("data : ", data)
 
-        const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
+    const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
 
-        return res.status(200).json({
-            message: "Supplier quotes fetched successfully",
-            data,
-            count,
-            code: 200
-        })
-    } catch (error) {
-        utils.handleError(res, error);
-    }
+    return res.status(200).json({
+      message: "Supplier quotes fetched successfully",
+      data,
+      count,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.getQuotesdata = async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) })
+    console.log("data : ", data)
+
+    return res.status(200).json({
+      message: "quotes data fetched successfully",
+      data,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
 }

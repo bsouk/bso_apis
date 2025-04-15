@@ -277,4 +277,10 @@ router.get(
   controller.getAllSupplierQuotes
 )
 
+router.get(
+  "/getQuotedata/:id",
+  trimRequest.all,
+  controller.getQuotesdata
+)
+
 module.exports = router;

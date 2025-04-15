@@ -958,15 +958,20 @@ exports.uploadMedia = async (req, res) => {
         }
 
         let isArray = req.body.isArray;
-        let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif"];
+        let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif", "image/webp", "image/svg", "image/bmp"];
         let supportedOtherTypes = [
             "application/msword",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "application/pdf",
             "audio/mpeg",
+            "audio/wav",
+            "audio/mp3",
+            "audio/ogg",
             "video/mp4",
             "video/quicktime",
-            "video/x-m4v"
+            "video/x-m4v",
+            "video/webm",
+            "video/mov"
         ];
 
         if (Array.isArray(req.files.media)) {
@@ -3791,7 +3796,7 @@ exports.selectSupplierQuote = async (req, res) => {
         if (shipment_type === "self-pickup") {
             const mailOptions = {
                 to: quotedata.user_id.email,
-                subject: "Shipement Pickup details",
+                subject: "Shipment Pickup details",
                 name: quotedata.user_id.full_name,
                 buyer_name: quotedata.user_id.full_name,
                 pickup_location: full_address,
