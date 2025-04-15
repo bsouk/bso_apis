@@ -3602,6 +3602,7 @@ exports.searchenquiry = async (req, res) => {
 exports.addenquiryquotes = async (req, res) => {
     try {
         const data = req.body;
+        console.log("data : ", data)
         const userId = req.user._id;
 
         const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
