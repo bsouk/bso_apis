@@ -385,7 +385,6 @@ router.get(
 
 router.get(
     "/getPaymentTerms",
-    requireAuth,
     trimRequest.all,
     controller.getPaymentTerms
 )
