@@ -2048,7 +2048,14 @@ exports.getAllSupplierQuotes = async (req, res) => {
 exports.getQuotesdata = async (req, res) => {
   try {
     const { id } = req.params
-    const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) }).populate("enquiry_items.quantity.unit")
+    const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) }).populate("enquiry_items.quantity.unit").populate({
+      path : "enquiry_id",
+      select : "enquiry_unique_id user_id priority shipping_address expiry_date",
+      populate : {
+        path : "shipping_address",
+        select : "address"
+      }
+    }).populate("pickup_address", "address")
     console.log("data : ", data)
 
     return res.status(200).json({
