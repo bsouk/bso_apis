@@ -1619,6 +1619,7 @@ exports.getAllEnquiry = async (req, res) => {
                         documents: { $first: "$documents" },
                         enquiry_items: { $push: "$enquiry_items" },
                         delivery_charges: { $first: "$delivery_charges" },
+                        subscription : {$first : "$subscription"},
                         reply: { $first: "$reply" },
                         createdAt: { $first: "$createdAt" },
                         updatedAt: { $first: "$updatedAt" },
