@@ -240,7 +240,6 @@ router.get(
 router.get(
     "/getQueryDetails/:id",
     trimRequest.all,
-    requireAuth,
     controller.getEnquiryDetails
 );
 
