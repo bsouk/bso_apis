@@ -3754,10 +3754,10 @@ exports.getAllSupplierQuotes = async (req, res) => {
 
 exports.selectSupplierQuote = async (req, res) => {
     try {
-        const { quote_id } = req.body
+        const { quote_id, shipment_type } = req.body
         console.log("data : ", req.body)
 
-        const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id')
+        const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id pickup_address')
         console.log("quotedata : ", quotedata)
 
         const selected = await Enquiry.findByIdAndUpdate(
@@ -3768,7 +3768,8 @@ exports.selectSupplierQuote = async (req, res) => {
                 $set: {
                     selected_supplier: {
                         quote_id: new mongoose.Types.ObjectId(quote_id)
-                    }
+                    },
+                    shipment_type: shipment_type
                 }
             }, { new: true }
         )
@@ -3785,6 +3786,21 @@ exports.selectSupplierQuote = async (req, res) => {
         quotedata.is_selected = true
         quotedata.final_price = totalprice
         await quotedata.save()
+
+        let full_address = `${quotedata?.pickup_address?.address.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city.name}, ${quotedata?.pickup_address?.state.name}, ${quotedata?.pickup_address?.country.name}, ${quotedata?.pickup_address?.pin_code}`
+        if (shipment_type === "self-pickup") {
+            const mailOptions = {
+                to: quotedata.user_id.email,
+                subject: "Shipement Pickup details",
+                name: quotedata.user_id.full_name,
+                buyer_name: quotedata.user_id.full_name,
+                pickup_location: full_address,
+                tracking_id: "",
+                tracking_url: ""
+            }
+
+            emailer.sendEmail(null, mailOptions, "shipmentPickup");
+        }
 
         return res.status(200).json({
             message: "Supplier quote selected successfully",
