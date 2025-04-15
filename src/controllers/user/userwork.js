@@ -2855,8 +2855,8 @@ exports.getAllEnquiry = async (req, res) => {
                         delivery_charges: { $first: "$delivery_charges" },
                         reply: { $first: "$reply" },
                         total_quotes: { $first: "$total_quotes" },
-                        shipment_type : {$first : "$shipment_type"},
-                        selected_supplier : {$first : "$selected_supplier"},
+                        shipment_type: { $first: "$shipment_type" },
+                        selected_supplier: { $first: "$selected_supplier" },
                         createdAt: { $first: "$createdAt" },
                         updatedAt: { $first: "$updatedAt" },
                     }
@@ -3787,7 +3787,12 @@ exports.selectSupplierQuote = async (req, res) => {
         const { quote_id, shipment_type } = req.body
         console.log("data : ", req.body)
 
-        const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id pickup_address')
+        const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id').populate(
+            {
+                path: "pickup_address",
+                select: "address"
+            }
+        )
         console.log("quotedata : ", quotedata)
 
         const selected = await Enquiry.findByIdAndUpdate(
