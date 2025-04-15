@@ -2706,7 +2706,7 @@ exports.getMyEnquiry = async (req, res) => {
 }
 exports.getAllEnquiry = async (req, res) => {
     try {
-        const { status, search, offset = 0, limit = 10, brand, countries, priority, hide_quote } = req.query;
+        const { status, search, offset = 0, limit = 10, brand, countries, priority, hide_quote, logisticsview } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
         const filter = {
             is_approved: "approved"
@@ -2730,6 +2730,10 @@ exports.getAllEnquiry = async (req, res) => {
         }
         if (hide_quote) {
             filter.total_quotes = { $gt: 0 }
+        }
+        if (logisticsview) {
+            filter.shipment_type = "delivery"
+            filter.selected_supplier = { $exists: true }
         }
 
         if (countries) {
@@ -2832,6 +2836,9 @@ exports.getAllEnquiry = async (req, res) => {
                     }
                 },
                 {
+                    $sort: { createdAt: -1 }
+                },
+                {
                     $group: {
                         _id: "$_id",
                         user_id: { $first: "$user_id" },
@@ -2848,6 +2855,8 @@ exports.getAllEnquiry = async (req, res) => {
                         delivery_charges: { $first: "$delivery_charges" },
                         reply: { $first: "$reply" },
                         total_quotes: { $first: "$total_quotes" },
+                        shipment_type : {$first : "$shipment_type"},
+                        selected_supplier : {$first : "$selected_supplier"},
                         createdAt: { $first: "$createdAt" },
                         updatedAt: { $first: "$updatedAt" },
                     }
@@ -3594,10 +3603,26 @@ exports.addenquiryquotes = async (req, res) => {
     try {
         const data = req.body;
         const userId = req.user._id;
-        const enquiry = await EnquiryQuotes.create({
-            ...data,
-            user_id: userId,
-        });
+
+        const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
+        console.log("enquiryData : ", enquiryData);
+        let enquiry = {}
+        if (enquiryData) {
+            enquiry = EnquiryQuotes.findOneAndUpdate(
+                { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
+                { $set: data },
+                {
+                    new: true
+                }
+            )
+            console.log("enquiry : ", enquiry);
+        } else {
+            enquiry = await EnquiryQuotes.create({
+                ...data,
+                user_id: userId,
+            });
+            console.log("enquiry : ", enquiry);
+        }
         return res.status(200).json({
             message: "Quotation Submit Successfully",
             data: enquiry,
@@ -3861,3 +3886,5 @@ exports.getPaymentTerms = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
