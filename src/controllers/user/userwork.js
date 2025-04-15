@@ -3789,8 +3789,7 @@ exports.selectSupplierQuote = async (req, res) => {
 
         const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id').populate(
             {
-                path: "pickup_address",
-                select: "address"
+                path: "pickup_address"
             }
         )
         console.log("quotedata : ", quotedata)
