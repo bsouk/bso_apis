@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
 const product = require("../../models/product");
 const commision = require("../../models/commision");
+const EnquiryQuotes = require("../../models/EnquiryQuotes")
 
 function createNewPassword() {
   const password = generatePassword.generate({
@@ -2014,4 +2015,26 @@ exports.getCommission = async(req,res)=>{
   }catch (error) {
     utils.handleError(res, error);
   }
+}
+
+
+exports.getAllSupplierQuotes = async (req, res) => {
+    try {
+        const { id } = req.params
+        console.log("id : ", id)
+
+        const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+        console.log("data : ", data)
+
+        const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
+
+        return res.status(200).json({
+            message: "Supplier quotes fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
 }
