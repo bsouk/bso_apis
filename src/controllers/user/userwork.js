@@ -3212,6 +3212,16 @@ exports.AddTeamMember = async (req, res) => {
         const userId = req.user._id;
         const data = req.body;
 
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
+
         let teamdata = await Team.findOne(
             {
                 $or: [
@@ -3436,8 +3446,19 @@ exports.GetTeamMember = async (req, res) => {
 
 exports.editTeamMember = async (req, res) => {
     try {
+        const userId = req.user._id;
         const Id = req.params.Id;
         const updateData = req.body;
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
 
         const updatedMember = await User.findByIdAndUpdate(Id, updateData, {
             new: true,
@@ -3463,7 +3484,19 @@ exports.editTeamMember = async (req, res) => {
 
 exports.deleteTeamMember = async (req, res) => {
     try {
+        const userId = req.user._id
         const Id = req.params.Id;
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
+
         const deletedMember = await User.findOneAndDelete(
             { _id: Id },
         );
@@ -3701,7 +3734,19 @@ exports.checksubscriptions = async (req, res) => {
 
 exports.changeInviteStatus = async (req, res) => {
     try {
+        const userId = req.user._id
         const data = req.body;
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
+
         const userdata = User.findOne({ _id: data.user_id })
         console.log("userdata : ", userdata)
 
@@ -3745,7 +3790,19 @@ exports.changeInviteStatus = async (req, res) => {
 
 exports.SuspendTeamMember = async (req, res) => {
     try {
+        const userId = req.user._id;
         const Id = req.params.Id;
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
+
         const SuspendedMember = await User.findByIdAndUpdate(
             Id,
             { $set: { member_status: "suspend" } },
@@ -3774,7 +3831,19 @@ exports.SuspendTeamMember = async (req, res) => {
 
 exports.ActivateTeamMember = async (req, res) => {
     try {
+        const userId = req.user._id
         const Id = req.params.Id;
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
+
         const SuspendedMember = await User.findByIdAndUpdate(
             Id,
             { $set: { member_status: "accepted" } },
