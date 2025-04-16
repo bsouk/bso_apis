@@ -3002,7 +3002,7 @@ exports.getEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate({ path: 'selected_supplier.quote_id', populate: "pickup_address" })
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {
@@ -3011,9 +3011,23 @@ exports.getEnquiryDetails = async (req, res) => {
             });
         }
 
+        const { selected_supplier, ...rest } = data.toObject();
+
+        if (selected_supplier?.quote_id) {
+            delete selected_supplier.quote_id.custom_charges_one;
+            delete selected_supplier.quote_id.custom_charges_two;
+            delete selected_supplier.quote_id.discount;
+            delete selected_supplier.quote_id.admin_charge;
+        }
+
+        const newdata = {
+            ...rest,
+            selected_supplier: selected_supplier?.quote_id || null,
+        };
+
         return res.status(200).json({
             message: "Query details fetched successfully",
-            data,
+            data: newdata,
             code: 200
         })
     } catch (error) {
