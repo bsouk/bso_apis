@@ -167,7 +167,6 @@ const EnquirySchema = new mongoose.Schema({
     shipment_type: {
         type: String,
         enum: ["self-pickup", "delivery"],
-        default: "delivery"
     }
 },
     {
