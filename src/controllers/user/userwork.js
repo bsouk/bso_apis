@@ -202,14 +202,16 @@ exports.editProfile = async (req, res) => {
         }
 
         if (data.switch_to) {
-            let types = user.user_type
             if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
                 return utils.handleError(res, {
                     message: `You are already ${data.switch_to} user`,
                     code: 400,
                 });
             }
-            types.push(data.switch_to.trim())
+            let types = user.user_type
+            if (!types.includes(data.switch_to.trim())) {
+                types.push(data.switch_to.trim())
+            }
             data.user_type = types
             data.current_user_type = data.switch_to
         }
@@ -3853,7 +3855,7 @@ exports.getMyAllQuotes = async (req, res) => {
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate({path : "pickup_address", select : "address"}).populate("enquiry_items.quantity.unit").sort({createdAt : -1})
+        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").sort({ createdAt: -1 })
         console.log("data : ", data)
 
         const count = await EnquiryQuotes.countDocuments({ user_id: new mongoose.Types.ObjectId(userId) })
