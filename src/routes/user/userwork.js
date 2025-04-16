@@ -412,4 +412,11 @@ router.patch(
     controller.selectLogisticsQuote
 )
 
+
+router.get(
+    "/getLogisticsQuotes/:id",
+    trimRequest.all,
+    controller.getLogisticsQuotes
+)
+
 module.exports = router;

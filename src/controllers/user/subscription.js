@@ -77,7 +77,8 @@ exports.createSubscription = async (req, res) => {
             plan_id: data.plan_id,
             start_at: start,
             end_at: end,
-            status: 'active'
+            status: 'active',
+            type : plandata.type
         }
 
         console.log("newdata : ", newdata)
