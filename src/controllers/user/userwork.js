@@ -4046,7 +4046,8 @@ exports.logisticsEnquiryDetails = async (req, res) => {
 
 exports.selectLogisticsQuote = async (req, res) => {
     try {
-        const userId = req.user_id
+        const userId = req.user._id
+        console.log("userId : ", userId)
         const { quote_id } = req.body
         console.log("data : ", req.body)
 
@@ -4105,7 +4106,7 @@ exports.selectLogisticsQuote = async (req, res) => {
         console.log("selected : ", selected)
 
         let totalprice = 0
-        enquiry.enquiry_items.forEach(i => totalprice += (i.unit_price * i.quantity.value))
+        enquiry?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.quantity.value))
         console.log("totalprice : ", totalprice)
 
         totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value) - enquiry?.selected_supplier?.quote_id?.discount?.value
