@@ -404,4 +404,12 @@ router.get(
     controller.logisticsEnquiryDetails
 )
 
+
+router.patch(
+    "/selectLogisticsQuote",
+    trimRequest.all,
+    requireAuth,
+    controller.selectLogisticsQuote
+)
+
 module.exports = router;
