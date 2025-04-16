@@ -3642,7 +3642,7 @@ exports.addenquiryquotes = async (req, res) => {
         console.log("enquiryData : ", enquiryData);
         let enquiry = {}
         if (enquiryData) {
-            enquiry = EnquiryQuotes.findOneAndUpdate(
+            enquiry = await EnquiryQuotes.findOneAndUpdate(
                 { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
                 { $set: data },
                 {
@@ -3987,7 +3987,7 @@ exports.submitLogisticsQuotes = async (req, res) => {
         console.log("enquiryData : ", enquiryData);
         let enquiry = {}
         if (enquiryData) {
-            enquiry = logistics_quotes.findOneAndUpdate(
+            enquiry = await logistics_quotes.findOneAndUpdate(
                 { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
                 { $set: data },
                 {
