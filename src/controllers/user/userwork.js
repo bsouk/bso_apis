@@ -203,7 +203,7 @@ exports.editProfile = async (req, res) => {
 
         if (data.switch_to) {
             let types = user.user_type
-            if (types.includes(data.switch_to.trim())) {
+            if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
                 return utils.handleError(res, {
                     message: `You are already ${data.switch_to} user`,
                     code: 400,
