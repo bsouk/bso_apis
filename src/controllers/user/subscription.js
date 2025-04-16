@@ -78,11 +78,11 @@ exports.createSubscription = async (req, res) => {
             start_at: start,
             end_at: end,
             status: 'active',
-            type : plandata.type
+            type: plandata.type
         }
 
         console.log("newdata : ", newdata)
-        const result = await Subscription.updateMany({ user_id: new mongoose.Types.ObjectId(userid) }, { status: 'terminated' }, { new: true })
+        const result = await Subscription.updateMany({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type }, { status: 'terminated' }, { new: true })
         console.log("result : ", result)
         const newsubscription = await Subscription.create(newdata);
         console.log("subscription : ", newsubscription)

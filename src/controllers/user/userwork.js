@@ -3662,12 +3662,12 @@ exports.addenquiryquotes = async (req, res) => {
         console.log("data : ", data)
         const userId = req.user._id;
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: "supplier" });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {
             return utils.handleError(res, {
-                message: "No subscription found",
+                message: "No supplier subscription found",
                 code: 400,
             });
         }
@@ -3708,7 +3708,7 @@ exports.checksubscriptions = async (req, res) => {
     try {
         const userId = req.user._id;
         console.log(userId)
-        const subscription = await Subscription.findOne({
+        const subscription = await Subscription.find({
             user_id: userId,
             status: 'active',
         });
@@ -3894,12 +3894,12 @@ exports.selectSupplierQuote = async (req, res) => {
         const { quote_id, shipment_type } = req.body
         console.log("data : ", req.body)
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active" });
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active", type: "buyer" });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {
             return utils.handleError(res, {
-                message: "No subscription found",
+                message: "No buyer subscription found",
                 code: 400,
             });
         }
@@ -4036,12 +4036,12 @@ exports.submitLogisticsQuotes = async (req, res) => {
         let userdata = req.user
         console.log("userdata : ", userdata)
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: "logistics" });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {
             return utils.handleError(res, {
-                message: "No subscription found",
+                message: "No logistics subscription found",
                 code: 400,
             });
         }
@@ -4125,7 +4125,8 @@ exports.selectLogisticsQuote = async (req, res) => {
                 {
                     $match: {
                         user_id: new mongoose.Types.ObjectId(userId),
-                        status: "active"
+                        status: "active",
+                        type: "buyer"
                     }
                 },
                 {
@@ -4148,7 +4149,7 @@ exports.selectLogisticsQuote = async (req, res) => {
 
         if (activeSubscription.length === 0) {
             return utils.handleError(res, {
-                message: "No subscription found",
+                message: "No buyer subscription found",
                 code: 400,
             });
         }
@@ -4235,7 +4236,7 @@ exports.getLogisticsQuotes = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
 
-        const data = await logistics_quotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate({path : 'enquiry_id', populate : "enquiry_items.quantity.unit selected_supplier.quote_id"})
+        const data = await logistics_quotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate({ path: 'enquiry_id', populate: "enquiry_items.quantity.unit selected_supplier.quote_id" })
         console.log("data : ", data)
 
         const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
