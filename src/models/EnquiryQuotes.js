@@ -6,6 +6,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
+    quote_unique_id : String,
     enquiry_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "enquires"

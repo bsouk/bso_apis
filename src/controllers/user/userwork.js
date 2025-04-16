@@ -3616,11 +3616,27 @@ exports.searchenquiry = async (req, res) => {
     }
 }
 
+
+async function genQuoteId() {
+    let token = Math.floor(Math.random() * 100000000)
+    return `quote-${token}`
+}
+
 exports.addenquiryquotes = async (req, res) => {
     try {
         const data = req.body;
         console.log("data : ", data)
         const userId = req.user._id;
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
 
         const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
         console.log("enquiryData : ", enquiryData);
@@ -3635,8 +3651,10 @@ exports.addenquiryquotes = async (req, res) => {
             )
             console.log("enquiry : ", enquiry);
         } else {
+            let quote_unique_id = await genQuoteId()
             enquiry = await EnquiryQuotes.create({
                 ...data,
+                quote_unique_id,
                 user_id: userId,
             });
             console.log("enquiry : ", enquiry);
@@ -3802,8 +3820,19 @@ exports.getAllSupplierQuotes = async (req, res) => {
 
 exports.selectSupplierQuote = async (req, res) => {
     try {
+        const user_id = req.user._id
         const { quote_id, shipment_type } = req.body
         console.log("data : ", req.body)
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
 
         const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id').populate(
             {
@@ -3824,7 +3853,7 @@ exports.selectSupplierQuote = async (req, res) => {
                     shipment_type: shipment_type
                 }
             }, { new: true }
-        )
+        ).populate('shipping_address user_id')
 
         console.log("selected : ", selected)
 
@@ -3853,6 +3882,25 @@ exports.selectSupplierQuote = async (req, res) => {
 
             emailer.sendEmail(null, mailOptions, "shipmentPickup");
         }
+
+        let full_ship_address = `${selected?.shipping_address?.address?.address_line_1}, ${selected?.shipping_address?.address?.address_line2} , ${selected?.shipping_address?.address?.city?.name}, ${selected?.shipping_address?.address?.state?.name}, ${selected?.shipping_address?.address?.country?.name}, ${selected?.shipping_address?.address?.pin_code}`
+        const mailOptions = {
+            to: quotedata.user_id.email,
+            subject: "Quote Selection Notification - Blue Sky",
+            supplier_name: quotedata.user_id.full_name,
+            enquiry_id: selected.enquiry_unique_id,
+            buyer_name: selected.user_id.full_name,
+            portal_url: "",
+            detail: `
+             <div class="quote-box">
+               <p><strong>Quote ID:</strong>${quotedata?.quote_unique_id}</p>
+               <p><strong>Pickup Address:</strong>${full_address}</p>
+               <p><strong>Shipping Address:</strong>${full_ship_address}</p>
+             </div>
+            `
+        }
+
+        emailer.sendEmail(null, mailOptions, "EnquirySelection");
 
         return res.status(200).json({
             message: "Supplier quote selected successfully",
@@ -3918,6 +3966,16 @@ exports.submitLogisticsQuotes = async (req, res) => {
         let userdata = req.user
         console.log("userdata : ", userdata)
 
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
+
         if (!userdata.user_type.includes("logistics")) {
             return utils.handleError(res, {
                 message: "Only Logistics can add quotes",
@@ -3938,8 +3996,10 @@ exports.submitLogisticsQuotes = async (req, res) => {
             )
             console.log("enquiry : ", enquiry);
         } else {
+            let quote_unique_id = await genQuoteId()
             enquiry = await logistics_quotes.create({
                 ...data,
+                quote_unique_id,
                 user_id: userId,
             });
             console.log("enquiry : ", enquiry);
@@ -3959,7 +4019,7 @@ exports.logisticsEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate({ path: 'selected_supplier.quote_id', populate: "pickup_address" })
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate({ path: 'selected_supplier.quote_id', populate: "pickup_address", populate: "enquiry_items.quantity.unit" })
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {
@@ -3983,3 +4043,81 @@ exports.logisticsEnquiryDetails = async (req, res) => {
     }
 }
 
+exports.selectLogisticsQuote = async (req, res) => {
+    try {
+        const userId = req.user_id
+        const { quote_id } = req.body
+        console.log("data : ", req.body)
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
+
+        const quotedata = await logistics_quotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id')
+        console.log("quotedata : ", quotedata)
+
+        const enquiry = await Enquiry.findOne({ _id: quotedata.enquiry_id }).populate({ path: 'selected_supplier.quote_id', populate: 'pickup_address' }).populate('user_id')
+        console.log("enquiry : ", enquiry)
+
+        const selected = await Enquiry.findByIdAndUpdate(
+            {
+                _id: new mongoose.Types.ObjectId(quotedata?.enquiry_id?._id)
+            },
+            {
+                $set: {
+                    selected_logistics: {
+                        quote_id: new mongoose.Types.ObjectId(quote_id)
+                    },
+                }
+            }, { new: true }
+        )
+
+        console.log("selected : ", selected)
+
+        let totalprice = 0
+        enquiry.enquiry_items.forEach(i => totalprice += (i.unit_price * i.quantity.value))
+        console.log("totalprice : ", totalprice)
+
+        totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value) - enquiry?.selected_supplier?.quote_id?.discount?.value
+        console.log("totalprice : ", totalprice)
+
+        quotedata.is_selected = true
+        enquiry.grand_total = totalprice
+        await quotedata.save()
+        await enquiry.save()
+
+        let field = enquiry.selected_supplier.quote_id
+        let full_ship_address = `${enquiry?.shipping_address?.address?.address_line_1}, ${enquiry?.shipping_address?.address?.address_line2} , ${enquiry?.shipping_address?.address?.city?.name}, ${enquiry?.shipping_address?.address?.state?.name}, ${enquiry?.shipping_address?.address?.country?.name}, ${enquiry?.shipping_address?.address?.pin_code}`
+        let full_address = `${field?.pickup_address?.address?.address_line_1}, ${field?.pickup_address?.address_line2} , ${field?.pickup_address?.city?.name}, ${field?.pickup_address?.state?.name}, ${field?.pickup_address?.country?.name}, ${field?.pickup_address?.pin_code}`
+        const mailOptions = {
+            to: quotedata.user_id.email,
+            subject: "Quote Selection Notification - Blue Sky",
+            supplier_name: quotedata.user_id.full_name,
+            enquiry_id: enquiry.enquiry_unique_id,
+            buyer_name: enquiry.user_id.full_name,
+            portal_url: "",
+            detail: `
+             <div class="quote-box">
+               <p><strong>Quote ID:</strong>${quotedata?.quote_unique_id}</p>
+               <p><strong>Pickup Address:</strong>${full_address}</p>
+               <p><strong>Shipping Address:</strong>${full_ship_address}</p>
+             </div>
+            `
+        }
+
+        emailer.sendEmail(null, mailOptions, "EnquirySelection");
+
+        return res.status(200).json({
+            message: "Logistics quote selected successfully",
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

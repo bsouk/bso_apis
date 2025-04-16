@@ -6,25 +6,18 @@ const logisticsQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
+    quote_unique_id: String,
     enquiry_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "enquires"
     },
-    // enquiry_items: {
-    //     type: [
-    //         {
-    //             item_id: {
-    //                 type: mongoose.Schema.Types.ObjectId
-    //             },
-    //             shipping_fee: {
-    //                 type: Number
-    //             }
-    //         }
-    //     ],
-    //     default: []
-    // },
     shipping_fee: {
         type: Number
+    },
+    notes: String,
+    is_selected: {
+        type: Boolean,
+        default: false
     }
 },
     {

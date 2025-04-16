@@ -150,7 +150,10 @@ const EnquirySchema = new mongoose.Schema({
         },
         value: Number
     },
-    grand_total: Number,
+    grand_total: {
+        type: Number,
+        default: 0
+    },
     reply: {
         documents: {
             type: [String],
