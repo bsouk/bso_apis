@@ -389,4 +389,19 @@ router.get(
     controller.getPaymentTerms
 )
 
+
+router.post(
+    "/addLogisticsQuotes",
+    trimRequest.all,
+    requireAuth,
+    controller.submitLogisticsQuotes
+)
+
+
+router.get(
+    "/getLogisticsEnquiryDetail/:id",
+    trimRequest.all,
+    controller.logisticsEnquiryDetails
+)
+
 module.exports = router;

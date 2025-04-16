@@ -164,6 +164,12 @@ const EnquirySchema = new mongoose.Schema({
             ref: "enquiry_quotes"
         }
     },
+    selected_logistics: {
+        quote_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "logistics_quotes"
+        }
+    },
     shipment_type: {
         type: String,
         enum: ["self-pickup", "delivery"],

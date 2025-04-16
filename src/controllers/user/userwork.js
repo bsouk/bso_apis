@@ -30,6 +30,7 @@ const uuid = require("uuid");
 const bcrypt = require('bcrypt');
 const Team = require("../../models/team");
 const payment_terms = require("../../models/payment_terms");
+const logistics_quotes = require("../../models/logistics_quotes");
 
 
 //create password for users
@@ -3908,4 +3909,77 @@ exports.getPaymentTerms = async (req, res) => {
     }
 }
 
+
+exports.submitLogisticsQuotes = async (req, res) => {
+    try {
+        const data = req.body;
+        console.log("data : ", data)
+        const userId = req.user._id;
+        let userdata = req.user
+        console.log("userdata : ", userdata)
+
+        if (!userdata.user_type.includes("logistics")) {
+            return utils.handleError(res, {
+                message: "Only Logistics can add quotes",
+                code: 400,
+            });
+        }
+
+        const enquiryData = await logistics_quotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
+        console.log("enquiryData : ", enquiryData);
+        let enquiry = {}
+        if (enquiryData) {
+            enquiry = logistics_quotes.findOneAndUpdate(
+                { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
+                { $set: data },
+                {
+                    new: true
+                }
+            )
+            console.log("enquiry : ", enquiry);
+        } else {
+            enquiry = await logistics_quotes.create({
+                ...data,
+                user_id: userId,
+            });
+            console.log("enquiry : ", enquiry);
+        }
+        return res.status(200).json({
+            message: "Logistics Quotation Submit Successfully",
+            data: enquiry,
+            code: 200
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.logisticsEnquiryDetails = async (req, res) => {
+    try {
+        const { id } = req.params
+        console.log("id : ", id)
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate({ path: 'selected_supplier.quote_id', populate: "pickup_address" })
+        console.log("data : ", data)
+        if (!data) {
+            return utils.handleError(res, {
+                message: "Query data not found",
+                code: 404,
+            });
+        }
+
+        const newdata = {
+            ...data.toObject(),
+            selected_supplier: data?.selected_supplier?.quote_id || null,
+        };
+
+        return res.status(200).json({
+            message: "Query details fetched successfully",
+            data: newdata,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
 

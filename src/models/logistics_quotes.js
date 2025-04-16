@@ -10,19 +10,22 @@ const logisticsQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "enquires"
     },
-    enquiry_items: {
-        type: [
-            {
-                item_id: {
-                    type: mongoose.Schema.Types.ObjectId
-                },
-                shipping_fee: {
-                    type: Number
-                }
-            }
-        ],
-        default: []
-    },
+    // enquiry_items: {
+    //     type: [
+    //         {
+    //             item_id: {
+    //                 type: mongoose.Schema.Types.ObjectId
+    //             },
+    //             shipping_fee: {
+    //                 type: Number
+    //             }
+    //         }
+    //     ],
+    //     default: []
+    // },
+    shipping_fee: {
+        type: Number
+    }
 },
     {
         timestamps: true
