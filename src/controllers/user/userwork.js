@@ -31,6 +31,7 @@ const bcrypt = require('bcrypt');
 const Team = require("../../models/team");
 const payment_terms = require("../../models/payment_terms");
 const logistics_quotes = require("../../models/logistics_quotes");
+const Commision = require("../../models/commision")
 
 
 //create password for users
@@ -4049,10 +4050,33 @@ exports.selectLogisticsQuote = async (req, res) => {
         const { quote_id } = req.body
         console.log("data : ", req.body)
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        const activeSubscription = await Subscription.aggregate(
+            [
+                {
+                    $match: {
+                        user_id: new mongoose.Types.ObjectId(userId),
+                        status: "active"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "plans",
+                        localField: 'plan_id',
+                        foreignField: 'plan_id',
+                        as: 'plan'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$plan",
+                        preserveNullAndEmptyArrays: true
+                    }
+                }
+            ]
+        )
         console.log("activeSubscription : ", activeSubscription)
 
-        if (!activeSubscription) {
+        if (activeSubscription.length === 0) {
             return utils.handleError(res, {
                 message: "No subscription found",
                 code: 400,
@@ -4086,6 +4110,19 @@ exports.selectLogisticsQuote = async (req, res) => {
 
         totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value) - enquiry?.selected_supplier?.quote_id?.discount?.value
         console.log("totalprice : ", totalprice)
+
+        if (activeSubscription[0].plan.plan_step === "direct") {
+            const commision = await Commision.findOne()
+            console.log("Commision : ", commision)
+
+            if (commision.charge_type === "percentage") {
+                totalprice += (totalprice) + ((commision.value) / 100)
+                console.log("totalprice : ", totalprice)
+            } else {
+                totalprice += commision.value
+                console.log("totalprice : ", totalprice)
+            }
+        }
 
         quotedata.is_selected = true
         enquiry.grand_total = totalprice
