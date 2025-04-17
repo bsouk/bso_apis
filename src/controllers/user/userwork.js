@@ -4089,7 +4089,16 @@ exports.logisticsEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate({ path: 'selected_supplier.quote_id', populate: "pickup_address", populate: "enquiry_items.quantity.unit" })
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate({
+            path: 'selected_supplier.quote_id', populate: [
+                {
+                    path: "pickup_address"
+                },
+                {
+                    path: "enquiry_items.quantity.unit"
+                }
+            ]
+        })
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {
