@@ -4236,7 +4236,19 @@ exports.getLogisticsQuotes = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
 
-        const data = await logistics_quotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate({ path: 'enquiry_id', populate: "enquiry_items.quantity.unit selected_supplier.quote_id" })
+        const data = await logistics_quotes.find({ enquiry_id: id })
+            .populate({
+                path: 'enquiry_id',
+                populate: [
+                    {
+                        path: "selected_supplier.quote_id",
+                        populate: { path: "pickup_address", strictPopulate: false }
+                    },
+                    {
+                        path: "enquiry_items.quantity.unit"
+                    }
+                ]
+            });
         console.log("data : ", data)
 
         const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
@@ -4259,7 +4271,19 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
         const id = req.user._id
         console.log("id : ", id)
 
-        const data = await logistics_quotes.find({ user_id: new mongoose.Types.ObjectId(id) }).populate({ path: 'enquiry_id', populate: "enquiry_items.quantity.unit selected_supplier.quote_id" })
+        const data = await logistics_quotes.find({ user_id: id })
+            .populate({
+                path: 'enquiry_id',
+                populate: [
+                    {
+                        path: "selected_supplier.quote_id",
+                        populate: { path: "pickup_address", strictPopulate: false }
+                    },
+                    {
+                        path: "enquiry_items.quantity.unit"
+                    }
+                ]
+            });
         console.log("data : ", data)
 
         const count = await logistics_quotes.countDocuments({ user_id: new mongoose.Types.ObjectId(id) })
