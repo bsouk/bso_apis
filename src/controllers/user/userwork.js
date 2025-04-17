@@ -4251,3 +4251,28 @@ exports.getLogisticsQuotes = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
+exports.getMyOwnLogisticsQuotes = async (req, res) => {
+    try {
+        const id = req.user._id
+        console.log("id : ", id)
+
+        const data = await logistics_quotes.find({ user_id: new mongoose.Types.ObjectId(id) }).populate({ path: 'enquiry_id', populate: "enquiry_items.quantity.unit selected_supplier.quote_id" })
+        console.log("data : ", data)
+
+        const count = await logistics_quotes.countDocuments({ user_id: new mongoose.Types.ObjectId(id) })
+
+        return res.status(200).json({
+            message: "Logistics quotes fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+

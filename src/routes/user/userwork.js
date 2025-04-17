@@ -419,4 +419,11 @@ router.get(
     controller.getLogisticsQuotes
 )
 
+router.get(
+    "/getMyOwnLogisticsQuotes",
+    trimRequest.all,
+    requireAuth,
+    controller.getMyOwnLogisticsQuotes
+)
+
 module.exports = router;
