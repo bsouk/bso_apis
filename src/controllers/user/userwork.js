@@ -2542,6 +2542,9 @@ exports.getMyEnquiry = async (req, res) => {
                         }
                     },
                     {
+                        $sort: { createdAt: -1 }
+                    },
+                    {
                         $group: {
                             _id: "$_id",
                             user_id: { $first: "$user_id" },
@@ -2557,6 +2560,7 @@ exports.getMyEnquiry = async (req, res) => {
                             enquiry_items: { $push: "$enquiry_items" },
                             delivery_charges: { $first: "$delivery_charges" },
                             reply: { $first: "$reply" },
+                            grand_total: { $first: "$grand_total" },
                             total_quotes: { $first: "$total_quotes" },
                             createdAt: { $first: "$createdAt" },
                             updatedAt: { $first: "$updatedAt" },
@@ -4203,7 +4207,7 @@ exports.selectLogisticsQuote = async (req, res) => {
         enquiry?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.quantity.value))
         console.log("totalprice : ", totalprice)
 
-        totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value) - enquiry?.selected_supplier?.quote_id?.discount?.value
+        totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value + quotedata?.shipping_fee) - enquiry?.selected_supplier?.quote_id?.discount?.value
         console.log("totalprice : ", totalprice)
 
         if (activeSubscription[0].plan.plan_step === "direct") {
