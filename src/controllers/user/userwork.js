@@ -2871,12 +2871,29 @@ exports.getAllEnquiry = async (req, res) => {
                                 }
                             }
                         ],
-                        as: "quotes"
+                        as: "supplier_quotes"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "logistics_quotes",
+                        let: { id: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$enquiry_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "logistics_quotes"
                     }
                 },
                 {
                     $addFields: {
-                        total_quotes: { $size: "$quotes" }
+                        total_supplier_quotes: { $size: "$supplier_quotes" },
+                        total_logistics_quotes: { $size: "$logistics_quotes" }
                     }
                 },
                 {
@@ -2909,7 +2926,8 @@ exports.getAllEnquiry = async (req, res) => {
                         enquiry_items: { $push: "$enquiry_items" },
                         delivery_charges: { $first: "$delivery_charges" },
                         reply: { $first: "$reply" },
-                        total_quotes: { $first: "$total_quotes" },
+                        total_supplier_quotes: { $first: "$total_supplier_quotes" },
+                        total_logistics_quotes: { $first: "$total_logistics_quotes" },
                         shipment_type: { $first: "$shipment_type" },
                         selected_supplier: { $first: "$selected_supplier" },
                         createdAt: { $first: "$createdAt" },
