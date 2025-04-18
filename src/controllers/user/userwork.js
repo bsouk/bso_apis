@@ -2537,6 +2537,50 @@ exports.getMyEnquiry = async (req, res) => {
                         },
                     },
                     {
+                        $lookup: {
+                            from: "enquiry_quotes",
+                            let: { id: "$selected_supplier.quote_id" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$_id"]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: "selected_supplier"
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "logistics_quotes",
+                            let: { id: "$selected_logistics.quote_id" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$$id", "$_id"]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: "selected_logistics"
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$selected_supplier",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
+                        $unwind: {
+                            path: "$selected_logistics",
+                            preserveNullAndEmptyArrays: true
+                        }
+                    },
+                    {
                         $project: {
                             quotes: 0
                         }
@@ -2548,6 +2592,7 @@ exports.getMyEnquiry = async (req, res) => {
                         $group: {
                             _id: "$_id",
                             user_id: { $first: "$user_id" },
+                            is_approved: { $first: "$is_approved" },
                             enquiry_unique_id: { $first: "$enquiry_unique_id" },
                             status: { $first: "$status" },
                             expiry_date: { $first: "$expiry_date" },
@@ -2558,6 +2603,8 @@ exports.getMyEnquiry = async (req, res) => {
                             currency: { $first: "$currency" },
                             documents: { $first: "$documents" },
                             enquiry_items: { $push: "$enquiry_items" },
+                            selected_supplier: { $first: "$selected_supplier" },
+                            selected_logistics: { $first: "$selected_logistics" },
                             delivery_charges: { $first: "$delivery_charges" },
                             reply: { $first: "$reply" },
                             grand_total: { $first: "$grand_total" },
