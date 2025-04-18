@@ -3911,6 +3911,14 @@ exports.selectSupplierQuote = async (req, res) => {
         )
         console.log("quotedata : ", quotedata)
 
+
+        if (quotedata?.enquiry_id?.selected_supplier?.quote_id && mongoose.isValidObjectId(quotedata?.enquiry_id?.selected_supplier?.quote_id)) {
+            return utils.handleError(res, {
+                message: "Enquiry has already an assigned Supplier",
+                code: 400
+            })
+        }
+
         const selected = await Enquiry.findByIdAndUpdate(
             {
                 _id: new mongoose.Types.ObjectId(quotedata?.enquiry_id?._id)
@@ -4168,6 +4176,13 @@ exports.selectLogisticsQuote = async (req, res) => {
 
         const enquiry = await Enquiry.findOne({ _id: quotedata.enquiry_id }).populate({ path: 'selected_supplier.quote_id', populate: 'pickup_address' }).populate('user_id')
         console.log("enquiry : ", enquiry)
+
+        if (enquiry?.selected_logistics?.quote_id && mongoose.isValidObjectId(enquiry?.selected_logistics?.quote_id)) {
+            return utils.handleError(res, {
+                message: "Enquiry has already an assigned Logistics",
+                code: 400
+            })
+        }
 
         const selected = await Enquiry.findByIdAndUpdate(
             {
