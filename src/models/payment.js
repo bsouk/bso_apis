@@ -8,6 +8,10 @@ const PaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'orders'
         },
+        enquiry_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'enquries'
+        },
         buyer_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "users"
@@ -16,6 +20,15 @@ const PaymentSchema = new mongoose.Schema(
             type: Number,
         },
         delivery_charges: {
+            type: Number,
+        },
+        service_charges: {
+            type: Number,
+        },
+        logistics_charges: {
+            type: Number,
+        },
+        supplier_charges: {
             type: Number,
         },
         payment_method: {

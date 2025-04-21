@@ -3090,10 +3090,11 @@ exports.getEnquiryDetails = async (req, res) => {
             delete selected_supplier.quote_id.discount;
             delete selected_supplier.quote_id.admin_charge;
         }
-
+        const commisiondata = await Commision.findOne();
         const newdata = {
             ...rest,
             selected_supplier: selected_supplier?.quote_id || null,
+            admincommission:commisiondata||null,
         };
 
         return res.status(200).json({

@@ -115,3 +115,30 @@ exports.paymentDetails = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+exports.paynow = async (req, res) => {
+    try {
+        const data = req.body
+        const userId = req.user._id
+        console.log("userId : ", userId)
+        const payment_data = await Payment.create({
+            enquiry_id:data.enquiry_id,
+            buyer_id : userId,
+            total_amount:data.total_amount,
+            service_charges:data.service_charges,
+            logistics_charges:data.logistics_charges,
+            supplier_charges:data.supplier_charges,
+            txn_id:'axis_123A789'
+        }
+            
+        )
+       
+        return res.status(200).json({
+            message: "Payment details fetched successfully",
+            data: payment_data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
