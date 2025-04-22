@@ -425,5 +425,17 @@ router.get(
     requireAuth,
     controller.getMyOwnLogisticsQuotes
 )
+router.post(
+    "/sendOtpForEnquiry",
+    trimRequest.all,
+    requireAuth,
+    controller.sendOtpForEnquiry
+)
+router.post(
+    "/verifyOtpForEnquiry",
+    trimRequest.all,
+    requireAuth,
+    controller.verifyOtpForEnquiry
+)
 
 module.exports = router;

@@ -32,8 +32,7 @@ const Team = require("../../models/team");
 const payment_terms = require("../../models/payment_terms");
 const logistics_quotes = require("../../models/logistics_quotes");
 const Commision = require("../../models/commision")
-
-
+const EnquiryOtp = require("../../models/EnquiryOtp")
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -3094,7 +3093,7 @@ exports.getEnquiryDetails = async (req, res) => {
         const newdata = {
             ...rest,
             selected_supplier: selected_supplier?.quote_id || null,
-            admincommission:commisiondata||null,
+            admincommission: commisiondata || null,
         };
 
         return res.status(200).json({
@@ -3741,7 +3740,8 @@ exports.addenquiryquotes = async (req, res) => {
                 code: 400,
             });
         }
-
+        // const enquirydata = await Enquiry.findOne({ _id: data.enquiry_id })
+        // const buyersubscription = await Subscription.findOne({ user_id: enquirydata.user_id, status: "active", type: "" });
         const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
         console.log("enquiryData : ", enquiryData);
         let enquiry = {}
@@ -4394,3 +4394,83 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
 }
 
 
+exports.sendOtpForEnquiry = async (req, res) => {
+    try {
+       
+        const { enquiry_id, quote_id } = req.body;
+        const enquiry = await Enquiry.findOne({ _id: enquiry_id })
+        const user = await User.findOne({ _id: enquiry.user_id })
+        const user_id = user._id;
+        if (!user || !user.email) {
+            return res.status(400).json({ code: 400, message: "User not found or missing email" });
+        }
+
+        const email = user.email;
+        const otp = Math.floor(100000 + Math.random() * 900000);
+
+        const existingOtp = await EnquiryOtp.findOne({
+            user_id,
+            enquiry_id,
+            quote_id,
+        });
+
+        const data = {
+            user_id,
+            enquiry_id,
+            quote_id,
+            email,
+            otp,
+            is_used: false,
+            verified: false,
+        };
+
+        if (existingOtp) {
+            await EnquiryOtp.findByIdAndUpdate(existingOtp._id, data);
+        } else {
+            const newOtp = new EnquiryOtp(data);
+            await newOtp.save();
+        }
+
+        const mailOptions = {
+            to: email,
+            subject: "Verify Your OTP",
+            app_name: process.env.APP_NAME,
+            otp: otp,
+        };
+
+        emailer.sendEmail(null, mailOptions, "verifyOTP");
+
+        res.json({ code: 200, message: "OTP sent successfully", otp }); // Remove `otp` if you don't want to expose it
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
+exports.verifyOtpForEnquiry = async (req, res) => {
+    try {
+        const { enquiry_id, quote_id,otp } = req.body;
+    
+        const otpData = await EnquiryOtp.findOne({
+            enquiry_id,
+            quote_id,
+        });
+  
+        if (!otpData || otpData.otp !== otp)
+          return utils.handleError(res, {
+            message: "The OTP you entered is incorrect. Please try again",
+            code: 400,
+          });
+        if (otpData.verified == true)
+          return res.json({ code: 200, message: "Otp verified successfully" });
+  
+  
+        otpData.verified = true;
+        otpData.is_used = true;
+        await otpData.save();
+  
+        res.json({ code: 200, message: "Otp verified successfully" });
+    } catch (error) {
+      utils.handleError(res, error);
+    }
+  };

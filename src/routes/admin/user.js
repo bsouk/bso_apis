@@ -282,5 +282,15 @@ router.get(
   trimRequest.all,
   controller.getQuotesdata
 )
+router.post(
+  "/acceptsupplierEnquiry",
+  trimRequest.all,
+  controller.acceptsupplierEnquiry
+)
+router.get(
+  "/finalquotes/:enquiry_id",
+  trimRequest.all,
+  controller.finalquotes
+)
 
 module.exports = router;
