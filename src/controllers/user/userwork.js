@@ -4464,8 +4464,12 @@ exports.verifyOtpForEnquiry = async (req, res) => {
             message: "The OTP you entered is incorrect. Please try again",
             code: 400,
           });
-        if (otpData.verified == true)
-          return res.json({ code: 200, message: "Otp verified successfully" });
+        if (otpData.verified == true){
+            const updatedstatus= await Enquiry.findByIdAndUpdate(enquiry_id, { status: "self_delivered" }, { new: true });
+            const updatedquote = await EnquiryQuotes.findByIdAndUpdate(quote_id, { status: "delivered" }, { new: true });
+            return res.json({ code: 200, message: "Otp verified successfully" });
+        }
+          
   
   
         otpData.verified = true;

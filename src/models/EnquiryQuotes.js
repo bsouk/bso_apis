@@ -6,6 +6,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
+    status:{
+        type:String,
+        default: "pending"
+    },
     is_admin_updated:{
         type: Boolean,
         default: false
