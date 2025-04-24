@@ -292,5 +292,6 @@ router.get(
   trimRequest.all,
   controller.finalquotes
 )
+router.put("/update-submit-query/:id", trimRequest.all, controller.updateSubmitQuery)
 
 module.exports = router;

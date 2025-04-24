@@ -2229,3 +2229,30 @@ exports.finalquotes = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+exports.updateSubmitQuery=async (req, res) => {
+  const enq_id=req.params.id
+  const data=req.body
+  console.log('data',data.enquiry_items)
+  const exist=await EnquiryQuotes.findById(enq_id)
+  if(!exist) {
+    return res.status(404).json({
+      message: 'Quote not found',
+      code: 404
+    })
+  }
+  const updateddata= await EnquiryQuotes.findOneAndUpdate({_id:enq_id}, {$set:{enquiry_items:data.enquiry_items, is_admin_updated:true}}, {new: true})
+  if(!updateddata) {
+    return res.status(400).json({
+      message: 'Failed to update quote',
+      code: 400
+    })
+  }
+  return res.status(200).json({
+    message: 'Quote updated successfully',
+    data: updateddata,
+    code: 200
+  })
+
+
+
+}

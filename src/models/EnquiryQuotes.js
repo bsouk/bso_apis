@@ -6,6 +6,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
+    is_admin_updated:{
+        type: Boolean,
+        default: false
+    },
     quote_unique_id : String,
     enquiry_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -28,7 +32,30 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     },
     enquiry_items: {
         type: [
+
             {
+                admin_price:{
+                    type: Number,
+                    default: 0
+                },
+                logistics_price: {
+                    type: Number,
+                    default: 0
+                },
+                margin_type:{
+                    type: String,
+                    enum: ["flat", "percentage"],
+                    default: "flat"
+                },
+                margin_value: {
+                    type: Number,
+                    default: 0
+                },
+                grand_total: {
+                    type: Number,
+                    default: 0
+                },
+
                 brand: {
                     type: String
                 },
