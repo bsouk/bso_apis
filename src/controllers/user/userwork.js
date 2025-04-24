@@ -4448,6 +4448,57 @@ exports.sendOtpForEnquiry = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+exports.sendOtpForQuote = async (req, res) => {
+    try {
+       
+        const { enquiry_id, quote_id } = req.body;
+        const enquiry = await EnquiryQuotes.findOne({ _id: quote_id })
+        const user = await User.findOne({ _id: enquiry.user_id })
+        const user_id = user._id;
+        if (!user || !user.email) {
+            return res.status(400).json({ code: 400, message: "User not found or missing email" });
+        }
+
+        const email = user.email;
+        const otp = Math.floor(100000 + Math.random() * 900000);
+
+        const existingOtp = await EnquiryOtp.findOne({
+            user_id,
+            enquiry_id,
+            quote_id,
+        });
+
+        const data = {
+            user_id,
+            enquiry_id,
+            quote_id,
+            email,
+            otp,
+            is_used: false,
+            verified: false,
+        };
+
+        if (existingOtp) {
+            await EnquiryOtp.findByIdAndUpdate(existingOtp._id, data);
+        } else {
+            const newOtp = new EnquiryOtp(data);
+            await newOtp.save();
+        }
+
+        const mailOptions = {
+            to: email,
+            subject: "Verify Your OTP",
+            app_name: process.env.APP_NAME,
+            otp: otp,
+        };
+
+        emailer.sendEmail(null, mailOptions, "verifyOTP");
+
+        res.json({ code: 200, message: "OTP sent successfully", otp }); // Remove `otp` if you don't want to expose it
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
 
 
 exports.verifyOtpForEnquiry = async (req, res) => {

@@ -431,6 +431,7 @@ router.post(
     requireAuth,
     controller.sendOtpForEnquiry
 )
+router.post("/sendOtpForQuote",trimRequest.all, requireAuth, controller.sendOtpForQuote)
 router.post(
     "/verifyOtpForEnquiry",
     trimRequest.all,
