@@ -22,7 +22,7 @@ const EnquirySchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["pending", "completed", "rejected"],
+        
         default: "pending"
     },
     expiry_date: {

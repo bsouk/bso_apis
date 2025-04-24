@@ -6,7 +6,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
-    status:{
+    shipment_type:{
         type:String,
         default: "pending"
     },

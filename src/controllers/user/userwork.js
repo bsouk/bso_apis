@@ -4458,6 +4458,7 @@ exports.verifyOtpForEnquiry = async (req, res) => {
             enquiry_id,
             quote_id,
         });
+        console.log("otpData : ", req.body)
   
         if (!otpData || otpData.otp !== otp)
           return utils.handleError(res, {
@@ -4465,10 +4466,22 @@ exports.verifyOtpForEnquiry = async (req, res) => {
             code: 400,
           });
         if (otpData.verified == true){
-            const updatedstatus= await Enquiry.findByIdAndUpdate(enquiry_id, { status: "self_delivered" }, { new: true });
-            const updatedquote = await EnquiryQuotes.findByIdAndUpdate(quote_id, { status: "delivered" }, { new: true });
-            return res.json({ code: 200, message: "Otp verified successfully" });
+            console.log("Otp already verified")
+           
+              
+            return res.json({ code: 200, message: "Otp verified already" });
         }
+        const updatedStatus = await Enquiry.findOneAndUpdate(
+            { _id: enquiry_id },
+            { $set: { status: "self_delivered" } },
+            { new: true }
+          );
+          
+          const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
+            { _id: quote_id },
+            { $set: { status: "delivered" } },
+            { new: true }
+          );
           
   
   
@@ -4476,7 +4489,7 @@ exports.verifyOtpForEnquiry = async (req, res) => {
         otpData.is_used = true;
         await otpData.save();
   
-        res.json({ code: 200, message: "Otp verified successfully" });
+        res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
       utils.handleError(res, error);
     }
