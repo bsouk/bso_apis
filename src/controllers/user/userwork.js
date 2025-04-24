@@ -181,12 +181,12 @@ exports.editProfile = async (req, res) => {
         if (data.email) {
             const doesEmailExists = await User.findOne({
                 email: data.email,
-                _id: { $ne: new mongoose.Types.ObjectId(id) },
+                _id: { $ne: new mongoose.Types.ObjectId(id) }, 
             });
 
             if (doesEmailExists)
                 return utils.handleError(res, {
-                    message: "This email address is already registered",
+                    message: "This email address is already registered", 
                     code: 400,
                 });
         }
@@ -259,7 +259,7 @@ exports.editProfile = async (req, res) => {
             case "supplier": {
                 const requiredFields = [
                     'full_name',
-                    'profile_image',
+                    
                     'email',
                     'phone_number',
                     'bank_details.account_holder_name',
@@ -272,7 +272,7 @@ exports.editProfile = async (req, res) => {
                     'bank_details.address.state',
                     'bank_details.address.zip_code',
                     'bank_details.address.country',
-                    'company_data.company_logo',
+                    
                     'company_data.name',
                     'company_data.business_category',
                     'company_data.phone_number',
@@ -319,10 +319,8 @@ exports.editProfile = async (req, res) => {
             case "logistics": {
                 const requiredFields = [
                     'full_name',
-                    'profile_image',
                     'email',
                     'phone_number',
-                    'company_data.company_logo',
                     'company_data.name',
                     'company_data.business_category',
                     'company_data.phone_number',
@@ -3488,7 +3486,7 @@ exports.GetTeamMember = async (req, res) => {
         const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id })
         console.log("teamLimit : ", teamLimit)
 
-        let teamLimitCount = 3;
+        let teamLimitCount = 0;
         let teamMemberCount = 0
 
         if (teamLimit) {
@@ -3502,7 +3500,7 @@ exports.GetTeamMember = async (req, res) => {
         return res.status(200).json({
             message: "Team Members fetched successfully",
             data: teamMembers,
-            team_limit: teamLimitCount,
+            team_limit: teamLimitCount !==0 ? teamLimitCount : 3,
             count: teamMemberCount,
             code: 200
         });
