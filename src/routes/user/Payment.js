@@ -22,6 +22,11 @@ router.get(
     requireAuth,
     controller.paymentDetails
 )
-
+router.post(
+    '/paynow',
+    trimRequest.all,
+    requireAuth,
+    controller.paynow
+)
 
 module.exports = router

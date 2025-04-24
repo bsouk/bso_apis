@@ -8,7 +8,8 @@ const generatePassword = require("generate-password");
 const product = require("../../models/product");
 const commision = require("../../models/commision");
 const EnquiryQuotes = require("../../models/EnquiryQuotes")
-
+const Enquiry = require("../../models/Enquiry")
+const subscription = require("../../models/subscription");
 function createNewPassword() {
   const password = generatePassword.generate({
     length: 8,
@@ -2049,21 +2050,182 @@ exports.getQuotesdata = async (req, res) => {
   try {
     const { id } = req.params
     const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) }).populate("enquiry_items.quantity.unit").populate({
-      path : "enquiry_id",
-      select : "enquiry_unique_id user_id priority shipping_address expiry_date",
-      populate : {
-        path : "shipping_address",
-        select : "address"
+      path: "enquiry_id",
+      select: "enquiry_unique_id user_id priority shipping_address expiry_date",
+      populate: {
+        path: "shipping_address",
+        select: "address"
       }
     }).populate("pickup_address", "address")
-    console.log("data : ", data)
 
+
+    const subscriptiondata = await subscription.aggregate([
+      {
+        $match: {
+          user_id: new mongoose.Types.ObjectId(data.enquiry_id.user_id),
+          status: "active"
+        }
+      },
+      {
+        $lookup: {
+          from: 'plans',
+          let: { plan_id: '$plan_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ['$plan_id', '$$plan_id'] }
+              }
+            },
+            {
+              $project: {
+                plan_id: 1,
+                name: 1,
+                duration: 1,
+                price: 1,
+                plan_step: 1
+                // Add or remove fields here as needed
+              }
+            }
+          ],
+          as: 'plan'
+        }
+      },
+      {
+        $unwind: {
+          path: '$plan',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $project: {
+          plan: 1,
+          _id: 0
+        }
+      },
+      {
+        $sort: {
+          createdAt: -1
+        }
+      },
+      {
+        $limit: 1
+      }
+    ]);
+
+    console.log("data : ", data)
+    data._doc.plan_step = subscriptiondata[0]?.plan?.plan_step || null;
     return res.status(200).json({
       message: "quotes data fetched successfully",
       data,
+      // subscriptiondata,
       code: 200
     })
   } catch (error) {
     utils.handleError(res, error);
   }
 }
+
+
+exports.acceptsupplierEnquiry = async (req, res) => {
+  try {
+    const { id, is_selected } = req.body;
+
+
+
+    const result = await EnquiryQuotes.findOneAndUpdate(
+      { _id: id },
+      { $set: { is_selected } },
+      { new: true }
+    );
+    if (!result) {
+      return res.status(404).json({
+        message: "Quote not found.",
+        code: 404
+      });
+    }
+    let totalprice = 0;
+
+    // Calculate total item price
+    result.enquiry_items.forEach(i => {
+      totalprice += (i.unit_price * i.quantity.value);
+    });
+
+    // Add custom charges (if they exist) and subtract discount
+    totalprice += (result?.custom_charges_one?.value || 0);
+    totalprice += (result?.custom_charges_two?.value || 0);
+    totalprice -= (result?.discount?.value || 0);
+
+    console.log("Total Price:", totalprice);
+
+    // Update the result with final price
+    result.final_price = totalprice;
+    result.is_selected = true;
+    await result.save();
+    // await Enquiry.findOneAndUpdate(
+    //   { _id: result.enquiry_id },
+    //   {
+    //     $set: {
+    //       selected_supplier: {
+    //         quote_id: id
+    //       }
+    //     }
+    //   }
+    // );
+    return res.status(200).json({
+      message: `Query accepted successfully.`,
+      data: result,
+      code: 200
+    });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+exports.finalquotes = async (req, res) => {
+  try {
+    const id = req.params.enquiry_id;
+
+    const enquiry = await Enquiry.findOne(
+      { _id: new mongoose.Types.ObjectId(id) },
+    );
+    if (!enquiry) {
+      return res.status(404).json({
+        message: "Quote not found.",
+        code: 404
+      });
+    }
+    const supplier = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_selected: true }).populate("enquiry_items.quantity.unit").populate({
+      path: "enquiry_id",
+      select: "enquiry_unique_id user_id priority shipping_address expiry_date",
+      populate: {
+        path: "shipping_address",
+        select: "address"
+      }
+    }).populate("pickup_address", "address")
+    // await Enquiry.findOneAndUpdate(
+    //   { _id: result.enquiry_id },
+    //   {
+    //     $set: {
+    //       selected_supplier: {
+    //         quote_id: id
+    //       }
+    //     }
+    //   }
+    // );
+    const suppiertotalprice = supplier.reduce((sum, quote) => {
+      return sum + (quote.final_price || 0);
+    }, 0);
+    return res.status(200).json({
+      message: `Query accepted successfully.`,
+      // data: result,
+      data: {
+        enquiry,
+        supplier,
+        suppiertotalprice
+      },
+      code: 200
+    });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
