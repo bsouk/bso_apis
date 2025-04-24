@@ -443,5 +443,6 @@ router.post(
     trimRequest.all,
     requireAuth,
     controller.verifyOtpForQuote)
+    router.post("/verifyotpforbuyer", trimRequest.all, requireAuth, controller.verifyOtpForBuyer)
 
 module.exports = router;
