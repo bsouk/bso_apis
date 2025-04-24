@@ -4545,3 +4545,47 @@ exports.verifyOtpForEnquiry = async (req, res) => {
       utils.handleError(res, error);
     }
   };
+  exports.verifyOtpForQuote = async (req, res) => {
+    try {
+        const { enquiry_id, quote_id,otp } = req.body;
+    
+        const otpData = await EnquiryOtp.findOne({
+            enquiry_id,
+            quote_id,
+        });
+        console.log("otpData : ", req.body)
+  
+        if (!otpData || otpData.otp !== otp)
+          return utils.handleError(res, {
+            message: "The OTP you entered is incorrect. Please try again",
+            code: 400,
+          });
+        if (otpData.verified == true){
+            console.log("Otp already verified")
+           
+              
+            return res.json({ code: 200, message: "Otp verified already" });
+        }
+        const updatedStatus = await Enquiry.findOneAndUpdate(
+            { _id: enquiry_id },
+            { $set: { status: "logistic_pickup" } },
+            { new: true }
+          );
+          
+          const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
+            { _id: quote_id },
+            { $set: { status: "logistic_pickup" } },
+            { new: true }
+          );
+          
+  
+  
+        otpData.verified = true;
+        otpData.is_used = true;
+        await otpData.save();
+  
+        res.json({ code: 200, message: "Otp verified successfullyyy" });
+    } catch (error) {
+      utils.handleError(res, error);
+    }
+  };

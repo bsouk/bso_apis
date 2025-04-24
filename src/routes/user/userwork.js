@@ -438,5 +438,10 @@ router.post(
     requireAuth,
     controller.verifyOtpForEnquiry
 )
+router.post(
+    "/verifyOtpForQuote",
+    trimRequest.all,
+    requireAuth,
+    controller.verifyOtpForQuote)
 
 module.exports = router;
