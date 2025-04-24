@@ -30,31 +30,32 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     currency: {
         type: String
     },
+    admin_price:{
+        type: Number,
+        default: 0
+    },
+    logistics_price: {
+        type: Number,
+        default: 0
+    },
+    margin_type:{
+        type: String,
+        enum: ["flat", "percentage"],
+        default: "flat"
+    },
+    margin_value: {
+        type: Number,
+        default: 0
+    },
+    grand_total: {
+        type: Number,
+        default: 0
+    },
     enquiry_items: {
         type: [
 
             {
-                admin_price:{
-                    type: Number,
-                    default: 0
-                },
-                logistics_price: {
-                    type: Number,
-                    default: 0
-                },
-                margin_type:{
-                    type: String,
-                    enum: ["flat", "percentage"],
-                    default: "flat"
-                },
-                margin_value: {
-                    type: Number,
-                    default: 0
-                },
-                grand_total: {
-                    type: Number,
-                    default: 0
-                },
+                
 
                 brand: {
                     type: String

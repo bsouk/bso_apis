@@ -2240,7 +2240,7 @@ exports.updateSubmitQuery=async (req, res) => {
       code: 404
     })
   }
-  const updateddata= await EnquiryQuotes.findOneAndUpdate({_id:enq_id}, {$set:{enquiry_items:data.enquiry_items, is_admin_updated:true}}, {new: true})
+  const updateddata= await EnquiryQuotes.findOneAndUpdate({_id:enq_id}, {$set:{enquiry_items:data.enquiry_items,margin_type:data.margin_type,margin_value:data.margin_value,grand_total:data.grand_total,admin_price:data.admin_price,logistics_price:data.logistics_price, is_admin_updated:true}}, {new: true})
   if(!updateddata) {
     return res.status(400).json({
       message: 'Failed to update quote',
