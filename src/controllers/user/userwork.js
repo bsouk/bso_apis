@@ -32,7 +32,8 @@ const Team = require("../../models/team");
 const payment_terms = require("../../models/payment_terms");
 const logistics_quotes = require("../../models/logistics_quotes");
 const Commision = require("../../models/commision")
-const EnquiryOtp = require("../../models/EnquiryOtp")
+const EnquiryOtp = require("../../models/EnquiryOtp");
+const payment = require("../../models/payment");
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -3088,11 +3089,15 @@ exports.getEnquiryDetails = async (req, res) => {
             delete selected_supplier.quote_id.admin_charge;
         }
         const commisiondata = await Commision.findOne();
+        const ispaymentdone=await payment.findOne({ enquiry_id: id });
         const newdata = {
             ...rest,
             selected_supplier: selected_supplier?.quote_id || null,
             admincommission: commisiondata || null,
         };
+        if(ispaymentdone){
+            newdata.payment_status="paid";
+        }
 
         return res.status(200).json({
             message: "Query details fetched successfully",
