@@ -4606,12 +4606,7 @@ exports.verifyOtpForEnquiry = async (req, res) => {
             message: "The OTP you entered is incorrect. Please try again",
             code: 400,
           });
-        if (otpData.verified == true){
-            console.log("Otp already verified")
-           
-              
-            return res.json({ code: 200, message: "Otp verified already" });
-        }
+        
         const updatedStatus = await Enquiry.findOneAndUpdate(
             { _id: enquiry_id },
             { $set: { status: "delivered" } },
