@@ -2231,17 +2231,42 @@ exports.finalquotes = async (req, res) => {
 };
 exports.updateSubmitQuery=async (req, res) => {
   const enq_id=req.params.id
-  const data=req.body
-  console.log('data',data.enquiry_items)
-  const exist=await EnquiryQuotes.findById(enq_id)
+  const {item,admin_price,logistics_price,margin_type,margin_value,grand_total}=req.body
+  console.log('data',req.body)
+  const exist=await Enquiry.findOne({_id:enq_id})
   if(!exist) {
     return res.status(404).json({
       message: 'Quote not found',
       code: 404
     })
   }
-  const updateddata= await EnquiryQuotes.findOneAndUpdate({_id:enq_id}, {$set:{enquiry_items:data.enquiry_items,margin_type:data.margin_type,margin_value:data.margin_value,grand_total:data.grand_total,admin_price:data.admin_price,logistics_price:data.logistics_price, is_admin_updated:true}}, {new: true})
-  if(!updateddata) {
+  let updatedItem
+  for(const it of item){
+     updatedItem = await EnquiryQuotes.findOneAndUpdate(
+      {
+        enquiry_id: enq_id,
+        'enquiry_items._id': it.item_id // Use the actual ObjectId of the item you want to update
+      },
+      {
+        $set: {
+          'enquiry_items.$.unit_price': it.newUnitPrice,
+          is_admin_updated: true,// Optional, based on your logic
+          admin_price,
+          logistics_price,
+          margin_type,
+          margin_value,
+          grand_total
+  
+        }
+      },
+      { new: true }
+    );
+
+  }
+ 
+  console.log('updatedItem',updatedItem)
+  
+  if(!updatedItem) {
     return res.status(400).json({
       message: 'Failed to update quote',
       code: 400
@@ -2249,7 +2274,7 @@ exports.updateSubmitQuery=async (req, res) => {
   }
   return res.status(200).json({
     message: 'Quote updated successfully',
-    data: updateddata,
+    data: updatedItem,
     code: 200
   })
 
