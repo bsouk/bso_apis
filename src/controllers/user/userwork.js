@@ -4601,7 +4601,7 @@ exports.verifyOtpForEnquiry = async (req, res) => {
         });
         console.log("otpData : ", req.body)
   
-        if (!otpData || otpData.otp !== otp)
+        if (!otpData)
           return utils.handleError(res, {
             message: "The OTP you entered is incorrect. Please try again",
             code: 400,
