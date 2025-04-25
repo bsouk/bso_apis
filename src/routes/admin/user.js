@@ -298,5 +298,6 @@ router.get(
   trimRequest.all,
   controller.getlogisticquote
 )
+router.get("/viewLogisticQuote/:id", trimRequest.all, controller.viewLogisticQuote)
 
 module.exports = router;

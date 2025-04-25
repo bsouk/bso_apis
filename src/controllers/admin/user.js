@@ -2315,3 +2315,18 @@ exports.getlogisticquote=async (req, res) => {
       }
 
 }
+exports.viewLogisticQuote=async (req, res) => {
+  const { id } = req.params
+  const data = await logistics_quotes.findOne({ _id: id })
+  if (!data) {
+    return res.status(404).json({
+      message: "Logistics quote not found.",
+      code: 404
+    });
+  }
+  return res.status(200).json({
+    message: "Logistics quote fetched successfully",
+    data,
+    code: 200
+  });
+}
