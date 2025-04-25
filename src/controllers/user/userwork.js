@@ -2782,7 +2782,7 @@ exports.getAllEnquiry = async (req, res) => {
             filter.priority = "high"
         }
         if (hide_quote) {
-            filter.total_quotes = { $gt: 0 }
+            filter.total_supplier_quotes = { $gt: 0 }
         }
         if (logisticsview) {
             filter.shipment_type = "delivery"
