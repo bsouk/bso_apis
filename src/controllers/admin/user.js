@@ -2317,6 +2317,63 @@ exports.getlogisticquote=async (req, res) => {
 }
 exports.viewLogisticQuote=async (req, res) => {
   const { id } = req.params
+  const logistic = await logistics_quotes.aggregate([
+    {
+      $match: { _id: new mongoose.Types.ObjectId(id) }
+    },
+    {
+      $lookup: {
+        from: "enquires",
+        localField: "enquiry_id",
+        foreignField: "_id",
+        as: "enquiry"
+      }
+    },
+    {
+      $unwind: {
+        path: "$enquiry",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: "enquiry_quotes",
+        localField: "enquiry.selected_supplier.quote_id",
+        foreignField: "_id",
+        as: "quote"
+      }
+    },
+    {
+      $unwind: {
+        path: "$quote",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: "addresses",
+        localField: "quote.pickup_address",
+        foreignField: "_id",
+        as: "pickup_address"
+      }
+    },
+    {
+      $unwind: {
+        path: "$pickup_address",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: "addresses",
+        localField: "enquiry.shipping_address",
+        foreignField: "_id",
+        as: "shipping_address"
+      }
+    }
+  ]);
+  
+
   const data = await logistics_quotes.findOne({ _id: id })
   if (!data) {
     return res.status(404).json({
@@ -2326,7 +2383,7 @@ exports.viewLogisticQuote=async (req, res) => {
   }
   return res.status(200).json({
     message: "Logistics quote fetched successfully",
-    data,
+    data:logistic,
     code: 200
   });
 }
