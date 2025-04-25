@@ -181,12 +181,12 @@ exports.editProfile = async (req, res) => {
         if (data.email) {
             const doesEmailExists = await User.findOne({
                 email: data.email,
-                _id: { $ne: new mongoose.Types.ObjectId(id) }, 
+                _id: { $ne: new mongoose.Types.ObjectId(id) },
             });
 
             if (doesEmailExists)
                 return utils.handleError(res, {
-                    message: "This email address is already registered", 
+                    message: "This email address is already registered",
                     code: 400,
                 });
         }
@@ -259,7 +259,7 @@ exports.editProfile = async (req, res) => {
             case "supplier": {
                 const requiredFields = [
                     'full_name',
-                    
+
                     'email',
                     'phone_number',
                     'bank_details.account_holder_name',
@@ -272,7 +272,7 @@ exports.editProfile = async (req, res) => {
                     'bank_details.address.state',
                     'bank_details.address.zip_code',
                     'bank_details.address.country',
-                    
+
                     'company_data.name',
                     'company_data.business_category',
                     'company_data.phone_number',
@@ -2787,7 +2787,7 @@ exports.getAllEnquiry = async (req, res) => {
             filter.total_supplier_quotes = { $lte: 0 };
         }
         if (logisticsview) {
-            
+
             filter.shipment_type = "delivery"
             filter.selected_supplier = { $exists: true }
         }
@@ -3074,7 +3074,8 @@ exports.getEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate({ path: 'selected_supplier.quote_id', populate: "pickup_address" })
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+            .populate({ path: 'selected_supplier.quote_id', populate: [{path:"pickup_address"},{path:'enquiry_items.quantity.unit'}] })
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {
@@ -3092,14 +3093,14 @@ exports.getEnquiryDetails = async (req, res) => {
             delete selected_supplier.quote_id.admin_charge;
         }
         const commisiondata = await Commision.findOne();
-        const ispaymentdone=await payment.findOne({ enquiry_id: id });
+        const ispaymentdone = await payment.findOne({ enquiry_id: id });
         const newdata = {
             ...rest,
             selected_supplier: selected_supplier?.quote_id || null,
             admincommission: commisiondata || null,
         };
-        if(ispaymentdone){
-            newdata.payment_status="paid";
+        if (ispaymentdone) {
+            newdata.payment_status = "paid";
         }
 
         return res.status(200).json({
@@ -3286,7 +3287,7 @@ exports.AddTeamMember = async (req, res) => {
     try {
         const userId = req.user._id;
         const data = req.body;
-        console.log("userId",userId)
+        console.log("userId", userId)
 
         const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
         console.log("activeSubscription : ", activeSubscription)
@@ -3323,7 +3324,7 @@ exports.AddTeamMember = async (req, res) => {
         if (teamdata.members.length >= 3) {
             const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
 
-            if (!Member ||teamdata.members.length >= Member.member_count) {
+            if (!Member || teamdata.members.length >= Member.member_count) {
                 return res.status(402).json({
                     message: "You have reached your member limit",
                     code: 402
@@ -3509,7 +3510,7 @@ exports.GetTeamMember = async (req, res) => {
         return res.status(200).json({
             message: "Team Members fetched successfully",
             data: teamMembers,
-            team_limit: teamLimitCount !==0 ? teamLimitCount : 3,
+            team_limit: teamLimitCount !== 0 ? teamLimitCount : 3,
             count: teamMemberCount,
             code: 200
         });
@@ -4398,7 +4399,7 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
 
 exports.sendOtpForEnquiry = async (req, res) => {
     try {
-       
+
         const { enquiry_id, quote_id } = req.body;
         const enquiry = await Enquiry.findOne({ _id: enquiry_id })
         const user = await User.findOne({ _id: enquiry.user_id })
@@ -4449,7 +4450,7 @@ exports.sendOtpForEnquiry = async (req, res) => {
 };
 exports.sendOtpForQuote = async (req, res) => {
     try {
-       
+
         const { enquiry_id, quote_id } = req.body;
         const enquiry = await EnquiryQuotes.findOne({ _id: quote_id })
         const user = await User.findOne({ _id: enquiry.user_id })
@@ -4502,130 +4503,130 @@ exports.sendOtpForQuote = async (req, res) => {
 
 exports.verifyOtpForEnquiry = async (req, res) => {
     try {
-        const { enquiry_id, quote_id,otp } = req.body;
-    
+        const { enquiry_id, quote_id, otp } = req.body;
+
         const otpData = await EnquiryOtp.findOne({
             enquiry_id,
             quote_id,
         });
         console.log("otpData : ", req.body)
-  
+
         if (!otpData || otpData.otp !== otp)
-          return utils.handleError(res, {
-            message: "The OTP you entered is incorrect. Please try again",
-            code: 400,
-          });
-        if (otpData.verified == true){
+            return utils.handleError(res, {
+                message: "The OTP you entered is incorrect. Please try again",
+                code: 400,
+            });
+        if (otpData.verified == true) {
             console.log("Otp already verified")
-           
-              
+
+
             return res.json({ code: 200, message: "Otp verified already" });
         }
         const updatedStatus = await Enquiry.findOneAndUpdate(
             { _id: enquiry_id },
             { $set: { status: "self_delivered" } },
             { new: true }
-          );
-          
-          const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
+        );
+
+        const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
             { _id: quote_id },
             { $set: { status: "delivered" } },
             { new: true }
-          );
-          
-  
-  
+        );
+
+
+
         otpData.verified = true;
         otpData.is_used = true;
         await otpData.save();
-  
+
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
-      utils.handleError(res, error);
+        utils.handleError(res, error);
     }
-  };
-  exports.verifyOtpForQuote = async (req, res) => {
+};
+exports.verifyOtpForQuote = async (req, res) => {
     try {
-        const { enquiry_id, quote_id,otp } = req.body;
-    
+        const { enquiry_id, quote_id, otp } = req.body;
+
         const otpData = await EnquiryOtp.findOne({
             enquiry_id,
             quote_id,
         });
         console.log("otpData : ", req.body)
-  
+
         if (!otpData || otpData.otp !== otp)
-          return utils.handleError(res, {
-            message: "The OTP you entered is incorrect. Please try again",
-            code: 400,
-          });
-        if (otpData.verified == true){
+            return utils.handleError(res, {
+                message: "The OTP you entered is incorrect. Please try again",
+                code: 400,
+            });
+        if (otpData.verified == true) {
             console.log("Otp already verified")
-           
-              
+
+
             return res.json({ code: 200, message: "Otp verified already" });
         }
         const updatedStatus = await Enquiry.findOneAndUpdate(
             { _id: enquiry_id },
             { $set: { status: "logistic_pickup" } },
             { new: true }
-          );
-          
-          const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
+        );
+
+        const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
             { _id: quote_id },
             { $set: { status: "logistic_pickup" } },
             { new: true }
-          );
-          
-  
-  
+        );
+
+
+
         otpData.verified = true;
         otpData.is_used = true;
         await otpData.save();
-  
+
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
-      utils.handleError(res, error);
+        utils.handleError(res, error);
     }
-  };
+};
 
 
-  exports.verifyOtpForBuyer = async (req, res) => {
+exports.verifyOtpForBuyer = async (req, res) => {
     try {
-        const { enquiry_id, quote_id,otp } = req.body;
-    
+        const { enquiry_id, quote_id, otp } = req.body;
+
         const otpData = await EnquiryOtp.findOne({
             enquiry_id,
             quote_id,
         });
         console.log("otpData : ", req.body)
-  
+
         if (!otpData)
-          return utils.handleError(res, {
-            message: "The OTP you entered is incorrect. Please try again",
-            code: 400,
-          });
-        
+            return utils.handleError(res, {
+                message: "The OTP you entered is incorrect. Please try again",
+                code: 400,
+            });
+
         const updatedStatus = await Enquiry.findOneAndUpdate(
             { _id: enquiry_id },
             { $set: { status: "delivered" } },
             { new: true }
-          );
-          
-          const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
+        );
+
+        const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
             { _id: quote_id },
             { $set: { status: "delivered" } },
             { new: true }
-          );
-          
-  
-  
+        );
+
+
+
         otpData.verified = true;
         otpData.is_used = true;
         await otpData.save();
-  
+
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
-      utils.handleError(res, error);
+        utils.handleError(res, error);
     }
-  };
+};
