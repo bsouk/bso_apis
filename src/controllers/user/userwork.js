@@ -2781,10 +2781,13 @@ exports.getAllEnquiry = async (req, res) => {
         if (priority) {
             filter.priority = "high"
         }
-        if (hide_quote) {
-            filter.total_supplier_quotes = { $gt: 0 }
+        if (hide_quote && logisticsview) {
+            filter.total_logistics_quotes = { $lte: 0 };
+        } else if (hide_quote) {
+            filter.total_supplier_quotes = { $lte: 0 };
         }
         if (logisticsview) {
+            
             filter.shipment_type = "delivery"
             filter.selected_supplier = { $exists: true }
         }
