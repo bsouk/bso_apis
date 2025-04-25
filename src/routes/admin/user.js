@@ -293,5 +293,10 @@ router.get(
   controller.finalquotes
 )
 router.put("/update-submit-query", trimRequest.all, controller.updateSubmitQuery)
+router.get(
+  "/getlogisticquote/:id",
+  trimRequest.all,
+  controller.getlogisticquote
+)
 
 module.exports = router;

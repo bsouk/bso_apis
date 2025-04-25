@@ -10,6 +10,7 @@ const commision = require("../../models/commision");
 const EnquiryQuotes = require("../../models/EnquiryQuotes")
 const Enquiry = require("../../models/Enquiry")
 const subscription = require("../../models/subscription");
+const logistics_quotes = require("../../models/logistics_quotes");
 function createNewPassword() {
   const password = generatePassword.generate({
     length: 8,
@@ -2279,5 +2280,38 @@ exports.updateSubmitQuery=async (req, res) => {
   })
 
 
+
+}
+exports.getlogisticquote=async (req, res) => {
+  try {
+          const { id } = req.params
+          console.log("id : ", id)
+  
+          const data = await logistics_quotes.find({ enquiry_id: id })
+              .populate({
+                  path: 'enquiry_id',
+                  populate: [
+                      {
+                          path: "selected_supplier.quote_id",
+                          populate: { path: "pickup_address", strictPopulate: false }
+                      },
+                      {
+                          path: "enquiry_items.quantity.unit"
+                      }
+                  ]
+              });
+          console.log("data : ", data)
+  
+          const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
+  
+          return res.status(200).json({
+              message: "Logistics quotes fetched successfully",
+              data,
+              count,
+              code: 200
+          })
+      } catch (error) {
+          utils.handleError(res, error);
+      }
 
 }
