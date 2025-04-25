@@ -3286,7 +3286,7 @@ exports.AddTeamMember = async (req, res) => {
     try {
         const userId = req.user._id;
         const data = req.body;
-        console.log("userId")
+        console.log("userId",userId)
 
         const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
         console.log("activeSubscription : ", activeSubscription)
@@ -3323,7 +3323,7 @@ exports.AddTeamMember = async (req, res) => {
         if (teamdata.members.length >= 3) {
             const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
 
-            if (!Member || Member.member_count <= (teamdata.members.length - 3)) {
+            if (!Member ||teamdata.members.length >= Member.member_count) {
                 return res.status(402).json({
                     message: "You have reached your member limit",
                     code: 402
