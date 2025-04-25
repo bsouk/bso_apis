@@ -2330,3 +2330,18 @@ exports.viewLogisticQuote=async (req, res) => {
     code: 200
   });
 }
+exports.acceptLogisticQuote=async (req, res) => {
+  const id= req.params.id
+  const updatelogisticQuote=await logistics_quotes.findByIdAndUpdate(id, { $set: { is_selected: true } }, { new: true })
+  if (!updatelogisticQuote) {
+    return res.status(404).json({
+      message: "Logistics quote not found.",
+      code: 404
+    });
+  }
+  return res.status(200).json({
+    message: "Logistics quote accepted successfully.",
+    data: updatelogisticQuote,
+    code: 200
+  });
+}

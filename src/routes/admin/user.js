@@ -299,5 +299,6 @@ router.get(
   controller.getlogisticquote
 )
 router.get("/viewLogisticQuote/:id", trimRequest.all, controller.viewLogisticQuote)
+router.put("/acceptLogisticQuote/:id", trimRequest.all, controller.acceptLogisticQuote)
 
 module.exports = router;
