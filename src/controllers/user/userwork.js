@@ -3286,6 +3286,7 @@ exports.AddTeamMember = async (req, res) => {
     try {
         const userId = req.user._id;
         const data = req.body;
+        console.log("userId")
 
         const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
         console.log("activeSubscription : ", activeSubscription)
@@ -3368,7 +3369,7 @@ exports.AddTeamMember = async (req, res) => {
         Adduser.last_login = new Date();
         await Adduser.save();
 
-        let link = `${process.env.APP_URL}team-invitation?token=${token}&id=${userId}`
+        let link = `${process.env.APP_URL}team-invitation?token=${token}&id=${Adduser._id}`
         console.log("link : ", link)
         const mailOptions = {
             to: Adduser.email,
@@ -3814,15 +3815,15 @@ exports.changeInviteStatus = async (req, res) => {
         const data = req.body;
         console.log("userIdddd : ", userId)
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
-        console.log("activeSubscription : ", activeSubscription)
+        // const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(data.userId), status: "active" });
+        // console.log("activeSubscription : ", activeSubscription)
 
-        if (!activeSubscription) {
-            return utils.handleError(res, {
-                message: "No subscription found",
-                code: 400,
-            });
-        }
+        // if (!activeSubscription) {
+        //     return utils.handleError(res, {
+        //         message: "No subscription found",
+        //         code: 400,
+        //     });
+        // }
 
         const userdata = User.findOne({ _id: data.user_id })
         console.log("userdata : ", userdata)
