@@ -2372,18 +2372,68 @@ exports.viewLogisticQuote=async (req, res) => {
       }
     }
   ]);
+  const subscriptiondata = await subscription.aggregate([
+    {
+      $match: {
+        user_id: new mongoose.Types.ObjectId(data.enquiry_id.user_id),
+        status: "active"
+      }
+    },
+    {
+      $lookup: {
+        from: 'plans',
+        let: { plan_id: '$plan_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ['$plan_id', '$$plan_id'] }
+            }
+          },
+          {
+            $project: {
+              plan_id: 1,
+              name: 1,
+              duration: 1,
+              price: 1,
+              plan_step: 1
+              // Add or remove fields here as needed
+            }
+          }
+        ],
+        as: 'plan'
+      }
+    },
+    {
+      $unwind: {
+        path: '$plan',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        plan: 1,
+        _id: 0
+      }
+    },
+    {
+      $sort: {
+        createdAt: -1
+      }
+    },
+    {
+      $limit: 1
+    }
+  ]);
+
+  console.log("data : ", data)
+  const plan_step = subscriptiondata[0]?.plan?.plan_step || null;
   
 
-  const data = await logistics_quotes.findOne({ _id: id })
-  if (!data) {
-    return res.status(404).json({
-      message: "Logistics quote not found.",
-      code: 404
-    });
-  }
+ 
   return res.status(200).json({
     message: "Logistics quote fetched successfully",
     data:logistic[0],
+    plan_step,
     code: 200
   });
 }
