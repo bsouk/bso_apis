@@ -3368,7 +3368,7 @@ exports.AddTeamMember = async (req, res) => {
         Adduser.last_login = new Date();
         await Adduser.save();
 
-        let link = `${process.env.APP_URL}team-invitation?token=${token}&id=${Adduser._id}`
+        let link = `${process.env.APP_URL}team-invitation?token=${token}&id=${userId}`
         console.log("link : ", link)
         const mailOptions = {
             to: Adduser.email,
@@ -3812,6 +3812,7 @@ exports.changeInviteStatus = async (req, res) => {
     try {
         const userId = req.user._id
         const data = req.body;
+        console.log("userIdddd : ", userId)
 
         const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
         console.log("activeSubscription : ", activeSubscription)
