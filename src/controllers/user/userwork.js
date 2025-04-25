@@ -3562,6 +3562,7 @@ exports.deleteTeamMember = async (req, res) => {
     try {
         const userId = req.user._id
         const Id = req.params.Id;
+        console.log("userId : ", userId)
 
         const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
         console.log("activeSubscription : ", activeSubscription)
@@ -3583,16 +3584,9 @@ exports.deleteTeamMember = async (req, res) => {
             });
         }
 
-        const result = await Team.findByIdAndUpdate(
+        const result = await Team.findOneAndUpdate(
             {
-                $or: [
-                    {
-                        admin_id: new mongoose.Types.ObjectId(Id)
-                    },
-                    {
-                        members: { $in: [new mongoose.Types.ObjectId(Id)] }
-                    }
-                ]
+                admin_id: new mongoose.Types.ObjectId(userId)
             },
             {
                 $pull: {
