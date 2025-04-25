@@ -59,6 +59,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: [
 
             {
+                admin_unit_price: {
+                    type: Number,
+                    default: 0
+                },
                 
 
                 brand: {

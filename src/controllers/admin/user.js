@@ -2231,25 +2231,25 @@ exports.finalquotes = async (req, res) => {
 };
 exports.updateSubmitQuery=async (req, res) => {
   const enq_id=req.params.id
-  const {item,admin_price,logistics_price,margin_type,margin_value,grand_total}=req.body
-  console.log('data',req.body)
-  const exist=await Enquiry.findOne({_id:enq_id})
-  if(!exist) {
-    return res.status(404).json({
-      message: 'Quote not found',
-      code: 404
-    })
-  }
+  const {items,admin_price,logistics_price,margin_type,margin_value,grand_total}=req.body
+  console.log('dataaaaaaaaaaaaa',req.body)
+  // const exist=await EnquiryQuotes.findOne({_id:items.})
+  // if(!exist) {
+  //   return res.status(404).json({ 
+  //     message: 'Quote not found',
+  //     code: 404
+  //   })
+  // }
   let updatedItem
-  for(const it of item){
+  for(const item of items){
      updatedItem = await EnquiryQuotes.findOneAndUpdate(
       {
-        enquiry_id: enq_id,
-        'enquiry_items._id': it.item_id // Use the actual ObjectId of the item you want to update
+        _id: item.quote_id,
+        'enquiry_items._id': item.item_id 
       },
       {
         $set: {
-          'enquiry_items.$.unit_price': it.newUnitPrice,
+          'enquiry_items.$.admin_unit_price': item.newUnitPrice,
           is_admin_updated: true,// Optional, based on your logic
           admin_price,
           logistics_price,
