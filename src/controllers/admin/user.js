@@ -2383,7 +2383,7 @@ exports.viewLogisticQuote=async (req, res) => {
   }
   return res.status(200).json({
     message: "Logistics quote fetched successfully",
-    data:logistic,
+    data:logistic[0],
     code: 200
   });
 }
