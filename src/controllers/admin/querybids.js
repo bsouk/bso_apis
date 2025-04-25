@@ -280,7 +280,7 @@ exports.deletequery = async (req, res) => {
                 code: 400
             });
         }
-        const existingRecords = await Query.find({ _id: { $in: ids } });
+        const existingRecords = await Enquiry.find({ _id: { $in: ids } });
 
         if (existingRecords.length !== ids.length) {
             return res.status(404).json({
@@ -288,7 +288,7 @@ exports.deletequery = async (req, res) => {
                 code: 404
             });
         }
-        const result = await Query.deleteMany({ _id: { $in: ids } });
+        const result = await Enquiry.deleteMany({ _id: { $in: ids } });
         const assigned_supplier_result = await query_assigned_suppliers.deleteMany({ query_id: { $in: ids } })
         const query_quotation = await quotation.deleteMany({ query_id: { $in: ids } })
 
