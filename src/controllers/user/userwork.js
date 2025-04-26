@@ -4066,10 +4066,11 @@ exports.selectSupplierQuote = async (req, res) => {
 
 exports.getMyAllQuotes = async (req, res) => {
     try {
+        const { offset = 0, limit = 10 } = req.query
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 })
+        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
         console.log("data : ", data)
 
         const count = await EnquiryQuotes.countDocuments({ user_id: new mongoose.Types.ObjectId(userId) })
