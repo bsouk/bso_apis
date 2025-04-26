@@ -417,6 +417,7 @@ router.patch(
 router.get(
     "/getLogisticsQuotes/:id",
     trimRequest.all,
+    requireAuth,
     controller.getLogisticsQuotes
 )
 
