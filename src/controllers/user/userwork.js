@@ -4404,6 +4404,7 @@ exports.getLogisticsQuotes = async (req, res) => {
 
 exports.getMyOwnLogisticsQuotes = async (req, res) => {
     try {
+        const { offset = 0, limit = 10 } = req.query
         const id = req.user._id
         console.log("id : ", id)
 
@@ -4419,7 +4420,7 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
                         path: "enquiry_items.quantity.unit"
                     }
                 ]
-            }).sort({ created_at: -1 })
+            }).sort({ created_at: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
         console.log("data : ", data)
 
         const count = await logistics_quotes.countDocuments({ user_id: new mongoose.Types.ObjectId(id) })
