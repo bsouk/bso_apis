@@ -63,8 +63,6 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                     type: Number,
                     default: 0
                 },
-                
-
                 brand: {
                     type: String
                 },

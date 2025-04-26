@@ -2327,7 +2327,7 @@ exports.createEnquiry = async (req, res) => {
         const subscription = await Subscription.aggregate([
             {
                 $match: {
-                    user_id: new mongoose.Types.ObjectId(id), 
+                    user_id: new mongoose.Types.ObjectId(id),
                     status: "active"
                 }
             },
@@ -3075,7 +3075,7 @@ exports.getEnquiryDetails = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
         const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit")
-            .populate({ path: 'selected_supplier.quote_id', populate: [{path:"pickup_address"},{path:'enquiry_items.quantity.unit'}] })
+            .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {
@@ -3942,11 +3942,49 @@ exports.ActivateTeamMember = async (req, res) => {
 
 exports.getAllSupplierQuotes = async (req, res) => {
     try {
+        const userId = req.user._id;
         const { id } = req.params
         console.log("id : ", id)
+        const plan = await Subscription.aggregate(
+            [
+                {
+                    $match: {
+                        user_id: new mongoose.Types.ObjectId(userId),
+                        status: "active",
+                        type: "buyer"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "plans",
+                        localField: 'plan_id',
+                        foreignField: 'plan_id',
+                        as: 'plan'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$plan",
+                        preserveNullAndEmptyArrays: true
+                    }
+                }
+            ]
+        )
+        console.log("plan : ", plan)
 
-        const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
-        console.log("data : ", data) 
+        let data = {}
+        if (plan.length === 0) {
+            return res.status(200).json({
+                message: "No active subscription found",
+                code: 200
+            })
+        }
+        if (plan[0]?.plan?.plan_step === "direct") {
+            data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+        } else {
+            data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_selected: true }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+        }
+        console.log("data : ", data)
 
         const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
 
