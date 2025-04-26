@@ -4384,7 +4384,7 @@ exports.getLogisticsQuotes = async (req, res) => {
                         path: "enquiry_items.quantity.unit"
                     }
                 ]
-            });
+            }).populate({ path: 'user_id', select: "company_data" })
         console.log("data : ", data)
 
         const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
