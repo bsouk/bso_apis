@@ -364,6 +364,7 @@ router.post(
 router.get(
     "/getSupplierQuotes/:id",
     trimRequest.all,
+    requireAuth,
     controller.getAllSupplierQuotes
 )
 
