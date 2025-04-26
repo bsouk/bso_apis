@@ -2438,6 +2438,20 @@ exports.viewLogisticQuote = async (req, res) => {
 exports.acceptLogisticQuote = async (req, res) => {
   const id = req.params.id
   const updatelogisticQuote = await logistics_quotes.findByIdAndUpdate(id, { $set: { is_selected: true } }, { new: true })
+  const selected = await Enquiry.findByIdAndUpdate(
+    {
+      _id: new mongoose.Types.ObjectId(updatelogisticQuote?.enquiry_id)
+    },
+    {
+      $set: {
+        selected_logistics: {
+          quote_id: new mongoose.Types.ObjectId(id)
+        },
+        shipment_type: "delivery"
+      }
+    }, { new: true }
+  )
+  console.log("selected : ", selected)
   if (!updatelogisticQuote) {
     return res.status(404).json({
       message: "Logistics quote not found.",
