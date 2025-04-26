@@ -204,6 +204,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    is_admin_approved : {
+        type: Boolean,
+        default: false
+    },
     final_price: {
         type: Number,
         default: 0

@@ -3982,7 +3982,7 @@ exports.getAllSupplierQuotes = async (req, res) => {
         if (plan[0]?.plan?.plan_step === "direct") {
             data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
         } else {
-            data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_selected: true }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+            data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_admin_approved: true }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
         }
         console.log("data : ", data)
 

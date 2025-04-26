@@ -2131,11 +2131,9 @@ exports.acceptsupplierEnquiry = async (req, res) => {
   try {
     const { id, is_selected } = req.body;
 
-
-
     const result = await EnquiryQuotes.findOneAndUpdate(
       { _id: id },
-      { $set: { is_selected } },
+      { $set: { is_admin_approved: is_selected } },
       { new: true }
     );
     if (!result) {
@@ -2195,7 +2193,7 @@ exports.finalquotes = async (req, res) => {
         code: 404
       });
     }
-    const supplier = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_selected: true }).populate("enquiry_items.quantity.unit").populate({
+    const supplier = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_admin_approved: true }).populate("enquiry_items.quantity.unit").populate({
       path: "enquiry_id",
       select: "enquiry_unique_id user_id priority shipping_address expiry_date",
       populate: {
@@ -2230,10 +2228,10 @@ exports.finalquotes = async (req, res) => {
     utils.handleError(res, error);
   }
 };
-exports.updateSubmitQuery=async (req, res) => {
-  const enq_id=req.params.id
-  const {items,admin_price,logistics_price,margin_type,margin_value,grand_total}=req.body
-  console.log('dataaaaaaaaaaaaa',req.body)
+exports.updateSubmitQuery = async (req, res) => {
+  const enq_id = req.params.id
+  const { items, admin_price, logistics_price, margin_type, margin_value, grand_total } = req.body
+  console.log('dataaaaaaaaaaaaa', req.body)
   // const exist=await EnquiryQuotes.findOne({_id:items.})
   // if(!exist) {
   //   return res.status(404).json({ 
@@ -2242,11 +2240,11 @@ exports.updateSubmitQuery=async (req, res) => {
   //   })
   // }
   let updatedItem
-  for(const item of items){
-     updatedItem = await EnquiryQuotes.findOneAndUpdate(
+  for (const item of items) {
+    updatedItem = await EnquiryQuotes.findOneAndUpdate(
       {
         _id: item.quote_id,
-        'enquiry_items._id': item.item_id 
+        'enquiry_items._id': item.item_id
       },
       {
         $set: {
@@ -2257,17 +2255,17 @@ exports.updateSubmitQuery=async (req, res) => {
           margin_type,
           margin_value,
           grand_total
-  
+
         }
       },
       { new: true }
     );
 
   }
- 
-  console.log('updatedItem',updatedItem)
-  
-  if(!updatedItem) {
+
+  console.log('updatedItem', updatedItem)
+
+  if (!updatedItem) {
     return res.status(400).json({
       message: 'Failed to update quote',
       code: 400
@@ -2282,40 +2280,40 @@ exports.updateSubmitQuery=async (req, res) => {
 
 
 }
-exports.getlogisticquote=async (req, res) => {
+exports.getlogisticquote = async (req, res) => {
   try {
-          const { id } = req.params
-          console.log("id : ", id)
-  
-          const data = await logistics_quotes.find({ enquiry_id: id })
-              .populate({
-                  path: 'enquiry_id',
-                  populate: [
-                      {
-                          path: "selected_supplier.quote_id",
-                          populate: { path: "pickup_address", strictPopulate: false }
-                      },
-                      {
-                          path: "enquiry_items.quantity.unit"
-                      }
-                  ]
-              });
-          console.log("data : ", data)
-  
-          const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
-  
-          return res.status(200).json({
-              message: "Logistics quotes fetched successfully",
-              data,
-              count,
-              code: 200
-          })
-      } catch (error) {
-          utils.handleError(res, error);
-      }
+    const { id } = req.params
+    console.log("id : ", id)
+
+    const data = await logistics_quotes.find({ enquiry_id: id })
+      .populate({
+        path: 'enquiry_id',
+        populate: [
+          {
+            path: "selected_supplier.quote_id",
+            populate: { path: "pickup_address", strictPopulate: false }
+          },
+          {
+            path: "enquiry_items.quantity.unit"
+          }
+        ]
+      });
+    console.log("data : ", data)
+
+    const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
+
+    return res.status(200).json({
+      message: "Logistics quotes fetched successfully",
+      data,
+      count,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
 
 }
-exports.viewLogisticQuote=async (req, res) => {
+exports.viewLogisticQuote = async (req, res) => {
   const { id } = req.params
   const logistic = await logistics_quotes.aggregate([
     {
@@ -2433,14 +2431,14 @@ exports.viewLogisticQuote=async (req, res) => {
 
   return res.status(200).json({
     message: "Logistics quote fetched successfully",
-    data:logistic[0],
+    data: logistic[0],
     plan_step,
     code: 200
   });
 }
-exports.acceptLogisticQuote=async (req, res) => {
-  const id= req.params.id
-  const updatelogisticQuote=await logistics_quotes.findByIdAndUpdate(id, { $set: { is_selected: true } }, { new: true })
+exports.acceptLogisticQuote = async (req, res) => {
+  const id = req.params.id
+  const updatelogisticQuote = await logistics_quotes.findByIdAndUpdate(id, { $set: { is_selected: true } }, { new: true })
   if (!updatelogisticQuote) {
     return res.status(404).json({
       message: "Logistics quote not found.",
