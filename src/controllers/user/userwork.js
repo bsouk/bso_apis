@@ -4483,7 +4483,7 @@ exports.sendOtpForEnquiry = async (req, res) => {
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
 
-        res.json({ code: 200, message: "OTP sent successfully", otp }); // Remove `otp` if you don't want to expose it
+        res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop() }); // Remove `otp` if you don't want to expose it
     } catch (error) {
         utils.handleError(res, error);
     }
@@ -4534,7 +4534,7 @@ exports.sendOtpForQuote = async (req, res) => {
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
 
-        res.json({ code: 200, message: "OTP sent successfully", otp }); // Remove `otp` if you don't want to expose it
+        res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop() }); // Remove `otp` if you don't want to expose it
     } catch (error) {
         utils.handleError(res, error);
     }
