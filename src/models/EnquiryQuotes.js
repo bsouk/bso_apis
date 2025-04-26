@@ -6,10 +6,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
     },
-    shipment_type:{
-        type:String,
-        default: "pending"
-    },
+    // shipment_type:{
+    //     type:String,
+    //     default: "pending"
+    // },
     is_admin_updated:{
         type: Boolean,
         default: false
