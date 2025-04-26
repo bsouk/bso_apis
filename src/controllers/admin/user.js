@@ -2372,10 +2372,12 @@ exports.viewLogisticQuote=async (req, res) => {
       }
     }
   ]);
+  console.log('logistic', logistic)
+  let logistic_id = logistic[0].user_id;
   const subscriptiondata = await subscription.aggregate([
     {
       $match: {
-        user_id: new mongoose.Types.ObjectId(data.enquiry_id.user_id),
+        user_id: new mongoose.Types.ObjectId(logistic_id),
         status: "active"
       }
     },
@@ -2389,16 +2391,16 @@ exports.viewLogisticQuote=async (req, res) => {
               $expr: { $eq: ['$plan_id', '$$plan_id'] }
             }
           },
-          {
-            $project: {
-              plan_id: 1,
-              name: 1,
-              duration: 1,
-              price: 1,
-              plan_step: 1
-              // Add or remove fields here as needed
-            }
-          }
+          // {
+          //   $project: {
+          //     plan_id: 1,
+          //     name: 1,
+          //     duration: 1,
+          //     price: 1,
+          //     plan_step: 1
+          //     // Add or remove fields here as needed
+          //   }
+          // }
         ],
         as: 'plan'
       }
@@ -2425,11 +2427,10 @@ exports.viewLogisticQuote=async (req, res) => {
     }
   ]);
 
-  console.log("data : ", data)
-  const plan_step = subscriptiondata[0]?.plan?.plan_step || null;
-  
+  console.log('subscriptiondata', subscriptiondata)
 
- 
+  const plan_step = subscriptiondata[0]?.plan?.plan_step || null;
+
   return res.status(200).json({
     message: "Logistics quote fetched successfully",
     data:logistic[0],
