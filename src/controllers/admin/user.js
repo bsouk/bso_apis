@@ -2158,7 +2158,6 @@ exports.acceptsupplierEnquiry = async (req, res) => {
 
     // Update the result with final price
     result.final_price = totalprice;
-    result.is_selected = true;
     await result.save();
     // await Enquiry.findOneAndUpdate(
     //   { _id: result.enquiry_id },
