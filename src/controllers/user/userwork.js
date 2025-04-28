@@ -4850,3 +4850,71 @@ exports.getSingleLogisticsQuotes = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.getResourceList = async (req, res) => {
+  try {
+    const { limit = 10, offset = 0, search = "" } = req.query;
+
+    const condition = {
+      user_type: { $in: ["resource"] },
+      profile_completed: true,
+      is_deleted: false,
+    };
+
+    if (search) {
+      condition["$or"] = [
+        {
+          full_name: { $regex: search, $options: "i" },
+        },
+        {
+          email: { $regex: search, $options: "i" },
+        },
+        {
+          phone_number: { $regex: search, $options: "i" },
+        },
+      ];
+    }
+
+    const countPromise = User.countDocuments(condition);
+
+    const usersPromise = User.aggregate([
+      {
+        $match: condition,
+      },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+      {
+        $skip: +offset,
+      },
+      {
+        $limit: +limit,
+      },
+      // {
+      //   $project: {
+      //     full_name: 1,
+      //     profile_image: 1,
+      //     email: 1,
+      //     phone_number_code: 1,
+      //     phone_number: 1,
+      //     status: 1,
+      //     availability_status: 1,
+      //     createdAt: 1,
+      //     last_login: 1,
+      //     unique_user_id: 1,
+      //     is_company_approved: 1,
+      //     is_user_approved_by_admin: 1
+      //   },
+      // },
+    ]);
+
+    const [count, users] = await Promise.all([countPromise, usersPromise]);
+
+    res.json({ data: users, count, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};

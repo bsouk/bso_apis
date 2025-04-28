@@ -467,4 +467,12 @@ router.post("/verifyotpforbuyer", trimRequest.all, requireAuth, controller.verif
 router.get("/getSingleSupplierQuotes/:id", trimRequest.all, controller.getSingleSupplierQuotes)
 router.get("/getSingleLogisticsQuotes/:id", trimRequest.all, controller.getSingleLogisticsQuotes)
 
+
+router.get(
+    "/getResourceList",
+    trimRequest.all,
+    requireAuth,
+    controller.getResourceList
+);
+
 module.exports = router;
