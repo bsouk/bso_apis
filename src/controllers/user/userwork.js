@@ -4720,3 +4720,48 @@ exports.verifyOtpForBuyer = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+
+
+exports.getSingleSupplierQuotes = async (req, res) => {
+    try {
+        const { id } = req.params
+        console.log("id : ", id)
+        const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+        return res.status(200).json({
+            message: "Supplier quote data fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getSingleLogisticsQuotes = async (req, res) => {
+    try {
+        const { id } = req.params
+        console.log("id : ", id)
+        const data = await logistics_quotes.findOne({ _id: id })
+            .populate({
+                path: 'enquiry_id',
+                populate: [
+                    {
+                        path: "selected_supplier.quote_id",
+                        populate: { path: "pickup_address", strictPopulate: false }
+                    },
+                    {
+                        path: "enquiry_items.quantity.unit"
+                    }
+                ]
+            }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
+        return res.status(200).json({
+            message: "logistics quote data fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

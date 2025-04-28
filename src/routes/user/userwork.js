@@ -433,7 +433,7 @@ router.post(
     requireAuth,
     controller.sendOtpForEnquiry
 )
-router.post("/sendOtpForQuote",trimRequest.all, requireAuth, controller.sendOtpForQuote)
+router.post("/sendOtpForQuote", trimRequest.all, requireAuth, controller.sendOtpForQuote)
 router.post(
     "/verifyOtpForEnquiry",
     trimRequest.all,
@@ -445,6 +445,9 @@ router.post(
     trimRequest.all,
     requireAuth,
     controller.verifyOtpForQuote)
-    router.post("/verifyotpforbuyer", trimRequest.all, requireAuth, controller.verifyOtpForBuyer)
+router.post("/verifyotpforbuyer", trimRequest.all, requireAuth, controller.verifyOtpForBuyer)
+
+router.get("/getSingleSupplierQuotes/:id", trimRequest.all, controller.getSingleSupplierQuotes)
+router.get("/getSingleLogisticsQuotes/:id", trimRequest.all, controller.getSingleLogisticsQuotes)
 
 module.exports = router;
