@@ -4419,9 +4419,9 @@ exports.getLogisticsQuotes = async (req, res) => {
                             path: "enquiry_items.quantity.unit"
                         }
                     ]
-                }).populate({ path: 'user_id', select: "company_data" })
+                }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
         } else {
-            data = await logistics_quotes.find({ enquiry_id: id, is_selected : true })
+            data = await logistics_quotes.find({ enquiry_id: id, is_selected: true })
                 .populate({
                     path: 'enquiry_id',
                     populate: [
@@ -4433,7 +4433,7 @@ exports.getLogisticsQuotes = async (req, res) => {
                             path: "enquiry_items.quantity.unit"
                         }
                     ]
-                }).populate({ path: 'user_id', select: "company_data" })
+                }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
         }
         console.log("data : ", data)
 
@@ -4470,7 +4470,7 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
                         path: "enquiry_items.quantity.unit"
                     }
                 ]
-            }).sort({ created_at: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
+            }).sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
         console.log("data : ", data)
 
         const count = await logistics_quotes.countDocuments({ user_id: new mongoose.Types.ObjectId(id) })
