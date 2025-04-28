@@ -34,6 +34,7 @@ const logistics_quotes = require("../../models/logistics_quotes");
 const Commision = require("../../models/commision")
 const EnquiryOtp = require("../../models/EnquiryOtp");
 const payment = require("../../models/payment");
+const industry_sub_type = require("../../models/industry_sub_type");
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -2274,6 +2275,30 @@ exports.addIndustryTypes = async (req, res) => {
     }
 }
 
+
+
+exports.addSubIndustryTypes = async (req, res) => {
+    try {
+        const { name, parent_category } = req.body
+        const check = await industry_sub_type.findOne({ name, parent_category })
+        if (check) {
+            return utils.handleError(res, {
+                message: "industry sub category already existed",
+                code: 404,
+            });
+        }
+        const newtype = await industry_sub_type.create({ name, parent_category })
+        console.log("new industry type : ", newtype)
+        return res.status(200).json({
+            message: "Industry Sub category added successfully",
+            data: newtype,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
 exports.getIndustryTypes = async (req, res) => {
     try {
         const { search, offset = 0, limit = 10 } = req.query
@@ -2300,7 +2325,7 @@ exports.getIndustryTypes = async (req, res) => {
 
         const count = await industry_type.countDocuments(filter)
         res.status(200).json({
-            message: "Quantities unit fetched successfully",
+            message: "Industry category fetched successfully",
             data,
             count,
             code: 200
@@ -2310,6 +2335,64 @@ exports.getIndustryTypes = async (req, res) => {
     }
 }
 
+
+
+exports.getIndustrySubTypes = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { search, offset = 0, limit = 10 } = req.query
+        let filter = {
+            parent_category: new mongoose.Types.ObjectId(id)
+        }
+        if (search) {
+            filter.name = { $regex: search, $options: "i" }
+        }
+        const data = await industry_sub_type.aggregate([
+            {
+                $match: filter
+            },
+            // {
+            //     $lookup: {
+            //         from: "industry_types",
+            //         localField: "parent_category",
+            //         foreignField: "_id",
+            //         as: "parent_category",
+            //         pipeline: [
+            //             {
+            //                 $project: {
+            //                     name: 1
+            //                 }
+            //             }
+            //         ]
+            //     }
+            // },
+            // {
+            //     $unwind: "$parent_category"
+            // },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 10
+            }
+        ])
+
+        const count = await industry_sub_type.countDocuments(filter)
+        res.status(200).json({
+            message: "Industry sub category fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
 
 
 //BSO New changes
@@ -4323,7 +4406,9 @@ exports.selectLogisticsQuote = async (req, res) => {
             console.log("Commision : ", commision)
 
             if (commision.charge_type === "percentage") {
-                totalprice += (totalprice) + ((commision.value) / 100)
+                if (totalprice > 0) {
+                    totalprice += (totalprice) + ((commision.value) / 100)
+                }
                 console.log("totalprice : ", totalprice)
             } else {
                 totalprice += commision.value

@@ -218,6 +218,23 @@ router.get(
 );
 
 
+
+
+
+router.post(
+    "/addSubIndustryType",
+    trimRequest.all,
+    requireAuth,
+    controller.addSubIndustryTypes
+);
+
+router.get(
+    "/getSubIndustryType/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getIndustrySubTypes
+);
+
 //changes
 router.post(
     "/addQuery",
