@@ -4812,7 +4812,12 @@ exports.getSingleSupplierQuotes = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+        const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) })
+            .populate('user_id', 'full_name email user_type current_user_type')
+            .populate('enquiry_items.quantity.unit')
+            .populate("pickup_address")
+            .populate({ path: 'enquiry_id', select: 'priority shipping_address', populate: { path: 'shipping_address' } })
+            .sort({ createdAt: -1 })
         return res.status(200).json({
             message: "Supplier quote data fetched successfully",
             data,
@@ -4853,68 +4858,68 @@ exports.getSingleLogisticsQuotes = async (req, res) => {
 
 
 exports.getResourceList = async (req, res) => {
-  try {
-    const { limit = 10, offset = 0, search = "" } = req.query;
+    try {
+        const { limit = 10, offset = 0, search = "" } = req.query;
 
-    const condition = {
-      user_type: { $in: ["resource"] },
-      profile_completed: true,
-      is_deleted: false,
-    };
+        const condition = {
+            user_type: { $in: ["resource"] },
+            profile_completed: true,
+            is_deleted: false,
+        };
 
-    if (search) {
-      condition["$or"] = [
-        {
-          full_name: { $regex: search, $options: "i" },
-        },
-        {
-          email: { $regex: search, $options: "i" },
-        },
-        {
-          phone_number: { $regex: search, $options: "i" },
-        },
-      ];
+        if (search) {
+            condition["$or"] = [
+                {
+                    full_name: { $regex: search, $options: "i" },
+                },
+                {
+                    email: { $regex: search, $options: "i" },
+                },
+                {
+                    phone_number: { $regex: search, $options: "i" },
+                },
+            ];
+        }
+
+        const countPromise = User.countDocuments(condition);
+
+        const usersPromise = User.aggregate([
+            {
+                $match: condition,
+            },
+            {
+                $sort: {
+                    createdAt: -1,
+                },
+            },
+            {
+                $skip: +offset,
+            },
+            {
+                $limit: +limit,
+            },
+            // {
+            //   $project: {
+            //     full_name: 1,
+            //     profile_image: 1,
+            //     email: 1,
+            //     phone_number_code: 1,
+            //     phone_number: 1,
+            //     status: 1,
+            //     availability_status: 1,
+            //     createdAt: 1,
+            //     last_login: 1,
+            //     unique_user_id: 1,
+            //     is_company_approved: 1,
+            //     is_user_approved_by_admin: 1
+            //   },
+            // },
+        ]);
+
+        const [count, users] = await Promise.all([countPromise, usersPromise]);
+
+        res.json({ data: users, count, code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
     }
-
-    const countPromise = User.countDocuments(condition);
-
-    const usersPromise = User.aggregate([
-      {
-        $match: condition,
-      },
-      {
-        $sort: {
-          createdAt: -1,
-        },
-      },
-      {
-        $skip: +offset,
-      },
-      {
-        $limit: +limit,
-      },
-      // {
-      //   $project: {
-      //     full_name: 1,
-      //     profile_image: 1,
-      //     email: 1,
-      //     phone_number_code: 1,
-      //     phone_number: 1,
-      //     status: 1,
-      //     availability_status: 1,
-      //     createdAt: 1,
-      //     last_login: 1,
-      //     unique_user_id: 1,
-      //     is_company_approved: 1,
-      //     is_user_approved_by_admin: 1
-      //   },
-      // },
-    ]);
-
-    const [count, users] = await Promise.all([countPromise, usersPromise]);
-
-    res.json({ data: users, count, code: 200 });
-  } catch (error) {
-    utils.handleError(res, error);
-  }
 };
