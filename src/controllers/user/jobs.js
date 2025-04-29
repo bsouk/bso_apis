@@ -27,7 +27,9 @@ exports.createJob = async (req, res) => {
 
         const job_data = {
             ...data,
-            job_unique_id: job_id
+            job_unique_id: job_id,
+            company_id: user_data._id,
+            status: 'active'
         }
 
         const new_job = await jobs.create(job_data)

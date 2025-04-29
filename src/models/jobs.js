@@ -12,6 +12,10 @@ const jobSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'industry_types'
     },
+    job_sub_category: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'industry_sub_types'
+    },
     company_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'company_data'
@@ -33,12 +37,38 @@ const jobSchema = new mongoose.Schema({
     responsibility: {
         type: String
     },
+    experience_type: {
+        type: String,
+        enum: ['fresher', 'experienced'],
+    },
+    experience: Number,
+    skills: [String],
+    budget: String,
+    payment_type: String,
+    job_duration: String,
+    weekly_hour_requirement: String,
+    questions: {
+        type: [
+            {
+                question: String,
+                answer: String,
+                is_required: Boolean,
+                options: [String]
+            }
+        ],
+        default: []
+    },
     qualifications: {
         type: String
     },
     applications_instructions: {
         type: String
     },
+    attachments: [String],
+    proposal_prefrences: String,
+    special_requirements: String,
+    languages: String,
+    proficiency_level: String,
     status: {
         type: String,
         enum: ['active', 'inactive', 'expired'],
