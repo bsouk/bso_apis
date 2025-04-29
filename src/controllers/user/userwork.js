@@ -4816,7 +4816,7 @@ exports.getSingleSupplierQuotes = async (req, res) => {
             .populate('user_id', 'full_name email user_type current_user_type')
             .populate('enquiry_items.quantity.unit')
             .populate("pickup_address")
-            .populate({ path: 'enquiry_id', select: 'priority shipping_address', populate: { path: 'shipping_address' } })
+            .populate({ path: 'enquiry_id', select: 'priority shipping_address enquiry_unique_id expiry_date', populate: { path: 'shipping_address' } })
             .sort({ createdAt: -1 })
         return res.status(200).json({
             message: "Supplier quote data fetched successfully",
