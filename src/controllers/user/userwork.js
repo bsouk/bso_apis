@@ -4859,7 +4859,7 @@ exports.getSingleLogisticsQuotes = async (req, res) => {
 
 exports.getResourceList = async (req, res) => {
     try {
-        const { limit = 10, offset = 0, search = "" } = req.query;
+        const { limit = 10, offset = 0, search = "", skills } = req.query;
 
         const condition = {
             user_type: { $in: ["resource"] },
@@ -4870,15 +4870,19 @@ exports.getResourceList = async (req, res) => {
         if (search) {
             condition["$or"] = [
                 {
-                    full_name: { $regex: search, $options: "i" },
+                    profile_title: { $regex: search, $options: "i" },
                 },
                 {
-                    email: { $regex: search, $options: "i" },
+                    specialisations: { $regex: search, $options: "i" },
                 },
                 {
-                    phone_number: { $regex: search, $options: "i" },
+                    profile_description: { $regex: search, $options: "i" },
                 },
             ];
+        }
+
+        if (skills) {
+            condition["skills"] = { $in: skills }
         }
 
         const countPromise = User.countDocuments(condition);
