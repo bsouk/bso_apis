@@ -131,7 +131,7 @@ exports.getJobData = async (req, res) => {
     try {
         const { id } = req.params
         console.log('id : ', id)
-        const job_data = await jobs.findOne({ _id: id })
+        const job_data = await jobs.findOne({ _id: id }).populate('company_id', 'company_data')
         console.log('job data : ', job_data)
         if (!job_data) {
             return utils.handleError(res, {
