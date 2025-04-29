@@ -19,14 +19,12 @@ router.post(
 router.get(
     '/getJob',
     trimRequest.all,
-    requireAuth,
     controller.getJobs
 )
 
 router.get(
     '/getJobData/:id',
     trimRequest.all,
-    requireAuth,
     controller.getJobData
 )
 
@@ -49,6 +47,14 @@ router.patch(
     trimRequest.all,
     requireAuth,
     controller.acceptApplication
+)
+
+
+router.get(
+    '/getCompanyPostedJob',
+    trimRequest.all,
+    requireAuth,
+    controller.getCompanyPostedJobs
 )
 
 module.exports = router

@@ -285,3 +285,82 @@ exports.acceptApplication = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.getCompanyPostedJobs = async (req, res) => {
+    try {
+        const userId = req.user._id
+        console.log('user id : ', userId)
+        const { offset = 0, limit = 10, search, job_type, industry_id } = req.query
+        let filter = {
+            company_id: new mongoose.Types.ObjectId(userId)
+        }
+        if (search) {
+            filter.job_title = { $regex: search, $options: "i" }
+        }
+        if (job_type) {
+            filter.job_type = job_type
+        }
+        if (industry_id) {
+            filter.job_category = industry_id
+        }
+        const jobs_data = await jobs.aggregate(
+            [
+                {
+                    $match: filter
+                },
+                {
+                    $lookup: {
+                        from: "company_datas",
+                        let: { id: "$company_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$_id"]
+                                    }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    company_name: 1,
+                                    company_logo: 1
+                                }
+                            }
+                        ],
+                        as: "company_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$company_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $sort: {
+                        createdAt: -1
+                    }
+                },
+                {
+                    $skip: parseInt(offset)
+                },
+                {
+                    $limit: parseInt(limit)
+                }
+            ]
+        )
+        console.log('jobs : ', jobs_data)
+        const count = await jobs.countDocuments(filter)
+
+        return res.status(200).json({
+            message: "jobs fetched successfully",
+            data: jobs_data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
