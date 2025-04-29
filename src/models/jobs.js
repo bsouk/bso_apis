@@ -47,6 +47,7 @@ const jobSchema = new mongoose.Schema({
     payment_type: String,
     job_duration: String,
     weekly_hour_requirement: String,
+    project_visibility: String,
     questions: {
         type: [
             {
