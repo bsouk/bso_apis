@@ -475,4 +475,12 @@ router.get(
     controller.getResourceList
 );
 
+
+router.get(
+    "/getResource/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getResource
+);
+
 module.exports = router;
