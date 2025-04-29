@@ -77,7 +77,7 @@ exports.getJobs = async (req, res) => {
                             {
                                 $project: {
                                     _id: 1,
-                                    company_data : 1
+                                    company_data: 1
                                 }
                             }
                         ],
@@ -88,6 +88,16 @@ exports.getJobs = async (req, res) => {
                     $unwind: {
                         path: "$company_data",
                         preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        company: "$company_data.company_data"
+                    }
+                },
+                {
+                    $project: {
+                        company_data: 0
                     }
                 },
                 {
@@ -323,7 +333,7 @@ exports.getCompanyPostedJobs = async (req, res) => {
                             {
                                 $project: {
                                     _id: 1,
-                                    company_data : 1
+                                    company_data: 1
                                 }
                             }
                         ],
@@ -334,6 +344,16 @@ exports.getCompanyPostedJobs = async (req, res) => {
                     $unwind: {
                         path: "$company_data",
                         preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        company: "$company_data.company_data"
+                    }
+                },
+                {
+                    $project: {
+                        company_data: 0
                     }
                 },
                 {
