@@ -64,7 +64,7 @@ exports.getJobs = async (req, res) => {
                 },
                 {
                     $lookup: {
-                        from: "company_datas",
+                        from: "users",
                         let: { id: "$company_id" },
                         pipeline: [
                             {
@@ -77,8 +77,7 @@ exports.getJobs = async (req, res) => {
                             {
                                 $project: {
                                     _id: 1,
-                                    company_name: 1,
-                                    company_logo: 1
+                                    company_data : 1
                                 }
                             }
                         ],
@@ -311,7 +310,7 @@ exports.getCompanyPostedJobs = async (req, res) => {
                 },
                 {
                     $lookup: {
-                        from: "company_datas",
+                        from: "users",
                         let: { id: "$company_id" },
                         pipeline: [
                             {
@@ -324,8 +323,7 @@ exports.getCompanyPostedJobs = async (req, res) => {
                             {
                                 $project: {
                                     _id: 1,
-                                    company_name: 1,
-                                    company_logo: 1
+                                    company_data : 1
                                 }
                             }
                         ],
