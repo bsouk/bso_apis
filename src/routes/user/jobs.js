@@ -57,4 +57,12 @@ router.get(
     controller.getCompanyPostedJobs
 )
 
+
+router.get(
+    '/getJobApplicants',
+    trimRequest.all,
+    requireAuth,
+    controller.getJobAppliedResources
+)
+
 module.exports = router

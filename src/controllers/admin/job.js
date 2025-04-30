@@ -131,9 +131,12 @@ exports.getJobData = async (req, res) => {
                 code: 404,
             });
         }
+        const applicants = await job_applications.find({ job_id: id }).populate('canditate_id').sort({ createdAt: -1 })
+        console.log('applicants : ', applicants)
         return res.status(200).json({
             message: 'job data fetched successfully',
             data: job_data,
+            applicants,
             code: 200
         })
     } catch (error) {
