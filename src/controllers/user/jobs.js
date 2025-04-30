@@ -154,8 +154,10 @@ exports.createJobApplication = async (req, res) => {
         const userId = req.user._id
         console.log('user id : ', userId)
         const data = req.body
+        const jobdata = await jobs.findOne({ _id: data.job_id })
+        console.log('job data : ', jobdata)
         const application_id = await generateUniqueId()
-        const new_application = await job_applications.create({ application_id, ...data })
+        const new_application = await job_applications.create({ application_id, ...data, company_id: jobdata.company_id, canditate_id: userId, status: 'active' })
         console.log('new application : ', new_application)
         return res.status(200).json({
             message: "Job applied successfully",

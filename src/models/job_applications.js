@@ -35,6 +35,15 @@ const jobApplicationSchema = new mongoose.Schema({
         enum: ['active', 'inactive', 'expired'],
         default: 'active'
     },
+    questions: {
+        type: [
+            {
+                question: String,
+                answer: String,
+            }
+        ],
+        default: []
+    },
     is_accepted_by_company: {
         type: Boolean,
         default: false
