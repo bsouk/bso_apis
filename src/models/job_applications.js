@@ -47,6 +47,11 @@ const jobApplicationSchema = new mongoose.Schema({
     is_accepted_by_company: {
         type: Boolean,
         default: false
+    },
+    application_status : {
+        type: String,
+        enum: ['pending', 'accepted', 'rejected', 'withdrawn'],
+        default: 'pending'
     }
 },
     { timestamps: true }
