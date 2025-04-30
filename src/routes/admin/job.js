@@ -43,4 +43,12 @@ router.get(
     controller.getIndustrySubTypes
 );
 
+
+router.get(
+    '/getCompanyListing',
+    trimRequest.all,
+    requireAuth,
+    controller.getCompanyListing
+)
+
 module.exports = router
