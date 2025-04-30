@@ -37,7 +37,7 @@ router.get(
 );
 
 router.get(
-    "/getSubIndustryType",
+    "/getSubIndustryType/:id",
     trimRequest.all,
     requireAuth,
     controller.getIndustrySubTypes
