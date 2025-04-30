@@ -70,6 +70,11 @@ const jobSchema = new mongoose.Schema({
     special_requirements: String,
     languages: String,
     proficiency_level: String,
+    created_by: {
+        type: String,
+        enum: ["admin", "company"],
+        default: 'company'
+    },
     status: {
         type: String,
         enum: ['active', 'inactive', 'expired'],
