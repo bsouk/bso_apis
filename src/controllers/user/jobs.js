@@ -8,7 +8,20 @@ async function generateUniqueId() {
     const id = await Math.floor(Math.random() * 1000000)
     return `#${id}`
 }
-
+const isFieldPopulated = (obj, path) => {
+    console.log("object is ", obj, " and path is ", path)
+    const keys = path.split('.');
+    console.log("keys is ", keys)
+    let current = obj;
+    for (let key of keys) {
+        console.log("cond is ", current, "key is ", current[key])
+        if (!current || !current[key] || current[key] === "" || current[key] === null || current[key] === undefined) {
+            return { path, code: false };
+        }
+        current = current[key];
+    }
+    return { path, code: true };
+};
 exports.createJob = async (req, res) => {
     try {
         const userId = req.user._id
@@ -16,12 +29,42 @@ exports.createJob = async (req, res) => {
 
         const user_data = await User.findOne({ _id: userId })
         console.log("user data : ", user_data)
-        if (!user_data.user_type.includes("company")) {
+        if (!user_data.company_data) {
             return utils.handleError(res, {
                 message: "Only authorised company can create job",
                 code: 404,
             });
         }
+
+        const requiredFields = [
+            'company_data.name',
+            'company_data.business_category',
+            'company_data.phone_number',
+            'company_data.name',
+            'company_data.registration_number',
+            'company_data.incorporation_date',
+            'company_data.vat_number',
+            'company_data.business_category',
+            'company_data.phone_number',
+            'company_data.email',
+            'company_data.address.line1',
+            'company_data.address.city',
+            'company_data.address.state',
+            'company_data.address.zip_code',
+            'company_data.address.country',
+        ];
+
+        const checkResults = requiredFields.map(field => isFieldPopulated(user_data, field));
+        const incompleteFields = checkResults.filter(result => result.code === false);
+
+        if (incompleteFields.length > 0) {
+            const missingPaths = incompleteFields.map(f => f.path);
+            return utils.handleError(res, {
+                message: `Please complete your company profile. Missing fields: ${missingPaths.join(', ')}`,
+                code: 400,
+            });
+        }
+
         const data = req.body
         const job_id = await generateUniqueId()
 
