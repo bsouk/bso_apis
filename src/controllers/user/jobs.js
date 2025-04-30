@@ -195,7 +195,13 @@ exports.getJobData = async (req, res) => {
 exports.createJobApplication = async (req, res) => {
     try {
         const userId = req.user._id
-        console.log('user id : ', userId)
+        console.log('user data : ', req.user)
+        if (!req?.user?.user_type?.includes('resource')) {
+            return utils.handleError(res, {
+                message: "Only resource user can apply for a job",
+                code: 403,
+            });
+        }
         const data = req.body
         const jobdata = await jobs.findOne({ _id: data.job_id })
         console.log('job data : ', jobdata)
@@ -434,6 +440,12 @@ exports.getJobAppliedResources = async (req, res) => {
         const companyId = req.user._id
         console.log('company id : ', companyId)
         const { job_id, offset = 0, limit = 10 } = req.query
+        if (!job_id) {
+            return utils.handleError(res, {
+                message: "Job id is required",
+                code: 400,
+            });
+        }
         const job_data = await jobs.findOne({ _id: job_id, company_id: companyId })
         console.log('job data : ', job_data)
         if (!job_data) {
