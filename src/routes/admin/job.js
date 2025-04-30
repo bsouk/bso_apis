@@ -28,4 +28,19 @@ router.get(
     controller.getJobData
 )
 
+
+router.get(
+    "/getIndustryType",
+    trimRequest.all,
+    requireAuth,
+    controller.getIndustryTypes
+);
+
+router.get(
+    "/getSubIndustryType",
+    trimRequest.all,
+    requireAuth,
+    controller.getIndustrySubTypes
+);
+
 module.exports = router

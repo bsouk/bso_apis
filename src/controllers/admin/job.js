@@ -3,6 +3,8 @@ const utils = require("../../utils/utils");
 const jobs = require("../../models/jobs");
 const User = require("../../models/user");
 const job_applications = require("../../models/job_applications");
+const industry_type = require("../../models/industry_type");
+const industry_sub_type = require("../../models/industry_sub_type");
 
 async function generateUniqueId() {
     const id = await Math.floor(Math.random() * 1000000)
@@ -131,6 +133,103 @@ exports.getJobData = async (req, res) => {
         return res.status(200).json({
             message: 'job data fetched successfully',
             data: job_data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+exports.getIndustryTypes = async (req, res) => {
+    try {
+        const { search, offset = 0, limit = 10 } = req.query
+        let filter = {}
+        if (search) {
+            filter.name = { $regex: search, $options: "i" }
+        }
+        const data = await industry_type.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 10
+            }
+        ])
+
+        const count = await industry_type.countDocuments(filter)
+        res.status(200).json({
+            message: "Industry category fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+exports.getIndustrySubTypes = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { search, offset = 0, limit = 10 } = req.query
+        let filter = {
+            parent_category: new mongoose.Types.ObjectId(id)
+        }
+        if (search) {
+            filter.name = { $regex: search, $options: "i" }
+        }
+        const data = await industry_sub_type.aggregate([
+            {
+                $match: filter
+            },
+            // {
+            //     $lookup: {
+            //         from: "industry_types",
+            //         localField: "parent_category",
+            //         foreignField: "_id",
+            //         as: "parent_category",
+            //         pipeline: [
+            //             {
+            //                 $project: {
+            //                     name: 1
+            //                 }
+            //             }
+            //         ]
+            //     }
+            // },
+            // {
+            //     $unwind: "$parent_category"
+            // },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 10
+            }
+        ])
+
+        const count = await industry_sub_type.countDocuments(filter)
+        res.status(200).json({
+            message: "Industry sub category fetched successfully",
+            data,
+            count,
             code: 200
         })
     } catch (error) {
