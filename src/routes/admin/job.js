@@ -51,4 +51,12 @@ router.get(
     controller.getCompanyListing
 )
 
+
+router.delete(
+    '/deleteJob',
+    trimRequest.all,
+    requireAuth,
+    controller.deleteJobs
+)
+
 module.exports = router

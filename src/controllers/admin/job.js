@@ -295,3 +295,20 @@ exports.getCompanyListing = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.deleteJobs = async (req, res) => {
+    try {
+        const { ids } = req.body
+        console.log('ids : ', req.body)
+        const jobs = await jobs.deleteMany({ _id: { $in: ids } })
+        console.log('deleted jobs : ', jobs)
+        return res.status(200).json({
+            message: "Job deleted successfully",
+            data: jobs,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
