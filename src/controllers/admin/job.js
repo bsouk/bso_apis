@@ -260,7 +260,7 @@ exports.getCompanyListing = async (req, res) => {
         const data = await user.aggregate([
             {
                 $match: {
-                    company_data: { $exists: true }
+                    company_data: { $exists: true, $ne: null, $ne: {} },
                 }
             },
             {
