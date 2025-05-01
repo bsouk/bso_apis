@@ -3,6 +3,7 @@ const utils = require("../../utils/utils");
 const jobs = require("../../models/jobs");
 const User = require("../../models/user");
 const job_applications = require("../../models/job_applications");
+const saved_job = require("../../models/saved_job");
 
 async function generateUniqueId() {
     const id = await Math.floor(Math.random() * 1000000)
@@ -361,7 +362,7 @@ exports.acceptApplication = async (req, res) => {
             {
                 $set: {
                     is_accepted_by_company: (status === true || status === "true") ? true : false,
-                    application_status : status === true || status === "true"? "accepted" : "rejected",
+                    application_status: status === true || status === "true" ? "accepted" : "rejected",
                 }
             }, { new: true }
         )
@@ -499,6 +500,49 @@ exports.getJobAppliedResources = async (req, res) => {
             count,
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.saveUnsavedJobs = async (req, res) => {
+    try {
+        const userId = req.user._id
+        console.log('user id : ', userId)
+        const { job_id } = req.body
+        if (!job_id) {
+            return utils.handleError(res, {
+                message: "Job id is required",
+                code: 400,
+            });
+        }
+        let job_data = await saved_job.findOne({ job_id, candidate_id: userId })
+        if (!job_data) {
+            job_data = await saved_job.create({
+                job_id,
+                candidate_id: userId,
+                status: "saved"
+            })
+            return res.status(200).json({
+                message: "Job saved successfully",
+                data: job_data,
+                code: 200
+            })
+        } else {
+            if (job_data && job_data.status === "saved") {
+                job_data.status = "unsaved"
+                await job_data.save()
+            } else {
+                job_data.status = "saved"
+                await job_data.save()
+            }
+            return res.status(200).json({
+                message: "Job status updated successfully",
+                data: job_data,
+                code: 200
+            })
+        }
     } catch (error) {
         utils.handleError(res, error);
     }

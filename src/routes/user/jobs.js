@@ -65,4 +65,12 @@ router.get(
     controller.getJobAppliedResources
 )
 
+
+router.post(
+    '/saveUnsaveJob',
+    trimRequest.all,
+    requireAuth,
+    controller.saveUnsavedJobs
+)
+
 module.exports = router
