@@ -133,6 +133,14 @@ exports.getJobData = async (req, res) => {
         }
         const applicants = await job_applications.find({ job_id: id }).populate('canditate_id').sort({ createdAt: -1 })
         console.log('applicants : ', applicants)
+        if (Array.isArray(applicants) && applicants.length > 0) {
+            const hiredapplicants = applicants.filter(app => app.application_status === 'accepted')
+            console.log('hired applicants : ', hiredapplicants)
+            if (Array.isArray(hiredapplicants) && hiredapplicants.length > 0) {
+                applicants = hiredapplicants
+            }
+        }
+        console.log('applicants : ', applicants)
         return res.status(200).json({
             message: 'job data fetched successfully',
             data: job_data,
@@ -346,7 +354,7 @@ exports.editJob = async (req, res) => {
 exports.getApllicantDetails = async (req, res) => {
     try {
         const { id } = req.params
-        const applicant_data = await job_applications.findOne({ _id: new mongoose.Types.ObjectId(id)}).populate('canditate_id').populate('company_id', '_id company_data')
+        const applicant_data = await job_applications.findOne({ _id: new mongoose.Types.ObjectId(id) }).populate('canditate_id').populate('company_id', '_id company_data')
         console.log('applicant_data : ', applicant_data)
         if (!applicant_data) {
             return utils.handleError(res, {
