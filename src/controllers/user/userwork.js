@@ -4553,6 +4553,9 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
                     },
                     {
                         path: "enquiry_items.quantity.unit"
+                    },
+                    {
+                        path : "shipping_address",
                     }
                 ]
             }).sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))

@@ -2059,6 +2059,7 @@ exports.getQuotesdata = async (req, res) => {
       }
     }).populate("pickup_address", "address")
 
+    console.log("data : ", data)
 
     const subscriptiondata = await subscription.aggregate([
       {
@@ -2078,16 +2079,16 @@ exports.getQuotesdata = async (req, res) => {
                 $expr: { $eq: ['$plan_id', '$$plan_id'] }
               }
             },
-            {
-              $project: {
-                plan_id: 1,
-                name: 1,
-                duration: 1,
-                price: 1,
-                plan_step: 1
-                // Add or remove fields here as needed
-              }
-            }
+            // {
+            //   $project: {
+            //     plan_id: 1,
+            //     name: 1,
+            //     duration: 1,
+            //     price: 1,
+            //     plan_step: 1
+            //     // Add or remove fields here as needed
+            //   }
+            // }
           ],
           as: 'plan'
         }
@@ -2098,12 +2099,12 @@ exports.getQuotesdata = async (req, res) => {
           preserveNullAndEmptyArrays: true
         }
       },
-      {
-        $project: {
-          plan: 1,
-          _id: 0
-        }
-      },
+      // {
+      //   $project: {
+      //     plan: 1,
+      //     _id: 0
+      //   }
+      // },
       {
         $sort: {
           createdAt: -1
@@ -2114,7 +2115,7 @@ exports.getQuotesdata = async (req, res) => {
       }
     ]);
 
-    console.log("data : ", data)
+    console.log("subscriptiondata : ", subscriptiondata)
     data._doc.plan_step = subscriptiondata[0]?.plan?.plan_step || null;
     return res.status(200).json({
       message: "quotes data fetched successfully",
