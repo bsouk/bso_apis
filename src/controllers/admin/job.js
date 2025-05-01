@@ -312,3 +312,27 @@ exports.deleteJobs = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.editJob = async (req, res) => {
+    try {
+        const { id } = req.params
+        const data = req.body
+        console.log('data : ', data)
+        const updated_job = await jobs.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(id) }, { $set: data }, { new: true })
+        console.log('updated_job : ', updated_job)
+        if (!updated_job) {
+            return utils.handleError(res, {
+                message: "Job not found",
+                code: 404,
+            });
+        }
+        return res.status(200).json({
+            message: "Job updated successfully",
+            data: updated_job,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

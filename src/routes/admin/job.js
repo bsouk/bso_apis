@@ -59,4 +59,12 @@ router.delete(
     controller.deleteJobs
 )
 
+
+router.patch(
+    '/editJob/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.editJob
+)
+
 module.exports = router

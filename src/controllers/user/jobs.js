@@ -313,12 +313,42 @@ exports.acceptApplication = async (req, res) => {
 
         const { job_application_id, status } = req.body
 
-        if (!user_data.user_type.includes("company")) {
+        if (!user_data.company_data) {
             return utils.handleError(res, {
-                message: "Only valid company accept applications",
+                message: "Only authorised company can accept job",
                 code: 404,
             });
         }
+
+        const requiredFields = [
+            'company_data.name',
+            'company_data.business_category',
+            'company_data.phone_number',
+            'company_data.name',
+            'company_data.registration_number',
+            'company_data.incorporation_date',
+            'company_data.vat_number',
+            'company_data.business_category',
+            'company_data.phone_number',
+            'company_data.email',
+            'company_data.address.line1',
+            'company_data.address.city',
+            'company_data.address.state',
+            'company_data.address.zip_code',
+            'company_data.address.country',
+        ];
+
+        const checkResults = requiredFields.map(field => isFieldPopulated(user_data, field));
+        const incompleteFields = checkResults.filter(result => result.code === false);
+
+        if (incompleteFields.length > 0) {
+            const missingPaths = incompleteFields.map(f => f.path);
+            return utils.handleError(res, {
+                message: `Please complete your company profile. Missing fields: ${missingPaths.join(', ')}`,
+                code: 400,
+            });
+        }
+
         const job_application_data = await job_applications.findOne({ _id: job_application_id, company_id: userId })
         if (!job_application_data) {
             return utils.handleError(res, {
@@ -330,7 +360,8 @@ exports.acceptApplication = async (req, res) => {
             { _id: job_application_id, company_id: userId },
             {
                 $set: {
-                    is_accepted_by_company: (status === true || status === "true") ? true : false
+                    is_accepted_by_company: (status === true || status === "true") ? true : false,
+                    application_status : status === true || status === "true"? "accepted" : "rejected",
                 }
             }, { new: true }
         )
