@@ -1562,6 +1562,12 @@ exports.getAllEnquiry = async (req, res) => {
                         as: "subscription",
                         pipeline: [
                             {
+                                $match : {
+                                    status: "active",
+                                    type: "buyer"
+                                }
+                            },
+                            {
                                 $lookup: {
                                     from: "plans",
                                     localField: "plan_id",
@@ -1669,7 +1675,8 @@ exports.getEnquiryDetails = async (req, res) => {
                 {
                     $match: {
                         user_id: new mongoose.Types.ObjectId(data?.user_id),
-                        status: "active"
+                        status: "active",
+                        type: "buyer"
                     }
                 },
                 {
