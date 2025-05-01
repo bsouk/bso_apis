@@ -247,7 +247,7 @@ exports.getCompanyListing = async (req, res) => {
         const { search, offset = 0, limit = 10 } = req.query
         let filter = {}
         if (search) {
-            filter[`or`] = [
+            filter[`$or`] = [
                 {
                     'company_data.name': { $regex: search, $options: "i" }
                 },
@@ -256,6 +256,7 @@ exports.getCompanyListing = async (req, res) => {
                 }
             ]
         }
+        console.log('filter : ', filter)
         const data = await user.aggregate([
             {
                 $match: {
@@ -284,7 +285,12 @@ exports.getCompanyListing = async (req, res) => {
             }
         ])
 
-        const count = await user.countDocuments(filter)
+        const count = await user.countDocuments(
+            {
+                company_data: { $exists: true }
+            },
+            filter
+        )
         res.status(200).json({
             message: "Company data fetched successfully",
             data,
