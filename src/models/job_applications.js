@@ -11,7 +11,7 @@ const jobApplicationSchema = new mongoose.Schema({
     },
     company_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'company_data'
+        ref: 'users'
     },
     canditate_id: {
         type: mongoose.Schema.Types.ObjectId,

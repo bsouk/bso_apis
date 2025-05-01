@@ -67,4 +67,11 @@ router.patch(
     controller.editJob
 )
 
+router.get(
+    '/getApplicantDetails/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getApllicantDetails
+)
+
 module.exports = router

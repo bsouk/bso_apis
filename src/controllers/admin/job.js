@@ -307,11 +307,10 @@ exports.deleteJobs = async (req, res) => {
     try {
         const { ids } = req.body
         console.log('ids : ', req.body)
-        const jobs = await jobs.deleteMany({ _id: { $in: ids } })
-        console.log('deleted jobs : ', jobs)
+        const result = await jobs.deleteMany({ _id: { $in: ids } })
+        console.log('deleted jobs : ', result)
         return res.status(200).json({
             message: "Job deleted successfully",
-            data: jobs,
             code: 200
         })
     } catch (error) {
@@ -344,3 +343,23 @@ exports.editJob = async (req, res) => {
 }
 
 
+exports.getApllicantDetails = async (req, res) => {
+    try {
+        const { id } = req.params
+        const applicant_data = await job_applications.findOne({ _id: new mongoose.Types.ObjectId(id)}).populate('canditate_id').populate('company_id', '_id company_data')
+        console.log('applicant_data : ', applicant_data)
+        if (!applicant_data) {
+            return utils.handleError(res, {
+                message: "Applicant data not found",
+                code: 404,
+            });
+        }
+        return res.status(200).json({
+            message: "Applicant data fetched successfully",
+            data: applicant_data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
