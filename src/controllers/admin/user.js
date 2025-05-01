@@ -2064,7 +2064,8 @@ exports.getQuotesdata = async (req, res) => {
       {
         $match: {
           user_id: new mongoose.Types.ObjectId(data.enquiry_id.user_id),
-          status: "active"
+          status: "active",
+          type: "buyer"
         }
       },
       {
