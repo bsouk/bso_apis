@@ -4549,7 +4549,15 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
                 populate: [
                     {
                         path: "selected_supplier.quote_id",
-                        populate: { path: "pickup_address", strictPopulate: false }
+                        populate:[
+                            {
+                              path: 'pickup_address',
+                              strictPopulate: false
+                            },
+                            {
+                              path: 'enquiry_items.quantity.unit'
+                            }
+                          ]
                     },
                     {
                         path: "enquiry_items.quantity.unit"
