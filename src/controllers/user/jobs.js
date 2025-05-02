@@ -290,10 +290,17 @@ exports.getappliedJobs = async (req, res) => {
         )
         console.log("data : ", data)
 
-        if (!data || data.length === 0) {
+        if (!data) {
             return utils.handleError(res, {
-                message: "No job applied yet",
+                message: "No job data found",
                 code: 404,
+            });
+        }
+        if (data.length === 0) {
+            return res.status(200).json({
+                message: "No job applied yet",
+                data: [],
+                success: true,
             });
         }
         return res.status(200).json({
@@ -543,6 +550,113 @@ exports.saveUnsavedJobs = async (req, res) => {
                 code: 200
             })
         }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getSavedJobs = async (req, res) => {
+    try {
+        const userId = req.user._id
+        console.log('user id : ', userId)
+        let { offset = 0, limit = 10, skills, job_type, industries, search = "" } = req.query
+        console.log("req.query : ", req.query)
+        let filter = {
+            candidate_id: userId, status: "saved"
+        }
+        let newfilter = {};
+
+        if (search) {
+            newfilter["job_data.job_title"] = { $regex: search, $options: "i" };
+        }
+        if (skills) {
+            skills = JSON.parse(skills);
+            newfilter["job_data.skills"] = { $in: skills };
+        }
+        if (job_type) {
+            job_type = JSON.parse(job_type);
+            newfilter["job_data.job_type"] = { $in: job_type };
+        }
+        if (industries) {
+            industries = JSON.parse(industries);
+            newfilter["job_data.job_category_data.name"] = { $in: industries };
+        }
+        console.log('filter : ', filter, "new filter : ", newfilter)
+        const data = await saved_job.aggregate(
+            [
+                {
+                    $match: filter
+                },
+                {
+                    $lookup: {
+                        from: "jobs",
+                        localField: "job_id",
+                        foreignField: "_id",
+                        as: "job_data",
+                        pipeline: [
+                            {
+                                $lookup: {
+                                    from: "industry_types",
+                                    localField: "job_category",
+                                    foreignField: "_id",
+                                    as: "job_category_data"
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$job_category_data",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$job_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        job: "$job_data"
+                    }
+                },
+                {
+                    $match: newfilter
+                },
+                {
+                    $project: {
+                        job_data: 0
+                    }
+                },
+                {
+                    $sort: {
+                        createdAt: -1
+                    }
+                },
+                {
+                    $skip: parseInt(offset)
+                },
+                {
+                    $limit: parseInt(limit)
+                }
+            ]
+        )
+        console.log('data : ', data)
+        const count = await saved_job.countDocuments({ candidate_id: userId, status: "saved" })
+        if (!data || data.length === 0) {
+            return utils.handleError(res, {
+                message: "No saved jobs found",
+                code: 404,
+            });
+        }
+        return res.status(200).json({
+            message: "Saved jobs fetched successfully",
+            data,
+            count,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }

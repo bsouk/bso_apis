@@ -73,4 +73,11 @@ router.post(
     controller.saveUnsavedJobs
 )
 
+router.get(
+    '/getSavedJobs',
+    trimRequest.all,
+    requireAuth,
+    controller.getSavedJobs
+)
+
 module.exports = router
