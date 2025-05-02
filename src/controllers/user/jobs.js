@@ -192,7 +192,7 @@ exports.getJobData = async (req, res) => {
             message: 'job data fetched successfully',
             data: job_data,
             saved_status: saved_job_data ? saved_job_data.status : 'unsaved',
-            application_status: application ? application.status : 'unapplied',
+            application_status: application.status ? "applied" : 'unapplied',
             code: 200
         })
     } catch (error) {
