@@ -215,6 +215,16 @@ exports.createJobApplication = async (req, res) => {
         const data = req.body
         const jobdata = await jobs.findOne({ _id: data.job_id })
         console.log('job data : ', jobdata)
+
+        const check = await job_applications.findOne({ job_id: data.job_id, canditate_id: userId, company_id: jobdata.company_id })
+        console.log('check : ', check)
+        if (check) {
+            return utils.handleError(res, {
+                message: "You have already applied for this job",
+                code: 400,
+            });
+        }
+
         const application_id = await generateUniqueId()
         const new_application = await job_applications.create({ application_id, ...data, company_id: jobdata.company_id, canditate_id: userId, status: 'active' })
         console.log('new application : ', new_application)
