@@ -180,6 +180,8 @@ exports.getJobData = async (req, res) => {
         console.log('job data : ', job_data)
         const saved_job_data = await saved_job.findOne({ candidate_id: user_id, job_id: id })
         console.log('saved job data : ', saved_job_data)
+        const application = await job_applications.findOne({ job_id: id, canditate_id: user_id })
+        console.log('application : ', application)
         if (!job_data) {
             return utils.handleError(res, {
                 message: "Job data not found",
@@ -190,6 +192,7 @@ exports.getJobData = async (req, res) => {
             message: 'job data fetched successfully',
             data: job_data,
             saved_status: saved_job_data ? saved_job_data.status : 'unsaved',
+            application_status: application ? application.status : 'unapplied',
             code: 200
         })
     } catch (error) {
@@ -285,11 +288,11 @@ exports.getappliedJobs = async (req, res) => {
                         preserveNullAndEmptyArrays: true
                     }
                 },
-                {
-                    $project: {
-                        job_data: 0
-                    }
-                }
+                // {
+                //     $project: {
+                //         job_data: 0
+                //     }
+                // }
             ]
         )
         console.log("data : ", data)
@@ -609,6 +612,27 @@ exports.getSavedJobs = async (req, res) => {
                             {
                                 $unwind: {
                                     path: "$job_category_data",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $lookup: {
+                                    from: "users",
+                                    localField: "company_id",
+                                    foreignField: "_id",
+                                    as: "company_data",
+                                    pipeline: [
+                                        {
+                                            $project: {
+                                                company_data: 1
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$company_data",
                                     preserveNullAndEmptyArrays: true
                                 }
                             }
