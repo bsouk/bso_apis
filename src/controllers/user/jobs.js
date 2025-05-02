@@ -4,6 +4,7 @@ const jobs = require("../../models/jobs");
 const User = require("../../models/user");
 const job_applications = require("../../models/job_applications");
 const saved_job = require("../../models/saved_job");
+const saved_resources = require("../../models/saved_resources");
 
 async function generateUniqueId() {
     const id = await Math.floor(Math.random() * 1000000)
@@ -731,6 +732,171 @@ exports.getSavedJobs = async (req, res) => {
         // }
         return res.status(200).json({
             message: "Saved jobs fetched successfully",
+            data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+//save unsave resources
+exports.saveUnsavedResources = async (req, res) => {
+    try {
+        const companyId = req.user._id
+        console.log('company id : ', companyId)
+
+
+        const user_data = await User.findOne({ _id: companyId })
+        console.log("user data : ", user_data)
+        if (!user_data.company_data) {
+            return utils.handleError(res, {
+                message: "Only authorised company can save resources",
+                code: 404,
+            });
+        }
+
+        const requiredFields = [
+            'company_data.name',
+            'company_data.business_category',
+            'company_data.phone_number',
+            'company_data.name',
+            'company_data.registration_number',
+            'company_data.incorporation_date',
+            'company_data.vat_number',
+            'company_data.business_category',
+            'company_data.phone_number',
+            'company_data.email',
+            'company_data.address.line1',
+            'company_data.address.city',
+            'company_data.address.state',
+            'company_data.address.zip_code',
+            'company_data.address.country',
+        ];
+
+        const checkResults = requiredFields.map(field => isFieldPopulated(user_data, field));
+        const incompleteFields = checkResults.filter(result => result.code === false);
+
+        if (incompleteFields.length > 0) {
+            const missingPaths = incompleteFields.map(f => f.path);
+            return utils.handleError(res, {
+                message: `Please complete your company profile. Missing fields: ${missingPaths.join(', ')}`,
+                code: 400,
+            });
+        }
+
+        const { candidate_id } = req.body
+        if (!candidate_id) {
+            return utils.handleError(res, {
+                message: "Candidate id is required",
+                code: 400,
+            });
+        }
+        let saved_data = await saved_resources.findOne({ company_id: companyId, candidate_id: candidate_id })
+        if (!saved_data) {
+            saved_data = await saved_resources.create({
+                ...req.body,
+                status: "saved"
+            })
+            return res.status(200).json({
+                message: "Resource saved successfully",
+                data: saved_data,
+                code: 200
+            })
+        } else {
+            if (saved_data && saved_data.status === "saved") {
+                saved_data.status = "unsaved"
+                await saved_data.save()
+            } else {
+                saved_data.status = "saved"
+                await saved_data.save()
+            }
+            return res.status(200).json({
+                message: "Resource status updated successfully",
+                data: saved_data,
+                code: 200
+            })
+        }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.getSavedResources = async (req, res) => {
+    try {
+        const companyId = req.user._id
+        console.log('company id : ', companyId)
+        let { offset = 0, limit = 10, skills, search = "" } = req.query
+        console.log("req.query : ", req.query)
+        let filter = {
+            company_id: companyId, status: "saved"
+        }
+        let newfilter = {};
+
+        if (search) {
+            newfilter["$or"] = [
+                {
+                    full_name: { $regex: search, $options: "i" },
+                    email: { $regex: search, $options: "i" }
+                }
+            ];
+        }
+        if (skills) {
+            skills = JSON.parse(skills);
+            newfilter["skills"] = { $in: skills };
+        }
+        console.log('filter : ', filter, "new filter : ", newfilter)
+        const data = await saved_resources.aggregate(
+            [
+                {
+                    $match: {
+                        ...filter,
+                        ...newfilter
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "candidate_id",
+                        foreignField: "_id",
+                        as: "candidate_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$candidate_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $sort: {
+                        createdAt: -1
+                    }
+                },
+                {
+                    $skip: parseInt(offset)
+                },
+                {
+                    $limit: parseInt(limit)
+                }
+            ]
+        )
+        console.log('data : ', data)
+        const count = await saved_resources.countDocuments({
+            ...filter,
+            ...newfilter
+        })
+        // if (!data || data.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "No saved jobs found",
+        //         code: 404,
+        //     });
+        // }
+        return res.status(200).json({
+            message: "Saved resources fetched successfully",
             data,
             count,
             code: 200
