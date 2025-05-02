@@ -191,6 +191,7 @@ exports.getJobData = async (req, res) => {
         return res.status(200).json({
             message: 'job data fetched successfully',
             data: job_data,
+            application: application,
             saved_status: saved_job_data ? saved_job_data.status : 'unsaved',
             application_status: application.status ? "applied" : 'unapplied',
             code: 200
@@ -230,6 +231,28 @@ exports.getappliedJobs = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user id : ', userId)
+
+        let { offset = 0, limit = 10, skills, job_type, industries, search = "" } = req.query
+        console.log("req.query : ", req.query)
+        let newfilter = {};
+
+        if (search) {
+            newfilter["job_data.job_title"] = { $regex: search, $options: "i" };
+        }
+        if (skills) {
+            skills = JSON.parse(skills);
+            newfilter["job_data.skills"] = { $in: skills };
+        }
+        if (job_type) {
+            job_type = JSON.parse(job_type);
+            newfilter["job_data.job_type"] = { $in: job_type };
+        }
+        if (industries) {
+            industries = JSON.parse(industries);
+            newfilter["job_data.job_category_data.name"] = { $in: industries };
+        }
+        console.log("new filter : ", newfilter)
+
         const data = await job_applications.aggregate(
             [
                 {
@@ -248,7 +271,21 @@ exports.getappliedJobs = async (req, res) => {
                                         $eq: ["$$id", "$_id"]
                                     }
                                 }
-                            }
+                            },
+                            {
+                                $lookup: {
+                                    from: "industry_types",
+                                    localField: "job_category",
+                                    foreignField: "_id",
+                                    as: "job_category_data"
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$job_category_data",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
                         ],
                         as: "job_data"
                     }
@@ -258,6 +295,9 @@ exports.getappliedJobs = async (req, res) => {
                         path: "$job_data",
                         preserveNullAndEmptyArrays: true
                     }
+                },
+                {
+                    $match: newfilter
                 },
                 {
                     $lookup: {
@@ -292,23 +332,34 @@ exports.getappliedJobs = async (req, res) => {
                 //         job_data: 0
                 //     }
                 // }
+                {
+                    $sort: {
+                        createdAt: -1
+                    }
+                },
+                {
+                    $skip: parseInt(offset)
+                },
+                {
+                    $limit: parseInt(limit)
+                }
             ]
         )
         console.log("data : ", data)
 
-        if (!data) {
-            return utils.handleError(res, {
-                message: "No job data found",
-                code: 404,
-            });
-        }
-        if (data.length === 0) {
-            return res.status(200).json({
-                message: "No job applied yet",
-                data: [],
-                success: true,
-            });
-        }
+        // if (!data) {
+        //     return utils.handleError(res, {
+        //         message: "No job data found",
+        //         code: 404,
+        //     });
+        // }
+        // if (data.length === 0) {
+        //     return res.status(200).json({
+        //         message: "No job applied yet",
+        //         data: [],
+        //         success: true,
+        //     });
+        // }
         return res.status(200).json({
             message: "Applied jobs fetched successfully",
             data,
@@ -672,12 +723,12 @@ exports.getSavedJobs = async (req, res) => {
         )
         console.log('data : ', data)
         const count = await saved_job.countDocuments({ candidate_id: userId, status: "saved" })
-        if (!data || data.length === 0) {
-            return utils.handleError(res, {
-                message: "No saved jobs found",
-                code: 404,
-            });
-        }
+        // if (!data || data.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "No saved jobs found",
+        //         code: 404,
+        //     });
+        // }
         return res.status(200).json({
             message: "Saved jobs fetched successfully",
             data,
