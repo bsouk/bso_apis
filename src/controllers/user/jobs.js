@@ -261,8 +261,8 @@ exports.getappliedJobs = async (req, res) => {
                 },
                 {
                     $lookup: {
-                        from: "company_datas",
-                        let: { id: "$job_data.company_id" },
+                        from: "users",
+                        let: { id: "$company_id" },
                         pipeline: [
                             {
                                 $match: {
@@ -274,8 +274,7 @@ exports.getappliedJobs = async (req, res) => {
                             {
                                 $project: {
                                     _id: 1,
-                                    company_name: 1,
-                                    company_logo: 1
+                                    company_data: 1,
                                 }
                             }
                         ],
