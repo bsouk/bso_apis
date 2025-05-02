@@ -173,10 +173,13 @@ exports.getJobs = async (req, res) => {
 
 exports.getJobData = async (req, res) => {
     try {
+        const user_id = req.user._id
         const { id } = req.params
-        console.log('id : ', id)
+        console.log('id : ', id, " user id : ", user_id)
         const job_data = await jobs.findOne({ _id: id }).populate('company_id', 'company_data')
         console.log('job data : ', job_data)
+        const saved_job_data = await saved_job.findOne({ candidate_id: user_id, job_id: id })
+        console.log('saved job data : ', saved_job_data)
         if (!job_data) {
             return utils.handleError(res, {
                 message: "Job data not found",
@@ -186,6 +189,7 @@ exports.getJobData = async (req, res) => {
         return res.status(200).json({
             message: 'job data fetched successfully',
             data: job_data,
+            saved_status: saved_job_data ? saved_job_data.status : 'unsaved',
             code: 200
         })
     } catch (error) {

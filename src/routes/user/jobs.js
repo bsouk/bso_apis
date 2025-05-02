@@ -25,6 +25,7 @@ router.get(
 router.get(
     '/getJobData/:id',
     trimRequest.all,
+    requireAuth,
     controller.getJobData
 )
 
