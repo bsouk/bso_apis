@@ -106,4 +106,12 @@ router.get(
     controller.getAppliedApplicantDetails
 )
 
+
+router.get(
+    '/getJobHiredResources/:job_id',
+    trimRequest.all,
+    requireAuth,
+    controller.getJobHiredResources
+)
+
 module.exports = router

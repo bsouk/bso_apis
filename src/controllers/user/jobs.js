@@ -933,3 +933,44 @@ exports.getAppliedApplicantDetails = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
+exports.getJobHiredResources = async (req, res) => {
+    try {
+        const companyId = req.user._id
+        console.log('company id : ', companyId)
+        const { job_id } = req.params
+        const { offset = 0, limit = 10 } = req.query
+        if (!job_id) {
+            return utils.handleError(res, {
+                message: "Job id is required",
+                code: 400,
+            });
+        }
+        const job_data = await jobs.findOne({ _id: job_id, company_id: companyId })
+        console.log('job data : ', job_data)
+        if (!job_data) {
+            return utils.handleError(res, {
+                message: "Job data not found",
+                code: 404,
+            });
+        }
+        const applicants = await job_applications.find({ job_id, company_id: companyId, is_accepted_by_company: true, application_status: "accepted" }).populate('canditate_id').sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
+        const count = await job_applications.countDocuments({ job_id, company_id: companyId, is_accepted_by_company: true, application_status: "accepted" })
+        // if (!applicants || applicants.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "No record found",
+        //         code: 404,
+        //     });
+        // }
+        return res.status(200).json({
+            message: "Hired resources fetched successfully",
+            data: applicants,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
