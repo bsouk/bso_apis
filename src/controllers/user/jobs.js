@@ -40,20 +40,9 @@ exports.createJob = async (req, res) => {
 
         const requiredFields = [
             'company_data.name',
-            'company_data.business_category',
-            'company_data.phone_number',
-            'company_data.name',
             'company_data.registration_number',
             'company_data.incorporation_date',
             'company_data.vat_number',
-            'company_data.business_category',
-            'company_data.phone_number',
-            'company_data.email',
-            'company_data.address.line1',
-            'company_data.address.city',
-            'company_data.address.state',
-            'company_data.address.zip_code',
-            'company_data.address.country',
         ];
 
         const checkResults = requiredFields.map(field => isFieldPopulated(user_data, field));
@@ -398,20 +387,9 @@ exports.acceptApplication = async (req, res) => {
 
         const requiredFields = [
             'company_data.name',
-            'company_data.business_category',
-            'company_data.phone_number',
-            'company_data.name',
             'company_data.registration_number',
             'company_data.incorporation_date',
             'company_data.vat_number',
-            'company_data.business_category',
-            'company_data.phone_number',
-            'company_data.email',
-            'company_data.address.line1',
-            'company_data.address.city',
-            'company_data.address.state',
-            'company_data.address.zip_code',
-            'company_data.address.country',
         ];
 
         const checkResults = requiredFields.map(field => isFieldPopulated(user_data, field));
@@ -771,20 +749,9 @@ exports.saveUnsavedResources = async (req, res) => {
 
         const requiredFields = [
             'company_data.name',
-            'company_data.business_category',
-            'company_data.phone_number',
-            'company_data.name',
             'company_data.registration_number',
             'company_data.incorporation_date',
             'company_data.vat_number',
-            'company_data.business_category',
-            'company_data.phone_number',
-            'company_data.email',
-            'company_data.address.line1',
-            'company_data.address.city',
-            'company_data.address.state',
-            'company_data.address.zip_code',
-            'company_data.address.country',
         ];
 
         const checkResults = requiredFields.map(field => isFieldPopulated(user_data, field));
