@@ -915,3 +915,21 @@ exports.getSavedResources = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
+exports.getAppliedApplicantDetails = async (req, res) => {
+    try {
+        const application_id = req.params.id
+        console.log('application id : ', application_id)
+        const data = await job_applications.findOne({ _id: application_id }).populate('canditate_id').populate('company_id', '_id company_data')
+        console.log('data : ', data)
+        return res.status(200).json({
+            message: "Applied applicant details fetched successfully",
+            data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

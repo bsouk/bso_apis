@@ -98,4 +98,12 @@ router.get(
     controller.getSavedResources
 )
 
+
+
+router.get(
+    '/getAppliedApplicantDetails/:id',
+    trimRequest.all,
+    controller.getAppliedApplicantDetails
+)
+
 module.exports = router
