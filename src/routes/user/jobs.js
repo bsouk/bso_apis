@@ -114,4 +114,11 @@ router.get(
     controller.getJobHiredResources
 )
 
+router.get(
+    '/getAllJobHiredResources',
+    trimRequest.all,
+    requireAuth,
+    controller.getAllJobHiredResources
+)
+
 module.exports = router

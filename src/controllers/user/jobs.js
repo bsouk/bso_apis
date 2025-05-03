@@ -974,3 +974,28 @@ exports.getJobHiredResources = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.getAllJobHiredResources = async (req, res) => {
+    try {
+        const companyId = req.user._id
+        console.log('company id : ', companyId)
+        const { offset = 0, limit = 10 } = req.query
+        const applicants = await job_applications.find({ company_id: companyId, is_accepted_by_company: true, application_status: "accepted" }).populate('canditate_id').sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
+        const count = await job_applications.countDocuments({ company_id: companyId, is_accepted_by_company: true, application_status: "accepted" })
+        // if (!applicants || applicants.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "No record found",
+        //         code: 404,
+        //     });
+        // }
+        return res.status(200).json({
+            message: "Hired resources fetched successfully",
+            data: applicants,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
