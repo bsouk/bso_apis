@@ -48,6 +48,8 @@ exports.addSubAdmin = async (req, res) => {
         }
         const password = await createNewPassword();
         const subadminData = {
+            first_name : data.first_name,
+            last_name : data.last_name,
             full_name: data.full_name,
             email: data.email,
             role: "sub_admin",
