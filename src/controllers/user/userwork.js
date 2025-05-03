@@ -801,15 +801,15 @@ exports.getUserAddressList = async (req, res) => {
         const addresslist = await Address.find({ user_id: userId }).populate("user_id", "full_name");
         console.log("addressList is ", addresslist);
 
-        if (!addresslist || addresslist.length === 0) {
-            return utils.handleError(res, {
-                message: "Address Not Found",
-                // code: 400,
-                code: 204,
-            });
-        }
+        // if (!addresslist || addresslist.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "Address Not Found",
+        //         // code: 400,
+        //         code: 200,
+        //     });
+        // }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: "User Address List Fetched Successfully",
             data: addresslist,

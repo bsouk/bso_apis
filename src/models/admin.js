@@ -7,7 +7,7 @@ const AdminSchema = new mongoose.Schema(
   {
     profile_image: {
       type: String,
-      default:""
+      default: ""
     },
     first_name: {
       type: String,
@@ -36,13 +36,23 @@ const AdminSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+    decoded_password: {
+      type: String,
+      required: true,
+      select: false,
+    },
     permissions: {
-      type: [String],
+      type: [mongoose.Schema.Types.Mixed],
       default: [""],
     },
     phone_number: {
       type: Number,
     },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    }
   },
   {
     timestamps: true,
