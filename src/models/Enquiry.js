@@ -22,7 +22,7 @@ const EnquirySchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        
+
         default: "pending"
     },
     expiry_date: {
@@ -176,6 +176,10 @@ const EnquirySchema = new mongoose.Schema({
     shipment_type: {
         type: String,
         enum: ["self-pickup", "delivery"],
+    },
+    order_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "orders"
     }
 },
     {

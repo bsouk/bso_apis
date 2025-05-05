@@ -28,6 +28,10 @@ const OrderSchema = new mongoose.Schema({
         ],
         default: "pending"
     },
+    enquiry_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'enquries'
+    },
     buyer_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users"
@@ -52,38 +56,38 @@ const OrderSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
-    delivery_charges: {
-        type: Number,
-        default: 0,
-    },
-    order_items: {
-        type: [
-            {
-                product_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'products',
-                },
-                supplier_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'users',
-                },
-                logistics_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'users',
-                },
-                variant_id: {
-                    type: mongoose.Schema.Types.ObjectId,
-                },
-                quantity: {
-                    type: Number
-                },
-                price: {
-                    type: Number
-                }
-            }
-        ],
-        default: []
-    },
+    // delivery_charges: {
+    //     type: Number,
+    //     default: 0,
+    // },
+    // order_items: {
+    //     type: [
+    //         {
+    //             product_id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'products',
+    //             },
+    //             supplier_id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'users',
+    //             },
+    //             logistics_id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //                 ref: 'users',
+    //             },
+    //             variant_id: {
+    //                 type: mongoose.Schema.Types.ObjectId,
+    //             },
+    //             quantity: {
+    //                 type: Number
+    //             },
+    //             price: {
+    //                 type: Number
+    //             }
+    //         }
+    //     ],
+    //     default: []
+    // },
     payment_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "payment"
