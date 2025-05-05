@@ -35,6 +35,7 @@ const Commision = require("../../models/commision")
 const EnquiryOtp = require("../../models/EnquiryOtp");
 const payment = require("../../models/payment");
 const industry_sub_type = require("../../models/industry_sub_type");
+const fcm_devices = require("../../models/fcm_devices");
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -4549,21 +4550,21 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
                 populate: [
                     {
                         path: "selected_supplier.quote_id",
-                        populate:[
+                        populate: [
                             {
-                              path: 'pickup_address',
-                              strictPopulate: false
+                                path: 'pickup_address',
+                                strictPopulate: false
                             },
                             {
-                              path: 'enquiry_items.quantity.unit'
+                                path: 'enquiry_items.quantity.unit'
                             }
-                          ]
+                        ]
                     },
                     {
                         path: "enquiry_items.quantity.unit"
                     },
                     {
-                        path : "shipping_address",
+                        path: "shipping_address",
                     }
                 ]
             }).sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
@@ -4953,6 +4954,61 @@ exports.getResource = async (req, res) => {
         console.log("user", user);
         res.json({ data: user[0], code: 200 });
     } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
+
+exports.addFCMDevice = async (req, res) => {
+    try {
+        const { device_id, device_type, token } = req.body;
+        const user_id = req.user._id;
+
+        const data = {
+            user_id: user_id,
+            device_id: device_id,
+            device_type: device_type,
+            token: token,
+            user_type: "admin"
+        };
+        const item = new fcm_devices(data);
+        await item.save();
+
+        res.json({
+            message: "Admin Token added successfully",
+            code: 200,
+        });
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
+    }
+};
+
+exports.deleteFCMDevice = async (req, res) => {
+    try {
+        const { token } = req.body;
+        const user_id = req.user._id;
+
+        const fcmToken = await fcm_devices.findOne({
+            user_id: user_id,
+            token: token,
+        });
+
+        if (!fcmToken)
+            return utils.handleError(res, {
+                message: "Token not found",
+                code: 404,
+            });
+
+        await fcm_devices.deleteOne({ user_id: user_id, token: token });
+
+        res.json({
+            message: "Admin Token deleted successfully",
+            code: 200,
+        });
+    } catch (error) {
+        console.log(error);
         utils.handleError(res, error);
     }
 };

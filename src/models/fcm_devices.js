@@ -8,15 +8,15 @@ const FCMDeviceSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    device_id : {
+    device_id: {
       type: String
     },
-    device_type:{
+    device_type: {
       type: String,
-      enum: ["web","android","ios"],
+      enum: ["web", "android", "ios"],
       default: "web",
     },
-    token:{
+    token: {
       type: String,
       required: true,
     }

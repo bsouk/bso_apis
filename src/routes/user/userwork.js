@@ -483,4 +483,19 @@ router.get(
     controller.getResource
 );
 
+
+router.post(
+    "/addFCMDevice",
+    requireAuth,
+    trimRequest.all,
+    controller.addFCMDevice
+  )
+  
+  router.post(
+    "/deleteFCMDevice",
+    requireAuth,
+    trimRequest.all,
+    controller.deleteFCMDevice
+  )
+
 module.exports = router;

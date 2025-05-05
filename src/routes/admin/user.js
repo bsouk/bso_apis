@@ -301,4 +301,19 @@ router.get(
 router.get("/viewLogisticQuote/:id", trimRequest.all, controller.viewLogisticQuote)
 router.put("/acceptLogisticQuote/:id", trimRequest.all, controller.acceptLogisticQuote)
 
+
+router.post(
+  "/addAdminFCMDevice",
+  requireAuth,
+  trimRequest.all,
+  controller.addFCMDevice
+)
+
+router.post(
+  "/deleteAdminFCMDevice",
+  requireAuth,
+  trimRequest.all,
+  controller.deleteFCMDevice
+)
+
 module.exports = router;

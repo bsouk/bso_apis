@@ -213,6 +213,31 @@ exports.getCountryCode = obj => {
  */
 
 
+exports.sendNotification = async (token, notificationData) => {
+  try {
+    // Ensure that the token is valid and not empty
+    if (!token) {
+      console.error("Invalid token provided.");
+      return;
+    }
+    console.log('notificationData', notificationData)
+    const message = {
+      notification: {
+        title: notificationData.title,
+        body: notificationData.description,  // Corrected description field name to "body"
+      },
+      token: token  // This should be the user's FCM token
+    };
+    console.log("message : ", message)
+    // Send the notification using Firebase Admin SDK
+    await admin.messaging().send(message);
+    console.log("Notification sent successfully to the user.");
+
+  } catch (error) {
+    console.error("Error sending notification:", error);
+  }
+};
+
 
 exports.sendPushNotification = async (
   notificaiton,
@@ -229,32 +254,31 @@ exports.sendPushNotification = async (
     const fcm_device = await FCMDevice.findOne({ user_id: new mongoose.Types.ObjectId(notificaiton.receiver_id) });
     const token = fcm_device?.token ?? ""
 
-    // if (push && token) {
-    //   const notificationData = {
-    //     title: notificaiton.title,
-    //     body: notificaiton.description,
-    //   };
-    //   var message = {
-    //     notification: notificationData,
-    //     tokens: [token],
-    //   };
+    if (push && token) {
+      const notificationData = {
+        title: notificaiton.title,
+        body: notificaiton.description,
+      };
+      var message = {
+        notification: notificationData,
+        tokens: [token],
+      };
 
-    //   admin
-    //     .messaging()
-    //     .sendMulticast(message)
-    //     .then((response) => {
-    //       console.log("response",response.responses[0].error)
-    //       if (response.failureCount > 0) {
-    //         console.log("Failed notification count" ,response.failureCount)
-    //       }else{
-    //         console.log("Notification sent successfully")
-    //       }
-    //     })
-    //     .catch((error) => {
-    //       console.log("Error sending message:", error);
-    //     });
-
-    // }
+      admin
+        .messaging()
+        .sendMulticast(message)
+        .then((response) => {
+          console.log("response", response.responses[0].error)
+          if (response.failureCount > 0) {
+            console.log("Failed notification count", response.failureCount)
+          } else {
+            console.log("Notification sent successfully")
+          }
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
+    }
 
   } catch (err) {
     console.log(err);

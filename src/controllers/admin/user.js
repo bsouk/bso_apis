@@ -11,6 +11,7 @@ const EnquiryQuotes = require("../../models/EnquiryQuotes")
 const Enquiry = require("../../models/Enquiry")
 const subscription = require("../../models/subscription");
 const logistics_quotes = require("../../models/logistics_quotes");
+const fcm_devices = require("../../models/fcm_devices");
 function createNewPassword() {
   const password = generatePassword.generate({
     length: 8,
@@ -2466,3 +2467,58 @@ exports.acceptLogisticQuote = async (req, res) => {
     code: 200
   });
 }
+
+
+
+exports.addFCMDevice = async (req, res) => {
+  try {
+    const { device_id, device_type, token } = req.body;
+    const user_id = req.user._id;
+
+    const data = {
+      user_id: user_id,
+      device_id: device_id,
+      device_type: device_type,
+      token: token,
+      user_type: "admin"
+    };
+    const item = new fcm_devices(data);
+    await item.save();
+
+    res.json({
+      message: "Admin Token added successfully",
+      code: 200,
+    });
+  } catch (error) {
+    console.log(error);
+    utils.handleError(res, error);
+  }
+};
+
+exports.deleteFCMDevice = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user_id = req.user._id;
+
+    const fcmToken = await fcm_devices.findOne({
+      user_id: user_id,
+      token: token,
+    });
+
+    if (!fcmToken)
+      return utils.handleError(res, {
+        message: "Token not found",
+        code: 404,
+      });
+
+    await fcm_devices.deleteOne({ user_id: user_id, token: token });
+
+    res.json({
+      message: "Admin Token deleted successfully",
+      code: 200,
+    });
+  } catch (error) {
+    console.log(error);
+    utils.handleError(res, error);
+  }
+};
