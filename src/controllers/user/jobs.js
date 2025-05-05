@@ -80,7 +80,7 @@ exports.createJob = async (req, res) => {
 
 exports.getJobs = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, search, job_type, industry_id } = req.query
+        const { offset = 0, limit = 10, search, job_type, industry_id, skills, location } = req.query
         let filter = {}
         if (search) {
             filter.job_title = { $regex: search, $options: "i" }
@@ -89,7 +89,13 @@ exports.getJobs = async (req, res) => {
             filter.job_type = job_type
         }
         if (industry_id) {
-            filter.job_category = industry_id
+            filter.job_category = { $in: industry_id }
+        }
+        if (skills) {
+            filter.skills = { $in: skills }
+        }
+        if (location) {
+            filter.location = { $regex: location, $options: "i" }
         }
         const jobs_data = await jobs.aggregate(
             [
@@ -232,7 +238,7 @@ exports.getappliedJobs = async (req, res) => {
         const userId = req.user._id
         console.log('user id : ', userId)
 
-        let { offset = 0, limit = 10, skills, job_type, industries, search = "" } = req.query
+        let { offset = 0, limit = 10, skills, job_type, industries, search = "" , location} = req.query
         console.log("req.query : ", req.query)
         let newfilter = {};
 
@@ -250,6 +256,9 @@ exports.getappliedJobs = async (req, res) => {
         if (industries) {
             industries = JSON.parse(industries);
             newfilter["job_data.job_category_data.name"] = { $in: industries };
+        }
+        if (location) {
+            newfilter["job_data.location"] = {$regex: location, $options: "i" };
         }
         console.log("new filter : ", newfilter)
 
@@ -436,7 +445,7 @@ exports.getCompanyPostedJobs = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user id : ', userId)
-        const { offset = 0, limit = 10, search, job_type, industry_id } = req.query
+        const { offset = 0, limit = 10, search, job_type, industry_id, skills, location} = req.query
         let filter = {
             company_id: new mongoose.Types.ObjectId(userId)
         }
@@ -447,7 +456,14 @@ exports.getCompanyPostedJobs = async (req, res) => {
             filter.job_type = job_type
         }
         if (industry_id) {
-            filter.job_category = industry_id
+            filter.job_category = { $in: JSON.parse(industry_id) };
+        }
+        if (skills) {
+            skills = JSON.parse(skills);
+            filter.skills = { $in: skills }
+        }
+        if (location) {
+            filter.location = {$regex: location, $options: "i" };
         }
         const jobs_data = await jobs.aggregate(
             [
@@ -605,7 +621,7 @@ exports.getSavedJobs = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user id : ', userId)
-        let { offset = 0, limit = 10, skills, job_type, industries, search = "" } = req.query
+        let { offset = 0, limit = 10, skills, job_type, industries, search = "", location} = req.query
         console.log("req.query : ", req.query)
         let filter = {
             candidate_id: userId, status: "saved"
@@ -626,6 +642,9 @@ exports.getSavedJobs = async (req, res) => {
         if (industries) {
             industries = JSON.parse(industries);
             newfilter["job_data.job_category_data.name"] = { $in: industries };
+        }
+        if (location) {
+            newfilter["job_data.location"] = { $regex: location, $options: "i" };
         }
         console.log('filter : ', filter, "new filter : ", newfilter)
         const data = await saved_job.aggregate(
