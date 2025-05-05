@@ -32,13 +32,19 @@ const sendUsernotificationhelper = async (user_id, notificationbody, dbnotificat
 exports.sendNotification = async (req, res) => {
     try {
         const admin_id = req.user._id;
-        const { sent_to, title, body } = req.body;
+        const { sent_to, title, body, all } = req.body;
+
+        let filter = {};
+        if (sent_to.length !== 0) {
+            filter['_id'] = { $in: sent_to }
+        }
+        if (sent_to.length === 0 && (all === true || all === "true")) {
+            filter = {}
+        }
 
         const users = await User.aggregate([
             {
-                $match: {
-                    _id: { $in: sent_to }
-                }
+                $match: filter
             },
             {
                 $lookup: {
@@ -109,6 +115,19 @@ exports.getNotificationList = async (req, res) => {
         const notifications = await Adminnotification.find({ sender_id: admin_id }).populate('receiver_id').sort({ createdAt: -1 }).skip(offset).limit(limit);
         const totalCount = await Adminnotification.countDocuments({ sender_id: admin_id });
         res.json({ notifications, totalCount, code: 200 })
+    } catch (error) {
+        console.log(error)
+        utils.handleError(res, error)
+    }
+}
+
+
+exports.getAllUsers = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10 } = req.query;
+        const users = await User.find().skip(Number(offset)).limit(Number(limit)).select('_id name');
+        console.log("users : ", users)
+        return res.json({ users, code: 200 })
     } catch (error) {
         console.log(error)
         utils.handleError(res, error)

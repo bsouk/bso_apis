@@ -24,4 +24,11 @@ router.get(
     controller.getNotificationList
 )
 
+router.get(
+    "/getAllUsers",
+    trimRequest.all,
+    requireAuth,
+    controller.getAllUsers
+)
+
 module.exports = router
