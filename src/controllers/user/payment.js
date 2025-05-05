@@ -32,6 +32,19 @@ exports.getPaymentListing = async (req, res) => {
                 },
                 {
                     $lookup: {
+                        from: "enquires",
+                        localField: "enquiry_id",
+                        foreignField: "_id",
+                        as: "enquiry_data"
+                    }
+                },
+                {
+                    $addFields: {
+                        enquiry_unique_id: '$enquiry_data.unique_id',
+                    }
+                },
+                {
+                    $lookup: {
                         from: "orders",
                         let: { id: "$order_id" },
                         pipeline: [
@@ -54,6 +67,11 @@ exports.getPaymentListing = async (req, res) => {
                     $unwind: {
                         path: "$order_data",
                         preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $project: {
+                        enquiry_data: 0
                     }
                 },
                 {
@@ -91,6 +109,19 @@ exports.paymentDetails = async (req, res) => {
                 },
                 {
                     $lookup: {
+                        from: "enquires",
+                        localField: "enquiry_id",
+                        foreignField: "_id",
+                        as: "enquiry_data"
+                    }
+                },
+                {
+                    $addFields: {
+                        enquiry_unique_id: '$enquiry_data.unique_id',
+                    }
+                },
+                {
+                    $lookup: {
                         from: "orders",
                         let: { id: "$order_id" },
                         pipeline: [
@@ -113,6 +144,11 @@ exports.paymentDetails = async (req, res) => {
                     $unwind: {
                         path: "$order_data",
                         preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $project : {
+                        enquiry_data: 0
                     }
                 }
             ]
