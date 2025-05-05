@@ -46,7 +46,7 @@ exports.getPaymentListing = async (req, res) => {
                 },
                 {
                     $addFields: {
-                        enquiry_unique_id: '$enquiry_data.unique_id',
+                        enquiry_unique_id: '$enquiry_data.enquiry_unique_id',
                     }
                 },
                 {
@@ -129,7 +129,7 @@ exports.paymentDetails = async (req, res) => {
                 },
                 {
                     $addFields: {
-                        enquiry_unique_id: '$enquiry_data.unique_id',
+                        enquiry_unique_id: '$enquiry_data.enquiry_unique_id',
                     }
                 },
                 {
