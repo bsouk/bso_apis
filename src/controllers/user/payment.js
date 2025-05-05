@@ -39,6 +39,12 @@ exports.getPaymentListing = async (req, res) => {
                     }
                 },
                 {
+                    $unwind: {
+                        path: "$enquiry_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
                     $addFields: {
                         enquiry_unique_id: '$enquiry_data.unique_id',
                     }
@@ -116,6 +122,12 @@ exports.paymentDetails = async (req, res) => {
                     }
                 },
                 {
+                    $unwind: {
+                        path: "$enquiry_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
                     $addFields: {
                         enquiry_unique_id: '$enquiry_data.unique_id',
                     }
@@ -147,7 +159,7 @@ exports.paymentDetails = async (req, res) => {
                     }
                 },
                 {
-                    $project : {
+                    $project: {
                         enquiry_data: 0
                     }
                 }
