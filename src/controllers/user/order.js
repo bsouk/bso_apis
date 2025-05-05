@@ -28,7 +28,14 @@ exports.myOrder = async (req, res) => {
                         from: "users",
                         localField: "buyer_id",
                         foreignField: "_id",
-                        as: "buyer_data"
+                        as: "buyer_data",
+                        pipeline : [
+                            {
+                                $project: {
+                                   password: 0,
+                                }
+                            }
+                        ]
                     }
                 },
                 {
@@ -39,7 +46,7 @@ exports.myOrder = async (req, res) => {
                 },
                 {
                     $lookup: {
-                        from: "enquiries",
+                        from: "enquires",
                         localField: "enquiry_id",
                         foreignField: "_id",
                         as: "enquiry_data"
@@ -56,7 +63,14 @@ exports.myOrder = async (req, res) => {
                         from: "users",
                         localField: "logistics_id",
                         foreignField: "_id",
-                        as: "logistics_data"
+                        as: "logistics_data",
+                        pipeline : [
+                            {
+                                $project: {
+                                   password: 0,
+                                }
+                            }
+                        ]
                     }
                 },
                 {
@@ -166,7 +180,14 @@ exports.OrderDetails = async (req, res) => {
                         from: "users",
                         localField: "buyer_id",
                         foreignField: "_id",
-                        as: "buyer_data"
+                        as: "buyer_data",
+                        pipeline : [
+                            {
+                                $project: {
+                                   password: 0,
+                                }
+                            }
+                        ]
                     }
                 },
                 {
@@ -177,7 +198,7 @@ exports.OrderDetails = async (req, res) => {
                 },
                 {
                     $lookup: {
-                        from: "enquiries",
+                        from: "enquires",
                         localField: "enquiry_id",
                         foreignField: "_id",
                         as: "enquiry_data"
@@ -194,7 +215,14 @@ exports.OrderDetails = async (req, res) => {
                         from: "users",
                         localField: "logistics_id",
                         foreignField: "_id",
-                        as: "logistics_data"
+                        as: "logistics_data",
+                        pipeline : [
+                            {
+                                $project: {
+                                   password: 0,
+                                }
+                            }
+                        ]
                     }
                 },
                 {
