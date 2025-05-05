@@ -30,6 +30,31 @@ exports.getPaymentListing = async (req, res) => {
                 },
                 {
                     $lookup: {
+                        from: "users",
+                        localField: "buyer_id",
+                        foreignField: "_id",
+                        as: "buyer",
+                        pipeline: [
+                            {
+                                $project: {
+                                    _id: 1,
+                                    full_name: 1,
+                                    first_name: 1,
+                                    last_name: 1,
+                                    email: 1
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$buyer",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
                         from: "orders",
                         let: { id: "$order_id" },
                         pipeline: [
@@ -58,10 +83,10 @@ exports.getPaymentListing = async (req, res) => {
                     $sort: { createdAt: -1 }
                 },
                 {
-                    $skip : parseInt(offset)
+                    $skip: parseInt(offset)
                 },
                 {
-                    $limit : parseInt(limit)
+                    $limit: parseInt(limit)
                 }
             ]
         )
@@ -86,6 +111,31 @@ exports.paymentDetails = async (req, res) => {
             [
                 {
                     $match: { _id: new mongoose.Types.ObjectId(id) }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "buyer_id",
+                        foreignField: "_id",
+                        as: "buyer",
+                        pipeline: [
+                            {
+                                $project: {
+                                    _id: 1,
+                                    full_name: 1,
+                                    first_name: 1,
+                                    last_name: 1,
+                                    email: 1
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$buyer",
+                        preserveNullAndEmptyArrays: true
+                    }
                 },
                 {
                     $lookup: {
