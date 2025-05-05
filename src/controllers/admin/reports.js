@@ -18,7 +18,7 @@ exports.downloadReport = async (req, res) => {
 
     try {
         switch (reportOf) {
-            case "User": {
+            case "Buyer": {
                 let userList = []
                 if (req.body.fromDate && req.body.toDate) {
                     const newFromDate = new Date(req.body.fromDate);
@@ -27,6 +27,139 @@ exports.downloadReport = async (req, res) => {
                         return res.status(400).json({ error: "Invalid date format" });
                     }
                     userList = await User.find({
+                        user_type: { $in: ['buyer'] },
+                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                    })
+                } else {
+                    userList = await User.find()
+                }
+                console.log("user list is", userList);
+
+                if (userList.length <= 0) {
+                    return res.status(401).json({
+                        message: "No user data found",
+                        code: 401
+                    })
+                }
+
+                const cleanUserList = userList.map((user) => ({
+                    userId: user?.unique_user_id,
+                    fullName: user?.full_name,
+                    companyName: user?.company_name,
+                    email: user?.email,
+                    phoneNumber: user?.phone_number,
+                    userType: user?.user_type,
+                    status: user?.status,
+                    profileCompleted: user?.profile_completed
+                }))
+
+                if (format === "excel") {
+                    return utils.generateExcel(cleanUserList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanUserList, res)
+                } else {
+                    return utils.generatePDF(cleanUserList, res)
+                }
+            };
+                break;
+            case "Supplier": {
+                let userList = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    userList = await User.find({
+                        user_type: { $in: ['supplier'] },
+                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                    })
+                } else {
+                    userList = await User.find()
+                }
+                console.log("user list is", userList);
+
+                if (userList.length <= 0) {
+                    return res.status(401).json({
+                        message: "No user data found",
+                        code: 401
+                    })
+                }
+
+                const cleanUserList = userList.map((user) => ({
+                    userId: user?.unique_user_id,
+                    fullName: user?.full_name,
+                    companyName: user?.company_name,
+                    email: user?.email,
+                    phoneNumber: user?.phone_number,
+                    userType: user?.user_type,
+                    status: user?.status,
+                    profileCompleted: user?.profile_completed
+                }))
+
+                if (format === "excel") {
+                    return utils.generateExcel(cleanUserList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanUserList, res)
+                } else {
+                    return utils.generatePDF(cleanUserList, res)
+                }
+            };
+                break;
+            case "Logistics": {
+                let userList = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    userList = await User.find({
+                        user_type: { $in: ['logistics'] },
+                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                    })
+                } else {
+                    userList = await User.find()
+                }
+                console.log("user list is", userList);
+
+                if (userList.length <= 0) {
+                    return res.status(401).json({
+                        message: "No user data found",
+                        code: 401
+                    })
+                }
+
+                const cleanUserList = userList.map((user) => ({
+                    userId: user?.unique_user_id,
+                    fullName: user?.full_name,
+                    companyName: user?.company_name,
+                    email: user?.email,
+                    phoneNumber: user?.phone_number,
+                    userType: user?.user_type,
+                    status: user?.status,
+                    profileCompleted: user?.profile_completed
+                }))
+
+                if (format === "excel") {
+                    return utils.generateExcel(cleanUserList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanUserList, res)
+                } else {
+                    return utils.generatePDF(cleanUserList, res)
+                }
+            };
+                break;
+            case "Resource": {
+                let userList = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    userList = await User.find({
+                        user_type: { $in: ['resource'] },
                         createdAt: { $gte: newFromDate, $lte: newToDate }
                     })
                 } else {
