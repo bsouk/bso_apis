@@ -11,9 +11,7 @@ const tracking_order = require("../../models/tracking_order");
 exports.getPaymentListing = async (req, res) => {
     try {
         const { status, from_date, to_date } = req.query
-        const userId = req.user._id
-        console.log("userId : ", userId)
-        const filter = { buyer_id: new mongoose.Types.ObjectId(userId) }
+        const filter = {}
         if (status) {
             filter.status = status
         }
