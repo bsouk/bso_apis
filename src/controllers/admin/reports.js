@@ -5,6 +5,9 @@ const Order = require("../../models/order")
 const Payment = require("../../models/payment")
 const utils = require("../../utils/utils");
 const Admin = require("../../models/admin");
+const Brand = require("../../models/brand");
+const BusinessCategory = require("../../models/business_category");
+const Category = require("../../models/product_category");
 const moment = require("moment");
 
 exports.downloadReport = async (req, res) => {
@@ -54,6 +57,123 @@ exports.downloadReport = async (req, res) => {
                     "Profile Completed": user?.profile_completed === true ? "Yes" : "No",
                     "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
                     "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+                }))
+
+                if (format === "excel") {
+                    return utils.generateExcel(cleanUserList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanUserList, res)
+                } else {
+                    return res.send(cleanUserList);
+                }
+            };
+                break;
+            case "Brand": {
+                let brand = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    brand = await Brand.find({
+                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                    }).sort({ createdAt: -1 })
+                } else {
+                    brand = await Brand.find().sort({ createdAt: -1 })
+                }
+                console.log("brand list is", brand);
+
+                if (brand.length <= 0) {
+                    return res.status(401).json({
+                        message: "No brand data found",
+                        code: 401
+                    })
+                }
+
+                const cleanUserList = brand.map((brand) => ({
+                    "Name": brand?.name ? brand?.name : " ",
+                    "Approval Status": brand?.is_admin_approved,
+                    "Created At": moment(brand?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(brand?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+                }))
+
+                if (format === "excel") {
+                    return utils.generateExcel(cleanUserList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanUserList, res)
+                } else {
+                    return res.send(cleanUserList);
+                }
+            };
+                break;
+            case "Business Category": {
+                let brand = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    brand = await BusinessCategory.find({
+                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                    }).sort({ createdAt: -1 })
+                } else {
+                    brand = await BusinessCategory.find().sort({ createdAt: -1 })
+                }
+                console.log("BusinessCategory list is", brand);
+
+                if (brand.length <= 0) {
+                    return res.status(401).json({
+                        message: "No brand data found",
+                        code: 401
+                    })
+                }
+
+                const cleanUserList = brand.map((brand) => ({
+                    "Name": brand?.name ? brand?.name : " ",
+                    "Approval Status": brand?.is_admin_approved,
+                    "Created At": moment(brand?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(brand?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+                }))
+
+                if (format === "excel") {
+                    return utils.generateExcel(cleanUserList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanUserList, res)
+                } else {
+                    return res.send(cleanUserList);
+                }
+            };
+                break;
+            case "Category": {
+                let brand = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    brand = await Category.find({
+                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                    }).sort({ createdAt: -1 })
+                } else {
+                    brand = await Category.find().sort({ createdAt: -1 })
+                }
+                console.log("brand list is", brand);
+
+                if (brand.length <= 0) {
+                    return res.status(401).json({
+                        message: "No brand data found",
+                        code: 401
+                    })
+                }
+
+                const cleanUserList = brand.map((brand) => ({
+                    "Name": brand?.name ? brand?.name : " ",
+                    "Approval Status": brand?.is_admin_approved,
+                    "Created At": moment(brand?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(brand?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 if (format === "excel") {
