@@ -4,6 +4,8 @@ const User = require("../../models/user")
 const Order = require("../../models/order")
 const Payment = require("../../models/payment")
 const utils = require("../../utils/utils");
+const Admin = require("../../models/admin");
+const moment = require("moment");
 
 exports.downloadReport = async (req, res) => {
     const { format, reportOf } = req.body
@@ -29,9 +31,9 @@ exports.downloadReport = async (req, res) => {
                     userList = await User.find({
                         user_type: { $in: ['buyer'] },
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    })
+                    }).sort({ createdAt: -1 })
                 } else {
-                    userList = await User.find()
+                    userList = await User.find().sort({ createdAt: -1 })
                 }
                 console.log("user list is", userList);
 
@@ -43,14 +45,15 @@ exports.downloadReport = async (req, res) => {
                 }
 
                 const cleanUserList = userList.map((user) => ({
-                    userId: user?.unique_user_id,
-                    fullName: user?.full_name,
-                    companyName: user?.company_name,
-                    email: user?.email,
-                    phoneNumber: user?.phone_number,
-                    userType: user?.user_type,
-                    status: user?.status,
-                    profileCompleted: user?.profile_completed
+                    "User Id": user?.unique_user_id,
+                    "Full Name": user?.full_name,
+                    "Company Name": user?.company_name,
+                    "Email": user?.email,
+                    "Phone Number": user?.phone_number,
+                    "status": user?.status,
+                    "Profile Completed": user?.profile_completed === true ? "Yes" : "No",
+                    "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 if (format === "excel") {
@@ -58,7 +61,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanUserList, res)
                 } else {
-                    return utils.generatePDF(cleanUserList, res)
+                    return res.send(cleanUserList);
                 }
             };
                 break;
@@ -73,9 +76,9 @@ exports.downloadReport = async (req, res) => {
                     userList = await User.find({
                         user_type: { $in: ['supplier'] },
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    })
+                    }).sort({ createdAt: -1 })
                 } else {
-                    userList = await User.find()
+                    userList = await User.find().sort({ createdAt: -1 })
                 }
                 console.log("user list is", userList);
 
@@ -87,14 +90,31 @@ exports.downloadReport = async (req, res) => {
                 }
 
                 const cleanUserList = userList.map((user) => ({
-                    userId: user?.unique_user_id,
-                    fullName: user?.full_name,
-                    companyName: user?.company_name,
-                    email: user?.email,
-                    phoneNumber: user?.phone_number,
-                    userType: user?.user_type,
-                    status: user?.status,
-                    profileCompleted: user?.profile_completed
+                    "User Id": user?.unique_user_id,
+                    "Full Name": user?.full_name,
+                    "Company Name": user?.company_name,
+                    "Email": user?.email,
+                    "Phone Number": user?.phone_number,
+                    "status": user?.status,
+                    "Profile Completed": user?.profile_completed === true ? "Yes" : "No",
+                    "Account Holder Name": user?.bank_details?.account_holder_name,
+                    "Account Number": user?.bank_details?.account_number,
+                    "Bank Name": user?.bank_details?.bank_name,
+                    "Swift Code": user?.bank_details?.swift_code,
+                    "IBAN Number": user?.bank_details?.iban_number,
+                    "Bank Address Line 1": user?.bank_details?.address?.line1,
+                    "Bank Address City": user?.bank_details?.address?.city,
+                    "Bank Address State": user?.bank_details?.address?.state,
+                    "Bank Address Zip Code": user?.bank_details?.address?.zip_code,
+                    "Bank Address Country": user?.bank_details?.address?.country,
+                    "Company Name": user?.company_data?.name,
+                    "Company Phone Number": user?.company_data?.phone_number,
+                    "Company Email": user?.company_data?.email,
+                    "Company Registration Number": user?.company_data?.registration_number,
+                    "Company Incorporation Date": user?.company_data?.incorporation_date,
+                    "Company VAT Number": user?.company_data?.vat_number,
+                    "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 if (format === "excel") {
@@ -102,7 +122,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanUserList, res)
                 } else {
-                    return utils.generatePDF(cleanUserList, res)
+                    return res.send(cleanUserList);
                 }
             };
                 break;
@@ -117,9 +137,9 @@ exports.downloadReport = async (req, res) => {
                     userList = await User.find({
                         user_type: { $in: ['logistics'] },
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    })
+                    }).sort({ createdAt: -1 })
                 } else {
-                    userList = await User.find()
+                    userList = await User.find().sort({ createdAt: -1 })
                 }
                 console.log("user list is", userList);
 
@@ -131,14 +151,27 @@ exports.downloadReport = async (req, res) => {
                 }
 
                 const cleanUserList = userList.map((user) => ({
-                    userId: user?.unique_user_id,
-                    fullName: user?.full_name,
-                    companyName: user?.company_name,
-                    email: user?.email,
-                    phoneNumber: user?.phone_number,
-                    userType: user?.user_type,
-                    status: user?.status,
-                    profileCompleted: user?.profile_completed
+                    "User Id": user?.unique_user_id,
+                    "Full Name": user?.full_name,
+                    "Company Name": user?.company_name,
+                    "Email": user?.email,
+                    "Phone Number": user?.phone_number,
+                    "status": user?.status,
+                    "Profile Completed": user?.profile_completed === true ? "Yes" : "No",
+                    "Company Name": user?.company_data?.name,
+                    "Company Phone Number": user?.company_data?.phone_number,
+                    "Company Email": user?.company_data?.email,
+                    "Company Registration Number": user?.company_data?.registration_number,
+                    "Company Incorporation Date": user?.company_data?.incorporation_date,
+                    "Company VAT Number": user?.company_data?.vat_number,
+                    "Company Address Line 1": user?.company_data?.address?.line1,
+                    "Company Address City": user?.company_data?.address?.city,
+                    "Company Address State": user?.company_data?.address?.state,
+                    "Company Address Zip Code": user?.company_data?.address?.zip_code,
+                    "Company Address Country": user?.company_data?.address?.country,
+                    "Delivery Type": user?.company_data?.delivery_type,
+                    "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 if (format === "excel") {
@@ -146,7 +179,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanUserList, res)
                 } else {
-                    return utils.generatePDF(cleanUserList, res)
+                    return res.send(cleanUserList);
                 }
             };
                 break;
@@ -161,9 +194,9 @@ exports.downloadReport = async (req, res) => {
                     userList = await User.find({
                         user_type: { $in: ['resource'] },
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    })
+                    }).sort({ createdAt: -1 })
                 } else {
-                    userList = await User.find()
+                    userList = await User.find().sort({ createdAt: -1 })
                 }
                 console.log("user list is", userList);
 
@@ -175,14 +208,21 @@ exports.downloadReport = async (req, res) => {
                 }
 
                 const cleanUserList = userList.map((user) => ({
-                    userId: user?.unique_user_id,
-                    fullName: user?.full_name,
-                    companyName: user?.company_name,
-                    email: user?.email,
-                    phoneNumber: user?.phone_number,
-                    userType: user?.user_type,
-                    status: user?.status,
-                    profileCompleted: user?.profile_completed
+                    "User Id": user?.unique_user_id,
+                    "Full Name": user?.full_name,
+                    "Profile Title": user?.profile_title,
+                    "Profile Description": user?.profile_description,
+                    "Email": user?.email,
+                    "Phone Number": user?.phone_number,
+                    "status": user?.status,
+                    "Profile Completed": user?.profile_completed === true ? "Yes" : "No",
+                    "Rate per hour": user?.rate_per_hour,
+                    "Pricing Model": user?.project_pricing_model,
+                    "Working Hours": user?.resource_availability?.working_hours?.from + " - " + user?.resource_availability?.working_hours?.to,
+                    "Time Zone": user?.resource_availability?.time_zone,
+                    "Days of Operation": user?.resource_availability?.days_of_operation,
+                    "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 if (format === "excel") {
@@ -190,7 +230,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanUserList, res)
                 } else {
-                    return utils.generatePDF(cleanUserList, res)
+                    return res.send(cleanUserList);
                 }
             };
                 break;
@@ -202,11 +242,11 @@ exports.downloadReport = async (req, res) => {
                     if (isNaN(newFromDate) || isNaN(newToDate)) {
                         return res.status(400).json({ error: "Invalid date format" });
                     }
-                    articleList = await Article.find({
+                    articleList = await Product.find({
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    }).lean()
+                    }).populate('user_id').populate('category_id').populate('brand_id').sort({ createdAt: -1 })
                 } else {
-                    articleList = await Article.find().lean()
+                    articleList = await Product.find().sort({ createdAt: -1 })
                 }
                 console.log("article list is", articleList);
 
@@ -216,16 +256,13 @@ exports.downloadReport = async (req, res) => {
                         code: 401
                     })
                 }
-
                 const cleanArticleList = articleList.map((article) => ({
-                    ArticleName: article?.name,
-                    ArticleId: article?.article_id,
-                    CutLengthPrice: article?.min_cut_length_price,
-                    WholeSalePrice: article?.price,
-                    HSNCode: article?.hsn_code,
-                    Discount: article?.applied_discount,
-                    FeatureStatus: article?.feature_status,
-                    DisplayStatus: article?.status
+                    "Name": article?.name,
+                    "Brand": article?.brand_id?.name,
+                    "Category": article?.category_id?.name,
+                    "Approval Status": article?.is_admin_approved,
+                    "Created At": moment(article?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(article?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 if (format === "excel") {
@@ -233,7 +270,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanArticleList, res)
                 } else {
-                    return utils.generatePDF(cleanArticleList, res)
+                    return res.send(cleanArticleList);
                 }
             }; break;
             case "Order": {
@@ -246,9 +283,9 @@ exports.downloadReport = async (req, res) => {
                     }
                     orderList = await Order.find({
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    }).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id')
+                    }).populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id').sort({ createdAt: -1 })
                 } else {
-                    orderList = await Order.find().populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id')
+                    orderList = await Order.find().populate('order_items.product_id').populate('order_items.supplier_id').populate('order_items.logistics_id').populate('order_items.variant_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id').sort({ createdAt: -1 })
                 }
                 console.log("article list is", orderList);
 
@@ -260,15 +297,17 @@ exports.downloadReport = async (req, res) => {
                 }
 
                 const cleanorderList = orderList.map((order) => ({
-                    "Order Id": order.order_unique_id,
-                    "Order Type": order.order_type,
-                    "Order Status": order.order_status,
-                    "Buyer": order.buyer_id.full_name,
-                    "Amount": order.total_amount,
-                    "Delivery Charges": order.delivery_charges,
-                    "Shipping Address": `${order.shipping_address.address.address_line_1},${order.shipping_address.address.address_line_2},${order.shipping_address.address.city},${order.shipping_address.address.state},${order.shipping_address.address.country},${order.shipping_address.address.pin_code}`,
-                    "Billing Address": `${order.billing_address.address.address_line_1},${order.billing_address.address.address_line_2},${order.billing_address.address.city},${order.billing_address.address.state},${order.billing_address.address.country},${order.billing_address.address.pin_code}`,
-                    "Payment": order.payment_id.status
+                    "Order Id": order?.order_unique_id,
+                    "Order Type": order?.order_type,
+                    "Order Status": order?.order_status,
+                    "Buyer": order?.buyer_id?.full_name,
+                    "Amount": order?.total_amount,
+                    "Delivery Charges": order?.delivery_charges,
+                    "Shipping Address": `${order?.shipping_address?.address?.address_line_1},${order?.shipping_address?.address?.address_line_2},${order?.shipping_address?.address?.city},${order?.shipping_address?.address?.state},${order?.shipping_address?.address?.country},${order?.shipping_address?.address?.pin_code}`,
+                    "Billing Address": `${order?.billing_address?.address?.address_line_1},${order?.billing_address?.address?.address_line_2},${order?.billing_address?.address?.city},${order?.billing_address?.address?.state},${order?.billing_address?.address?.country},${order?.billing_address?.address?.pin_code}`,
+                    "Payment": order?.payment_id?.status,
+                    "Created At": moment(order?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(order?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 const headings = [
@@ -285,15 +324,15 @@ exports.downloadReport = async (req, res) => {
 
                 const data = []
                 orderList.map(async (order) =>
-                    await data.push([order.order_unique_id,
-                    order.order_type,
-                    order.order_status,
-                    order.buyer_id.full_name,
-                    order.total_amount,
-                    order.delivery_charges,
-                    `${order.shipping_address.address.address_line_1},${order.shipping_address.address.address_line_2},${order.shipping_address.address.city},${order.shipping_address.address.state},${order.shipping_address.address.country},${order.shipping_address.address.pin_code}`,
-                    `${order.billing_address.address.address_line_1},${order.billing_address.address.address_line_2},${order.billing_address.address.city},${order.billing_address.address.state},${order.billing_address.address.country},${order.billing_address.address.pin_code}`,
-                    order.payment_id.status
+                    await data.push([order?.order_unique_id,
+                    order?.order_type,
+                    order?.order_status,
+                    order?.buyer_id?.full_name,
+                    order?.total_amount,
+                    order?.delivery_charges,
+                    `${order?.shipping_address?.address?.address_line_1},${order?.shipping_address?.address?.address_line_2},${order?.shipping_address?.address?.city},${order?.shipping_address?.address?.state},${order?.shipping_address?.address?.country},${order?.shipping_address?.address?.pin_code}`,
+                    `${order?.billing_address?.address?.address_line_1},${order?.billing_address?.address?.address_line_2},${order?.billing_address?.address?.city},${order?.billing_address?.address?.state},${order?.billing_address?.address?.country},${order?.billing_address?.address?.pin_code}`,
+                    order?.payment_id?.status
                     ])
                 )
 
@@ -302,7 +341,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanorderList, res)
                 } else {
-                    return utils.generatePDF(headings, cleanorderList, res)
+                    return res.send(cleanorderList);
                 }
             }; break;
             case "Payment": {
@@ -315,9 +354,9 @@ exports.downloadReport = async (req, res) => {
                     }
                     paymentList = await Payment.find({
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    })
+                    }).sort({ createdAt: -1 })
                 } else {
-                    paymentList = await Payment.find()
+                    paymentList = await Payment.find().sort({ createdAt: -1 })
                 }
                 console.log("article list is", paymentList);
 
@@ -334,7 +373,9 @@ exports.downloadReport = async (req, res) => {
                     Status: payment?.status,
                     Amount: payment?.total_amount,
                     "Delivery Charges": payment.delivery_charges,
-                    Reciept: payment?.receipt_number
+                    Reciept: payment?.receipt_number,
+                    "Created At": moment(payment?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(payment?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 const headings = [
@@ -363,7 +404,7 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanpaymentList, res)
                 } else {
-                    return utils.generatePDF(headings, cleanpaymentList, res)
+                    return res.send(cleanpaymentList);
                 }
             }; break;
             case "SubAdmin": {
@@ -377,9 +418,9 @@ exports.downloadReport = async (req, res) => {
                     SubAdminList = await Admin.find({
                         createdAt: { $gte: newFromDate, $lte: newToDate },
                         role: "sub_admin"
-                    }).lean()
+                    }).sort({ createdAt: -1 })
                 } else {
-                    SubAdminList = await Admin.find({ role: "sub_admin" }).lean()
+                    SubAdminList = await Admin.find({ role: "sub_admin" }).sort({ createdAt: -1 })
                 }
                 console.log("subadmin list is", SubAdminList);
 
@@ -395,6 +436,10 @@ exports.downloadReport = async (req, res) => {
                     Email: subadmin?.email,
                     Role: subadmin?.role,
                     PhoneNumber: subadmin?.phone_number,
+                    "Permissions": (Object.entries(subadmin?.permissions[0])
+                        .map(([key, actions]) => `${key}: ${Array.isArray(actions) ? actions.map(i => i) : ''}`)).join(', '),
+                    "Created At": moment(subadmin?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(subadmin?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
 
                 if (format === "excel") {
@@ -402,7 +447,8 @@ exports.downloadReport = async (req, res) => {
                 } else if (format === "csv") {
                     return utils.generateCSV(cleanSubAdminList, res)
                 } else {
-                    return utils.generatePDF(cleanSubAdminList, res)
+                    // return utils.generatePDF(cleanSubAdminList, res)
+                    return res.send(cleanSubAdminList);
                 }
             }; break;
             default: return utils.handleError(res, {
