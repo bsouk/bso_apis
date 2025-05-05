@@ -60,10 +60,10 @@ exports.getPaymentListing = async (req, res) => {
                     $sort: { createdAt: -1 }
                 },
                 {
-                    $skip : parseInt(offset)
+                    $skip: parseInt(offset)
                 },
                 {
-                    $limit : parseInt(limit)
+                    $limit: parseInt(limit)
                 }
             ]
         )
@@ -165,6 +165,7 @@ exports.paynow = async (req, res) => {
 
         const payment_data = await Payment.create({
             enquiry_id: data.enquiry_id,
+            order_id: neworder._id,
             buyer_id: userId,
             total_amount: data.total_amount,
             service_charges: data.service_charges,
