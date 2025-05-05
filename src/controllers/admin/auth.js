@@ -30,7 +30,7 @@ exports.addAdmin = async (req, res) => {
     const data = {
       _id: new mongoose.Types.ObjectId("64b29004376e6cb3d3c6e55c"),
       first_name: "John",
-      last_name:"Doe",
+      last_name: "Doe",
       email: "bso@mailinator.com",
       password: "Admin@123",
       phone: "9967656543",
@@ -49,11 +49,11 @@ exports.addAdmin = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password, remember_me } = req.body;
-    const user = await Admin.findOne({ email: email } , "+password" );
+    const user = await Admin.findOne({ email: email }, "+password");
     if (!user) return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400 })
 
     const isPasswordMatch = await utils.checkPassword(password, user)
-    console.log("isPasswordMatch" ,isPasswordMatch)
+    console.log("isPasswordMatch", isPasswordMatch)
     if (!isPasswordMatch) {
       return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400 })
     }
@@ -71,9 +71,9 @@ exports.login = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
 
   try {
-    const {email , production} = req.body;
+    const { email, production } = req.body;
 
-    let user = await Admin.findOne({ email } );
+    let user = await Admin.findOne({ email });
     if (!user) return utils.handleError(res, { message: "No account found with the provided information", code: 400 });
 
     const token = uuid.v4();
@@ -81,19 +81,19 @@ exports.forgotPassword = async (req, res) => {
 
     const tokenExpirationDuration = 15 * 60;
     const resetInstance = new ResetPassword({
-      email:email,
+      email: email,
       token: token,
       used: false,
       exp_time: new Date(Date.now() + tokenExpirationDuration * 1000)
     });
 
-    console.log("resetInstance",resetInstance)
+    console.log("resetInstance", resetInstance)
 
     //Save the resetInstance to the database
     await resetInstance.save();
     const mailOptions = {
-      to : user.email,
-      subject : "Password Reset Request",
+      to: user.email,
+      subject: "Password Reset Request",
       name: user.full_name,
       email: user.email,
       reset_link: production === false ? `${process.env.LOCAL_ADMIN_URL}reset-password/${token}` : `${process.env.PRODUCTION_ADMIN_URL}reset-password/${token}`
@@ -149,23 +149,36 @@ exports.resetPassword = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-      const { currentPassword, newPassword } = req.body;
-      const user_id = req.user._id
+    const { currentPassword, newPassword } = req.body;
+    const user_id = req.user._id
 
-      let user = await Admin.findById(user_id, "+password");
-      const isPasswordMatch = await utils.checkPassword(currentPassword, user);
-      if (!isPasswordMatch) return utils.handleError(res, { message: "Current password is incorrect", code: 400 });
+    let user = await Admin.findById(user_id, "+password");
+    const isPasswordMatch = await utils.checkPassword(currentPassword, user);
+    if (!isPasswordMatch) return utils.handleError(res, { message: "Current password is incorrect", code: 400 });
 
-      const newPasswordMatch = await utils.checkPassword(newPassword, user);
-      if (newPasswordMatch) return utils.handleError(res, { message: "New password must be different from the current password", code: 400 });
+    const newPasswordMatch = await utils.checkPassword(newPassword, user);
+    if (newPasswordMatch) return utils.handleError(res, { message: "New password must be different from the current password", code: 400 });
 
-      user.password = newPassword;
+    user.password = newPassword;
 
-      await user.save();
+    await user.save();
 
-      res.status(200).json({ message: 'Password has been changed successfully' ,code : 200});
+    res.status(200).json({ message: 'Password has been changed successfully', code: 200 });
   } catch (error) {
-      utils.handleError(res, error);
+    utils.handleError(res, error);
   }
 };
+
+
+exports.getMyProfile = async (req, res) => {
+  try {
+    const user_id = req.user._id
+    const user = await Admin.findById(user_id).lean();
+    console.log("user is", user);
+
+    return res.json({ data: user, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
 

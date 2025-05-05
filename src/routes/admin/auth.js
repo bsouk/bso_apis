@@ -40,4 +40,12 @@ router.post(
     controller.changePassword
 )
 
+router.get(
+    "/getMyProfile",
+    trimRequest.all,
+    requireAuth,
+    controller.getMyProfile
+)
+
+
 module.exports = router
