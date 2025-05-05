@@ -220,7 +220,7 @@ exports.downloadReport = async (req, res) => {
                     "Pricing Model": user?.project_pricing_model ? user?.project_pricing_model : "",
                     "Working Hours": user?.resource_availability?.working_hours?.from + " - " + user?.resource_availability?.working_hours?.to,
                     "Time Zone": user?.resource_availability?.time_zone ? user?.resource_availability?.time_zone : "",
-                    "Days of Operation": user?.resource_availability?.days_of_operation ? user?.resource_availability?.days_of_operation.join(", ") : "",
+                    "Days of Operation": user?.resource_availability?.days_of_operation ? user?.resource_availability?.days_of_operation : "",
                     "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
                     "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
