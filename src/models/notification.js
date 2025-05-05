@@ -16,6 +16,10 @@ const notificationSchema = new mongoose.Schema(
         related_to: {
             type: mongoose.Schema.Types.ObjectId,
         },
+        related_to_type: {
+            type: String,
+            enum: ["user", "product", "service", "order", "post", "event", "sos", "payment_slip", "delivery"],
+        },
         type: {
             type: String,
             enum: [

@@ -1,0 +1,116 @@
+const fcm_devices = require("../../models/fcm_devices");
+const Adminnotification = require("../../models/admin_notification");
+const Notification = require("../../models/notification");
+const utils = require("../../utils/utils");
+const emailer = require("../../utils/emailer");
+const User = require("../../models/user");
+
+const sendUsernotificationhelper = async (user_id, notificationbody, dbnotificationbody) => {
+    try {
+        //user notification
+        const userFcmDevices = await fcm_devices.find({ user_id });
+        console.log("userFcmDevices : ", userFcmDevices)
+        const notificationMessage = notificationbody
+        if (userFcmDevices && userFcmDevices.length > 0) {
+            userFcmDevices.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const userNotificationData = dbnotificationbody
+            const newuserNotification = new Notification(userNotificationData);
+            console.log("newuserNotification : ", newuserNotification)
+            await newuserNotification.save();
+        } else {
+            console.log(`No active FCM tokens found for user`);
+        }
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+exports.sendNotification = async (req, res) => {
+    try {
+        const admin_id = req.user._id;
+        const { sent_to, title, body } = req.body;
+
+        const users = await User.aggregate([
+            {
+                $match: {
+                    _id: { $in: sent_to }
+                }
+            },
+            {
+                $lookup: {
+                    from: "fcmdevices",
+                    localField: "_id",
+                    foreignField: "user_id",
+                    as: "device_token"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$device_token",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+        ])
+
+        const device_tokens = [];
+
+        const notificationToCreate = []
+
+        for (let index = 0; index < users.length; index++) {
+            const element = users[index];
+            const notificationData = {
+                sender_id: admin_id,
+                receiver_id: element._id,
+                type: "by_admin",
+                title: title,
+                body: body
+            }
+            notificationToCreate.push(notificationData);
+            if (element.notification === true && element?.device_token) {
+                device_tokens.push(element?.device_token?.token)
+                let notificationbody = {
+                    title: title,
+                    description: body
+                }
+                let dbnotificationbody = {
+                    title: title,
+                    description: body,
+                    type: "admin_action",
+                    receiver_id: element?._id,
+                    related_to: element?._id,
+                    related_to_type: "user",
+                }
+                await sendUsernotificationhelper(element?._id, notificationbody, dbnotificationbody)
+            }
+        }
+
+        console.log("device_token", device_tokens)
+        const notificaitons = await Adminnotification.insertMany(notificationToCreate);
+        console.log("notificaitons", notificaitons)
+        //push notification
+        if (device_tokens.length !== 0) {
+            utils.sendPushNotification(device_tokens, title, body)
+        }
+        res.json({ message: "Notification sent successfully", code: 200 })
+    } catch (error) {
+        console.log(error)
+        utils.handleError(res, error)
+    }
+}
+
+exports.getNotificationList = async (req, res) => {
+    try {
+        const admin_id = req.user._id;
+        const { offset = 0, limit = 10 } = req.query;
+        const notifications = await Adminnotification.find({ sender_id: admin_id }).populate('receiver_id').sort({ createdAt: -1 }).skip(offset).limit(limit);
+        const totalCount = await Adminnotification.countDocuments({ sender_id: admin_id });
+        res.json({ notifications, totalCount, code: 200 })
+    } catch (error) {
+        console.log(error)
+        utils.handleError(res, error)
+    }
+}

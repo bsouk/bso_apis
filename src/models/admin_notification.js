@@ -4,8 +4,13 @@ const mongoosePaginate = require('mongoose-paginate-v2')
 
 const AdminNotificationSchema = new mongoose.Schema(
     {
+        sender_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref : 'admins'
+        },
         receiver_id: {
             type: mongoose.Schema.Types.ObjectId,
+            ref: 'users'
         },
         type: {
             type: String,
@@ -15,7 +20,8 @@ const AdminNotificationSchema = new mongoose.Schema(
                 "subscription_downgrade",
                 "subscription_cancelled",
                 "new_trial",
-                "free_trial_to_new_user"
+                "free_trial_to_new_user",
+                "by_admin",
             ],
             required: true,
         },
