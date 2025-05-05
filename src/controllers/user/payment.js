@@ -10,7 +10,7 @@ const tracking_order = require("../../models/tracking_order");
 
 exports.getPaymentListing = async (req, res) => {
     try {
-        const { status, from_date, to_date } = req.query
+        const { status, from_date, to_date, offset = 0, limit = 10 } = req.query
         const userId = req.user._id
         console.log("userId : ", userId)
         const filter = { buyer_id: new mongoose.Types.ObjectId(userId) }
@@ -55,6 +55,15 @@ exports.getPaymentListing = async (req, res) => {
                         path: "$order_data",
                         preserveNullAndEmptyArrays: true
                     }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $skip : parseInt(offset)
+                },
+                {
+                    $limit : parseInt(limit)
                 }
             ]
         )
