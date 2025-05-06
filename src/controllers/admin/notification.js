@@ -4,6 +4,7 @@ const Notification = require("../../models/notification");
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const User = require("../../models/user");
+const { default: mongoose } = require("mongoose");
 
 const sendUsernotificationhelper = async (user_id, notificationbody, dbnotificationbody) => {
     try {
@@ -33,11 +34,12 @@ exports.sendNotification = async (req, res) => {
     try {
         const admin_id = req.user._id;
         const { sent_to, title, body, all } = req.body;
-        console.log("body : ", body)
+        console.log("body : ", req.body)
 
         let filter = {};
-        if (Array.isArray(sent_to) && sent_to.length !== 0) {
-            filter['_id'] = { $in: sent_to }
+        if (sent_to.length > 0) {
+            let ids = sent_to.map(id => new mongoose.Types.ObjectId(id));
+            filter['_id'] = { $in: ids }
         } else {
             filter = {}
         }
@@ -45,6 +47,7 @@ exports.sendNotification = async (req, res) => {
         //     filter = {}
         // }
 
+        console.log("filter : ", filter)
         const users = await User.aggregate([
             {
                 $match: filter
@@ -64,6 +67,7 @@ exports.sendNotification = async (req, res) => {
                 },
             },
         ])
+        console.log("users : ", users)
 
         const device_tokens = [];
 
@@ -96,7 +100,6 @@ exports.sendNotification = async (req, res) => {
                 await sendUsernotificationhelper(element?._id, notificationbody, dbnotificationbody)
             }
         }
-
         console.log("device_token", device_tokens)
         if (Array.isArray(sent_to) && sent_to.length !== 0) {
             const notifications = await Adminnotification.insertMany(notificationToCreate);
