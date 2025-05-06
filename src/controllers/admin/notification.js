@@ -33,14 +33,20 @@ exports.sendNotification = async (req, res) => {
     try {
         const admin_id = req.user._id;
         const { sent_to, title, body, all } = req.body;
+        console.log("body : ", body)
+
+        const isAll = all == true || all == "true";
+        const isNotAll = all == false || all == "false";
 
         let filter = {};
         if (Array.isArray(sent_to) && sent_to.length !== 0) {
             filter['_id'] = { $in: sent_to }
-        }
-        if ((Array.isArray(sent_to) && sent_to.length === 0) && (all === true || all === "true")) {
+        } else {
             filter = {}
         }
+        // if ((Array.isArray(sent_to) && sent_to.length === 0) && (all === true || all === "true")) {
+        //     filter = {}
+        // }
 
         const users = await User.aggregate([
             {
@@ -95,20 +101,18 @@ exports.sendNotification = async (req, res) => {
         }
 
         console.log("device_token", device_tokens)
-        if (all === true || all === "true") {
-            const notificaitons = await Adminnotification.create({
+        if (isAll) {
+            const notification = await Adminnotification.create({
                 sender_id: admin_id,
                 type: "by_admin",
                 title: title,
                 body: body,
                 send_to: "all"
             });
-            console.log("notificaitons", notificaitons)
-        }
-
-        if (all === false || all === "false") {
-            const notificaitons = await Adminnotification.insertMany(notificationToCreate);
-            console.log("notificaitons", notificaitons)
+            console.log("Admin notification (all):", notification);
+        } else if (isNotAll) {
+            const notifications = await Adminnotification.insertMany(notificationToCreate);
+            console.log("Admin notifications (individual):", notifications);
         }
         //push notification
         if (device_tokens.length !== 0) {
