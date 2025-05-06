@@ -9,6 +9,7 @@ const Brand = require("../../models/brand");
 const BusinessCategory = require("../../models/business_category");
 const Category = require("../../models/product_category");
 const Job = require("../../models/jobs");
+const Enquiry = require("../../models/Enquiry")
 const moment = require("moment");
 
 exports.downloadReport = async (req, res) => {
@@ -582,9 +583,9 @@ exports.downloadReport = async (req, res) => {
                     }
                     List = await Job.find({
                         createdAt: { $gte: newFromDate, $lte: newToDate }
-                    }).sort({ createdAt: -1 })
+                    }).populate('company_id').populate('job_category').sort({ createdAt: -1 })
                 } else {
-                    List = await Job.find().sort({ createdAt: -1 })
+                    List = await Job.find().populate('company_id').populate('job_category').sort({ createdAt: -1 })
                 }
                 console.log("job list is", List);
 
@@ -596,7 +597,17 @@ exports.downloadReport = async (req, res) => {
                 }
 
                 const cleanList = List.map((data) => ({
-                  
+                    "Job Title": data?.job_title ? data?.job_title : " ",
+                    "Job Id": data?.job_unique_id ? data?.job_unique_id : " ",
+                    "Company Name": data?.company_id?.company_name ? data?.company_id?.company_name : " ",
+                    "Job Type": data?.job_type ? data?.job_type : " ",
+                    "Job Category": data?.job_category?.name ? data?.job_category?.name : " ",
+                    "Job Location": data?.job_location ? data?.job_location : " ",
+                    "Job Salary": data?.salary ? data?.salary : " ",
+                    "Experience": data?.experience_type ? data?.experience_type : " ",
+                    "Budget": data?.budget ? data?.budget : " ",
+                    "Job Duration": data?.job_duration ? data?.job_duration : " ",
+                    "Payment Mode": data?.payment_type ? data?.payment_type : " ",
                     "Created At": moment(data?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
                     "Updated At": moment(data?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
                 }))
@@ -606,6 +617,53 @@ exports.downloadReport = async (req, res) => {
                     return utils.generateCSV(cleanList, res)
                 } else {
                     return res.send(cleanList);
+                }
+            }; break;
+            case "Enquiry": {
+                let SubAdminList = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    SubAdminList = await Enquiry.find({
+                        createdAt: { $gte: newFromDate, $lte: newToDate },
+                    }).populate('user_id').populate('shipping_address').sort({ createdAt: -1 })
+                } else {
+                    SubAdminList = await Enquiry.find({}).populate('user_id').populate('shipping_address').sort({ createdAt: -1 })
+                }
+                console.log("enquiry list is", SubAdminList);
+
+                if (SubAdminList.length <= 0) {
+                    return res.status(401).json({
+                        message: "No Enquiry data found",
+                        code: 401
+                    })
+                }
+
+                const cleanSubAdminList = SubAdminList.map((subadmin) => ({
+                    "Enquiry Id": subadmin?.enquiry_unique_id,
+                    "Enquiry Number": subadmin?.enquiry_number,
+                    "Enquiry Status": subadmin?.status,
+                    "Buyer Name": subadmin?.user_id?.full_name,
+                    "Buyer Email": subadmin?.user_id?.email,
+                    "Buyer PhoneNumber": subadmin?.user_id?.phone_number,
+                    "Approval Status": subadmin?.is_approved,
+                    "Expiry Date": subadmin?.expiry_date,
+                    "Priority": subadmin?.priority,
+                    "Shipping Address": `${subadmin?.shipping_address?.address?.address_line_1},${subadmin?.shipping_address?.address?.address_line_2},${subadmin?.shipping_address?.address?.city},${subadmin?.shipping_address?.address?.state},${subadmin?.shipping_address?.address?.country},${subadmin?.shipping_address?.address?.pin_code}`,
+                    "Created At": moment(subadmin?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(subadmin?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+                }))
+
+                if (format === "excel") {
+                    return utils.generateExcel(cleanSubAdminList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanSubAdminList, res)
+                } else {
+                    // return utils.generatePDF(cleanSubAdminList, res)
+                    return res.send(cleanSubAdminList);
                 }
             }; break;
             default: return utils.handleError(res, {
