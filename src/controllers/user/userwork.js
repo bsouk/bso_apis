@@ -4792,8 +4792,6 @@ exports.verifyOtpForEnquiry = async (req, res) => {
             });
         if (otpData.verified == true) {
             console.log("Otp already verified")
-
-
             return res.json({ code: 200, message: "Otp verified already" });
         }
         const updatedStatus = await Enquiry.findOneAndUpdate(
@@ -4801,14 +4799,11 @@ exports.verifyOtpForEnquiry = async (req, res) => {
             { $set: { status: "self_delivered" } },
             { new: true }
         );
-
         const updatedQuote = await EnquiryQuotes.findOneAndUpdate(
             { _id: quote_id },
             { $set: { status: "delivered" } },
             { new: true }
         );
-
-
 
         otpData.verified = true;
         otpData.is_used = true;

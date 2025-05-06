@@ -14,6 +14,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    status : {
+        type: String,
+        default: "pending"
+    },
     quote_unique_id : String,
     enquiry_id: {
         type: mongoose.Schema.Types.ObjectId,
