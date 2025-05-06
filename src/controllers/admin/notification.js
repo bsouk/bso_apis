@@ -1,5 +1,6 @@
 const fcm_devices = require("../../models/fcm_devices");
 const Adminnotification = require("../../models/admin_notification");
+const admin_received_notification = require("../../models/admin_received_notification");
 const Notification = require("../../models/notification");
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
@@ -125,13 +126,27 @@ exports.sendNotification = async (req, res) => {
     }
 }
 
+exports.getReceivedNotificationList = async (req, res) => {
+    try {
+        const admin_id = req.user._id;
+        const { offset = 0, limit = 10 } = req.query;
+        const notifications = await admin_received_notification.find({ receiver_id: admin_id }).sort({ createdAt: -1 }).skip(offset).limit(limit);
+        const totalCount = await admin_received_notification.countDocuments({ receiver_id: admin_id });
+        return res.status(200).json({ notifications, totalCount, code: 200 })
+    } catch (error) {
+        console.log(error)
+        utils.handleError(res, error)
+    }
+}
+
+
 exports.getNotificationList = async (req, res) => {
     try {
         const admin_id = req.user._id;
         const { offset = 0, limit = 10 } = req.query;
         const notifications = await Adminnotification.find({ sender_id: admin_id }).populate('receiver_id').sort({ createdAt: -1 }).skip(offset).limit(limit);
         const totalCount = await Adminnotification.countDocuments({ sender_id: admin_id });
-        res.json({ notifications, totalCount, code: 200 })
+        return res.status(200).json({ notifications, totalCount, code: 200 })
     } catch (error) {
         console.log(error)
         utils.handleError(res, error)

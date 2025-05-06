@@ -1,6 +1,7 @@
 const User = require("../../models/user");
 const Address = require("../../models/address");
 const Supplier = require("../../models/supplier")
+const Admin = require("../../models/admin")
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
@@ -36,6 +37,7 @@ const EnquiryOtp = require("../../models/EnquiryOtp");
 const payment = require("../../models/payment");
 const industry_sub_type = require("../../models/industry_sub_type");
 const fcm_devices = require("../../models/fcm_devices");
+const admin_received_notification = require("../../models/admin_received_notification");
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -2481,6 +2483,42 @@ exports.createEnquiry = async (req, res) => {
         const newquery = await Enquiry.create(newdata);
         console.log("newquery : ", newquery)
 
+
+        // admin notification
+        const admins = await Admin.findOne({ role: 'super_admin' });
+        console.log("admins : ", admins)
+
+        if (admins) {
+            const notificationMessage = {
+                title: 'New Enquiry created',
+                description: `${req.user.full_name} has created a new enquiry . Enquiry ID : ${newquery.enquiry_unique_id}`,
+                enquiry_id: newquery._id
+            };
+
+            const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+            console.log("adminFcmDevices : ", adminFcmDevices)
+
+            if (adminFcmDevices && adminFcmDevices.length > 0) {
+                adminFcmDevices.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const adminNotificationData = {
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    // description: notificationMessage.description,
+                    type: "new_enquiry",
+                    receiver_id: admins._id,
+                    related_to: newquery._id,
+                    related_to_type: "enquiry",
+                };
+                const newAdminNotification = new admin_received_notification(adminNotificationData);
+                console.log("newAdminNotification : ", newAdminNotification)
+                await newAdminNotification.save();
+            }
+        }
+
         return res.status(200).json({
             message: "Enquiry created successfully",
             data: newquery,
@@ -3992,7 +4030,7 @@ exports.SuspendTeamMember = async (req, res) => {
             });
         }
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" , type: type });
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: type });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {

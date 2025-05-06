@@ -25,6 +25,13 @@ router.get(
 )
 
 router.get(
+    "/getReceivedNotificationList",
+    trimRequest.all,
+    requireAuth,
+    controller.getReceivedNotificationList
+)
+
+router.get(
     "/getAllUsers",
     trimRequest.all,
     requireAuth,
