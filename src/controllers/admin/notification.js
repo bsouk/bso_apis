@@ -132,7 +132,8 @@ exports.getReceivedNotificationList = async (req, res) => {
         const { offset = 0, limit = 10 } = req.query;
         const notifications = await admin_received_notification.find({ receiver_id: admin_id }).sort({ createdAt: -1 }).skip(offset).limit(limit);
         const totalCount = await admin_received_notification.countDocuments({ receiver_id: admin_id });
-        return res.status(200).json({ notifications, totalCount, code: 200 })
+        const unreadCount = await admin_received_notification.countDocuments({ receiver_id: admin_id, is_read: false, is_seen: false });
+        return res.status(200).json({ notifications, totalCount, unreadCount, code: 200 })
     } catch (error) {
         console.log(error)
         utils.handleError(res, error)
@@ -160,6 +161,19 @@ exports.getAllUsers = async (req, res) => {
         const users = await User.find().skip(Number(offset)).limit(Number(limit)).select('_id full_name first_name last_name email');
         console.log("users : ", users)
         return res.json({ users, code: 200 })
+    } catch (error) {
+        console.log(error)
+        utils.handleError(res, error)
+    }
+}
+
+
+exports.ReadAllNotification = async (req, res) => {
+    try {
+        const admin_id = req.user._id;
+        const notification = await admin_received_notification.updateMany({ receiver_id: admin_id }, { is_read: true, is_seen: true }, { new: true });
+        console.log("notification : ", notification)
+        return res.status(200).json({ message: "Notification read successfully", code: 200 })
     } catch (error) {
         console.log(error)
         utils.handleError(res, error)

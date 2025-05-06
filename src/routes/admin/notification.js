@@ -38,4 +38,12 @@ router.get(
     controller.getAllUsers
 )
 
+
+router.patch(
+    "/ReadAllNotification",
+    trimRequest.all,
+    requireAuth,
+    controller.ReadAllNotification
+)
+
 module.exports = router
