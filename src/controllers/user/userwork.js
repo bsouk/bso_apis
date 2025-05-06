@@ -3373,7 +3373,14 @@ exports.AddTeamMember = async (req, res) => {
         const data = req.body;
         console.log("userId", userId)
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        if (!data.type) {
+            return utils.handleError(res, {
+                message: "Team Type is required",
+                code: 400,
+            });
+        }
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: data.type });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {
@@ -3391,6 +3398,9 @@ exports.AddTeamMember = async (req, res) => {
                     },
                     {
                         members: { $in: [new mongoose.Types.ObjectId(userId)] }
+                    },
+                    {
+                        team_type: data.type,
                     }
                 ]
             }
@@ -3401,13 +3411,13 @@ exports.AddTeamMember = async (req, res) => {
             let tid = await genTeamId()
             teamdata = await Team.create({
                 team_id: tid,
-                admin_id: userId
+                admin_id: userId,
+                team_type: data.type,
             })
         }
 
         if (teamdata.members.length >= 3) {
             const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
-
             if (!Member || teamdata.members.length >= Member.member_count) {
                 return res.status(402).json({
                     message: "You have reached your member limit",
@@ -3441,7 +3451,7 @@ exports.AddTeamMember = async (req, res) => {
         await Adduser.save();
 
         const teammemberadd = await Team.findOneAndUpdate(
-            { admin_id: new mongoose.Types.ObjectId(userId) },
+            { admin_id: new mongoose.Types.ObjectId(userId), team_type: data.type },
             {
                 $push: { members: Adduser._id }
             },
@@ -3555,6 +3565,14 @@ exports.GetTeamMember = async (req, res) => {
         console.log("userId : ", userId)
         const offset = parseInt(req.query.offset) || 0;
         const limit = parseInt(req.query.limit) || 3;
+        const type = req.query.type;
+
+        if (!type) {
+            return utils.handleError(res, {
+                message: "Team Type is required",
+                code: 400,
+            });
+        }
 
         // const teamMembers = await User.find({
         //     user_id: userId,
@@ -3572,6 +3590,9 @@ exports.GetTeamMember = async (req, res) => {
                 },
                 {
                     members: { $in: [new mongoose.Types.ObjectId(userId)] }
+                },
+                {
+                    team_type: type,
                 }
             ]
         }).populate('admin_id members')
@@ -3611,7 +3632,14 @@ exports.editTeamMember = async (req, res) => {
         const Id = req.params.Id;
         const updateData = req.body;
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        if (!updateData.type) {
+            return utils.handleError(res, {
+                message: "Team Type is required",
+                code: 400,
+            });
+        }
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: updateData.type });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {
@@ -3648,8 +3676,15 @@ exports.deleteTeamMember = async (req, res) => {
         const userId = req.user._id
         const Id = req.params.Id;
         console.log("userId : ", userId)
+        const type = req.query.type;
+        if (!type) {
+            return res.status(400).json({
+                message: "Team Type is required",
+                code: 400
+            });
+        }
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: type });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {
@@ -3671,7 +3706,7 @@ exports.deleteTeamMember = async (req, res) => {
 
         const result = await Team.findOneAndUpdate(
             {
-                admin_id: new mongoose.Types.ObjectId(userId)
+                admin_id: new mongoose.Types.ObjectId(userId), team_type: type
             },
             {
                 $pull: {
@@ -3682,7 +3717,7 @@ exports.deleteTeamMember = async (req, res) => {
 
         console.log("result : ", result)
 
-        await Team.deleteMany({ admin_id: new mongoose.Types.ObjectId(Id) });
+        await Team.deleteMany({ admin_id: new mongoose.Types.ObjectId(Id), team_type: type });
 
         return res.status(200).json({
             message: "Team Member deleted successfully",
@@ -3949,8 +3984,15 @@ exports.SuspendTeamMember = async (req, res) => {
     try {
         const userId = req.user._id;
         const Id = req.params.Id;
+        const type = req.query.type;
+        if (!type) {
+            return utils.handleError(res, {
+                message: "Team Type is required",
+                code: 400,
+            });
+        }
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" , type: type });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {
@@ -3990,8 +4032,15 @@ exports.ActivateTeamMember = async (req, res) => {
     try {
         const userId = req.user._id
         const Id = req.params.Id;
+        const type = req.query.type;
+        if (!type) {
+            return utils.handleError(res, {
+                message: "Team Type is required",
+                code: 400,
+            });
+        }
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active" });
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: type });
         console.log("activeSubscription : ", activeSubscription)
 
         if (!activeSubscription) {

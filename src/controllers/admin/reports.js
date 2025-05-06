@@ -8,6 +8,7 @@ const Admin = require("../../models/admin");
 const Brand = require("../../models/brand");
 const BusinessCategory = require("../../models/business_category");
 const Category = require("../../models/product_category");
+const Job = require("../../models/jobs");
 const moment = require("moment");
 
 exports.downloadReport = async (req, res) => {
@@ -569,6 +570,42 @@ exports.downloadReport = async (req, res) => {
                 } else {
                     // return utils.generatePDF(cleanSubAdminList, res)
                     return res.send(cleanSubAdminList);
+                }
+            }; break;
+            case "Job": {
+                let List = []
+                if (req.body.fromDate && req.body.toDate) {
+                    const newFromDate = new Date(req.body.fromDate);
+                    const newToDate = new Date(req.body.toDate);
+                    if (isNaN(newFromDate) || isNaN(newToDate)) {
+                        return res.status(400).json({ error: "Invalid date format" });
+                    }
+                    List = await Job.find({
+                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                    }).sort({ createdAt: -1 })
+                } else {
+                    List = await Job.find().sort({ createdAt: -1 })
+                }
+                console.log("job list is", List);
+
+                if (List.length <= 0) {
+                    return res.status(401).json({
+                        message: "No Job data found",
+                        code: 401
+                    })
+                }
+
+                const cleanList = List.map((data) => ({
+                  
+                    "Created At": moment(data?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                    "Updated At": moment(data?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+                }))
+                if (format === "excel") {
+                    return utils.generateExcel(cleanList, res)
+                } else if (format === "csv") {
+                    return utils.generateCSV(cleanList, res)
+                } else {
+                    return res.send(cleanList);
                 }
             }; break;
             default: return utils.handleError(res, {

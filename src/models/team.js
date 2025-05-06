@@ -4,6 +4,10 @@ const validator = require('validator')
 const TeamSchema = new mongoose.Schema(
     {
         team_id: String,
+        team_type : {
+            type: String,
+            enum: ['supplier', 'buyer', 'logistics', 'resource']
+        },
         admin_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'users'
