@@ -95,7 +95,7 @@ exports.sendNotification = async (req, res) => {
         }
 
         console.log("device_token", device_tokens)
-        if ((Array.isArray(sent_to) && sent_to.length === 0) && (all === true || all === "true")) {
+        if (all === true || all === "true") {
             const notificaitons = await Adminnotification.create({
                 sender_id: admin_id,
                 type: "by_admin",
@@ -104,7 +104,9 @@ exports.sendNotification = async (req, res) => {
                 send_to: "all"
             });
             console.log("notificaitons", notificaitons)
-        } else {
+        }
+
+        if (all === false || all === "false") {
             const notificaitons = await Adminnotification.insertMany(notificationToCreate);
             console.log("notificaitons", notificaitons)
         }
