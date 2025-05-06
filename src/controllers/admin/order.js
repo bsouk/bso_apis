@@ -96,7 +96,7 @@ exports.changeOrderStatus = async (req, res) => {
     try {
         const { order_id, status, payment_id } = req.body
         if (order_id && status) {
-            const result = await Order.findOneAndUpdate({ _id: order_id }, { $set: { order_status: status } }, { new: true })
+            const result = await Order.findOneAndUpdate({ _id: order_id }, { $set: { order_status: status, order_type : status } }, { new: true })
             console.log("result : ", result)
             return res.status(200).json({
                 message: "Order status changed successfully",

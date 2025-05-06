@@ -5,7 +5,7 @@ const utils = require("../../utils/utils");
 
 exports.myOrder = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, order_type = "active", search = "" } = req.query
+        const { offset = 0, limit = 10, order_type = "pending", search = "" } = req.query
         const userId = req.user._id
         console.log("userId : ", userId)
         const filter = {

@@ -38,7 +38,6 @@ router.get(
     controller.getAllUsers
 )
 
-
 router.patch(
     "/ReadAllNotification",
     trimRequest.all,
