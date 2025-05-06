@@ -203,6 +203,7 @@ exports.paynow = async (req, res) => {
             shipping_address: enquiry_data?.shipping_address,
             billing_address: enquiry_data?.shipping_address,
             logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+            order_pickup: "delivery",
         }
 
         const neworder = await Order.create(orderdata)
@@ -227,6 +228,12 @@ exports.paynow = async (req, res) => {
             tracking_unique_id: await generateUniqueId(),
             order_id: neworder._id,
             logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+            order_shipment_dates: [
+                {
+                    order_status: "order created",
+                    date: new Date(),
+                },
+            ]
         }
 
         const newtracking = await tracking_order.create(tracking_data)

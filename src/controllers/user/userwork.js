@@ -38,6 +38,8 @@ const payment = require("../../models/payment");
 const industry_sub_type = require("../../models/industry_sub_type");
 const fcm_devices = require("../../models/fcm_devices");
 const admin_received_notification = require("../../models/admin_received_notification");
+const Order = require("../../models/order");
+const tracking_order = require("../../models/tracking_order");
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -4173,7 +4175,7 @@ exports.getAllSupplierQuotes = async (req, res) => {
 exports.selectSupplierQuote = async (req, res) => {
     try {
         const user_id = req.user._id
-        const { quote_id, shipment_type } = req.body
+        const { quote_id, shipment_type, selected_payment_terms } = req.body
         console.log("data : ", req.body)
 
         const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active", type: "buyer" });
@@ -4210,7 +4212,8 @@ exports.selectSupplierQuote = async (req, res) => {
                     selected_supplier: {
                         quote_id: new mongoose.Types.ObjectId(quote_id)
                     },
-                    shipment_type: shipment_type
+                    shipment_type: shipment_type,
+                    selected_payment_terms: selected_payment_terms,
                 }
             }, { new: true }
         ).populate('shipping_address user_id')
@@ -4724,7 +4727,6 @@ exports.sendOtpForEnquiry = async (req, res) => {
 };
 exports.sendOtpForQuote = async (req, res) => {
     try {
-
         const { enquiry_id, quote_id } = req.body;
         const enquiry = await EnquiryQuotes.findOne({ _id: quote_id })
         const user = await User.findOne({ _id: enquiry.user_id })
@@ -4774,10 +4776,22 @@ exports.sendOtpForQuote = async (req, res) => {
     }
 };
 
-
+//self pickup for self delivery
+async function generateUniqueId() {
+    const id = await Math.floor(Math.random() * 10000000000)
+    console.log('unique id : ', id)
+    return `#${id}`
+}
 exports.verifyOtpForEnquiry = async (req, res) => {
     try {
         const { enquiry_id, quote_id, otp } = req.body;
+
+        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id }).populate('selected_supplier.quote_id')
+        console.log("enquiry_data : ", enquiry_data)
+
+        if (!enquiry_data) {
+            return res.status(404).json({ error: "Enquiry not found", code: 404 })
+        }
 
         const otpData = await EnquiryOtp.findOne({
             enquiry_id,
@@ -4809,21 +4823,65 @@ exports.verifyOtpForEnquiry = async (req, res) => {
         otpData.is_used = true;
         await otpData.save();
 
+
+        const orderdata = {
+            order_unique_id: await generateUniqueId(),
+            enquiry_id: enquiry_id,
+            buyer_id: enquiry_data?.user_id,
+            total_amount: enquiry_data?.grand_total,
+            shipping_address: enquiry_data?.shipping_address,
+            billing_address: enquiry_data?.shipping_address,
+            order_pickup: "self_pickup",
+            order_type: "delivered",
+            order_status: "delivered",
+        }
+
+        const neworder = await Order.create(orderdata)
+        console.log("neworder : ", neworder)
+
+        const tracking_data = {
+            tracking_unique_id: await generateUniqueId(),
+            order_id: neworder._id,
+            order_shipment_status: "delivered",
+            // logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+            order_shipment_dates: [
+                {
+                    order_status: "order created",
+                    date: new Date(),
+                },
+                {
+                    order_status: "order processed",
+                    date: new Date(),
+                },
+                {
+                    order_status: "Self pickup",
+                    date: new Date(),
+                }
+            ]
+        }
+
+        const newtracking = await tracking_order.create(tracking_data)
+        console.log("newtracking : ", newtracking)
+
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
         utils.handleError(res, error);
     }
 };
+
 exports.verifyOtpForQuote = async (req, res) => {
     try {
         const { enquiry_id, quote_id, otp } = req.body;
+        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id }).populate({ path: 'order_id', populate: { path: "tracking_id" } }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+            .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
+        console.log("enquiry_data : ", enquiry_data)
 
         const otpData = await EnquiryOtp.findOne({
             enquiry_id,
             quote_id,
         });
-        console.log("otpData : ", req.body)
 
+        console.log("otpData : ", req.body)
         if (!otpData || otpData.otp !== otp)
             return utils.handleError(res, {
                 message: "The OTP you entered is incorrect. Please try again",
@@ -4831,8 +4889,6 @@ exports.verifyOtpForQuote = async (req, res) => {
             });
         if (otpData.verified == true) {
             console.log("Otp already verified")
-
-
             return res.json({ code: 200, message: "Otp verified already" });
         }
         const updatedStatus = await Enquiry.findOneAndUpdate(
@@ -4847,11 +4903,30 @@ exports.verifyOtpForQuote = async (req, res) => {
             { new: true }
         );
 
-
-
         otpData.verified = true;
         otpData.is_used = true;
         await otpData.save();
+
+        const trackingdata = await tracking_order.findOneAndUpdate(
+            { _id: enquiry_data?.order_id?.tracking_id?._id },
+            {
+                $push: {
+                    order_shipment_dates: {
+                        order_status: "logistic pickup",
+                        date: new Date(),
+                    },
+                }
+            },
+            { new: true }
+        );
+        console.log("trackingdata : ", trackingdata)
+
+        const orderdata = await Order.findOneAndUpdate(
+            { _id: enquiry_data?.order_id?._id },
+            { $set: { order_type: "shipped" } },
+            { new: true }
+        );
+        console.log("orderdata : ", orderdata)
 
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
@@ -4859,10 +4934,13 @@ exports.verifyOtpForQuote = async (req, res) => {
     }
 };
 
-
 exports.verifyOtpForBuyer = async (req, res) => {
     try {
         const { enquiry_id, quote_id, otp } = req.body;
+
+        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id }).populate({ path: 'order_id', populate: { path: "tracking_id" } }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+            .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
+        console.log("enquiry_data : ", enquiry_data)
 
         const otpData = await EnquiryOtp.findOne({
             enquiry_id,
@@ -4888,11 +4966,31 @@ exports.verifyOtpForBuyer = async (req, res) => {
             { new: true }
         );
 
-
-
         otpData.verified = true;
         otpData.is_used = true;
         await otpData.save();
+
+
+        const trackingdata = await tracking_order.findOneAndUpdate(
+            { _id: enquiry_data?.order_id?.tracking_id?._id },
+            {
+                $push: {
+                    order_shipment_dates: {
+                        order_status: "delivered",
+                        date: new Date(),
+                    },
+                }
+            },
+            { new: true }
+        );
+        console.log("trackingdata : ", trackingdata)
+
+        const orderdata = await Order.findOneAndUpdate(
+            { _id: enquiry_data?.order_id?._id },
+            { $set: { order_type: "delivered", order_status: "delivered" } },
+            { new: true }
+        );
+        console.log("orderdata : ", orderdata)
 
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {

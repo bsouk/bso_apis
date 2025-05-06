@@ -22,7 +22,6 @@ const EnquirySchema = new mongoose.Schema({
     },
     status: {
         type: String,
-
         default: "pending"
     },
     expiry_date: {
@@ -135,6 +134,9 @@ const EnquirySchema = new mongoose.Schema({
     delivery_charges: {
         type: Number,
         default: 0
+    },
+    selected_payment_terms: {
+        type: mongoose.Schema.Types.Mixed
     },
     additional_charges: {
         charge_type: {

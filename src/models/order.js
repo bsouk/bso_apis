@@ -8,13 +8,19 @@ const OrderSchema = new mongoose.Schema({
         required: true,
         sparse: true
     },
+    order_pickup: {
+        type: String,
+        enum: ["self_pickup", "delivery"],
+        default: "delivery",
+    },
     order_type: {
         type: String,
         enum: [
             "active",
             "delivered",
             "return_exchange",
-            "cancelled"
+            "cancelled",
+            "shipped",
         ],
         default: "active",
         sparse: true,
