@@ -599,7 +599,7 @@ exports.downloadReport = async (req, res) => {
                 const cleanList = List.map((data) => ({
                     "Job Title": data?.job_title ? data?.job_title : " ",
                     "Job Id": data?.job_unique_id ? data?.job_unique_id : " ",
-                    "Company Name": data?.company_id?.company_name ? data?.company_id?.company_name : " ",
+                    "Company Name": data?.company_id?.company_data?.name ? data?.company_id?.company_data?.name : " ",
                     "Job Type": data?.job_type ? data?.job_type : " ",
                     "Job Category": data?.job_category?.name ? data?.job_category?.name : " ",
                     "Job Location": data?.job_location ? data?.job_location : " ",

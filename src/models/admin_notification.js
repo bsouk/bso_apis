@@ -12,6 +12,11 @@ const AdminNotificationSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'users'
         },
+        send_to : {
+            type : String,
+            enum : ['all', 'specific'],
+            default : 'specific'
+        },
         type: {
             type: String,
             enum: [

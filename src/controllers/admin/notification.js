@@ -95,8 +95,19 @@ exports.sendNotification = async (req, res) => {
         }
 
         console.log("device_token", device_tokens)
-        const notificaitons = await Adminnotification.insertMany(notificationToCreate);
-        console.log("notificaitons", notificaitons)
+        if (all === true || all === "true") {
+            const notificaitons = await Adminnotification.create({
+                sender_id: admin_id,
+                type: "by_admin",
+                title: title,
+                body: body,
+                send_to: "all"
+            });
+            console.log("notificaitons", notificaitons)
+        } else {
+            const notificaitons = await Adminnotification.insertMany(notificationToCreate);
+            console.log("notificaitons", notificaitons)
+        }
         //push notification
         if (device_tokens.length !== 0) {
             utils.sendPushNotification(device_tokens, title, body)

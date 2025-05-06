@@ -8,6 +8,10 @@ const Brand = require("../../models/brand");
 const crypto = require("crypto");
 const plan = require("../../models/plan");
 const Subscription = require("../../models/subscription")
+const Admin = require("../../models/admin");
+const fcm_devices = require("../../models/fcm_devices");
+const admin_notification = require("../../models/admin_notification");
+const admin_received_notification = require("../../models/admin_received_notification");
 // const stripe = require('stripe')('your_stripe_secret_key');
 
 
@@ -86,6 +90,42 @@ exports.createSubscription = async (req, res) => {
         console.log("result : ", result)
         const newsubscription = await Subscription.create(newdata);
         console.log("subscription : ", newsubscription)
+
+
+        // admin notification
+        const admins = await Admin.findOne({ role: 'super_admin' });
+        console.log("admins : ", admins)
+
+        if (admins) {
+            const notificationMessage = {
+                title: 'New Subscription created',
+                description: `${userdata.full_name} has created a new subscription . Plan ID : ${newsubscription.plan_id}`,
+                subscription_id: newsubscription._id
+            };
+
+            const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+            console.log("adminFcmDevices : ", adminFcmDevices)
+
+            if (adminFcmDevices && adminFcmDevices.length > 0) {
+                adminFcmDevices.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const adminNotificationData = {
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    // description: notificationMessage.description,
+                    type: "new_subscription",
+                    receiver_id: admins._id,
+                    related_to: newsubscription._id,
+                    related_to_type: "subscription",
+                };
+                const newAdminNotification = new admin_received_notification(adminNotificationData);
+                console.log("newAdminNotification : ", newAdminNotification)
+                await newAdminNotification.save();
+            }
+        }
         return res.status(200).json({
             message: "Subscription created successfully",
             data: newsubscription,
