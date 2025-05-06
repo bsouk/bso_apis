@@ -166,4 +166,11 @@ router.patch(
     controller.approveRejectEnquiry
 );
 
+router.post(
+    '/planChangeRequest',
+    trimRequest.all,
+    requireAuth,
+    controller.planChangeRequest
+)
+
 module.exports = router

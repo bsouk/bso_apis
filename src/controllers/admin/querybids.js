@@ -11,6 +11,8 @@ const moment = require("moment");
 const version_history = require("../../models/version_history");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 const subscription = require("../../models/subscription");
+const fcm_devices = require("../../models/fcm_devices");
+const Notification = require("../../models/notification");
 
 exports.getquery = async (req, res) => {
     try {
@@ -1769,6 +1771,47 @@ exports.approveRejectEnquiry = async (req, res) => {
         return res.status(200).json({
             message: `Query ${status} successfully`,
             data: result,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.planChangeRequest = async (req, res) => {
+    try {
+        const { id } = req.body
+        console.log("id : ", id)
+        const data = await Enquiry.findOne({ _id: id })
+        console.log("data : ", data)
+
+        const userFcmDevices = await fcm_devices.find({ user_id: data?.user_id });
+        console.log("userFcmDevices : ", userFcmDevices)
+        let notificationbody = {
+            title: 'Plan Change Request',
+            description: `As we can see on your enquiry number ${data?.enquiry_unique_id}, no supplier has quoted yet. We request you to change your current plan to BSO Admin. Then BSO will provide you with your requested items.`
+        }
+        if (userFcmDevices && userFcmDevices.length > 0) {
+            userFcmDevices.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationbody);
+            })
+            let dbnotificationbody = {
+                title: notificationbody.title,
+                description: notificationbody.description,
+                type: "admin_action",
+                receiver_id: data?.user_id,
+                related_to: data?.user_id,
+                related_to_type: "user",
+            }
+            const newuserNotification = new Notification(dbnotificationbody);
+            console.log("newuserNotification : ", newuserNotification)
+            await newuserNotification.save();
+        }
+        return res.status(200).json({
+            message: "Plan change request sent successfully",
             code: 200
         })
     } catch (error) {
