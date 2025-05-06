@@ -35,10 +35,10 @@ exports.sendNotification = async (req, res) => {
         const { sent_to, title, body, all } = req.body;
 
         let filter = {};
-        if (sent_to.length !== 0) {
+        if (Array.isArray(sent_to) && sent_to.length !== 0) {
             filter['_id'] = { $in: sent_to }
         }
-        if (sent_to.length === 0 && (all === true || all === "true")) {
+        if ((Array.isArray(sent_to) && sent_to.length === 0) && (all === true || all === "true")) {
             filter = {}
         }
 
@@ -125,7 +125,7 @@ exports.getNotificationList = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
     try {
         const { offset = 0, limit = 10 } = req.query;
-        const users = await User.find().skip(Number(offset)).limit(Number(limit)).select('_id name');
+        const users = await User.find().skip(Number(offset)).limit(Number(limit)).select('_id full_name first_name last_name email');
         console.log("users : ", users)
         return res.json({ users, code: 200 })
     } catch (error) {
