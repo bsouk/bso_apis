@@ -173,4 +173,11 @@ router.post(
     controller.planChangeRequest
 )
 
+router.get(
+    '/getdownloadSingleEnquiryPdfdata/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getdownloadSingleEnquiryPdfdata
+)
+
 module.exports = router

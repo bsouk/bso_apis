@@ -629,9 +629,9 @@ exports.downloadReport = async (req, res) => {
                     }
                     SubAdminList = await Enquiry.find({
                         createdAt: { $gte: newFromDate, $lte: newToDate },
-                    }).populate('user_id').populate('shipping_address').sort({ createdAt: -1 })
+                    }).populate('user_id').populate('shipping_address').populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').sort({ createdAt: -1 })
                 } else {
-                    SubAdminList = await Enquiry.find({}).populate('user_id').populate('shipping_address').sort({ createdAt: -1 })
+                    SubAdminList = await Enquiry.find({}).populate('user_id').populate('shipping_address').populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').sort({ createdAt: -1 })
                 }
                 console.log("enquiry list is", SubAdminList);
 

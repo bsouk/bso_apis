@@ -59,7 +59,8 @@ const notificationSchema = new mongoose.Schema(
 
                 "delivery_cancelled",
                 "issue_raised",
-                "payout"
+                "payout",
+                "admin_action"
             ],
             required: true
         },

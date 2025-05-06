@@ -13,6 +13,8 @@ const query_assigned_suppliers = require("../../models/query_assigned_suppliers"
 const subscription = require("../../models/subscription");
 const fcm_devices = require("../../models/fcm_devices");
 const Notification = require("../../models/notification");
+const EnquiryQuotes = require("../../models/EnquiryQuotes");
+const logistics_quotes = require("../../models/logistics_quotes");
 
 exports.getquery = async (req, res) => {
     try {
@@ -1812,6 +1814,46 @@ exports.planChangeRequest = async (req, res) => {
         }
         return res.status(200).json({
             message: "Plan change request sent successfully",
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getdownloadSingleEnquiryPdfdata = async (req, res) => {
+    try {
+        const { id } = req.params
+        const enquiry = await Enquiry.findOne({ _id: id }).populate('user_id').populate('shipping_address').populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').sort({ createdAt: -1 })
+        console.log("enquiry : ", enquiry)
+        const supplierquote = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate("enquiry_items.quantity.unit").populate({
+            path: "enquiry_id",
+            select: "enquiry_unique_id user_id priority shipping_address expiry_date",
+            populate: {
+                path: "shipping_address",
+                select: "address"
+            }
+        }).populate("pickup_address", "address")
+        const logisticsquote = await logistics_quotes.find({ enquiry_id: id })
+            .populate({
+                path: 'enquiry_id',
+                populate: [
+                    {
+                        path: "selected_supplier.quote_id",
+                        populate: { path: "pickup_address", strictPopulate: false }
+                    },
+                    {
+                        path: "enquiry_items.quantity.unit"
+                    }
+                ]
+            });
+        console.log("logistics data : ", logisticsquote, " supplier data : ", supplierquote)
+        return res.status(200).json({
+            message: "Enquiry data fetched successfully",
+            enquiry,
+            supplier_quote: supplierquote,
+            logistics_quote: logisticsquote,
             code: 200
         })
     } catch (error) {
