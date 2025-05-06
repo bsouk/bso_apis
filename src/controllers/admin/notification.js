@@ -35,9 +35,6 @@ exports.sendNotification = async (req, res) => {
         const { sent_to, title, body, all } = req.body;
         console.log("body : ", body)
 
-        const isAll = all == true || all == "true";
-        const isNotAll = all == false || all == "false";
-
         let filter = {};
         if (Array.isArray(sent_to) && sent_to.length !== 0) {
             filter['_id'] = { $in: sent_to }
@@ -101,7 +98,10 @@ exports.sendNotification = async (req, res) => {
         }
 
         console.log("device_token", device_tokens)
-        if (isAll) {
+        if (Array.isArray(sent_to) && sent_to.length !== 0) {
+            const notifications = await Adminnotification.insertMany(notificationToCreate);
+            console.log("Admin notifications (individual):", notifications);
+        } else {
             const notification = await Adminnotification.create({
                 sender_id: admin_id,
                 type: "by_admin",
@@ -110,9 +110,6 @@ exports.sendNotification = async (req, res) => {
                 send_to: "all"
             });
             console.log("Admin notification (all):", notification);
-        } else if (isNotAll) {
-            const notifications = await Adminnotification.insertMany(notificationToCreate);
-            console.log("Admin notifications (individual):", notifications);
         }
         //push notification
         if (device_tokens.length !== 0) {
