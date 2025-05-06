@@ -1461,11 +1461,15 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
 
 exports.getAllEnquiry = async (req, res) => {
     try {
-        const { status, search, offset = 0, limit = 10, brand, countries } = req.query;
+        const { status, search, offset = 0, limit = 10, brand, countries, plan_step } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
         const filter = {};
         let brandfilter = {}
         let countryFilter = {};
+
+        if (plan_step) {
+            filter['subscription.plan.plan_step'] = plan_step;
+        }
 
         if (brand) {
             brandfilter = {
@@ -1562,7 +1566,7 @@ exports.getAllEnquiry = async (req, res) => {
                         as: "subscription",
                         pipeline: [
                             {
-                                $match : {
+                                $match: {
                                     status: "active",
                                     type: "buyer"
                                 }
@@ -1605,6 +1609,28 @@ exports.getAllEnquiry = async (req, res) => {
                     }
                 },
                 {
+                    $lookup: {
+                        from: "enquiry_quotes",
+                        localField: "_id",
+                        foreignField: "enquiry_id",
+                        as: "supplier_quote"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "logistics_quotes",
+                        localField: "_id",
+                        foreignField: "enquiry_id",
+                        as: "logistics_quotes"
+                    }
+                },
+                {
+                    $addFields: {
+                        total_supplier_quote: { $size: "$supplier_quote" },
+                        total_logistics_quote: { $size: "$logistics_quotes" }
+                    }
+                },
+                {
                     $match: {
                         ...filter,
                         ...countryFilter
@@ -1625,7 +1651,9 @@ exports.getAllEnquiry = async (req, res) => {
                         documents: { $first: "$documents" },
                         enquiry_items: { $push: "$enquiry_items" },
                         delivery_charges: { $first: "$delivery_charges" },
-                        subscription : {$first : "$subscription"},
+                        subscription: { $first: "$subscription" },
+                        total_supplier_quote: { $first: "$total_supplier_quote" },
+                        total_logistics_quote: { $first: "$total_logistics_quote" },
                         reply: { $first: "$reply" },
                         createdAt: { $first: "$createdAt" },
                         updatedAt: { $first: "$updatedAt" },
