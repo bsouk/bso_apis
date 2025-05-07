@@ -6,10 +6,13 @@ const payment = require("../../models/payment");
 
 exports.getOrders = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, order_type = "", search = "" } = req.query
+        const { offset = 0, limit = 10, order_type = "", search = "" , user_id} = req.query
         const filter = {}
         if (order_type) {
             filter.order_type = order_type
+        }
+        if(user_id){
+            filter.buyer_id = new mongoose.Types.ObjectId(user_id)
         }
         if (search) {
             filter.order_unique_id = { $regex: search, $options: "i" }

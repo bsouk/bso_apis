@@ -49,7 +49,7 @@ exports.genrateClientScretKey = async (req, res) => {
             });
         }
 
-        const [user, plan] = await Promise.all([
+        const [user, plandata] = await Promise.all([
             User.findById(userid),
             plan.findOne({ plan_id })
         ]);
@@ -60,7 +60,7 @@ exports.genrateClientScretKey = async (req, res) => {
                 code: 404
             });
         }
-        if (!plan) {
+        if (!plandata) {
             return res.status(404).json({
                 message: "Plan not found",
                 code: 404
@@ -73,15 +73,15 @@ exports.genrateClientScretKey = async (req, res) => {
         }
 
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: plan.price * 100,
-            currency: plan.currency || 'usd',
+            amount: plandata.price * 100,
+            currency: plandata.currency || 'usd',
             customer: customer.id,
             automatic_payment_methods: {
                 enabled: true,
             },
             metadata: {
                 userId: userid.toString(),
-                planId: plan._id.toString()
+                planId: plandata._id.toString()
             }
         });
 
