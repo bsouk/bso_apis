@@ -1827,7 +1827,7 @@ exports.getdownloadSingleEnquiryPdfdata = async (req, res) => {
         const { id } = req.params
         const enquiry = await Enquiry.findOne({ _id: id }).populate('user_id').populate('shipping_address').populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').sort({ createdAt: -1 })
         console.log("enquiry : ", enquiry)
-        const supplierquote = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate("enquiry_items.quantity.unit").populate({
+        const supplierquote = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id').populate("enquiry_items.quantity.unit").populate({
             path: "enquiry_id",
             select: "enquiry_unique_id user_id priority shipping_address expiry_date",
             populate: {
