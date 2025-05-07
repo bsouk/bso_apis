@@ -2232,7 +2232,7 @@ exports.finalquotes = async (req, res) => {
 };
 exports.updateSubmitQuery = async (req, res) => {
   const enq_id = req.params.id
-  const { items, admin_price, logistics_price, margin_type, margin_value, grand_total } = req.body
+  const { items, admin_price, logistics_price, margin_type, margin_value, grand_total, payment_terms } = req.body
   console.log('dataaaaaaaaaaaaa', req.body)
   // const exist=await EnquiryQuotes.findOne({_id:items.})
   // if(!exist) {
@@ -2256,8 +2256,8 @@ exports.updateSubmitQuery = async (req, res) => {
           logistics_price,
           margin_type,
           margin_value,
-          grand_total
-
+          grand_total,
+          admin_payment_terms: payment_terms
         }
       },
       { new: true }

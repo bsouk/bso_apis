@@ -10,15 +10,15 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     //     type:String,
     //     default: "pending"
     // },
-    is_admin_updated:{
+    is_admin_updated: {
         type: Boolean,
         default: false
     },
-    status : {
+    status: {
         type: String,
         default: "pending"
     },
-    quote_unique_id : String,
+    quote_unique_id: String,
     enquiry_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "enquires"
@@ -38,7 +38,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     currency: {
         type: String
     },
-    admin_price:{
+    admin_price: {
         type: Number,
         default: 0
     },
@@ -46,7 +46,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    margin_type:{
+    margin_type: {
         type: String,
         enum: ["flat", "percentage"],
         default: "flat"
@@ -175,6 +175,9 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     payment_terms: {
         type: mongoose.Schema.Types.Mixed
     },
+    admin_payment_terms: {
+        type: mongoose.Schema.Types.Mixed
+    },
     discount: {
         charge_type: {
             type: String,
@@ -208,7 +211,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    is_admin_approved : {
+    is_admin_approved: {
         type: Boolean,
         default: false
     },
