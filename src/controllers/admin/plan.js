@@ -129,9 +129,16 @@ exports.editPlan = async (req, res) => {
         }
 
         if (data.price || data.interval || data.currency) {
-            const interval_count = data.interval ?
-                await intervalCount(data.interval) :
-                plandata.interval_count;
+            const interval_count = await intervalCount(data.interval);
+            let newinterval = ''
+            switch (data.interval) {
+                case 'monthly': newinterval = 'month'; break;
+                case 'yearly': newinterval = 'year'; break;
+                case 'weekly': newinterval = 'week'; break;
+                case 'daily': newinterval = 'day'; break;
+                default: newinterval = 'month'; break;
+            }
+            console.log("newinterval : ", newinterval)
 
             const newPrice = await stripe.prices.create({
                 unit_amount: (data.price || plandata.price) * 100,
@@ -142,6 +149,24 @@ exports.editPlan = async (req, res) => {
                 },
                 product: plandata.stripe_product_id,
             });
+
+            let per_user_price = {}
+            if (data.price_per_person && data.price_per_person > 0) {
+                per_user_price = await stripe.prices.create({
+                    unit_amount: data.price_per_person * 100,
+                    currency: data.currency || 'usd',
+                    recurring: {
+                        interval: newinterval,
+                        interval_count: interval_count,
+                    },
+                    product: product.id,
+                    metadata: {
+                        pricing_type: 'per_user'
+                    }
+                });
+                console.log("Created per-user price:", per_user_price?.id);
+                data.stripe_per_user_price_id = per_user_price?.id || ""
+            }
 
             data.stripe_price_id = newPrice.id;
             data.interval_count = interval_count;

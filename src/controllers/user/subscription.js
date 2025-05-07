@@ -83,6 +83,7 @@ exports.createSubscription = async (req, res) => {
                 userId: userid.toString(),
                 planId: plandata._id.toString()
             },
+            defa
         });
 
 
