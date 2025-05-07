@@ -73,12 +73,30 @@ exports.createPlan = async (req, res) => {
             product: product.id,
         });
 
+        let per_user_price = {}
+        if (data.price_per_person && data.price_per_person > 0) {
+            per_user_price = await stripe.prices.create({
+                unit_amount: data.price_per_person * 100,
+                currency: data.currency || 'usd',
+                recurring: {
+                    interval: newinterval,
+                    interval_count: interval_count,
+                },
+                product: product.id,
+                metadata: {
+                    pricing_type: 'per_user'
+                }
+            });
+            console.log("Created per-user price:", per_user_price?.id);
+        }
+
         console.log("product : ", product, " price : ", price)
 
         data.plan_id = planId
         data.interval_count = interval_count
         data.stripe_product_id = product.id
         data.stripe_price_id = price.id
+        data.stripe_per_user_price_id = per_user_price?.id || ""
         const newplan = await plan.create(data);
         console.log("newplan : ", newplan)
         return res.status(201).json({ message: "plan created successfully", data: newplan, code: 200 });
