@@ -144,7 +144,7 @@ exports.editPlan = async (req, res) => {
                 unit_amount: (data.price || plandata.price) * 100,
                 currency: data.currency || plandata.currency || 'usd',
                 recurring: {
-                    interval: data.interval || plandata.interval,
+                    interval: newinterval,
                     interval_count: interval_count,
                 },
                 product: plandata.stripe_product_id,
