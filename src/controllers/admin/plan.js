@@ -47,8 +47,8 @@ exports.createPlan = async (req, res) => {
         // // });
 
         const product = await stripe.products.create({
-            name: data.name,
-            description: data.description || '',
+            name: data.plan_name,
+            description: data.plan_description || '',
             metadata: data.metadata || {
             },
         });
