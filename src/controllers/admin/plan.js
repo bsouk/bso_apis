@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const plan = require("../../models/plan");
 const subscription = require("../../models/subscription");
 const Team = require("../../models/team");
-// const stripe = require('stripe')('your_stripe_secret_key');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 async function genratePlanId() {
     const token = crypto.randomBytes(5).toString('hex')
@@ -28,26 +28,48 @@ exports.createPlan = async (req, res) => {
         const planId = await genratePlanId()
         console.log("plan id : ", planId)
 
-        // const product = await stripe.products.create({
-        //     name: data.name,
-        //     description: data.description,
-        //     metadata: data.metadata || {},
-        // });
+        // // const product = await stripe.products.create({
+        // //     name: data.name,
+        // //     description: data.description,
+        // //     metadata: data.metadata || {},
+        // // });
 
-        const interval_count = await intervalCount(data.interval)
-        console.log("interval_count : ", interval_count)
-        // const price = await stripe.prices.create({
-        //     unit_amount: data.price,
-        //     currency: "USD",
-        //     recurring: {
-        //         interval: data.interval,
-        //         interval_count,
-        //     },
-        //     product: product.id,
-        // });
+        // const interval_count = await intervalCount(data.interval)
+        // console.log("interval_count : ", interval_count)
+        // // const price = await stripe.prices.create({
+        // //     unit_amount: data.price,
+        // //     currency: "USD",
+        // //     recurring: {
+        // //         interval: data.interval,
+        // //         interval_count,
+        // //     },
+        // //     product: product.id,
+        // // });
+
+        const product = await stripe.products.create({
+            name: data.name,
+            description: data.description || '',
+            metadata: data.metadata || {
+            },
+        });
+
+        const interval_count = await intervalCount(data.interval);
+        const price = await stripe.prices.create({
+            unit_amount: data.price * 100,
+            currency: data.currency || 'usd',
+            recurring: {
+                interval: data.interval,
+                interval_count: interval_count,
+            },
+            product: product.id,
+        });
+
+        console.log("product : ", product, " price : ", price)
 
         data.plan_id = planId
         data.interval_count = interval_count
+        data.stripe_product_id = product.id
+        data.stripe_price_id = price.id
         const newplan = await plan.create(data);
         console.log("newplan : ", newplan)
         return res.status(201).json({ message: "plan created successfully", data: newplan, code: 200 });
@@ -70,6 +92,34 @@ exports.editPlan = async (req, res) => {
         }
         const data = req.body
         console.log("data : ", data)
+
+        if (data.name || data.description) {
+            await stripe.products.update(plandata.stripe_product_id, {
+                name: data.name || plandata.name,
+                description: data.description || plandata.description,
+                ...(data.metadata ? { metadata: data.metadata } : plandata.metadata)
+            });
+        }
+
+        if (data.price || data.interval || data.currency) {
+            const interval_count = data.interval ?
+                await intervalCount(data.interval) :
+                plandata.interval_count;
+
+            const newPrice = await stripe.prices.create({
+                unit_amount: (data.price || plandata.price) * 100,
+                currency: data.currency || plandata.currency || 'usd',
+                recurring: {
+                    interval: data.interval || plandata.interval,
+                    interval_count: interval_count,
+                },
+                product: plandata.stripe_product_id,
+            });
+
+            data.stripe_price_id = newPrice.id;
+            data.interval_count = interval_count;
+        }
+
         const response = await plan.findOneAndUpdate(
             { _id: id },
             { $set: data },
@@ -131,6 +181,23 @@ exports.deletePlan = async (req, res) => {
             code: 404,
         });
     }
+
+    const subscriptionCount = await subscription.countDocuments({
+        plan_id: plandata.plan_id,
+        status: 'active'
+    });
+
+    if (subscriptionCount > 0) {
+        return utils.handleError(res, {
+            message: "Cannot delete plan with active subscriptions",
+            code: 400,
+        });
+    }
+
+    await stripe.products.update(plandata.stripe_product_id, {
+        active: false
+    });
+
     const result = await plan.deleteOne({ _id: id });
     console.log("result : ", result)
     return res.status(200).json({

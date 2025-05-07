@@ -14,7 +14,7 @@ exports.getOrders = async (req, res) => {
         if (search) {
             filter.order_unique_id = { $regex: search, $options: "i" }
         }
-        const myorders = await Order.find(filter).skip(parseInt(offset)).limit(parseInt(limit)).populate('enquiry_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id').populate('logistics_id')
+        const myorders = await Order.find(filter).sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit)).populate('enquiry_id').populate('shipping_address').populate('billing_address').populate('payment_id').populate('tracking_id').populate('buyer_id').populate('logistics_id')
         const count = await Order.countDocuments()
         console.log("myorders : ", myorders)
 
@@ -96,7 +96,7 @@ exports.changeOrderStatus = async (req, res) => {
     try {
         const { order_id, status, payment_id } = req.body
         if (order_id && status) {
-            const result = await Order.findOneAndUpdate({ _id: order_id }, { $set: { order_status: status, order_type : status } }, { new: true })
+            const result = await Order.findOneAndUpdate({ _id: order_id }, { $set: { order_status: status, order_type: status } }, { new: true })
             console.log("result : ", result)
             return res.status(200).json({
                 message: "Order status changed successfully",

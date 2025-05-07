@@ -69,10 +69,40 @@ const planSchema = new mongoose.Schema(
         plan_step: {
             type: String,
             enum: ["direct", "admin_involved"],
-        }
+        },
+        stripe_product_id: {
+            type: String,
+            required: true,
+            unique: true
+        },
+        stripe_price_id: {
+            type: String,
+            required: true,
+            unique: true
+        },
+        stripe_per_user_price_id: {
+            type: String,
+            unique: true,
+            sparse: true // Only required if price_per_person > 0
+        },
+        features: [{
+            name: String,
+            included: Boolean,
+            limit: Number
+        }]
     },
     {
-        timestamps: true
+        timestamps: true,
+        toJSON: {
+            virtuals: true,
+            transform: function (doc, ret) {
+                delete ret.__v;
+                delete ret.stripe_product_id;
+                delete ret.stripe_base_price_id;
+                delete ret.stripe_per_user_price_id;
+                return ret;
+            }
+        }
     }
 );
 

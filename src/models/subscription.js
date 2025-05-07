@@ -11,6 +11,9 @@ const subscriptionSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        stripe_subscription_id : {
+            type: String,
+        },
         plan_id: {
             type: String,
             required: true

@@ -12,9 +12,7 @@ const Admin = require("../../models/admin");
 const fcm_devices = require("../../models/fcm_devices");
 const admin_notification = require("../../models/admin_notification");
 const admin_received_notification = require("../../models/admin_received_notification");
-// const stripe = require('stripe')('your_stripe_secret_key');
-
-
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 async function genrateSubscriptionId() {
     const token = crypto.randomBytes(5).toString('hex')
@@ -29,20 +27,15 @@ async function getCustomerByEmail(email) {
     return customers.data.length > 0 ? customers.data[0] : null;
 }
 
-// exports.createSubscription = async (req, res) => {
-//     try {
-//         const userid = req.user._id
-//         const data = req.body
-//         const userdata = await User.findOne({ _id: userid })
-//         console.log("userdata : ", userdata)
-//         if(!userdata){
-
-//         }
-//         const is_customer_existed = await getCustomerByEmail(req.user.email)
-//     } catch (error) {
-//         utils.handleError(res, error);
-//     }
-// }
+async function createStripeCustomer(user) {
+    return await stripe.customers.create({
+        email: user.email,
+        name: user.full_name,
+        metadata: {
+            userId: user._id.toString()
+        }
+    });
+}
 
 exports.createSubscription = async (req, res) => {
     try {
@@ -64,6 +57,35 @@ exports.createSubscription = async (req, res) => {
                 code: 404,
             });
         }
+
+        if (!plandata?.stripe_price_id) {
+            return utils.handleError(res, {
+                message: "Plan is not properly configured for payments",
+                code: 400,
+            });
+        }
+
+        let customer = await getCustomerByEmail(userdata.email);
+        if (!customer) {
+            customer = await createStripeCustomer(userdata);
+        }
+
+        // // Attach the selected payment method to customer (but don't set as default)
+        // await stripe.paymentMethods.attach(payment_method_id, {
+        //     customer: customer.id,
+        // });
+
+        const stripeSubscription = await stripe.subscriptions.create({
+            customer: customer.id,
+            items: [{ price: plandata?.stripe_price_id }],
+            expand: ['latest_invoice.payment_intent'],
+            metadata: {
+                userId: userid.toString(),
+                planId: plandata._id.toString()
+            },
+        });
+
+
         let today = new Date();
         let start = new Date(today);
         let end
@@ -79,9 +101,10 @@ exports.createSubscription = async (req, res) => {
             user_id: userdata?._id,
             subscription_id: await genrateSubscriptionId(),
             plan_id: data.plan_id,
+            stripe_subscription_id: stripeSubscription.id,
             start_at: start,
             end_at: end,
-            status: 'active',
+            status: stripeSubscription.status,
             type: plandata.type
         }
 

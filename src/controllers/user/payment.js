@@ -199,7 +199,7 @@ exports.paynow = async (req, res) => {
             order_unique_id: await generateUniqueId(),
             enquiry_id: data.enquiry_id,
             buyer_id: userId,
-            total_amount: enquiry_data?.grand_total,
+            total_amount: enquiry_data?.selected_supplier?.quote_id?.grand_total,
             shipping_address: enquiry_data?.shipping_address,
             billing_address: enquiry_data?.shipping_address,
             logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,

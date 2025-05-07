@@ -36,7 +36,7 @@ const OrderSchema = new mongoose.Schema({
     },
     enquiry_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'enquries'
+        ref: 'enquires'
     },
     buyer_id: {
         type: mongoose.Schema.Types.ObjectId,
