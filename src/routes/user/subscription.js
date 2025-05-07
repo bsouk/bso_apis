@@ -22,7 +22,7 @@ router.get(
 )
 
 router.post(
-    "/genrateClientScretKey",
+    "/generateClientSecretKey",
     trimRequest.all,
     requireAuth,
     controller.genrateClientScretKey
