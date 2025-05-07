@@ -41,6 +41,14 @@ exports.createSubscription = async (req, res) => {
     try {
         const userid = req.user._id
         const data = req.body
+        const { plan_id, payment_method_id } = req.body;
+
+        if (!plan_id || !payment_method_id) {
+            return res.status(400).json({
+                message: "Plan ID and payment method ID are required",
+                code: 400
+            });
+        }
         const userdata = await User.findOne({ _id: userid })
         console.log("userdata : ", userdata)
         if (!userdata) {
@@ -70,22 +78,34 @@ exports.createSubscription = async (req, res) => {
             customer = await createStripeCustomer(userdata);
         }
 
-        // // Attach the selected payment method to customer (but don't set as default)
-        // await stripe.paymentMethods.attach(payment_method_id, {
-        //     customer: customer.id,
-        // });
+        // Attach the selected payment method to customer (but don't set as default)
+        await stripe.paymentMethods.attach(payment_method_id, {
+            customer: customer.id,
+        });
 
         const stripeSubscription = await stripe.subscriptions.create({
             customer: customer.id,
             items: [{ price: plandata?.stripe_price_id }],
+            payment_settings: {
+                payment_method_types: ['card', 'us_bank_account', 'link'],
+                save_default_payment_method: 'on_subscription' // Let Stripe handle retention
+            },
             expand: ['latest_invoice.payment_intent'],
+            off_session: false, // First payment is on-session
             metadata: {
                 userId: userid.toString(),
                 planId: plandata._id.toString()
             },
-            defa
         });
 
+        const paymentIntent = stripeSubscription.latest_invoice.payment_intent;
+        let requiresAction = false;
+        let clientSecret = null;
+
+        if (['requires_action', 'requires_confirmation'].includes(paymentIntent.status)) {
+            requiresAction = true;
+            clientSecret = paymentIntent.client_secret;
+        }
 
         let today = new Date();
         let start = new Date(today);
@@ -103,10 +123,13 @@ exports.createSubscription = async (req, res) => {
             subscription_id: await genrateSubscriptionId(),
             plan_id: data.plan_id,
             stripe_subscription_id: stripeSubscription.id,
+            stripe_payment_method_id: payment_method_id,
+            stripe_customer_id: customer.id,
             start_at: start,
             end_at: end,
             status: stripeSubscription.status,
-            type: plandata.type
+            type: plandata.type,
+            payment_method_type: paymentIntent.payment_method_types[0]
         }
 
         console.log("newdata : ", newdata)
@@ -152,10 +175,23 @@ exports.createSubscription = async (req, res) => {
         }
         return res.status(200).json({
             message: "Subscription created successfully",
-            data: newsubscription,
+            data: {
+                subscription: newsubscription,
+                requires_action: requiresAction,
+                client_secret: clientSecret,
+                payment_method_type: paymentIntent.payment_method_types[0]
+            },
             code: 200
         })
     } catch (error) {
+        if (error.type === 'StripeInvalidRequestError') {
+            return res.status(400).json({
+                message: error.message,
+                code: 400,
+                stripe_code: error.code,
+                payment_method_type: error.payment_method?.type
+            });
+        }
         utils.handleError(res, error);
     }
 }
