@@ -15,4 +15,10 @@ router.get(
     controller.dashboardChartData
 )
 
+router.get(
+    '/getRevenueChartData',
+    trimRequest.all,
+    controller.getRevenueChartData
+)
+
 module.exports = router
