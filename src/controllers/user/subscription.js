@@ -37,6 +37,84 @@ async function createStripeCustomer(user) {
     });
 }
 
+exports.genrateClientScretKey = async (req, res) => {
+    try {
+        const userid = req.user._id;
+        const { plan_id } = req.body;
+
+        if (!plan_id) {
+            return res.status(400).json({
+                message: "Plan ID is required",
+                code: 400
+            });
+        }
+
+        const [user, plan] = await Promise.all([
+            User.findById(userid),
+            plan.findOne({ plan_id })
+        ]);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                code: 404
+            });
+        }
+        if (!plan) {
+            return res.status(404).json({
+                message: "Plan not found",
+                code: 404
+            });
+        }
+
+        let customer = await getCustomerByEmail(user.email);
+        if (!customer) {
+            customer = await createStripeCustomer(user);
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: plan.price * 100,
+            currency: plan.currency || 'usd',
+            customer: customer.id,
+            automatic_payment_methods: {
+                enabled: true,
+            },
+            metadata: {
+                userId: userid.toString(),
+                planId: plan._id.toString()
+            }
+        });
+
+        return res.status(200).json({
+            message: "Payment intent created",
+            data: {
+                client_secret: paymentIntent.client_secret,
+                customer_id: customer.id,
+                plan_id: plan_id,
+                requires_payment_method: true
+            },
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("Subscription error:", error);
+
+        if (error.type === 'StripeInvalidRequestError') {
+            return res.status(400).json({
+                message: error.message,
+                code: 400,
+                details: error.raw || null
+            });
+        }
+
+        res.status(500).json({
+            message: "Subscription creation failed",
+            error: error.message,
+            code: 500
+        });
+    }
+};
+
 exports.createSubscription = async (req, res) => {
     try {
         const userid = req.user._id
@@ -91,7 +169,6 @@ exports.createSubscription = async (req, res) => {
                 save_default_payment_method: 'on_subscription' // Let Stripe handle retention
             },
             expand: ['latest_invoice.payment_intent'],
-            off_session: false, // First payment is on-session
             metadata: {
                 userId: userid.toString(),
                 planId: plandata._id.toString()

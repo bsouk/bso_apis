@@ -21,6 +21,12 @@ router.get(
     controller.getSinglePlan
 )
 
+router.post(
+    "/genrateClientScretKey",
+    trimRequest.all,
+    requireAuth,
+    controller.genrateClientScretKey
+)
 
 router.post(
     "/createSubscription",
