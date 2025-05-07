@@ -54,11 +54,20 @@ exports.createPlan = async (req, res) => {
         });
 
         const interval_count = await intervalCount(data.interval);
+        let newinterval = ''
+        switch (data.interval) {
+            case 'monthly': newinterval = 'month'; break;
+            case 'yearly': newinterval = 'year'; break;
+            case 'weekly': newinterval = 'week'; break;
+            case 'daily': newinterval = 'day'; break;
+            default: newinterval = 'month'; break;
+        }
+        console.log("newinterval : ", newinterval)
         const price = await stripe.prices.create({
             unit_amount: data.price * 100,
             currency: data.currency || 'usd',
             recurring: {
-                interval: data.interval,
+                interval: newinterval,
                 interval_count: interval_count,
             },
             product: product.id,
