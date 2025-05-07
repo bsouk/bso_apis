@@ -20,9 +20,7 @@ const subscriptionSchema = new mongoose.Schema(
         stripe_customer_id: {
             type: String,
         },
-        payment_method_type: {
-            type: new mongoose.Schema.Types.Mixed
-        },
+        payment_method_type: String,
         plan_id: {
             type: String,
             required: true
