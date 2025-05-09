@@ -72,18 +72,12 @@ const planSchema = new mongoose.Schema(
         },
         stripe_product_id: {
             type: String,
-            required: true,
-            unique: true
         },
         stripe_price_id: {
             type: String,
-            required: true,
-            unique: true
         },
         stripe_per_user_price_id: {
             type: String,
-            unique: true,
-            sparse: true // Only required if price_per_person > 0
         },
         features: [{
             name: String,
