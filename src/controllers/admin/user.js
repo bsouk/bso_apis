@@ -12,6 +12,7 @@ const Enquiry = require("../../models/Enquiry")
 const subscription = require("../../models/subscription");
 const logistics_quotes = require("../../models/logistics_quotes");
 const fcm_devices = require("../../models/fcm_devices");
+const BusinessCategory = require("../../models/business_category")
 function createNewPassword() {
   const password = generatePassword.generate({
     length: 8,
@@ -1296,8 +1297,35 @@ exports.getSupplierList = async (req, res) => {
     ]);
 
     const [count, users] = await Promise.all([countPromise, usersPromise]);
+    console.log("users : ", users);
 
-    res.json({ data: users, count, code: 200 });
+    const suppliers = await Promise.all(users.map(async user => {
+      if (user.company_data?.business_category) {
+        try {
+          const categoryIds = user.company_data.business_category
+            .split(',')
+            .map(id => id.trim())
+            .filter(id => mongoose.Types.ObjectId.isValid(id))
+            .map(id => new mongoose.Types.ObjectId(id));
+
+          if (categoryIds.length > 0) {
+            const categories = await BusinessCategory.find(
+              { _id: { $in: categoryIds } },
+              { name: 1 }
+            );
+            user.company_data.business_category = categories.map(cat => cat.name).join(", ");
+          } else {
+            user.company_data.business_category = "";
+          }
+        } catch (error) {
+          console.error("Error processing categories:", error);
+          user.company_data.business_category = "";
+        }
+      }
+      return user;
+    }));
+    console.log("suppliers : ", suppliers)
+    return res.json({ data: suppliers, count, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
