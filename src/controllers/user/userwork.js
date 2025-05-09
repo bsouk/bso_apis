@@ -40,6 +40,7 @@ const fcm_devices = require("../../models/fcm_devices");
 const admin_received_notification = require("../../models/admin_received_notification");
 const Order = require("../../models/order");
 const tracking_order = require("../../models/tracking_order");
+const Notification = require("../../models/notification")
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -3901,9 +3902,10 @@ exports.addenquiryquotes = async (req, res) => {
                 code: 400,
             });
         }
-        // const enquirydata = await Enquiry.findOne({ _id: data.enquiry_id })
+        const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id })
+        console.log("buyerenquiry : ", buyerenquiry)
         // const buyersubscription = await Subscription.findOne({ user_id: enquirydata.user_id, status: "active", type: "" });
-        const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
+        const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) }).populate('enquiry_id');
         console.log("enquiryData : ", enquiryData);
         let enquiry = {}
         if (enquiryData) {
@@ -3924,6 +3926,37 @@ exports.addenquiryquotes = async (req, res) => {
             });
             console.log("enquiry : ", enquiry);
         }
+
+        //send notification
+        const notificationMessage = {
+            title: 'New Quote submit by supplier',
+            description: `${req.user.full_name} has created a new quote . Enquiry ID : ${buyerenquiry?.enquiry_unique_id}`,
+            quote: enquiry._id
+        };
+
+        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+        console.log("buyerfcm : ", buyerfcm)
+
+        if (buyerfcm && buyerfcm.length > 0) {
+            buyerfcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "supplier_quote_added",
+                receiver_id: buyerenquiry.user_id,
+                related_to: buyerenquiry.user_id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
+
         return res.status(200).json({
             message: "Quotation Submit Successfully",
             data: enquiry,

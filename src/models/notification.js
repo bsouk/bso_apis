@@ -61,7 +61,9 @@ const notificationSchema = new mongoose.Schema(
                 "issue_raised",
                 "payout",
                 "admin_action",
-                "job_updated"
+                "job_updated",
+                "bso",
+                "supplier_quote_added"
             ],
             required: true
         },

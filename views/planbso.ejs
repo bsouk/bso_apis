@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enquiry Reminder - Blue Sky</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .email-container {
+      max-width: 700px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #007BFF;
+      color: #fff;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+    .content {
+      padding: 30px 40px;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    .content h2 {
+      color: #007BFF;
+      margin-top: 0;
+    }
+    .info-box {
+      background-color: #fff4e5;
+      padding: 15px;
+      margin: 20px 0;
+      border-left: 4px solid #FFA500;
+      border-radius: 4px;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      background-color: #007BFF;
+      color: #fff;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #007BFF;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>Blue Sky</h1>
+    </div>
+    <div class="content">
+      <p><strong>Hello <%= buyer_name %>,</strong></p>
+
+      <p>We noticed that your enquiry <strong>#<%= enquiry_id %></strong>, expiring on <strong><%= expiry_date %></strong>, has not received any quotes from suppliers.</p>
+
+      <div class="info-box">
+        <p>To increase your chances of receiving relevant quotations, we recommend upgrading your plan to <strong>BSO Admin</strong>.</p>
+      </div>
+
+      <p>Upgrading ensures better visibility and response from suppliers who are aligned with your requirements.</p>
+
+      <a href="<%= plan_change_url %>" class="btn">Upgrade My Plan</a>
+
+      <p style="margin-top: 30px;">If you have any questions, feel free to contact our support team anytime.</p>
+
+      <p>Best regards,<br><strong>Blue Sky Team</strong></p>
+    </div>
+    <div class="footer">
+      &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
