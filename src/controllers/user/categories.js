@@ -85,3 +85,89 @@ exports.getBusinessCategories = async (req, res) => {
     }
 }
 
+
+exports.addProductCategory = async (req, res) => {
+    try {
+        const { icon, name } = req.body;
+
+        const isCategoryExists = await ProductCategory.findOne({ name: name });
+        if (isCategoryExists)
+            return utils.handleError(res, {
+                message: "This category already exist",
+                code: 400,
+            });
+
+        const category = new ProductCategory({ icon, name });
+        await category.save();
+
+        res.json({ message: "Category added successfully", code: 200 });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
+
+exports.addProductSubCategory = async (req, res) => {
+    try {
+        const { name, icon, product_category_type_id } = req.body
+
+        if (!name || !icon || !product_category_type_id) return res.json({ "message": "Send valid data", "code": 500 })
+
+        //mark main category have further sub category
+        const mainCategory = await ProductCategory.findById({ _id: product_category_type_id })
+
+        if (!mainCategory) {
+            return utils.handleError(res, {
+                message: "Main category not found",
+                code: 400,
+            });
+        }
+
+        mainCategory.isNext = true
+        await mainCategory.save()
+
+        const isSubCategoryExist = await ProductSubCategory.findOne({ name, product_category_type_id });
+
+        if (isSubCategoryExist) return res.json({ "message": "Subcategory already exist for this category", "code": 500 });
+
+        const newSubCategory = new ProductSubCategory({ name, icon, product_category_type_id });
+        await newSubCategory.save();
+        return res.json({ "message": "Subcategory added successfully", "code": 500 })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.addProductSubSubCategory = async (req, res) => {
+    try {
+        const { name, icon, product_category_type_id, product_sub_category_type_id } = req.body
+
+        if (!name || !icon || !product_category_type_id || !product_sub_category_type_id) return res.json({ "message": "Send valid data", "code": 500 })
+
+        const isSubSubCategoryExist = await ProductSubSubCategory.findOne({ name, product_category_type_id, product_sub_category_type_id });
+
+        if (isSubSubCategoryExist) return res.json({ "message": "Sub-Sub-Category already exist for this category", "code": 500 });
+
+        //mark its parent category have sub category
+        const mainCategory = await ProductSubCategory.findById({ _id: product_sub_category_type_id })
+        if (!mainCategory) {
+            return utils.handleError(res, {
+                message: "Sub Category not found",
+                code: 404,
+            });
+        }
+
+        mainCategory.isNext = true
+        await mainCategory.save()
+
+        const newSubSubCategory = new ProductSubSubCategory({ name, icon, product_category_type_id, product_sub_category_type_id });
+        await newSubSubCategory.save();
+        return res.json({ "message": "Sub-Sub-Category added successfully", "code": 500 })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

@@ -18,7 +18,7 @@ async function genrateSubscriptionId() {
     const token = crypto.randomBytes(5).toString('hex')
     return `sub-${token}`
 }
-
+ 
 async function getCustomerByEmail(email) {
     const customers = await stripe.customers.list({
         email: email,

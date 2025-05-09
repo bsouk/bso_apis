@@ -50,3 +50,24 @@ exports.getBrand = async (req, res) => {
     }
 };
 
+
+
+exports.addBrand = async (req, res) => {
+    try {
+
+        const isBrandExists = await Brand.findOne({ name: req.body.name });
+        if (isBrandExists) return utils.handleError(res, { message: "The brand name already exists. Please enter a different name", code: 400 });
+
+        const data = {
+            name: req.body.name,
+            icon: req.body.icon
+        }
+        const saveBrand = new Brand(data);
+        await saveBrand.save()
+
+        res.json({ message: "Brand added successfully", code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+

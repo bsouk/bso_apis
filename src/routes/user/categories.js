@@ -22,4 +22,27 @@ router.get(
     controller.getBusinessCategories
 )
 
+router.post(
+  "/addProductCategory",
+  trimRequest.all,
+  requireAuth,
+  controller.addProductCategory
+);
+
+
+router.post(
+  "/addSubCategory",
+  trimRequest.all,
+  requireAuth,
+  controller.addProductSubCategory
+);
+
+
+router.post(
+  "/addSubSubCategory",
+  trimRequest.all,
+  requireAuth,
+  controller.addProductSubSubCategory
+);
+
 module.exports = router
