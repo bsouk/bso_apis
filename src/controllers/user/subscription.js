@@ -72,23 +72,34 @@ exports.genrateClientScretKey = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: plandata.price * 100,
-            currency: plandata.currency || 'usd',
+        // const paymentIntent = await stripe.paymentIntents.create({
+        //     amount: plandata.price * 100,
+        //     currency: plandata.currency || 'usd',
+        //     customer: customer.id,
+        //     automatic_payment_methods: {
+        //         enabled: true,
+        //     },
+        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account', 'amazon_pay'],
+        //     metadata: {
+        //         userId: userid.toString(),
+        //         planId: plandata._id.toString()
+        //     }
+        // });
+
+
+        const setupIntent = await stripe.setupIntents.create({
             customer: customer.id,
-            automatic_payment_methods: {
-                enabled: true,
-            },
+            payment_method_types: ['card', 'paypal', 'link', 'us_bank_account', 'amazon_pay'],
             metadata: {
                 userId: userid.toString(),
-                planId: plandata._id.toString()
+                planId: plan._id.toString()
             }
         });
 
         return res.status(200).json({
             message: "Payment intent created",
             data: {
-                client_secret: paymentIntent.client_secret,
+                client_secret: setupIntent.client_secret,
                 customer_id: customer.id,
                 plan_id: plan_id,
                 requires_payment_method: true
@@ -156,35 +167,36 @@ exports.createSubscription = async (req, res) => {
             customer = await createStripeCustomer(userdata);
         }
 
-        // // Attach the selected payment method to customer (but don't set as default)
-        // await stripe.paymentMethods.attach(payment_method_id, {
-        //     customer: customer.id,
-        // });
+        // Attach the selected payment method to customer (but don't set as default)
+        await stripe.paymentMethods.attach(payment_method_id, {
+            customer: customer.id,
+        });
 
-        let paymentMethod = {}
-        paymentMethod = await stripe.paymentMethods.retrieve(payment_method_id);
-        console.log("paymentMethod : ", paymentMethod)
+        // let paymentMethod = {}
+        // paymentMethod = await stripe.paymentMethods.retrieve(payment_method_id);
+        // console.log("paymentMethod : ", paymentMethod)
 
-        if (paymentMethod.customer && paymentMethod.customer !== customer.id) {
-            return utils.handleError(res, {
-                message: 'Payment method belongs to another customer',
-                code: 400
-            })
-        }
+        // if (paymentMethod.customer && paymentMethod.customer !== customer.id) {
+        //     return utils.handleError(res, {
+        //         message: 'Payment method belongs to another customer',
+        //         code: 400
+        //     })
+        // }
 
-        if (!paymentMethod.customer) {
-            paymentMethod = await stripe.paymentMethods.attach(payment_method_id, {
-                customer: customer.id
-            });
-        }
+        // if (!paymentMethod.customer) {
+        //     paymentMethod = await stripe.paymentMethods.attach(payment_method_id, {
+        //         customer: customer.id
+        //     });
+        // }
 
         const stripeSubscription = await stripe.subscriptions.create({
             customer: customer.id,
             items: [{ price: plandata?.stripe_price_id }],
-            payment_settings: {
-                payment_method_types: ['card', 'us_bank_account', 'link'],
-                save_default_payment_method: 'on_subscription' // Let Stripe handle retention
-            },
+            // payment_settings: {
+            //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account', 'amazon_pay'],
+            //     save_default_payment_method: 'on_subscription' // Let Stripe handle retention
+            // },
+            default_payment_method: payment_method_id,
             expand: ['latest_invoice.payment_intent'],
             metadata: {
                 userId: userid.toString(),
