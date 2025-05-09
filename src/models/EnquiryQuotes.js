@@ -61,11 +61,16 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     },
     enquiry_items: {
         type: [
-
             {
                 admin_unit_price: {
                     type: Number,
                     default: 0
+                },
+                admin_margin_type: {
+                    type: String,
+                },
+                admin_margin_value: {
+                    type: Number,
                 },
                 brand: {
                     type: String

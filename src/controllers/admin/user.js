@@ -2292,7 +2292,7 @@ exports.finalquotes = async (req, res) => {
 };
 exports.updateSubmitQuery = async (req, res) => {
   const enq_id = req.params.id
-  const { items, admin_price, logistics_price, margin_type, margin_value, grand_total, payment_terms } = req.body
+  const { items, admin_price, logistics_price, grand_total, payment_terms } = req.body
   console.log('dataaaaaaaaaaaaa', req.body)
   // const exist=await EnquiryQuotes.findOne({_id:items.})
   // if(!exist) {
@@ -2311,18 +2311,17 @@ exports.updateSubmitQuery = async (req, res) => {
       {
         $set: {
           'enquiry_items.$.admin_unit_price': item.newUnitPrice,
+          'enquiry_items.$.admin_margin_type': item.margin_type,
+          'enquiry_items.$.admin_margin_value': item.margin_value,
           is_admin_updated: true,// Optional, based on your logic
           admin_price,
           logistics_price,
-          margin_type,
-          margin_value,
           grand_total,
           admin_payment_terms: payment_terms
         }
       },
       { new: true }
     );
-
   }
 
   console.log('updatedItem', updatedItem)
