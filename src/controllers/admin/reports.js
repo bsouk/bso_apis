@@ -226,17 +226,22 @@ exports.downloadReport = async (req, res) => {
                 }
 
                 const cleanUserList = await Promise.all(userList.map(async (user) => {
-                    let ids = user?.company_data?.business_category.split(',')
-                    ids = ids.map(i => i.trim())
-                    console.log("ids : ", ids)
-                    const category = await BusinessCategory.find({ _id: { $in: ids } }, { name: 1, _id: 0 })
-                    console.log("category : ", category);
+                    let category = []
+                    if (user.company_data.business_category) {
+                        let ids = user?.company_data?.business_category?.split(',')
+                            .map(id => id.trim())
+                            .filter(id => mongoose.Types.ObjectId.isValid(id))
+                            .map(id => new mongoose.Types.ObjectId(id));
+                        console.log("ids : ", ids)
+                        category = await BusinessCategory.find({ _id: { $in: ids } }, { name: 1, _id: 0 })
+                        console.log("category : ", category);
+                    }
 
                     return {
                         "User Id": user?.unique_user_id ? user?.unique_user_id : " ",
                         "Full Name": user?.full_name ? user?.full_name : " ",
                         "Company Name": user?.company_name ? user?.company_name : " ",
-                        "Business Category": category.map((cat) => cat.name).join(", "),
+                        "Business Category": category.length !== 0 ? category.map((cat) => cat.name).join(", ") : "",
                         "Email": user?.email ? user?.email : " ",
                         "Phone Number": user?.phone_number ? user?.phone_number : " ",
                         "status": user?.status,
