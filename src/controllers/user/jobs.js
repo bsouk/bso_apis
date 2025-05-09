@@ -238,7 +238,7 @@ exports.getappliedJobs = async (req, res) => {
         const userId = req.user._id
         console.log('user id : ', userId)
 
-        let { offset = 0, limit = 10, skills, job_type, industries, search = "" , location} = req.query
+        let { offset = 0, limit = 10, skills, job_type, industries, search = "", location } = req.query
         console.log("req.query : ", req.query)
         let newfilter = {};
 
@@ -258,7 +258,7 @@ exports.getappliedJobs = async (req, res) => {
             newfilter["job_data.job_category_data.name"] = { $in: industries };
         }
         if (location) {
-            newfilter["job_data.location"] = {$regex: location, $options: "i" };
+            newfilter["job_data.location"] = { $regex: location, $options: "i" };
         }
         console.log("new filter : ", newfilter)
 
@@ -445,7 +445,7 @@ exports.getCompanyPostedJobs = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user id : ', userId)
-        const { offset = 0, limit = 10, search, job_type, industry_id, skills, location} = req.query
+        const { offset = 0, limit = 10, search, job_type, industry_id, skills, location } = req.query
         let filter = {
             company_id: new mongoose.Types.ObjectId(userId)
         }
@@ -463,7 +463,7 @@ exports.getCompanyPostedJobs = async (req, res) => {
             filter.skills = { $in: skills }
         }
         if (location) {
-            filter.location = {$regex: location, $options: "i" };
+            filter.location = { $regex: location, $options: "i" };
         }
         const jobs_data = await jobs.aggregate(
             [
@@ -621,7 +621,7 @@ exports.getSavedJobs = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user id : ', userId)
-        let { offset = 0, limit = 10, skills, job_type, industries, search = "", location} = req.query
+        let { offset = 0, limit = 10, skills, job_type, industries, search = "", location } = req.query
         console.log("req.query : ", req.query)
         let filter = {
             candidate_id: userId, status: "saved"
@@ -979,6 +979,31 @@ exports.getAllJobHiredResources = async (req, res) => {
             message: "Hired resources fetched successfully",
             data: applicants,
             count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.editJob = async (req, res) => {
+    try {
+        const companyId = req.user._id
+        console.log("company is : ", companyId)
+        const data = req.body
+        console.log('data : ', data)
+        const updated_job = await jobs.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(data.id), company_id: new mongoose.Types.ObjectId(companyId) }, { $set: data }, { new: true })
+        console.log('updated_job : ', updated_job)
+        if (!updated_job) {
+            return utils.handleError(res, {
+                message: "Authorised Company can edit this job",
+                code: 404,
+            });
+        }
+        return res.status(200).json({
+            message: "Job updated successfully",
+            data: updated_job,
             code: 200
         })
     } catch (error) {

@@ -121,4 +121,11 @@ router.get(
     controller.getAllJobHiredResources
 )
 
+router.patch(
+    '/editJob',
+    trimRequest.all,
+    requireAuth,
+    controller.editJob
+)
+
 module.exports = router
