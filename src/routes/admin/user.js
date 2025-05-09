@@ -207,6 +207,13 @@ router.post(
   controller.RejectUser
 );
 
+router.post(
+  "/sendProfileReply",
+  trimRequest.all,
+  requireAuth,
+  controller.sendProfileReply
+)
+
 //change Profile status
 router.post(
   "/changeProfileStatus/:id",

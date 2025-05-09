@@ -189,6 +189,16 @@ exports.downloadReport = async (req, res) => {
                 break;
             case "Supplier": {
                 let userList = []
+                let filter = {}
+                if (req.body.business_category) {
+                    const ids = req.body.business_category
+                        .split(',')
+                        .map(id => id.trim())
+                        .filter(id => id);
+                    const regexPattern = ids.map(id => `(?=.*\\b${id}\\b)`).join('');
+                    filter['company_data.business_category'] = { $regex: regexPattern };
+                    console.log("filter : ", filter);
+                }
                 if (req.body.fromDate && req.body.toDate) {
                     const newFromDate = new Date(req.body.fromDate);
                     const newToDate = new Date(req.body.toDate);
@@ -197,10 +207,11 @@ exports.downloadReport = async (req, res) => {
                     }
                     userList = await User.find({
                         user_type: { $in: ['supplier'] },
-                        createdAt: { $gte: newFromDate, $lte: newToDate }
+                        createdAt: { $gte: newFromDate, $lte: newToDate },
+                        ...filter
                     }).sort({ createdAt: -1 })
                 } else {
-                    userList = await User.find().sort({ createdAt: -1 })
+                    userList = await User.find(filter).sort({ createdAt: -1 })
                 }
                 console.log("user list is", userList);
 

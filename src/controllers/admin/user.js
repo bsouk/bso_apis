@@ -1785,6 +1785,34 @@ exports.RejectUser = async (req, res) => {
   }
 }
 
+
+exports.sendProfileReply = async (req, res) => {
+  try {
+    const { user_id, reply } = req.body
+    console.log("body : ", req.body)
+    const Userdata = await User.findById({ _id: user_id });
+    console.log("user is ", Userdata);
+
+    if (!Userdata) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    const mailOptions = {
+      to: Userdata.email,
+      subject: "Profile Review Request",
+      user_name: Userdata.full_name,
+      message: reply
+    }
+
+    emailer.sendEmail(null, mailOptions, "profileReply");
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
 //change Profile status
 exports.changeStatus = async (req, res) => {
   try {
