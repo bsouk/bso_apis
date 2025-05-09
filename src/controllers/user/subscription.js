@@ -18,7 +18,7 @@ async function genrateSubscriptionId() {
     const token = crypto.randomBytes(5).toString('hex')
     return `sub-${token}`
 }
- 
+
 async function getCustomerByEmail(email) {
     const customers = await stripe.customers.list({
         email: email,
@@ -156,10 +156,27 @@ exports.createSubscription = async (req, res) => {
             customer = await createStripeCustomer(userdata);
         }
 
-        // Attach the selected payment method to customer (but don't set as default)
-        await stripe.paymentMethods.attach(payment_method_id, {
-            customer: customer.id,
-        });
+        // // Attach the selected payment method to customer (but don't set as default)
+        // await stripe.paymentMethods.attach(payment_method_id, {
+        //     customer: customer.id,
+        // });
+
+        let paymentMethod = {}
+        paymentMethod = await stripe.paymentMethods.retrieve(payment_method_id);
+        console.log("paymentMethod : ", paymentMethod)
+
+        if (paymentMethod.customer && paymentMethod.customer !== customer.id) {
+            return utils.handleError(res, {
+                message: 'Payment method belongs to another customer',
+                code: 400
+            })
+        }
+
+        if (!paymentMethod.customer) {
+            paymentMethod = await stripe.paymentMethods.attach(payment_method_id, {
+                customer: customer.id
+            });
+        }
 
         const stripeSubscription = await stripe.subscriptions.create({
             customer: customer.id,
