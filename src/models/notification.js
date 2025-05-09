@@ -18,7 +18,7 @@ const notificationSchema = new mongoose.Schema(
         },
         related_to_type: {
             type: String,
-            enum: ["user", "product", "service", "order", "post", "event", "sos", "payment_slip", "delivery"],
+            enum: ["user", "product", "service", "order", "post", "event", "sos", "payment_slip", "delivery", "job"],
         },
         type: {
             type: String,
@@ -60,7 +60,8 @@ const notificationSchema = new mongoose.Schema(
                 "delivery_cancelled",
                 "issue_raised",
                 "payout",
-                "admin_action"
+                "admin_action",
+                "job_updated"
             ],
             required: true
         },

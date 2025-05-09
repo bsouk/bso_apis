@@ -5,6 +5,8 @@ const User = require("../../models/user");
 const job_applications = require("../../models/job_applications");
 const saved_job = require("../../models/saved_job");
 const saved_resources = require("../../models/saved_resources");
+const fcm_devices = require("../../models/fcm_devices");
+const Notification = require("../../models/notification")
 
 async function generateUniqueId() {
     const id = await Math.floor(Math.random() * 1000000)
@@ -993,14 +995,48 @@ exports.editJob = async (req, res) => {
         console.log("company is : ", companyId)
         const data = req.body
         console.log('data : ', data)
-        const updated_job = await jobs.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(data.id), company_id: new mongoose.Types.ObjectId(companyId) }, { $set: data }, { new: true })
-        console.log('updated_job : ', updated_job)
-        if (!updated_job) {
+
+        const jobdata = await jobs.findOne({ _id: new mongoose.Types.ObjectId(data.id), company_id: new mongoose.Types.ObjectId(companyId) })
+        console.log("jobdata : ", jobdata)
+        if (!jobdata) {
             return utils.handleError(res, {
                 message: "Authorised Company can edit this job",
                 code: 404,
             });
         }
+        const updated_job = await jobs.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(data.id), company_id: new mongoose.Types.ObjectId(companyId) }, { $set: data }, { new: true })
+        console.log('updated_job : ', updated_job)
+
+        const applicantsid = await job_applications.find({ job_id: new mongoose.Types.ObjectId(data.id) })
+        console.log("applicantsid : ", applicantsid)
+
+        applicantsid.forEach(async i => {
+            const token = await fcm_devices.find({ user_id: new mongoose.Types.ObjectId(i.canditate_id) })
+            console.log("token : ", token)
+
+            let notificationMessage = {
+                title: "Job data updated",
+                description: `${jobdata?.job_unique_id} has been updated by ${req?.user?.company_data?.name}`
+            }
+            let dbnotificationbody = {
+                title: "Job data updated",
+                description: `${jobdata?.job_unique_id} has been updated by ${req?.user?.company_data?.name}`,
+                type: "job_updated",
+                receiver_id: i.canditate_id,
+                related_to: data.id,
+                related_to_type: "job",
+            }
+
+            token.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const newuserNotification = new Notification(dbnotificationbody);
+            console.log("newuserNotification : ", newuserNotification)
+            await newuserNotification.save();
+        })
+
         return res.status(200).json({
             message: "Job updated successfully",
             data: updated_job,

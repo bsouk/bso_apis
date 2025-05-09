@@ -195,10 +195,13 @@ exports.downloadReport = async (req, res) => {
                         .split(',')
                         .map(id => id.trim())
                         .filter(id => id);
-                    const regexPattern = ids.map(id => `(?=.*\\b${id}\\b)`).join('');
-                    filter['company_data.business_category'] = { $regex: regexPattern };
-                    console.log("filter : ", filter);
+
+                    filter['$or'] = ids.map(id => ({
+                        'company_data.business_category': new RegExp(`\\b${id}\\b`)
+                    }));
                 }
+                console.log("filter : ", filter);
+
                 if (req.body.fromDate && req.body.toDate) {
                     const newFromDate = new Date(req.body.fromDate);
                     const newToDate = new Date(req.body.toDate);
@@ -222,34 +225,43 @@ exports.downloadReport = async (req, res) => {
                     })
                 }
 
-                const cleanUserList = userList.map((user) => ({
-                    "User Id": user?.unique_user_id ? user?.unique_user_id : " ",
-                    "Full Name": user?.full_name ? user?.full_name : " ",
-                    "Company Name": user?.company_name ? user?.company_name : " ",
-                    "Email": user?.email ? user?.email : " ",
-                    "Phone Number": user?.phone_number ? user?.phone_number : " ",
-                    "status": user?.status,
-                    "Profile Completed": user?.profile_completed === true ? "Yes" : "No",
-                    "Account Holder Name": user?.bank_details?.account_holder_name ? user?.bank_details?.account_holder_name : " ",
-                    "Account Number": user?.bank_details?.account_number ? user?.bank_details?.account_number : " ",
-                    "Bank Name": user?.bank_details?.bank_name ? user?.bank_details?.bank_name : " ",
-                    "Swift Code": user?.bank_details?.swift_code ? user?.bank_details?.swift_code : " ",
-                    "IBAN Number": user?.bank_details?.iban_number ? user?.bank_details?.iban_number : " ",
-                    "Bank Address Line 1": user?.bank_details?.address?.line1 ? user?.bank_details?.address?.line1 : " ",
-                    "Bank Address City": user?.bank_details?.address?.city ? user?.bank_details?.address?.city : " ",
-                    "Bank Address State": user?.bank_details?.address?.state ? user?.bank_details?.address?.state : " ",
-                    "Bank Address Zip Code": user?.bank_details?.address?.zip_code ? user?.bank_details?.address?.zip_code : " ",
-                    "Bank Address Country": user?.bank_details?.address?.country ? user?.bank_details?.address?.country : " ",
-                    "Company Name": user?.company_data?.name ? user?.company_data?.name : " ",
-                    "Company Phone Number": user?.company_data?.phone_number ? user?.company_data?.phone_number : " ",
-                    "Company Email": user?.company_data?.email ? user?.company_data?.email : " ",
-                    "Company Registration Number": user?.company_data?.registration_number ? user?.company_data?.registration_number : " ",
-                    "Company Incorporation Date": user?.company_data?.incorporation_date ? user?.company_data?.incorporation_date : " ",
-                    "Company VAT Number": user?.company_data?.vat_number ? user?.company_data?.vat_number : " ",
-                    "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
-                    "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
-                }))
+                const cleanUserList = await Promise.all(userList.map(async (user) => {
+                    let ids = user?.company_data?.business_category.split(',')
+                    ids = ids.map(i => i.trim())
+                    console.log("ids : ", ids)
+                    const category = await BusinessCategory.find({ _id: { $in: ids } }, { name: 1, _id: 0 })
+                    console.log("category : ", category);
 
+                    return {
+                        "User Id": user?.unique_user_id ? user?.unique_user_id : " ",
+                        "Full Name": user?.full_name ? user?.full_name : " ",
+                        "Company Name": user?.company_name ? user?.company_name : " ",
+                        "Business Category": category.map((cat) => cat.name).join(", "),
+                        "Email": user?.email ? user?.email : " ",
+                        "Phone Number": user?.phone_number ? user?.phone_number : " ",
+                        "status": user?.status,
+                        "Profile Completed": user?.profile_completed === true ? "Yes" : "No",
+                        "Account Holder Name": user?.bank_details?.account_holder_name ? user?.bank_details?.account_holder_name : " ",
+                        "Account Number": user?.bank_details?.account_number ? user?.bank_details?.account_number : " ",
+                        "Bank Name": user?.bank_details?.bank_name ? user?.bank_details?.bank_name : " ",
+                        "Swift Code": user?.bank_details?.swift_code ? user?.bank_details?.swift_code : " ",
+                        "IBAN Number": user?.bank_details?.iban_number ? user?.bank_details?.iban_number : " ",
+                        "Bank Address Line 1": user?.bank_details?.address?.line1 ? user?.bank_details?.address?.line1 : " ",
+                        "Bank Address City": user?.bank_details?.address?.city ? user?.bank_details?.address?.city : " ",
+                        "Bank Address State": user?.bank_details?.address?.state ? user?.bank_details?.address?.state : " ",
+                        "Bank Address Zip Code": user?.bank_details?.address?.zip_code ? user?.bank_details?.address?.zip_code : " ",
+                        "Bank Address Country": user?.bank_details?.address?.country ? user?.bank_details?.address?.country : " ",
+                        "Company Name": user?.company_data?.name ? user?.company_data?.name : " ",
+                        "Company Phone Number": user?.company_data?.phone_number ? user?.company_data?.phone_number : " ",
+                        "Company Email": user?.company_data?.email ? user?.company_data?.email : " ",
+                        "Company Registration Number": user?.company_data?.registration_number ? user?.company_data?.registration_number : " ",
+                        "Company Incorporation Date": user?.company_data?.incorporation_date ? user?.company_data?.incorporation_date : " ",
+                        "Company VAT Number": user?.company_data?.vat_number ? user?.company_data?.vat_number : " ",
+                        "Created At": moment(user?.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+                        "Updated At": moment(user?.updatedAt).format('YYYY-MM-DD HH:mm:ss'),
+                    }
+                })
+                )
                 if (format === "excel") {
                     return utils.generateExcel(cleanUserList, res)
                 } else if (format === "csv") {
