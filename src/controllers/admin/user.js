@@ -1808,6 +1808,10 @@ exports.sendProfileReply = async (req, res) => {
     }
 
     emailer.sendEmail(null, mailOptions, "profileReply");
+    return res.status(200).json({
+      message: "Email Sent Successfully",
+      code: 200
+    })
   } catch (error) {
     utils.handleError(res, error);
   }
