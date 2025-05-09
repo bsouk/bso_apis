@@ -92,7 +92,7 @@ exports.genrateClientScretKey = async (req, res) => {
             payment_method_types: ['card', 'paypal', 'link', 'us_bank_account', 'amazon_pay'],
             metadata: {
                 userId: userid.toString(),
-                planId: plan._id.toString()
+                planId: plandata._id.toString()
             }
         });
 
