@@ -15,4 +15,11 @@ router.get(
     controller.getBrand
 );
 
+router.post(
+    "/addBrand",
+    trimRequest.all,
+    requireAuth,
+    controller.addBrand
+);
+
 module.exports = router
