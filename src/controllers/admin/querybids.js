@@ -1792,7 +1792,7 @@ exports.planChangeRequest = async (req, res) => {
         console.log("userFcmDevices : ", userFcmDevices)
         let notificationbody = {
             title: 'Plan Change Request',
-            description: `As we can see on your enquiry number ${data?.enquiry_unique_id}, no supplier has quoted yet. We request you to change your current plan to BSO Admin. Then BSO will provide you with your requested items.`
+            description: `As we can see on your enquiry number ${data?.enquiry_unique_id}, no supplier has quoted yet. We request you to change your current plan to BSO Admin.`
         }
         if (userFcmDevices && userFcmDevices.length > 0) {
             userFcmDevices.forEach(async i => {

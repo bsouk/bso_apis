@@ -64,19 +64,22 @@ exports.createPlan = async (req, res) => {
         }
         console.log("newinterval : ", newinterval)
         const price = await stripe.prices.create({
-            unit_amount: data.price * 100,
+            unit_amount: Math.round(data.price * 100),
             currency: data.currency || 'usd',
             recurring: {
                 interval: newinterval,
                 interval_count: interval_count,
             },
             product: product.id,
+            metadata: {
+                pricing_type: 'base'
+            }
         });
 
         let per_user_price = {}
         if (data.price_per_person && data.price_per_person > 0) {
             per_user_price = await stripe.prices.create({
-                unit_amount: data.price_per_person * 100,
+                unit_amount: Math.round(data.price_per_person * 100),
                 currency: data.currency || 'usd',
                 recurring: {
                     interval: newinterval,

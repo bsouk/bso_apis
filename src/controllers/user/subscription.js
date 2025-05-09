@@ -162,6 +162,9 @@ exports.createSubscription = async (req, res) => {
             });
         }
 
+        const pricefetch = await stripe.prices.retrieve(plandata.stripe_price_id);
+        console.log("pricefetch : ", pricefetch)
+
         let customer = await getCustomerByEmail(userdata.email);
         if (!customer) {
             customer = await createStripeCustomer(userdata);
