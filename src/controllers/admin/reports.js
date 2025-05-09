@@ -43,9 +43,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("user list is", userList);
 
                 if (userList.length <= 0) {
-                    return res.status(404).json({
+                    return res.status(200).json({
                         message: "No user data found",
-                        code: 404
+                        data: userList,
+                        code: 200
                     })
                 }
 
@@ -87,9 +88,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("brand list is", brand);
 
                 if (brand.length <= 0) {
-                    return res.status(401).json({
+                    return res.status(200).json({
                         message: "No brand data found",
-                        code: 401
+                        data: brand,
+                        code: 200
                     })
                 }
 
@@ -126,9 +128,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("BusinessCategory list is", brand);
 
                 if (brand.length <= 0) {
-                    return res.status(401).json({
-                        message: "No brand data found",
-                        code: 401
+                    return res.status(200).json({
+                        message: "No data found",
+                        data: brand,
+                        code: 200
                     })
                 }
 
@@ -165,9 +168,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("brand list is", brand);
 
                 if (brand.length <= 0) {
-                    return res.status(401).json({
-                        message: "No brand data found",
-                        code: 401
+                    return res.status(200).json({
+                        message: "No data found",
+                        data: brand,
+                        code: 200
                     })
                 }
 
@@ -219,9 +223,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("user list is", userList);
 
                 if (userList.length <= 0) {
-                    return res.status(401).json({
+                    return res.status(200).json({
                         message: "No user data found",
-                        code: 401
+                        data: userList,
+                        code: 200
                     })
                 }
 
@@ -294,9 +299,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("user list is", userList);
 
                 if (userList.length <= 0) {
-                    return res.status(401).json({
+                    return res.status(200).json({
                         message: "No user data found",
-                        code: 401
+                        data: userList,
+                        code: 200
                     })
                 }
 
@@ -351,9 +357,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("user list is", userList);
 
                 if (userList.length <= 0) {
-                    return res.status(401).json({
+                    return res.status(200).json({
                         message: "No user data found",
-                        code: 401
+                        data: userList,
+                        code: 200
                     })
                 }
 
@@ -401,9 +408,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("article list is", articleList);
 
                 if (articleList.length <= 0) {
-                    return res.status(401).json({
+                    return res.status(200).json({
                         message: "No Article data found",
-                        code: 401
+                        data: articleList,
+                        code: 200
                     })
                 }
                 const cleanArticleList = articleList.map((article) => ({
@@ -440,9 +448,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("article list is", orderList);
 
                 if (orderList.length <= 0) {
-                    return res.status(401).json({
-                        message: "No Article data found",
-                        code: 401
+                    return res.status(200).json({
+                        message: "No data found",
+                        data: orderList,
+                        code: 200
                     })
                 }
 
@@ -511,9 +520,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("article list is", paymentList);
 
                 if (paymentList.length <= 0) {
-                    return res.status(401).json({
-                        message: "No Article data found",
-                        code: 401
+                    return res.status(200).json({
+                        message: "No data found",
+                        data: paymentList,
+                        code: 200
                     })
                 }
 
@@ -575,9 +585,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("subadmin list is", SubAdminList);
 
                 if (SubAdminList.length <= 0) {
-                    return res.status(401).json({
-                        message: "No Article data found",
-                        code: 401
+                    return res.status(200).json({
+                        message: "No data found",
+                        data: SubAdminList,
+                        code: 200
                     })
                 }
 
@@ -618,9 +629,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("job list is", List);
 
                 if (List.length <= 0) {
-                    return res.status(401).json({
+                    return res.status(200).json({
                         message: "No Job data found",
-                        code: 401
+                        data: List,
+                        code: 200
                     })
                 }
 
@@ -664,9 +676,10 @@ exports.downloadReport = async (req, res) => {
                 console.log("enquiry list is", SubAdminList);
 
                 if (SubAdminList.length <= 0) {
-                    return res.status(401).json({
-                        message: "No Enquiry data found",
-                        code: 401
+                    return res.status(200).json({
+                        message: "No data found",
+                        data: SubAdminList,
+                        code: 200
                     })
                 }
 
