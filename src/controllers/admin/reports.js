@@ -43,9 +43,9 @@ exports.downloadReport = async (req, res) => {
                 console.log("user list is", userList);
 
                 if (userList.length <= 0) {
-                    return res.status(401).json({
+                    return res.status(404).json({
                         message: "No user data found",
-                        code: 401
+                        code: 404
                     })
                 }
 
