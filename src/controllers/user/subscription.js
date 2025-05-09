@@ -72,19 +72,18 @@ exports.genrateClientScretKey = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        // const paymentIntent = await stripe.paymentIntents.create({
-        //     amount: plandata.price * 100,
-        //     currency: plandata.currency || 'usd',
-        //     customer: customer.id,
-        //     automatic_payment_methods: {
-        //         enabled: true,
-        //     },
-        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account', 'amazon_pay'],
-        //     metadata: {
-        //         userId: userid.toString(),
-        //         planId: plandata._id.toString()
-        //     }
-        // });
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: plandata.price * 100,
+            currency: plandata.currency || 'usd',
+            customer: customer.id,
+            automatic_payment_methods: {
+                enabled: true,
+            },
+            metadata: {
+                userId: userid.toString(),
+                planId: plandata._id.toString()
+            }
+        });
 
 
         const setupIntent = await stripe.setupIntents.create({
@@ -99,7 +98,8 @@ exports.genrateClientScretKey = async (req, res) => {
         return res.status(200).json({
             message: "Payment intent created",
             data: {
-                client_secret: setupIntent.client_secret,
+                client_secret: paymentIntent.client_secret,
+                setup_intent: setupIntent.client_secret,
                 customer_id: customer.id,
                 plan_id: plan_id,
                 requires_payment_method: true
