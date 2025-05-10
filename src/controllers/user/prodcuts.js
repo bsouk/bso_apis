@@ -69,7 +69,8 @@ exports.addProduct = async (req, res) => {
       name: data.name,
       brand_id: data.brand_id,
       category_id: data.category_id,
-      variant: [...newVariant]
+      variant: [...newVariant],
+      product_of: "supplier"
     };
 
     if (data.sub_category_id) {

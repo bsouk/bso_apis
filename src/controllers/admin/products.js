@@ -118,7 +118,7 @@ exports.addProduct = async (req, res) => {
 
             const productData = {
                 user_id: user_id ? user_id : adminId,
-                product_of: user_id ? 'supplier' : 'admin',
+                product_of: 'admin',
                 name: data.name,
                 brand_id: data.brand_id,
                 category_id: data.category_id,
@@ -537,7 +537,9 @@ exports.getSkuList = async (req, res) => {
 exports.getInventoryList = async (req, res) => {
     try {
         const { offset = 0, limit = 10, search, low_stock, out_of_stock } = req.query
-        let filter = {}
+        let filter = {
+            product_of : 'admin'
+        }
         if (search) {
             filter['$or'] = [
                 {
