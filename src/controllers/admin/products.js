@@ -614,14 +614,14 @@ exports.getInventoryList = async (req, res) => {
                     }
                 },
                 {
-                    $sort: { createdAt: -1 }
-                },
-                {
                     $skip: parseInt(offset) || 0
                 },
                 {
                     $limit: parseInt(limit) || 10
-                }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
             ]
         )
 
