@@ -317,11 +317,11 @@ exports.paynow = async (req, res) => {
             customer: customer.id,
         });
 
-        await stripe.customers.update(customer.id, {
-            invoice_settings: {
-                default_payment_method: data.payment_method_id
-            }
-        });
+        // await stripe.customers.update(customer.id, {
+        //     invoice_settings: {
+        //         default_payment_method: data.payment_method_id
+        //     }
+        // });
 
         const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
 
