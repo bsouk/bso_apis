@@ -22,6 +22,15 @@ router.get(
     requireAuth,
     controller.paymentDetails
 )
+
+
+router.post(
+    '/createPaymentIntentForEnquiry',
+    trimRequest.all,
+    requireAuth,
+    controller.createPaymentIntent
+)
+
 router.post(
     '/paynow',
     trimRequest.all,

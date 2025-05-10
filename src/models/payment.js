@@ -32,15 +32,7 @@ const PaymentSchema = new mongoose.Schema(
             type: Number,
         },
         payment_method: {
-            type: String,
-            enum: [
-                "cash_on_delivery",
-                "net_banking",
-                "upi",
-                "wallet",
-                "card"
-            ],
-            default: "cash_on_delivery",
+            type: String
         },
         receipt_number: {
             type: String,
@@ -83,7 +75,12 @@ const PaymentSchema = new mongoose.Schema(
         },
         paymentFrom: {
             type: String,
-        }
+        },
+        stripe_payment_intent : String,
+        stripe_payment_method : String,
+        stripe_customer_id: {
+            type: String,
+        },
     },
     {
         versionKey: false,
