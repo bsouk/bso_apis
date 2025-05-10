@@ -339,7 +339,7 @@ exports.paynow = async (req, res) => {
 
 
         const confirmedIntent = await stripe.paymentIntents.confirm(
-            payment_intent_id,
+            data.payment_intent_id,
             {
                 payment_method: payment_method_id,
             }
