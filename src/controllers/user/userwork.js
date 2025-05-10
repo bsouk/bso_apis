@@ -5254,13 +5254,15 @@ exports.getResourceList = async (req, res) => {
 exports.getResource = async (req, res) => {
     try {
         const user_id = req.params.id;
-        const user = await User.aggregate([
-            {
-                $match: {
-                    _id: new mongoose.Types.ObjectId(user_id),
+        const user = await User.aggregate(
+            [
+                {
+                    $match: {
+                        _id: new mongoose.Types.ObjectId(user_id),
+                    },
                 },
-            },
-        ]);
+            ]
+        );
         console.log("user", user);
         res.json({ data: user[0], code: 200 });
     } catch (error) {

@@ -758,7 +758,6 @@ exports.saveUnsavedResources = async (req, res) => {
         const companyId = req.user._id
         console.log('company id : ', companyId)
 
-
         const user_data = await User.findOne({ _id: companyId })
         console.log("user data : ", user_data)
         if (!user_data.company_data) {
@@ -797,7 +796,8 @@ exports.saveUnsavedResources = async (req, res) => {
         if (!saved_data) {
             saved_data = await saved_resources.create({
                 ...req.body,
-                status: "saved"
+                status: "saved",
+                company_id: companyId,
             })
             return res.status(200).json({
                 message: "Resource saved successfully",
