@@ -5492,6 +5492,7 @@ exports.addSuppliercollectiondata = async (req, res) => {
             }
         }
 
+        return res.status(200).json({ message: "collection data added", data: quotedata, code: 200 });
     } catch (error) {
         console.log(error);
         utils.handleError(res, error);
