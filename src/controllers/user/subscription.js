@@ -256,7 +256,7 @@ exports.createSubscription = async (req, res) => {
             const notificationMessage = {
                 title: 'New Subscription created',
                 description: `${userdata.full_name} has created a new subscription . Plan ID : ${newsubscription.plan_id}`,
-                subscription_id: newsubscription._id
+                user_id: userid
             };
 
             const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
@@ -274,8 +274,8 @@ exports.createSubscription = async (req, res) => {
                     // description: notificationMessage.description,
                     type: "new_subscription",
                     receiver_id: admins._id,
-                    related_to: newsubscription._id,
-                    related_to_type: "subscription",
+                    related_to: userid,
+                    related_to_type: "user",
                 };
                 const newAdminNotification = new admin_received_notification(adminNotificationData);
                 console.log("newAdminNotification : ", newAdminNotification)

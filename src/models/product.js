@@ -49,7 +49,7 @@ const productSchema = new mongoose.Schema(
           required: false,
         },
         inventory_quantity: {
-          type: Number,
+          type: String,
         },
         Threshold_value: {
           type: Number
