@@ -323,42 +323,35 @@ exports.paynow = async (req, res) => {
         //     }
         // });
 
-        // const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
+        const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
+        let confirmedIntent = paymentIntent;
 
-        // if (paymentIntent.status === 'succeeded') {
-        //     return res.status(400).json({
-        //         error: "Payment already completed",
-        //         code: 400
-        //     });
-        // }
-
-        // const confirmedIntent = await stripe.paymentIntents.confirm(
-        //     data.payment_intent_id,
-        //     { payment_method: data.payment_method_id }
-        // );
-
-
-        const confirmedIntent = await stripe.paymentIntents.confirm(
-            data.payment_intent_id,
-            {
-                payment_method: data.payment_method_id,
-            }
-        );
-
-        if (confirmedIntent.status === 'requires_action') {
-            return res.status(200).json({
-                message: "Payment requires additional action",
-                requires_action: true,
-                client_secret: confirmedIntent.client_secret,
-                code: 200
-            });
-        }
-
-        if (confirmedIntent.status !== 'succeeded') {
+        if (paymentIntent.status === 'succeeded') {
             return res.status(400).json({
-                error: `Payment failed: ${confirmedIntent.last_payment_error?.message || 'Unknown error'}`,
+                error: "Payment already completed",
                 code: 400
             });
+        } else {
+            const confirmedIntent = await stripe.paymentIntents.confirm(
+                data.payment_intent_id,
+                { payment_method: data.payment_method_id }
+            );
+
+            if (confirmedIntent.status === 'requires_action') {
+                return res.status(200).json({
+                    message: "Payment requires additional action",
+                    requires_action: true,
+                    client_secret: confirmedIntent.client_secret,
+                    code: 200
+                });
+            }
+
+            if (confirmedIntent.status !== 'succeeded') {
+                return res.status(400).json({
+                    error: `Payment failed: ${confirmedIntent.last_payment_error?.message || 'Unknown error'}`,
+                    code: 400
+                });
+            }
         }
 
         const orderdata = {
