@@ -241,20 +241,20 @@ exports.createPaymentIntent = async (req, res) => {
             },
         });
 
-        const setupIntent = await stripe.setupIntents.create({
-            customer: customer.id,
-            payment_method_types: ['card', 'paypal', 'link', 'us_bank_account'],
-            metadata: {
-                userId: userId.toString(),
-                enquiryId: enquiry_id
-            }
-        });
+        // const setupIntent = await stripe.setupIntents.create({
+        //     customer: customer.id,
+        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account'],
+        //     metadata: {
+        //         userId: userId.toString(),
+        //         enquiryId: enquiry_id
+        //     }
+        // });
 
         return res.status(200).json({
             message: "Payment intent created",
             data: {
                 client_secret: paymentIntent.client_secret,
-                setup_client_secret: setupIntent.client_secret,
+                // setup_client_secret: setupIntent.client_secret,
                 payment_intent_id: paymentIntent.id,
                 customer_id: customer.id,
                 amount: totalAmount,
@@ -313,9 +313,9 @@ exports.paynow = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        await stripe.paymentMethods.attach(data.payment_method_id, {
-            customer: customer.id,
-        });
+        // await stripe.paymentMethods.attach(data.payment_method_id, {
+        //     customer: customer.id,
+        // });
 
         // await stripe.customers.update(customer.id, {
         //     invoice_settings: {
@@ -323,18 +323,26 @@ exports.paynow = async (req, res) => {
         //     }
         // });
 
-        const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
+        // const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
 
-        if (paymentIntent.status === 'succeeded') {
-            return res.status(400).json({
-                error: "Payment already completed",
-                code: 400
-            });
-        }
+        // if (paymentIntent.status === 'succeeded') {
+        //     return res.status(400).json({
+        //         error: "Payment already completed",
+        //         code: 400
+        //     });
+        // }
+
+        // const confirmedIntent = await stripe.paymentIntents.confirm(
+        //     data.payment_intent_id,
+        //     { payment_method: data.payment_method_id }
+        // );
+
 
         const confirmedIntent = await stripe.paymentIntents.confirm(
-            data.payment_intent_id,
-            { payment_method: data.payment_method_id }
+            payment_intent_id,
+            {
+                payment_method: payment_method_id,
+            }
         );
 
         if (confirmedIntent.status === 'requires_action') {
@@ -383,7 +391,7 @@ exports.paynow = async (req, res) => {
             payment_status: 'success',
             stripe_payment_intent: confirmedIntent.id,
             stripe_payment_method: data.payment_method_id,
-            stripe_customer_id : customer.id,
+            stripe_customer_id: customer.id,
         }
         )
 
