@@ -26,7 +26,9 @@ const TrackingSchema = new mongoose.Schema({
             "confirmed",
             "dispatched",
             "out_for_delivery",
-            "delivered"
+            "delivered",
+            "pickup ready",
+            "cancelled",
         ],
         default: "placed"
     },

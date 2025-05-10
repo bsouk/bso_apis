@@ -63,7 +63,10 @@ const notificationSchema = new mongoose.Schema(
                 "admin_action",
                 "job_updated",
                 "bso",
-                "supplier_quote_added"
+                "supplier_quote_added",
+                "logistics_quote_added",
+                "logistics_accepted_by_buyer",
+                "supplier_accepted_by_buyer",
             ],
             required: true
         },

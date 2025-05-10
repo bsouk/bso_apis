@@ -498,4 +498,11 @@ router.post(
     controller.deleteFCMDevice
   )
 
+  router.post(
+    "/addSuppliercollectiondata",
+    requireAuth,
+    trimRequest.all,
+    controller.addSuppliercollectiondata
+  )
+
 module.exports = router;

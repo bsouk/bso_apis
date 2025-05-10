@@ -4264,20 +4264,20 @@ exports.selectSupplierQuote = async (req, res) => {
         quotedata.final_price = totalprice
         await quotedata.save()
 
-        let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
-        if (shipment_type === "self-pickup") {
-            const mailOptions = {
-                to: quotedata.user_id.email,
-                subject: "Shipment Pickup details",
-                name: quotedata.user_id.full_name,
-                buyer_name: quotedata.user_id.full_name,
-                pickup_location: full_address,
-                tracking_id: "",
-                tracking_url: ""
-            }
+        // let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
+        // if (shipment_type === "self-pickup") {
+        //     const mailOptions = {
+        //         to: quotedata.user_id.email,
+        //         subject: "Shipment Pickup details",
+        //         name: quotedata.user_id.full_name,
+        //         buyer_name: quotedata.user_id.full_name,
+        //         pickup_location: full_address,
+        //         tracking_id: "",
+        //         tracking_url: ""
+        //     }
 
-            emailer.sendEmail(null, mailOptions, "shipmentPickup");
-        }
+        //     emailer.sendEmail(null, mailOptions, "shipmentPickup");
+        // }
 
         let full_ship_address = `${selected?.shipping_address?.address?.address_line_1}, ${selected?.shipping_address?.address?.address_line2} , ${selected?.shipping_address?.address?.city?.name}, ${selected?.shipping_address?.address?.state?.name}, ${selected?.shipping_address?.address?.country?.name}, ${selected?.shipping_address?.address?.pin_code}`
         const mailOptions = {
@@ -4297,6 +4297,36 @@ exports.selectSupplierQuote = async (req, res) => {
         }
 
         emailer.sendEmail(null, mailOptions, "EnquirySelection");
+
+        //send notification
+        const notificationMessage = {
+            title: 'Buyer has accepted your quote',
+            description: `${req.user.full_name} has your quote . Enquiry ID : ${selected?.enquiry_unique_id}`,
+            quote: selected?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: quotedata?.user_id?._id || quotedata?.user_id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "supplier_accepted_by_buyer",
+                receiver_id: quotedata?.user_id?._id || quotedata?.user_id,
+                related_to: quotedata?.user_id?._id || quotedata?.user_id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
 
         return res.status(200).json({
             message: "Supplier quote selected successfully",
@@ -4380,6 +4410,9 @@ exports.submitLogisticsQuotes = async (req, res) => {
             });
         }
 
+        const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id })
+        console.log("buyerenquiry : ", buyerenquiry)
+
         const enquiryData = await logistics_quotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
         console.log("enquiryData : ", enquiryData);
         let enquiry = {}
@@ -4401,6 +4434,40 @@ exports.submitLogisticsQuotes = async (req, res) => {
             });
             console.log("enquiry : ", enquiry);
         }
+
+
+
+        //send notification
+        const notificationMessage = {
+            title: 'New Quote submit by logistics',
+            description: `${req.user.full_name} has created a new quote . Enquiry ID : ${buyerenquiry?.enquiry_unique_id}`,
+            quote: enquiry._id
+        };
+
+        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+        console.log("buyerfcm : ", buyerfcm)
+
+        if (buyerfcm && buyerfcm.length > 0) {
+            buyerfcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "logistics_quote_added",
+                receiver_id: buyerenquiry.user_id,
+                related_to: buyerenquiry.user_id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
+
+
         return res.status(200).json({
             message: "Logistics Quotation Submit Successfully",
             data: enquiry,
@@ -4565,6 +4632,36 @@ exports.selectLogisticsQuote = async (req, res) => {
         }
 
         emailer.sendEmail(null, mailOptions, "EnquirySelection");
+
+        //send notification
+        const notificationMessage = {
+            title: 'Buyer has accepted your quote',
+            description: `${req.user.full_name} has your quote . Enquiry ID : ${enquiry?.enquiry_unique_id}`,
+            quote: enquiry._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: quotedata?.user_id?._id || quotedata?.user_id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "logistics_accepted_by_buyer",
+                receiver_id: quotedata?.user_id?._id || quotedata?.user_id,
+                related_to: quotedata?.user_id?._id || quotedata?.user_id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
 
         return res.status(200).json({
             message: "Logistics quote selected successfully",
@@ -5227,3 +5324,142 @@ exports.deleteFCMDevice = async (req, res) => {
 };
 
 
+exports.addSuppliercollectiondata = async (req, res) => {
+    try {
+        const { quote_id } = req.body
+        const user_id = req.user._id;
+        console.log("body : ", req.body)
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active", type: "supplier" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No supplier subscription found",
+                code: 400,
+            });
+        }
+
+        const quotedata = await EnquiryQuotes.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(quote_id) }, { $set: { ...req.body, status: 'shipement_ready' } }, { new: true }).populate('user_id').populate({
+            path: 'enquiry_id', populate: [
+                { path: 'user_id' },
+                { path: 'selected_logistics.quote_id', populate: { path: 'user_id' } },
+            ]
+        }).populate(
+            {
+                path: "pickup_address"
+            }
+        )
+        console.log("quotedata : ", quotedata)
+
+        const updateEnquiry = await Enquiry.findOneAndUpdate({ _id: quotedata.enquiry_id._id }, { $set: { status: 'shipement_ready' } }, { new: true })
+        console.log("updateEnquiry : ", updateEnquiry)
+
+        if (updateEnquiry.order_id) {
+            const updatetrack = await tracking_order.findOneAndUpdate({ order_id: updateEnquiry?.order_id }, {
+                $set: {
+                    order_shipment_status: "pickup ready",
+                    order_shipment_dates: {
+                        $push: {
+                            order_status: "pickup ready",
+                            date: new Date(),
+                        },
+                    }
+                }
+            })
+            console.log("updatetrack : ", updatetrack)
+        }
+
+        if (!quotedata) {
+            return utils.handleError(res, {
+                message: "Quote not found",
+                code: 404,
+            });
+        }
+
+        if (quotedata.enquiry_id.shipment_type === "self-pickup") {
+            let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
+            const mailOptions = {
+                to: quotedata?.enquiry_id?.user_id?.email,
+                subject: "Shipment Pickup details",
+                buyer_name: quotedata?.enquiry_id?.user_id?.full_name,
+                pickup_location: full_address,
+                tracking_id: "",
+                tracking_url: ""
+            }
+            emailer.sendEmail(null, mailOptions, "shipmentPickup");
+            //send notification
+            const notificationMessage = {
+                title: 'shipment is ready for pickup',
+                description: `Enquiry ID : ${quotedata?.enquiry_id?.enquiry_unique_id} is ready for pickup. Please collect your shipment from supplier`,
+                enquiry: quotedata?.enquiry_id?._id
+            };
+
+            const fcm = await fcm_devices.find({ user_id: quotedata?.enquiry_id?.user_id });
+            console.log("fcm : ", fcm)
+
+            if (fcm && fcm.length > 0) {
+                fcm.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    // body: notificationMessage.description,
+                    description: notificationMessage.description,
+                    type: "order_ready_for_pickup",
+                    receiver_id: quotedata?.enquiry_id?.user_id,
+                    related_to: quotedata?.enquiry_id?.user_id,
+                    related_to_type: "user",
+                };
+                const newNotification = new Notification(NotificationData);
+                console.log("newNotification : ", newNotification)
+                await newNotification.save();
+            }
+        } else {
+            let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
+            const mailOptions = {
+                to: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?.email,
+                subject: "Shipment Pickup details",
+                buyer_name: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?.full_name,
+                pickup_location: full_address,
+                tracking_id: "",
+                tracking_url: ""
+            }
+            emailer.sendEmail(null, mailOptions, "shipmentPickup");
+            //send notification
+            const notificationMessage = {
+                title: 'shipment is ready for pickup',
+                description: `Enquiry ID : ${quotedata?.enquiry_id?.enquiry_unique_id} is ready for pickup. Please collect your shipment from supplier`,
+                enquiry: quotedata?.enquiry_id?._id
+            };
+
+            const fcm = await fcm_devices.find({ user_id: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?._id });
+            console.log("fcm : ", fcm)
+
+            if (fcm && fcm.length > 0) {
+                fcm.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    // body: notificationMessage.description,
+                    description: notificationMessage.description,
+                    type: "order_ready_for_pickup",
+                    receiver_id: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?._id,
+                    related_to: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?._id,
+                    related_to_type: "user",
+                };
+                const newNotification = new Notification(NotificationData);
+                console.log("newNotification : ", newNotification)
+                await newNotification.save();
+            }
+        }
+
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
+    }
+}

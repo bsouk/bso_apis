@@ -228,6 +228,16 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'address'
     },
+    collection_readiness: {
+        package: String,
+        weight: Number,
+        dimension: String,
+        collection_address: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'address'
+        },
+        document: String
+    }
 },
     {
         timestamps: true
