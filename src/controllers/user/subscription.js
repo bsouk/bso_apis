@@ -276,6 +276,7 @@ exports.createSubscription = async (req, res) => {
                     receiver_id: admins._id,
                     related_to: userid,
                     related_to_type: "user",
+                    user_type: plandata.type
                 };
                 const newAdminNotification = new admin_received_notification(adminNotificationData);
                 console.log("newAdminNotification : ", newAdminNotification)

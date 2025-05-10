@@ -19,6 +19,7 @@ const AdminReceivedSchema = new mongoose.Schema(
         related_to_type: {
             type: String,
         },
+        user_type: String,
         type: {
             type: String,
             required: true
