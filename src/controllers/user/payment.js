@@ -326,12 +326,13 @@ exports.paynow = async (req, res) => {
         const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
         let confirmedIntent = paymentIntent;
 
-        if (paymentIntent.status === 'succeeded') {
-            return res.status(400).json({
-                error: "Payment already completed",
-                code: 400
-            });
-        } else {
+        // if (paymentIntent.status === 'succeeded') {
+        //     return res.status(400).json({
+        //         error: "Payment already completed",
+        //         code: 400
+        //     });
+        // } 
+        if (paymentIntent.status !== 'succeeded') {
             const confirmedIntent = await stripe.paymentIntents.confirm(
                 data.payment_intent_id,
                 { payment_method: data.payment_method_id }
