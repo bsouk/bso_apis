@@ -5253,6 +5253,7 @@ exports.getResourceList = async (req, res) => {
 
 exports.getResource = async (req, res) => {
     try {
+        const id = req.user._id;
         const user_id = req.params.id;
         const user = await User.aggregate(
             [
@@ -5261,6 +5262,37 @@ exports.getResource = async (req, res) => {
                         _id: new mongoose.Types.ObjectId(user_id),
                     },
                 },
+                {
+                    $lookup: {
+                        from: "saved_resources",
+                        localField: "_id",
+                        foreignField: "candidate_id",
+                        as: "resource",
+                        pipeline: [
+                            {
+                                $match: {
+                                    company_id: new mongoose.Types.ObjectId(id)
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$resource",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        resource_save_status: '$resource.status'
+                    }
+                },
+                {
+                    $project: {
+                        resource: 0
+                    }
+                }
             ]
         );
         console.log("user", user);
