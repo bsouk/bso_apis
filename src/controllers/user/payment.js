@@ -6,6 +6,7 @@ const Payment = require("../../models/payment")
 const User = require("../../models/user")
 const enquiry = require("../../models/Enquiry")
 const tracking_order = require("../../models/tracking_order");
+const payment_terms = require("../../models/payment_terms");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
@@ -225,10 +226,56 @@ exports.createPaymentIntent = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        const totalAmount = enquiry_data?.grand_total;
+        let selected_pay_term = enquiry_data.selected_payment_terms
+        console.log("selected_pay_term : ", selected_pay_term)
+
+        const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_pay_term) })
+        console.log("fetch_term : ", fetch_term)
+
+        if (!fetch_term) {
+            return utils.handleError(res, {
+                message: "Payment term not found"
+            });
+        }
+
+        if (!fetch_term.method == "scheduled") {
+            return utils.handleError(res, {
+                message: `Payment method is ${fetch_term.method}`
+            })
+        }
+
+        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: userId });
+        console.log("paymenthistory : ", paymenthistory)
+
+        let totalAmount = enquiry_data?.grand_total
+        let paymentAmount = 0
+        let my_schedule_id = ""
+        if (!paymenthistory) {
+            paymenthistory = await Payment.create({
+                enquiry_id: enquiry_id,
+                buyer_id: userId,
+                total_amount: enquiry_data?.grand_total,
+                payment_status: 'pending',
+                stripe_customer_id: customer.id,
+            }
+            )
+            console.log("paymenthistory : ", paymenthistory)
+        }
+
+        if (fetch_term.schedule && fetch_term.schedule.length > 0 && paymenthistory.payment_stage && paymenthistory.payment_stage > 0) {
+            for (const i of fetch_term.schedule) {
+                if (!paymenthistory.payment_stage.includes(i.schedule_id)) {
+                    paymentAmount = i.value_type === "percentage"
+                        ? (totalAmount * i.value) / 100
+                        : i.value;
+                    my_schedule_id = i.schedule_id
+                    break;
+                }
+            }
+        }
 
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(totalAmount * 100),
+            amount: Math.round(paymentAmount * 100),
             currency: 'usd',
             customer: customer.id,
             automatic_payment_methods: {
@@ -258,6 +305,7 @@ exports.createPaymentIntent = async (req, res) => {
                 payment_intent_id: paymentIntent.id,
                 customer_id: customer.id,
                 amount: totalAmount,
+                schedule_id: my_schedule_id,
                 currency: 'usd'
             },
             code: 200
@@ -289,9 +337,9 @@ exports.paynow = async (req, res) => {
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        if (!data.enquiry_id || !data.payment_intent_id || !data.payment_method_id) {
+        if (!data.enquiry_id || !data.payment_intent_id || !data.payment_method_id || !data.schedule_id) {
             return res.status(400).json({
-                error: "Enquiry ID, Payment Intent ID and Payment Method ID are required",
+                error: "Enquiry ID, Payment Intent ID, Schedule ID and Payment Method ID are required",
                 code: 400
             });
         }
@@ -355,6 +403,121 @@ exports.paynow = async (req, res) => {
             }
         }
 
+        let neworder = await Order.findOne({ enquiry_id: data.enquiry_id, buyer_id: userId })
+        console.log("neworder : ", neworder)
+
+        if (!neworder) {
+            const orderdata = {
+                order_unique_id: await generateUniqueId(),
+                enquiry_id: data.enquiry_id,
+                buyer_id: userId,
+                total_amount: enquiry_data?.grand_total,
+                shipping_address: enquiry_data?.shipping_address,
+                billing_address: enquiry_data?.shipping_address,
+                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+                order_pickup: enquiry_data?.shipment_type,
+            }
+
+            const neworder = await Order.create(orderdata)
+            console.log("neworder : ", neworder)
+
+            enquiry_data.order_id = neworder._id
+            await enquiry_data.save()
+        }
+
+        const payment_data = await Payment.findOneAndUpdate({ enquiry_id: data.enquiry_id, buyer_id: userId }, {
+            $set: {
+                order_id: neworder._id,
+                total_amount: data.total_amount,
+                service_charges: data.service_charges,
+                logistics_charges: data.logistics_charges,
+                supplier_charges: data.supplier_charges,
+                payment_stage: {
+                    $push: {
+                        status: confirmedIntent.status || 'success',
+                        stripe_payment_intent: confirmedIntent.id,
+                        stripe_payment_method: data.payment_method_id,
+                        payment_method: confirmedIntent.payment_method_types[0],
+                        txn_id: confirmedIntent.id,
+                        schedule_id: data.schedule_id,
+                        schedule_status: "completed"
+                    }
+                },
+            }
+        }, { new: true })
+
+        let newtracking = await tracking_order.findOne({ order_id: neworder._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })
+        console.log("newtracking : ", newtracking)
+
+        if (!newtracking) {
+            const tracking_data = {
+                tracking_unique_id: await generateUniqueId(),
+                order_id: neworder._id,
+                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+                order_shipment_dates: [
+                    {
+                        order_status: "order created",
+                        date: new Date(),
+                    },
+                ]
+            }
+
+            newtracking = await tracking_order.create(tracking_data)
+            console.log("newtracking : ", newtracking)
+        }
+
+        newtracking.order_shipment_dates.push({
+            order_status: "payment schedule completed",
+            date: new Date(),
+            schedule_id: data?.schedule_id
+        })
+
+        await newtracking.save()
+        neworder.payment_id = payment_data._id
+        neworder.tracking_id = newtracking._id
+
+        await neworder.save()
+
+        return res.status(200).json({
+            message: "checkout successfull!",
+            data: {
+                order: neworder,
+                payment: payment_data,
+                tracking: newtracking
+            },
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.checkoutCashOnDelivery = async (req, res) => {
+    try {
+        const data = req.body
+        const userId = req.user._id
+        console.log("userId : ", userId)
+
+        if (!data.enquiry_id) {
+            return res.status(400).json({
+                error: "Enquiry ID is required",
+                code: 400
+            });
+        }
+
+        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id')
+        console.log("enquiry_data : ", enquiry_data)
+
+        if (!enquiry_data) {
+            return res.status(404).json({ error: "Enquiry not found", code: 404 })
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found", code: 404 });
+        }
+
         const orderdata = {
             order_unique_id: await generateUniqueId(),
             enquiry_id: data.enquiry_id,
@@ -363,7 +526,7 @@ exports.paynow = async (req, res) => {
             shipping_address: enquiry_data?.shipping_address,
             billing_address: enquiry_data?.shipping_address,
             logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
-            order_pickup: "delivery",
+            order_pickup: enquiry_data?.shipment_type,
         }
 
         const neworder = await Order.create(orderdata)
@@ -372,22 +535,25 @@ exports.paynow = async (req, res) => {
         enquiry_data.order_id = neworder._id
         await enquiry_data.save()
 
-        const payment_data = await Payment.create({
-            enquiry_id: data.enquiry_id,
-            order_id: neworder._id,
+
+        let paymentdata = await Payment.create({
+            enquiry_id: data?.enquiry_id,
             buyer_id: userId,
+            payment_status: 'pending',
+            order_id: neworder._id,
             total_amount: data.total_amount,
-            txn_id: confirmedIntent.id,
             service_charges: data.service_charges,
             logistics_charges: data.logistics_charges,
             supplier_charges: data.supplier_charges,
-            payment_method: confirmedIntent.payment_method_types[0],
-            payment_status: 'success',
-            stripe_payment_intent: confirmedIntent.id,
-            stripe_payment_method: data.payment_method_id,
-            stripe_customer_id: customer.id,
+            payment_stage: [
+                {
+                    status: 'pending',
+                    payment_method: 'cash-on-delivery',
+                }
+            ]
         }
         )
+        console.log("paymentdata : ", paymentdata)
 
         const tracking_data = {
             tracking_unique_id: await generateUniqueId(),
@@ -401,19 +567,18 @@ exports.paynow = async (req, res) => {
             ]
         }
 
-        const newtracking = await tracking_order.create(tracking_data)
+        newtracking = await tracking_order.create(tracking_data)
         console.log("newtracking : ", newtracking)
 
-        neworder.payment_id = payment_data._id
+        neworder.payment_id = paymentdata._id
         neworder.tracking_id = newtracking._id
 
         await neworder.save()
 
         return res.status(200).json({
-            message: "checkout successfull!",
+            message: "checkout for cash on delivery is successfull!",
             data: {
                 order: neworder,
-                payment: payment_data,
                 tracking: newtracking
             },
             code: 200

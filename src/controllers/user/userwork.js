@@ -4916,7 +4916,8 @@ exports.verifyOtpForEnquiry = async (req, res) => {
     try {
         const { enquiry_id, quote_id, otp } = req.body;
 
-        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id }).populate('selected_supplier.quote_id')
+        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id }).populate({ path: 'order_id', populate: { path: "tracking_id" } }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+            .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
         console.log("enquiry_data : ", enquiry_data)
 
         if (!enquiry_data) {
@@ -4953,45 +4954,34 @@ exports.verifyOtpForEnquiry = async (req, res) => {
         otpData.is_used = true;
         await otpData.save();
 
-
-        const orderdata = {
-            order_unique_id: await generateUniqueId(),
-            enquiry_id: enquiry_id,
-            buyer_id: enquiry_data?.user_id,
-            total_amount: enquiry_data?.grand_total,
-            shipping_address: enquiry_data?.shipping_address,
-            billing_address: enquiry_data?.shipping_address,
-            order_pickup: "self_pickup",
-            order_type: "delivered",
-            order_status: "delivered",
-        }
-
-        const neworder = await Order.create(orderdata)
-        console.log("neworder : ", neworder)
-
-        const tracking_data = {
-            tracking_unique_id: await generateUniqueId(),
-            order_id: neworder._id,
-            order_shipment_status: "delivered",
-            // logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
-            order_shipment_dates: [
-                {
-                    order_status: "order created",
-                    date: new Date(),
-                },
-                {
-                    order_status: "order processed",
-                    date: new Date(),
-                },
-                {
-                    order_status: "Self pickup",
-                    date: new Date(),
+        const trackingdata = await tracking_order.findOneAndUpdate(
+            { _id: enquiry_data?.order_id?.tracking_id?._id },
+            {
+                $push: {
+                    order_shipment_dates: {
+                        $each: [
+                            {
+                                order_status: "self pickup",
+                                date: new Date(),
+                            },
+                            {
+                                order_status: "delivered",
+                                date: new Date(),
+                            }
+                        ]
+                    }
                 }
-            ]
-        }
+            },
+            { new: true }
+        );
+        console.log("trackingdata : ", trackingdata)
 
-        const newtracking = await tracking_order.create(tracking_data)
-        console.log("newtracking : ", newtracking)
+        const orderdata = await Order.findOneAndUpdate(
+            { _id: enquiry_data?.order_id?._id },
+            { $set: { order_type: "delivered", order_status: "delivered" } },
+            { new: true }
+        );
+        console.log("orderdata : ", orderdata)
 
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
@@ -5072,6 +5062,9 @@ exports.verifyOtpForBuyer = async (req, res) => {
             .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
         console.log("enquiry_data : ", enquiry_data)
 
+        const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(enquiry_data?.selected_pay_term) })
+        console.log("fetch_term : ", fetch_term)
+
         const otpData = await EnquiryOtp.findOne({
             enquiry_id,
             quote_id,
@@ -5121,6 +5114,17 @@ exports.verifyOtpForBuyer = async (req, res) => {
             { new: true }
         );
         console.log("orderdata : ", orderdata)
+
+        if (fetch_term.method == "cash-on-delivery") {
+            const paymentdata = await payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data.user_id })
+            console.log("paymentdata : ", paymentdata)
+            paymentdata.payment_status = "complete"
+            if (paymentdata.payment_stage && paymentdata.payment_stage.length > 0) {
+                paymentdata.payment_stage[0].status = "success"
+                paymentdata.payment_stage[0].schedule_status = "completed"
+            }
+            await paymentdata.save();
+        }
 
         res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {

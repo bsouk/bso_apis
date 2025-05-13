@@ -31,56 +31,68 @@ const PaymentSchema = new mongoose.Schema(
         supplier_charges: {
             type: Number,
         },
-        payment_method: {
-            type: String
-        },
-        receipt_number: {
-            type: String,
-            default: function () {
-                const uuid = uuidv4().replace(/-/g, ""); // Generate UUID and remove hyphens
-                const upperCaseUuid = uuid.toUpperCase(); // Convert UUID to uppercase
-                return upperCaseUuid.substring(0, 10); // Take the first 10 characters
-            },
-        },
-        promocode: {
-            type: Object,
-            default: null,
-        },
-        txn_id: {
-            type: String,
-            default: null,
-        },
-        tid_number: {
-            type: String,
-        },
-        buyer_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "users",
-        },
-        status: {
-            type: String,
-            enum: ["success", "failed", "pending"],
-            default: "pending",
-        },
-        payment_obj: {
-            // from payu
-            type: Object,
-        },
-        refund_obj: {
-            // from payu
-            type: Object,
-        },
-        transactionTimeStamps: {
-            type: String,
-        },
-        paymentFrom: {
-            type: String,
-        },
-        stripe_payment_intent : String,
-        stripe_payment_method : String,
         stripe_customer_id: {
             type: String,
         },
+        payment_status: {
+            type: String,
+            enum: ["pending", "complete"],
+            default: "pending",
+        },
+        iloc_document: [String],
+        payment_stage: [
+            {
+                payment_method: {
+                    type: String
+                },
+                schedule_id: String,
+                schedule_status: {
+                    type: String,
+                    enum: ["pending", "completed"],
+                    default: "pending"
+                },
+                receipt_number: {
+                    type: String,
+                    default: function () {
+                        const uuid = uuidv4().replace(/-/g, ""); // Generate UUID and remove hyphens
+                        const upperCaseUuid = uuid.toUpperCase(); // Convert UUID to uppercase
+                        return upperCaseUuid.substring(0, 10); // Take the first 10 characters
+                    },
+                },
+                promocode: {
+                    type: Object,
+                    default: null,
+                },
+                txn_id: {
+                    type: String,
+                    default: null,
+                },
+                tid_number: {
+                    type: String,
+                },
+                status: {
+                    type: String,
+                    enum: ["success", "failed", "pending"],
+                    default: "pending",
+                },
+                payment_obj: {
+                    // from payu
+                    type: Object,
+                },
+                refund_obj: {
+                    // from payu
+                    type: Object,
+                },
+                transactionTimeStamps: {
+                    type: String,
+                },
+                paymentFrom: {
+                    type: String,
+                },
+                stripe_payment_intent: String,
+                stripe_payment_method: String,
+            }
+        ]
     },
     {
         versionKey: false,

@@ -36,6 +36,7 @@ const TrackingSchema = new mongoose.Schema({
         {
             order_status: String,
             date: Date,
+            schedule_id: String
         },
     ],
     logistics_id: {
