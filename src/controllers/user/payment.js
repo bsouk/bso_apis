@@ -497,7 +497,7 @@ exports.paynow = async (req, res) => {
 }
 
 
-exports.checkoutCashOnDelivery = async (req, res) => {
+exports.checkoutOfflinePayment = async (req, res) => {
     try {
         const data = req.body
         const userId = req.user._id

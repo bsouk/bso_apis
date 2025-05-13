@@ -38,4 +38,12 @@ router.post(
     controller.paynow
 )
 
+
+router.post(
+    '/checkoutOfflinePayment',
+    trimRequest.all,
+    requireAuth,
+    controller.checkoutOfflinePayment
+)
+
 module.exports = router

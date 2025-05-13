@@ -3199,7 +3199,7 @@ exports.getEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate('selected_payment_terms')
             .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
         console.log("data : ", data)
         if (!data) {
@@ -5149,6 +5149,7 @@ exports.getSingleSupplierQuotes = async (req, res) => {
         console.log("id : ", id)
         const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) })
             .populate('user_id', 'full_name email user_type current_user_type')
+            .populate('payment_terms').populate('admin_payment_terms')
             .populate('enquiry_items.quantity.unit')
             .populate("pickup_address")
             .populate({ path: 'enquiry_id', select: 'priority shipping_address enquiry_unique_id expiry_date', populate: { path: 'shipping_address' } })

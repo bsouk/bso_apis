@@ -136,7 +136,8 @@ const EnquirySchema = new mongoose.Schema({
         default: 0
     },
     selected_payment_terms: {
-        type: mongoose.Schema.Types.Mixed
+        type: mongoose.Schema.Types.ObjectId,
+        ref : "payment_terms"
     },
     additional_charges: {
         charge_type: {

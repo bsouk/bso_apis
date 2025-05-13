@@ -178,10 +178,12 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         }
     },
     payment_terms: {
-        type: mongoose.Schema.Types.Mixed
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: "payment_terms"
     },
     admin_payment_terms: {
-        type: mongoose.Schema.Types.Mixed
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: "payment_terms"
     },
     discount: {
         charge_type: {
