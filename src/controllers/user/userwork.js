@@ -5115,9 +5115,10 @@ exports.verifyOtpForBuyer = async (req, res) => {
         );
         console.log("orderdata : ", orderdata)
 
+        const paymentdata = await payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data.user_id })
+        console.log("paymentdata : ", paymentdata)
+
         if (fetch_term.method == "cash-on-delivery") {
-            const paymentdata = await payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data.user_id })
-            console.log("paymentdata : ", paymentdata)
             paymentdata.payment_status = "complete"
             if (paymentdata.payment_stage && paymentdata.payment_stage.length > 0) {
                 paymentdata.payment_stage[0].status = "success"
@@ -5125,8 +5126,16 @@ exports.verifyOtpForBuyer = async (req, res) => {
             }
             await paymentdata.save();
         }
+        if (fetch_term.method == "scheduled" && fetch_term.schedule.includes({ payment_stage: "upon-delivery" })) {
+            paymentdata.payment_stage.push({
+                status: 'success',
+                payment_method: "cash-on-delivery",
+                schedule_status: "completed"
+            })
+            await paymentdata.save();
+        }
 
-        res.json({ code: 200, message: "Otp verified successfullyyy" });
+        return res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
         utils.handleError(res, error);
     }

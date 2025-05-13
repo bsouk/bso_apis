@@ -21,27 +21,19 @@ const paymentTermsSchema = new mongoose.Schema(
                         const upperCaseUuid = uuid.toUpperCase(); // Convert UUID to uppercase
                         return upperCaseUuid.substring(0, 5); // Take the first 10 characters
                     },
-                }
-            },
-            {
+                },
                 value_type: {
                     type: String,
                     enum: ['flat', 'percentage'],
                     default: "percentage"
-                }
-            },
-            {
-                value: Number
-            },
-            {
-                days: Number
-            },
-            {
+                },
+                value: Number,
+                days: Number,
                 payment_stage: {
                     type: String,
                     enum: ["advance", "readiness", "within", "upon-delivery"]
                 }
-            }
+            },
         ],
     },
     {
