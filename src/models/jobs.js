@@ -25,15 +25,15 @@ const jobSchema = new mongoose.Schema({
     },
     job_type: {
         type: [String],
-        enum: ["Full-Time", "Part-Time", "Freelance", "Contract-Based", "Internship", "Temporary", "Hybrid"],
+        // enum: ["Full-Time", "Part-Time", "Freelance", "Contract-Based", "Internship", "Temporary", "Hybrid"],
     },
     schedule: {
         type: [String],
-        enum: ["Day-shift", "Morning-shift", "Rotational-shift", "Night-shift", "Monday-Friday", "Evening-shift", "Weekend-availabilty", "Fixed-shift", "US-shift", "UK-shift", "Weekend-only", "other", "none"]
+        // enum: ["Day-shift", "Morning-shift", "Rotational-shift", "Night-shift", "Monday-Friday", "Evening-shift", "Weekend-availabilty", "Fixed-shift", "US-shift", "UK-shift", "Weekend-only", "other", "none"]
     },
     rate: {
         type: String,
-        enum: ["Hourly", "Monthly", "Annually", "Per-project", "Weekly", "Daily", "Other"]
+        // enum: ["Hourly", "Monthly", "Annually", "Per-project", "Weekly", "Daily", "Other"]
     },
     supplemental_pay: {
         type: [String],
@@ -89,14 +89,14 @@ const jobSchema = new mongoose.Schema({
     },
     experience_type: {
         type: String,
-        enum: ['fresher', 'experienced'],
+        // enum: ['fresher', 'experienced'],
     },
     experience: Number,
     skills: [String],
     payment_type: {
         type: {
             type: String,
-            enum: ['Range', 'Minimum', 'Maximum', 'Exact']
+            // enum: ['Range', 'Minimum', 'Maximum', 'Exact']
         },
         value: Number,
         min: Number,
