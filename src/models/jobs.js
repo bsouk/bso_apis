@@ -62,14 +62,12 @@ const jobSchema = new mongoose.Schema({
     planned_start_date: {
         status: {
             type: String,
-            enum: ["yes", "no"]
         },
         date: Date
     },
     application_last_date: {
         status: {
             type: String,
-            enum: ["yes", "no"]
         },
         date: Date
     },
