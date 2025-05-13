@@ -4345,7 +4345,7 @@ exports.getMyAllQuotes = async (req, res) => {
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate('payment_terms').populate('admin_payment_terms').populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
         console.log("data : ", data)
 
         const count = await EnquiryQuotes.countDocuments({ user_id: new mongoose.Types.ObjectId(userId) })
