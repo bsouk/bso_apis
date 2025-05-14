@@ -426,10 +426,10 @@ exports.paynow = async (req, res) => {
                 order_pickup: enquiry_data?.shipment_type,
             }
 
-            const neworder = await Order.create(orderdata)
+            neworder = await Order.create(orderdata)
             console.log("neworder : ", neworder)
 
-            enquiry_data.order_id = neworder._id
+            enquiry_data.order_id = neworder?._id
             await enquiry_data.save()
             payment_data.order_id = neworder?._id
         }
@@ -451,7 +451,7 @@ exports.paynow = async (req, res) => {
 
         await payment_data.save()
 
-        let newtracking = await tracking_order.findOne({ order_id: neworder._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })
+        let newtracking = await tracking_order.findOne({ order_id: neworder?._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })
         console.log("newtracking : ", newtracking)
 
         if (!newtracking) {
