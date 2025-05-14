@@ -3199,7 +3199,7 @@ exports.getEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate('selected_payment_terms')
+        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit").populate('selected_payment_terms').populate('selected_logistics.quote_id')
             .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
         console.log("data : ", data)
         if (!data) {
@@ -3208,6 +3208,9 @@ exports.getEnquiryDetails = async (req, res) => {
                 code: 404,
             });
         }
+
+        const paymentdata = await payment.findOne({ enquiry_id: id })
+        console.log("paymentdata : ", paymentdata)
 
         const { selected_supplier, ...rest } = data.toObject();
 
@@ -3223,6 +3226,7 @@ exports.getEnquiryDetails = async (req, res) => {
             ...rest,
             selected_supplier: selected_supplier?.quote_id || null,
             admincommission: commisiondata || null,
+            payment: paymentdata
         };
         if (ispaymentdone) {
             newdata.payment_status = "paid";
@@ -4586,7 +4590,7 @@ exports.selectLogisticsQuote = async (req, res) => {
         console.log("selected : ", selected)
 
         let totalprice = 0
-        enquiry?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.quantity.value))
+        enquiry?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
         console.log("totalprice : ", totalprice)
 
         totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value + quotedata?.shipping_fee) - enquiry?.selected_supplier?.quote_id?.discount?.value
@@ -4598,7 +4602,7 @@ exports.selectLogisticsQuote = async (req, res) => {
 
             if (commision.charge_type === "percentage") {
                 if (totalprice > 0) {
-                    totalprice += (totalprice) + ((commision.value) / 100)
+                    totalprice += (totalprice) * ((commision.value) / 100)
                 }
                 console.log("totalprice : ", totalprice)
             } else {
@@ -4723,6 +4727,9 @@ exports.getLogisticsQuotes = async (req, res) => {
                         },
                         {
                             path: "enquiry_items.quantity.unit"
+                        },
+                        {
+                            path: "selected_payment_terms"
                         }
                     ]
                 }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
@@ -4737,6 +4744,9 @@ exports.getLogisticsQuotes = async (req, res) => {
                         },
                         {
                             path: "enquiry_items.quantity.unit"
+                        },
+                        {
+                            path: "selected_payment_terms"
                         }
                     ]
                 }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })

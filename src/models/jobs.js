@@ -148,7 +148,8 @@ const jobSchema = new mongoose.Schema({
     is_ai: {
         type: Boolean,
         default: false
-    }
+    },
+    preview: String
 },
     { timestamps: true }
 )
