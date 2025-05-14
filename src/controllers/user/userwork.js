@@ -3232,9 +3232,9 @@ exports.getEnquiryDetails = async (req, res) => {
         // }
 
         if (
-            data.selected_payment_terms &&
-            data.selected_payment_terms.schedule &&
-            data.selected_payment_terms.schedule.length > 0
+            (data.selected_payment_terms &&
+                data.selected_payment_terms.schedule &&
+                data.selected_payment_terms.schedule.length > 0) || (data.selected_payment_terms && data.selected_payment_terms.method === "advanced")
         ) {
             const schedule = data.selected_payment_terms.schedule;
             const paymentStages = paymentdata?.payment_stage || [];
