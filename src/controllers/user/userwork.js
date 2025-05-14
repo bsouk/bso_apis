@@ -4259,7 +4259,7 @@ exports.selectSupplierQuote = async (req, res) => {
             [
                 {
                     $match: {
-                        user_id: new mongoose.Types.ObjectId(userId),
+                        user_id: new mongoose.Types.ObjectId(user_id),
                         status: "active",
                         type: "buyer"
                     }
