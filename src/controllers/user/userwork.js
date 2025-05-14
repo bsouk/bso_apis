@@ -3254,6 +3254,7 @@ exports.getEnquiryDetails = async (req, res) => {
         }
 
         if (data.selected_payment_terms && data.selected_payment_terms.method === "advanced") {
+            const paymentStages = paymentdata?.payment_stage || [];
             newschedule = paymentStages.map(sch => {
                 return {
                     ...sch.toObject(),
