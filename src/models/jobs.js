@@ -142,6 +142,12 @@ const jobSchema = new mongoose.Schema({
     let_candidate_contact_us: {
         type: Boolean,
         default: false
+    },
+    ai_prompt: String,
+    ai_response: String,
+    is_ai: {
+        type: Boolean,
+        default: false
     }
 },
     { timestamps: true }
