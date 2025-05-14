@@ -338,6 +338,7 @@ async function generateUniqueId() {
 exports.paynow = async (req, res) => {
     try {
         const data = req.body
+        console.log("body : ", data)
         const userId = req.user._id
         console.log("userId : ", userId)
 
@@ -429,27 +430,26 @@ exports.paynow = async (req, res) => {
             await enquiry_data.save()
         }
 
-        const payment_data = await Payment.findOneAndUpdate({ enquiry_id: data.enquiry_id, buyer_id: userId }, {
-            $set: {
-                order_id: neworder._id,
-                total_amount: data?.total_amount,
-                service_charges: data?.service_charges,
-                logistics_charges: data?.logistics_charges,
-                supplier_charges: data?.supplier_charges,
-                $push: {
-                    payment_stage: {
-                        status: confirmedIntent.status || 'success',
-                        stripe_payment_intent: confirmedIntent.id,
-                        stripe_payment_method: data?.payment_method_id,
-                        payment_method: confirmedIntent.payment_method_types[0],
-                        txn_id: confirmedIntent.id,
-                        schedule_id: data?.schedule_id,
-                        schedule_status: "completed",
-                        amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0
-                    }
-                },
-            }
-        }, { new: true })
+        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: userId })
+        console.log("payment_data : ", payment_data)
+
+        payment_data.order_id = neworder._id
+        payment_data.total_amount = data?.total_amount
+        payment_data.service_charges = data?.service_charges
+        payment_data.logistics_charges = data?.logistics_charges
+        payment_data.supplier_charges = data?.supplier_charges
+        payment_data.payment_stage.push({
+            status: confirmedIntent.status || 'success',
+            stripe_payment_intent: confirmedIntent.id,
+            stripe_payment_method: data?.payment_method_id,
+            payment_method: confirmedIntent.payment_method_types[0],
+            txn_id: confirmedIntent.id,
+            schedule_id: data?.schedule_id,
+            schedule_status: "completed",
+            amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0
+        })
+
+        await payment_data.save()
 
         let newtracking = await tracking_order.findOne({ order_id: neworder._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })
         console.log("newtracking : ", newtracking)
