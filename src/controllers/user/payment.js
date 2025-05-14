@@ -308,7 +308,7 @@ exports.createPaymentIntent = async (req, res) => {
                 // setup_client_secret: setupIntent.client_secret,
                 payment_intent_id: paymentIntent.id,
                 customer_id: customer.id,
-                amount: totalAmount,
+                amount: paymentAmount,
                 schedule_id: my_schedule_id,
                 currency: 'usd'
             },
@@ -341,9 +341,9 @@ exports.paynow = async (req, res) => {
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        if (!data.enquiry_id || !data.payment_intent_id || !data.payment_method_id || !data.schedule_id) {
+        if (!data.enquiry_id || !data.payment_intent_id || !data.payment_method_id) {
             return res.status(400).json({
-                error: "Enquiry ID, Payment Intent ID, Schedule ID and Payment Method ID are required",
+                error: "Enquiry ID, Payment Intent ID and Payment Method ID are required",
                 code: 400
             });
         }
@@ -432,18 +432,18 @@ exports.paynow = async (req, res) => {
         const payment_data = await Payment.findOneAndUpdate({ enquiry_id: data.enquiry_id, buyer_id: userId }, {
             $set: {
                 order_id: neworder._id,
-                total_amount: data.total_amount,
-                service_charges: data.service_charges,
-                logistics_charges: data.logistics_charges,
-                supplier_charges: data.supplier_charges,
+                total_amount: data?.total_amount,
+                service_charges: data?.service_charges,
+                logistics_charges: data?.logistics_charges,
+                supplier_charges: data?.supplier_charges,
                 payment_stage: {
                     $push: {
                         status: confirmedIntent.status || 'success',
                         stripe_payment_intent: confirmedIntent.id,
-                        stripe_payment_method: data.payment_method_id,
+                        stripe_payment_method: data?.payment_method_id,
                         payment_method: confirmedIntent.payment_method_types[0],
                         txn_id: confirmedIntent.id,
-                        schedule_id: data.schedule_id,
+                        schedule_id: data?.schedule_id,
                         schedule_status: "completed"
                     }
                 },
