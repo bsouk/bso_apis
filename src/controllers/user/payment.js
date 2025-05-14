@@ -238,11 +238,11 @@ exports.createPaymentIntent = async (req, res) => {
             });
         }
 
-        if (fetch_term.method != "scheduled") {
-            return utils.handleError(res, {
-                message: `Payment method is ${fetch_term.method}`
-            })
-        }
+        // if (fetch_term.method != "scheduled") {
+        //     return utils.handleError(res, {
+        //         message: `Payment method is ${fetch_term.method}`
+        //     })
+        // }
 
         let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: userId });
         console.log("paymenthistory : ", paymenthistory)
