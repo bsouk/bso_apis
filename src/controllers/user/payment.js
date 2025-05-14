@@ -411,6 +411,8 @@ exports.paynow = async (req, res) => {
 
         let neworder = await Order.findOne({ enquiry_id: data.enquiry_id, buyer_id: userId })
         console.log("neworder : ", neworder)
+        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: userId })
+        console.log("payment_data : ", payment_data)
 
         if (!neworder) {
             const orderdata = {
@@ -429,12 +431,9 @@ exports.paynow = async (req, res) => {
 
             enquiry_data.order_id = neworder._id
             await enquiry_data.save()
+            payment_data.order_id = neworder?._id
         }
 
-        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: userId })
-        console.log("payment_data : ", payment_data)
-
-        payment_data.order_id = neworder._id
         payment_data.total_amount = data?.total_amount
         payment_data.service_charges = data?.service_charges
         payment_data.logistics_charges = data?.logistics_charges
