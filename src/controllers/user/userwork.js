@@ -3221,16 +3221,12 @@ exports.getEnquiryDetails = async (req, res) => {
             delete selected_supplier.quote_id.admin_charge;
         }
         const commisiondata = await Commision.findOne();
-        const ispaymentdone = await payment.findOne({ enquiry_id: id });
         const newdata = {
             ...rest,
             selected_supplier: selected_supplier?.quote_id || null,
             admincommission: commisiondata || null,
             payment: paymentdata
         };
-        if (ispaymentdone) {
-            newdata.payment_status = "paid";
-        }
 
         return res.status(200).json({
             message: "Query details fetched successfully",
