@@ -238,7 +238,7 @@ exports.createPaymentIntent = async (req, res) => {
             });
         }
 
-        if (!fetch_term.method == "scheduled") {
+        if (fetch_term.method != "scheduled") {
             return utils.handleError(res, {
                 message: `Payment method is ${fetch_term.method}`
             })
@@ -266,7 +266,7 @@ exports.createPaymentIntent = async (req, res) => {
             paymentAmount = enquiry_data?.grand_total
         }
 
-        if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0 && paymenthistory.payment_stage && paymenthistory.payment_stage > 0) {
+        if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0 && paymenthistory.payment_stage && paymenthistory.payment_stage.length > 0) {
             for (const i of fetch_term.schedule) {
                 if (!paymenthistory.payment_stage.includes(i.schedule_id)) {
                     paymentAmount = i.value_type === "percentage"
