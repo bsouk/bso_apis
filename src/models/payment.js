@@ -46,6 +46,7 @@ const PaymentSchema = new mongoose.Schema(
                     type: String
                 },
                 schedule_id: String,
+                amount: Number,
                 schedule_status: {
                     type: String,
                     enum: ["pending", "completed"],

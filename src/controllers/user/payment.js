@@ -444,7 +444,8 @@ exports.paynow = async (req, res) => {
                         payment_method: confirmedIntent.payment_method_types[0],
                         txn_id: confirmedIntent.id,
                         schedule_id: data?.schedule_id,
-                        schedule_status: "completed"
+                        schedule_status: "completed",
+                        amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0
                     }
                 },
             }
