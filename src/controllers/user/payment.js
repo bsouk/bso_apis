@@ -434,7 +434,7 @@ exports.paynow = async (req, res) => {
             payment_data.order_id = neworder?._id
         }
 
-        payment_data.total_amount = data?.total_amount
+        // payment_data.total_amount = data?.total_amount
         payment_data.service_charges = data?.service_charges
         payment_data.logistics_charges = data?.logistics_charges
         payment_data.supplier_charges = data?.supplier_charges
