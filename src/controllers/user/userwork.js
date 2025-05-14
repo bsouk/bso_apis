@@ -4264,7 +4264,7 @@ exports.selectSupplierQuote = async (req, res) => {
         quotedata.final_price = totalprice
         await quotedata.save()
 
-        // let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
+        let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
         // if (shipment_type === "self-pickup") {
         //     const mailOptions = {
         //         to: quotedata.user_id.email,
