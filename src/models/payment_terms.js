@@ -9,7 +9,7 @@ const paymentTermsSchema = new mongoose.Schema(
         },
         method: {
             type: String,
-            enum: ["scheduled", "cash-on-delivery", "iloc", "advanced"]
+            enum: ["scheduled", "cash-on-delivery", "cash-against-document", "iloc", "advanced"]
         },
         iloc_document: [String],
         schedule: [

@@ -4411,7 +4411,7 @@ exports.getPaymentTerms = async (req, res) => {
         if (search) {
             filter.name = new RegExp(search, 'i')
         }
-        const data = await payment_terms.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+        const data = await payment_terms.find(filter).sort({ createdAt: 1 }).skip(Number(offset)).limit(Number(limit))
         const count = await payment_terms.countDocuments(filter)
         console.log("data : ", data)
         return res.status(200).json({
