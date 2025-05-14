@@ -4391,7 +4391,7 @@ exports.selectSupplierQuote = async (req, res) => {
         //send notification
         const notificationMessage = {
             title: 'Buyer has accepted your quote',
-            description: `${req.user.full_name} has your quote . Enquiry ID : ${selected?.enquiry_unique_id}`,
+            description: `${req.user.full_name} has select your quote . Enquiry ID : ${selected?.enquiry_unique_id}`,
             quote: selected?._id
         };
 
@@ -4726,7 +4726,7 @@ exports.selectLogisticsQuote = async (req, res) => {
         //send notification
         const notificationMessage = {
             title: 'Buyer has accepted your quote',
-            description: `${req.user.full_name} has your quote . Enquiry ID : ${enquiry?.enquiry_unique_id}`,
+            description: `${req.user.full_name} has select your quote . Enquiry ID : ${enquiry?.enquiry_unique_id}`,
             quote: enquiry._id
         };
 

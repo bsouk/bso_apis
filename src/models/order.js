@@ -10,7 +10,7 @@ const OrderSchema = new mongoose.Schema({
     },
     order_pickup: {
         type: String,
-        enum: ["self_pickup", "delivery"],
+        enum: ["self-pickup", "delivery"],
         default: "delivery",
     },
     order_type: {
