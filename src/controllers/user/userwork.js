@@ -3220,12 +3220,53 @@ exports.getEnquiryDetails = async (req, res) => {
             delete selected_supplier.quote_id.discount;
             delete selected_supplier.quote_id.admin_charge;
         }
+
+        let newschedule = []
+        // if (data.selected_payment_terms && data.selected_payment_terms.schedule.length > 0) {
+        //     newschedule = data.selected_payment_terms.schedule.map(i => {
+        //         if (paymentdata.payment_stage.includes(i.schedule_id)) {
+        //             let index = paymentdata.payment_stage.indexOf(i.schedule_id)
+        //             console.log("index : ", index)
+        //         }
+        //     })
+        // }
+
+        if (
+            data.selected_payment_terms &&
+            data.selected_payment_terms.schedule &&
+            data.selected_payment_terms.schedule.length > 0
+        ) {
+            const schedule = data.selected_payment_terms.schedule;
+            const paymentStages = paymentdata?.payment_stage || [];
+
+            newschedule = schedule.map(sch => {
+                const matchedStage = paymentStages.find(p => p.schedule_id === sch.schedule_id);
+                return {
+                    ...sch.toObject(),
+                    payment_status: matchedStage?.status || null,
+                    amount_paid: matchedStage?.amount || null,
+                    txn_id: matchedStage?.txn_id || null,
+                    stripe_payment_intent: matchedStage?.stripe_payment_intent || null,
+                    stripe_payment_method: matchedStage?.stripe_payment_method || null,
+                    schedule_status: matchedStage?.schedule_status || "pending"
+                };
+            });
+        }
+
         const commisiondata = await Commision.findOne();
+        // const newdata = {
+        //     ...rest,
+        //     selected_supplier: selected_supplier?.quote_id || null,
+        //     admincommission: commisiondata || null,
+        //     payment: paymentdata
+        // };
+
         const newdata = {
             ...rest,
             selected_supplier: selected_supplier?.quote_id || null,
             admincommission: commisiondata || null,
-            payment: paymentdata
+            // payment: paymentdata,
+            payment_schedule_details: newschedule
         };
 
         return res.status(200).json({
