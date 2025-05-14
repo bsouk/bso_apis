@@ -4252,15 +4252,43 @@ exports.selectSupplierQuote = async (req, res) => {
         const { quote_id, shipment_type, selected_payment_terms } = req.body
         console.log("data : ", req.body)
 
-        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active", type: "buyer" });
+        // const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active", type: "buyer" });
+        // console.log("activeSubscription : ", activeSubscription)
+
+        const activeSubscription = await Subscription.aggregate(
+            [
+                {
+                    $match: {
+                        user_id: new mongoose.Types.ObjectId(userId),
+                        status: "active",
+                        type: "buyer"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "plans",
+                        localField: 'plan_id',
+                        foreignField: 'plan_id',
+                        as: 'plan'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$plan",
+                        preserveNullAndEmptyArrays: true
+                    }
+                }
+            ]
+        )
         console.log("activeSubscription : ", activeSubscription)
 
-        if (!activeSubscription) {
+        if (activeSubscription.length === 0) {
             return utils.handleError(res, {
                 message: "No buyer subscription found",
                 code: 400,
             });
         }
+
 
         const quotedata = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id').populate(
             {
@@ -4269,6 +4297,8 @@ exports.selectSupplierQuote = async (req, res) => {
         )
         console.log("quotedata : ", quotedata)
 
+        const enquiry = await Enquiry.findOne({ _id: quotedata.enquiry_id }).populate('user_id')
+        console.log("enquiry : ", enquiry)
 
         if (quotedata?.enquiry_id?.selected_supplier?.quote_id && mongoose.isValidObjectId(quotedata?.enquiry_id?.selected_supplier?.quote_id)) {
             return utils.handleError(res, {
@@ -4295,15 +4325,34 @@ exports.selectSupplierQuote = async (req, res) => {
         console.log("selected : ", selected)
 
         let totalprice = 0
-        quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.quantity.value))
+        quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
         console.log("totalprice : ", totalprice)
 
         totalprice += (quotedata?.custom_charges_one?.value + quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
         console.log("totalprice : ", totalprice)
 
+
+        if (activeSubscription[0].plan.plan_step === "direct") {
+            const commision = await Commision.findOne()
+            console.log("Commision : ", commision)
+
+            if (commision.charge_type === "percentage") {
+                if (totalprice > 0) {
+                    totalprice += (totalprice) * ((commision.value) / 100)
+                }
+                console.log("totalprice : ", totalprice)
+            } else {
+                totalprice += commision.value
+                console.log("totalprice : ", totalprice)
+            }
+        }
+
         quotedata.is_selected = true
         quotedata.final_price = totalprice
+        enquiry.grand_total = totalprice
         await quotedata.save()
+        await enquiry.save()
+
 
         let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
         // if (shipment_type === "self-pickup") {
