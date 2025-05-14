@@ -3232,9 +3232,9 @@ exports.getEnquiryDetails = async (req, res) => {
         // }
 
         if (
-            (data.selected_payment_terms &&
-                data.selected_payment_terms.schedule &&
-                data.selected_payment_terms.schedule.length > 0) || (data.selected_payment_terms && data.selected_payment_terms.method === "advanced")
+            data.selected_payment_terms &&
+            data.selected_payment_terms.schedule &&
+            data.selected_payment_terms.schedule.length > 0
         ) {
             const schedule = data.selected_payment_terms.schedule;
             const paymentStages = paymentdata?.payment_stage || [];
@@ -3249,6 +3249,15 @@ exports.getEnquiryDetails = async (req, res) => {
                     stripe_payment_intent: matchedStage?.stripe_payment_intent || null,
                     stripe_payment_method: matchedStage?.stripe_payment_method || null,
                     schedule_status: matchedStage?.schedule_status || "pending"
+                };
+            });
+        }
+
+        if (data.selected_payment_terms && data.selected_payment_terms.method === "advanced") {
+            newschedule = paymentStages.map(sch => {
+                return {
+                    ...sch.toObject(),
+                    method: data.selected_payment_terms.method
                 };
             });
         }
