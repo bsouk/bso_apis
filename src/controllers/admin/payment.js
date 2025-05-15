@@ -128,7 +128,8 @@ exports.paymentDetails = async (req, res) => {
                                     full_name: 1,
                                     first_name: 1,
                                     last_name: 1,
-                                    email: 1
+                                    email: 1,
+                                    profile_image : 1
                                 }
                             }
                         ]

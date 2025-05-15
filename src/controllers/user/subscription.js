@@ -88,7 +88,7 @@ exports.genrateClientScretKey = async (req, res) => {
 
         const setupIntent = await stripe.setupIntents.create({
             customer: customer.id,
-            payment_method_types: ['card', 'paypal', 'link', 'us_bank_account', 'amazon_pay'],
+            payment_method_types: ['card', 'link', 'us_bank_account'],
             metadata: {
                 userId: userid.toString(),
                 planId: plandata._id.toString()
