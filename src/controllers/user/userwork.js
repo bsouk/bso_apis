@@ -3243,8 +3243,8 @@ exports.getEnquiryDetails = async (req, res) => {
                 const matchedStage = paymentStages.find(p => p.schedule_id === sch.schedule_id);
                 return {
                     ...sch.toObject(),
-                    payment_status: matchedStage?.status || null,
-                    amount_paid: matchedStage?.amount || null,
+                    status: matchedStage?.status || null,
+                    amount: matchedStage?.amount || null,
                     txn_id: matchedStage?.txn_id || null,
                     stripe_payment_intent: matchedStage?.stripe_payment_intent || null,
                     stripe_payment_method: matchedStage?.stripe_payment_method || null,

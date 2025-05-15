@@ -1693,7 +1693,7 @@ exports.getEnquiryDetails = async (req, res) => {
     try {
         const { id } = req.params
         console.log("id : ", id)
-        const data = await Enquiry.findOne({ _id: id }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+        const data = await Enquiry.findOne({ _id: id }).populate('selected_payment_terms').populate("shipping_address").populate("enquiry_items.quantity.unit")
         console.log("data : ", data)
         if (!data) {
             return utils.handleError(res, {
