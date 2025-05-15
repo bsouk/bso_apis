@@ -205,10 +205,10 @@ exports.getContactUs = async (req, res) => {
         $sort: { createdAt: -1 },
       },
       {
-        $limit: +limit,
+        $skip: +offset,
       },
       {
-        $skip: +offset,
+        $limit: +limit,
       },
     ]);
 
