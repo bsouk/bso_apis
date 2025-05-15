@@ -2385,7 +2385,23 @@ exports.viewLogisticQuote = async (req, res) => {
         from: "enquires",
         localField: "enquiry_id",
         foreignField: "_id",
-        as: "enquiry"
+        as: "enquiry",
+        pipeline: [
+          {
+            $lookup: {
+              from: "payment_terms",
+              localField: "selected_payment_terms",
+              foreignField: "_id",
+              as: "selected_payment_terms"
+            }
+          },
+          {
+            $unwind: {
+              path: "$selected_payment_terms",
+              preserveNullAndEmptyArrays: true
+            }
+          }
+        ]
       }
     },
     {
