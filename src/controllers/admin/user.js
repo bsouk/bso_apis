@@ -235,19 +235,19 @@ exports.addCustomer = async (req, res) => {
     }
     const user = new User(userData);
 
-    const addressData = {
-      user_id: user._id,
-      address: data.address,
-      location: data.location,
-      phone_number_code: data.phone_number_code,
-      phone_number: data.phone_number,
-      is_primary: true,
-      default_address: true,
-    };
+    // const addressData = {
+    //   user_id: user._id,
+    //   address: data.address,
+    //   location: data.location,
+    //   phone_number_code: data.phone_number_code,
+    //   phone_number: data.phone_number,
+    //   is_primary: true,
+    //   default_address: true,
+    // };
 
-    const address = new Address(addressData);
+    // const address = new Address(addressData);
+    // await address.save();
     await user.save();
-    await address.save();
 
     const mailOptions = {
       to: user.email,
