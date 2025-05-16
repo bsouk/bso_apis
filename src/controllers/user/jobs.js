@@ -338,11 +338,16 @@ exports.getappliedJobs = async (req, res) => {
                         preserveNullAndEmptyArrays: true
                     }
                 },
-                // {
-                //     $project: {
-                //         job_data: 0
-                //     }
-                // }
+                {
+                    $addFields : {
+                        company : "$company_data.company_data"
+                    }
+                },
+                {
+                    $project: {
+                        company_data: 0
+                    }
+                },
                 {
                     $sort: {
                         createdAt: -1
