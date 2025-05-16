@@ -2448,7 +2448,7 @@ exports.viewLogisticQuote = async (req, res) => {
     }
   ]);
   console.log('logistic', logistic)
-  let logistic_id = logistic[0].user_id;
+  let logistic_id = logistic[0].enquiry.user_id;
   const subscriptiondata = await subscription.aggregate([
     {
       $match: {
