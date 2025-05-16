@@ -130,7 +130,7 @@ exports.exportOrder = async (req, res) => {
 
         let filter = {}
         if (req.body.user_id) {
-            filter.buyer_id = new mongoose.Types.ObjectId(user_id)
+            filter.buyer_id = new mongoose.Types.ObjectId(req.body.user_id)
         }
 
         if (!['excel', 'csv', 'pdf'].includes(format)) {
