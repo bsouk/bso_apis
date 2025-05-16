@@ -6,12 +6,12 @@ const payment = require("../../models/payment");
 
 exports.getOrders = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, order_type = "", search = "" , user_id} = req.query
+        const { offset = 0, limit = 10, order_type = "", search = "", user_id } = req.query
         const filter = {}
         if (order_type) {
             filter.order_type = order_type
         }
-        if(user_id){
+        if (user_id) {
             filter.buyer_id = new mongoose.Types.ObjectId(user_id)
         }
         if (search) {
@@ -128,13 +128,18 @@ exports.exportOrder = async (req, res) => {
         const { format } = req.body
         console.log("file format is ", format)
 
+        let filter = {}
+        if (req.body.user_id) {
+            filter.buyer_id = new mongoose.Types.ObjectId(user_id)
+        }
+
         if (!['excel', 'csv', 'pdf'].includes(format)) {
             return utils.handleError(res, {
                 message: "unavailable download format",
                 code: 404,
             });
         }
-        const order_data = await Order.find()
+        const order_data = await Order.find(filter)
             .populate('enquiry_id')
             .populate('shipping_address')
             .populate('billing_address')
