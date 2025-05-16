@@ -297,6 +297,44 @@ exports.getappliedJobs = async (req, res) => {
                                     preserveNullAndEmptyArrays: true
                                 }
                             },
+                            {
+                                $lookup: {
+                                    from: "users",
+                                    let: { id: "$company_id" },
+                                    pipeline: [
+                                        {
+                                            $match: {
+                                                $expr: {
+                                                    $eq: ["$$id", "$_id"]
+                                                }
+                                            }
+                                        },
+                                        {
+                                            $project: {
+                                                _id: 1,
+                                                company_data: 1,
+                                            }
+                                        }
+                                    ],
+                                    as: "company_data"
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$company_data",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $addFields: {
+                                    company: "$company_data.company_data"
+                                }
+                            },
+                            {
+                                $project: {
+                                    company_data: 0
+                                }
+                            },
                         ],
                         as: "job_data"
                     }
@@ -309,44 +347,6 @@ exports.getappliedJobs = async (req, res) => {
                 },
                 {
                     $match: newfilter
-                },
-                {
-                    $lookup: {
-                        from: "users",
-                        let: { id: "$company_id" },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: ["$$id", "$_id"]
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 1,
-                                    company_data: 1,
-                                }
-                            }
-                        ],
-                        as: "company_data"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$company_data",
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $addFields : {
-                        company : "$company_data.company_data"
-                    }
-                },
-                {
-                    $project: {
-                        company_data: 0
-                    }
                 },
                 {
                     $sort: {
@@ -707,8 +707,8 @@ exports.getSavedJobs = async (req, res) => {
                                 }
                             },
                             {
-                                $project : {
-                                    company_data : 0
+                                $project: {
+                                    company_data: 0
                                 }
                             }
                         ]
