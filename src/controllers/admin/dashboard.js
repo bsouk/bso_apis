@@ -11,7 +11,10 @@ const Ads = require("../../models/ads");
 
 exports.dashboardChartData = async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments();
+        const totalUsers = await User.countDocuments({
+            profile_completed: true,
+            is_deleted: false,
+        });
         const totalBuyer = await User.countDocuments({
             user_type: { $in: ["buyer"] },
             profile_completed: true,
