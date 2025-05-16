@@ -13,23 +13,27 @@ exports.dashboardChartData = async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
         const totalBuyer = await User.countDocuments({
-            user_type: { $in: ["buyer"] }, profile_completed: true,
+            user_type: { $in: ["buyer"] },
+            profile_completed: true,
             is_deleted: false,
         });
         const totalSupplier = await User.countDocuments({
             user_type: {
-                $in: ["supplier"], profile_completed: true,
-                is_deleted: false,
-            }
+                $in: ["supplier"],
+            },
+            profile_completed: true,
+            is_deleted: false,
         });
         const totalLogistics = await User.countDocuments({
             user_type: {
-                $in: ["logistics"], profile_completed: true,
-                is_deleted: false,
-            }
+                $in: ["logistics"],
+            },
+            profile_completed: true,
+            is_deleted: false,
         });
         const totalResource = await User.countDocuments({
-            user_type: { $in: ["resource"] }, profile_completed: true,
+            user_type: { $in: ["resource"] },
+            profile_completed: true,
             is_deleted: false,
         });
         return res.status(200).json({
