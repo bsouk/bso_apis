@@ -684,7 +684,7 @@ exports.getSavedJobs = async (req, res) => {
                                     pipeline: [
                                         {
                                             $project: {
-                                                company_data: 1
+                                                company_data: 1,
                                             }
                                         }
                                     ]
@@ -694,6 +694,11 @@ exports.getSavedJobs = async (req, res) => {
                                 $unwind: {
                                     path: "$company_data",
                                     preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $addFields: {
+                                    'company_data': "$company_data.company_data"
                                 }
                             }
                         ]

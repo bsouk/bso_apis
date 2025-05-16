@@ -12,10 +12,26 @@ const Ads = require("../../models/ads");
 exports.dashboardChartData = async (req, res) => {
     try {
         const totalUsers = await User.countDocuments();
-        const totalBuyer = await User.countDocuments({ user_type: { $in: ["buyer"] } });
-        const totalSupplier = await User.countDocuments({ user_type: { $in: ["supplier"] } });
-        const totalLogistics = await User.countDocuments({ user_type: { $in: ["logistics"] } });
-        const totalResource = await User.countDocuments({ user_type: { $in: ["resource"] } });
+        const totalBuyer = await User.countDocuments({
+            user_type: { $in: ["buyer"] }, profile_completed: true,
+            is_deleted: false,
+        });
+        const totalSupplier = await User.countDocuments({
+            user_type: {
+                $in: ["supplier"], profile_completed: true,
+                is_deleted: false,
+            }
+        });
+        const totalLogistics = await User.countDocuments({
+            user_type: {
+                $in: ["logistics"], profile_completed: true,
+                is_deleted: false,
+            }
+        });
+        const totalResource = await User.countDocuments({
+            user_type: { $in: ["resource"] }, profile_completed: true,
+            is_deleted: false,
+        });
         return res.status(200).json({
             message: "Dashboard data fetched successfully",
             totalUsers,
@@ -94,12 +110,12 @@ exports.getRevenueChartData = async (req, res) => {
                 { $sort: { _id: 1 } }
             ]);
             console.log("dailyData:", dailyData);
-        
+
             data = Array.from({ length: 24 }, (_, i) => ({
                 hour: i,
                 total: 0
             }));
-        
+
             dailyData.forEach(item => {
                 if (item._id >= 0 && item._id <= 23) {
                     data[item._id] = {
