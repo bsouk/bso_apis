@@ -272,7 +272,7 @@ exports.getCustomerList = async (req, res) => {
 
     const condition = {
       // $or: [{ user_type: "buyer" }, { user_type: "company" }],
-      user_type: { $in: ["buyer", "company"] },
+      user_type: { $in: ["buyer"] },
       profile_completed: true,
       is_deleted: false,
     };
