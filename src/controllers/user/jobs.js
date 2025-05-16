@@ -698,7 +698,12 @@ exports.getSavedJobs = async (req, res) => {
                             },
                             {
                                 $addFields: {
-                                    'company_data': "$company_data.company_data"
+                                    'company': "$company_data.company_data"
+                                }
+                            },
+                            {
+                                $project : {
+                                    company_data : 0
                                 }
                             }
                         ]
