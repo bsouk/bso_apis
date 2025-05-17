@@ -1003,7 +1003,7 @@ exports.getAllJobHiredResources = async (req, res) => {
                     from: 'ratings',
                     localField: 'canditate_id',
                     foreignField: 'user_id',
-                    as: 'candidate_id.company_rating'
+                    as: 'company_rating'
                 }
             },
             {
@@ -1014,7 +1014,7 @@ exports.getAllJobHiredResources = async (req, res) => {
             },
             {
                 $unwind: {
-                    path: "$candidate_id.company_rating",
+                    path: "$company_rating",
                     preserveNullAndEmptyArrays: true
                 }
             },
