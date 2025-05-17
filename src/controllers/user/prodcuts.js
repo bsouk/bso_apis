@@ -189,7 +189,7 @@ exports.getProduct = async (req, res) => {
 
 exports.getProductList = async (req, res) => {
   try {
-    const { search, offset = 0, limit = 10, category_id } = req.query;
+    const { search, offset = 0, limit = 10, category_id, status } = req.query;
 
     const filter = {
       is_deleted: { $ne: true },
@@ -198,6 +198,10 @@ exports.getProductList = async (req, res) => {
 
     if (search) {
       filter.name = { $regex: search, $options: "i" };
+    }
+
+    if(status){
+      filter.is_admin_approved = status
     }
 
     // if (category_id) {

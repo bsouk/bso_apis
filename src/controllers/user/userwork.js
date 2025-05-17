@@ -5675,3 +5675,39 @@ exports.addResourceRating = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
+exports.getMyResourceRating = async (req, res) => {
+    try {
+        const id = req.user._id
+        console.log("id : ", id)
+
+        const ratingdata = await Rating.find({ user_id: id })
+        console.log("ratingdata : ", ratingdata)
+
+        let chart = await Rating.aggregate([
+            {
+                $match: {
+                    user_id : new mongoose.Types.ObjectId(id)
+                }
+            },
+            {
+                $group: {
+                    _id: "$count",
+                    sum: { $sum: 1 }
+                }
+            }
+        ])
+        console.log("chart : ", chart)
+
+        chart = chart.map(i => ({
+            count: i._id,
+            total: i.sum
+        }))
+        return res.status(200).json({ message: "data fetched successfully", data: ratingdata, chart: chart })
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
+    }
+}

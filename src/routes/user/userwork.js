@@ -512,4 +512,11 @@ router.post(
     controller.addResourceRating
 )
 
+router.get(
+    "/getMyResourceRating",
+    requireAuth,
+    trimRequest.all,
+    controller.getMyResourceRating
+)
+
 module.exports = router;
