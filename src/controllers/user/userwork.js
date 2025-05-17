@@ -5653,7 +5653,7 @@ exports.addResourceRating = async (req, res) => {
         const totalsum = await Rating.aggregate([
             {
                 $match: {
-                    user_id: resource_id
+                    user_id: new mongoose.Types.ObjectId(resource_id)
                 }
             },
             {
@@ -5663,8 +5663,10 @@ exports.addResourceRating = async (req, res) => {
                 }
             }
         ])
-        console.log("totalrating : ", totalrating, " totalsum : ", totalsum)
-        user.rating = totalsum[0]?.sum / totalrating
+        console.log("totalrating : ", totalrating, " totalsum : ", totalsum[0].sum)
+        let finalrating = totalsum[0].sum / totalrating
+        console.log("finalrating : ", finalrating)
+        user.rating = finalrating
         await user.save()
 
         return res.status(200).json({ message: "resource rating added successfully", data: newrating })
