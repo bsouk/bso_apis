@@ -5680,7 +5680,7 @@ exports.addResourceRating = async (req, res) => {
 
 exports.getMyResourceRating = async (req, res) => {
     try {
-        const id = req.user._id
+        const { id } = req.params
         console.log("id : ", id)
 
         const ratingdata = await Rating.find({ user_id: id })
@@ -5689,7 +5689,7 @@ exports.getMyResourceRating = async (req, res) => {
         let chart = await Rating.aggregate([
             {
                 $match: {
-                    user_id : new mongoose.Types.ObjectId(id)
+                    user_id: new mongoose.Types.ObjectId(id)
                 }
             },
             {

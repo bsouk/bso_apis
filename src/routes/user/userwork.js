@@ -513,7 +513,7 @@ router.post(
 )
 
 router.get(
-    "/getMyResourceRating",
+    "/getMyResourceRating/:id",
     requireAuth,
     trimRequest.all,
     controller.getMyResourceRating
