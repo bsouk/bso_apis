@@ -3,6 +3,7 @@ const utils = require("../../utils/utils");
 const jobs = require("../../models/jobs");
 const User = require("../../models/user");
 const job_applications = require("../../models/job_applications");
+const saved_job = require("../../models/saved_job")
 const industry_type = require("../../models/industry_type");
 const industry_sub_type = require("../../models/industry_sub_type");
 const user = require("../../models/user");
@@ -316,7 +317,9 @@ exports.deleteJobs = async (req, res) => {
         const { ids } = req.body
         console.log('ids : ', req.body)
         const result = await jobs.deleteMany({ _id: { $in: ids } })
-        console.log('deleted jobs : ', result)
+        const allja = await job_applications.deleteMany({job_id : { $in : ids } })
+        const allsj = await saved_job.deleteMany({job_id : { $in : ids } })
+        console.log('deleted jobs : ', result, allja, allsj)
         return res.status(200).json({
             message: "Job deleted successfully",
             code: 200
