@@ -5664,12 +5664,7 @@ exports.addResourceRating = async (req, res) => {
             }
         ])
         console.log("totalrating : ", totalrating, " totalsum : ", totalsum)
-
-        if (totalsum.length === 0) {
-            user.rating = 0
-        } else {
-            user.rating = totalsum[0]?.sum / totalrating
-        }
+        user.rating = totalsum[0]?.sum / totalrating
         await user.save()
 
         return res.status(200).json({ message: "resource rating added successfully", data: newrating })
