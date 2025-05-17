@@ -984,14 +984,55 @@ exports.getAllJobHiredResources = async (req, res) => {
         const companyId = req.user._id
         console.log('company id : ', companyId)
         const { offset = 0, limit = 10 } = req.query
-        const applicants = await job_applications.find({ company_id: companyId, is_accepted_by_company: true, application_status: "accepted" }).populate('canditate_id').sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
+        const applicants = await job_applications.aggregate([
+            {
+                $match: {
+                    company_id: new mongoose.Types.ObjectId(companyId), is_accepted_by_company: true, application_status: "accepted"
+                }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: 'canditate_id',
+                    foreignField: '_id',
+                    as: 'candidate_id'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'ratings',
+                    localField: 'canditate_id',
+                    foreignField: 'user_id',
+                    as: 'candidate_id.company_rating'
+                }
+            },
+            {
+                $unwind: {
+                    path: "$candidate_id",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $unwind: {
+                    path: "$candidate_id.company_rating",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $skip: parseInt(offset)
+            },
+            {
+                $limit: parseInt(limit)
+            }
+        ])
+
+        // find({ company_id: companyId, is_accepted_by_company: true, application_status: "accepted" }).populate('canditate_id').sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
         const count = await job_applications.countDocuments({ company_id: companyId, is_accepted_by_company: true, application_status: "accepted" })
-        // if (!applicants || applicants.length === 0) {
-        //     return utils.handleError(res, {
-        //         message: "No record found",
-        //         code: 404,
-        //     });
-        // }
         return res.status(200).json({
             message: "Hired resources fetched successfully",
             data: applicants,
