@@ -2,6 +2,7 @@ const User = require("../../models/user");
 const Address = require("../../models/address");
 const Supplier = require("../../models/supplier")
 const Admin = require("../../models/admin")
+const Rating = require("../../models/rating")
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
@@ -5615,6 +5616,66 @@ exports.addSuppliercollectiondata = async (req, res) => {
         }
 
         return res.status(200).json({ message: "collection data added", data: quotedata, code: 200 });
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.addResourceRating = async (req, res) => {
+    try {
+        const id = req.user._id
+        console.log("company id : ", id)
+        const { rating, comment, resource_id } = req.body
+        const user = await User.findOne({ _id: resource_id })
+        console.log("user : ", user)
+
+        const isexist = await Rating.findOne({ user_id: resource_id, company_id: id })
+        console.log("isexist : ", isexist)
+
+        let newrating = {}
+
+        if (!isexist) {
+            newrating = await Rating.create({
+                user_id: resource_id,
+                company_id: id,
+                count: rating,
+                comment: comment
+            })
+            console.log("newrating : ", newrating)
+        } else {
+            newrating = await Rating.findOneAndUpdate({ user_id: resource_id, company_id: id }, {
+                count: rating,
+                comment: comment
+            }, { new: true })
+            console.log("newrating : ", newrating)
+        }
+
+        const totalrating = await Rating.countDocuments({ user_id: resource_id })
+        const totalsum = await Rating.aggregate([
+            {
+                $match: {
+                    user_id: resource_id
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id",
+                    sum: { $sum: "$count" }
+                }
+            }
+        ])
+        console.log("totalrating : ", totalrating, " totalsum : ", totalsum)
+
+        if (totalsum.length === 0) {
+            user.rating = 0
+        } else {
+            user.rating = totalsum[0]?.sum / totalrating
+        }
+        await user.save()
+
+        return res.status(200).json({ message: "resource rating added successfully", data: newrating })
     } catch (error) {
         console.log(error);
         utils.handleError(res, error);

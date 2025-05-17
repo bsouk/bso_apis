@@ -468,6 +468,10 @@ const UserSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "accepted", "rejected"],
       default: "pending",
+    },
+    rating: {
+      type: Number,
+      default: 0
     }
   },
   {

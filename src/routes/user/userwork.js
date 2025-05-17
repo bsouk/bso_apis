@@ -489,20 +489,27 @@ router.post(
     requireAuth,
     trimRequest.all,
     controller.addFCMDevice
-  )
-  
-  router.post(
+)
+
+router.post(
     "/deleteFCMDevice",
     requireAuth,
     trimRequest.all,
     controller.deleteFCMDevice
-  )
+)
 
-  router.post(
+router.post(
     "/addSuppliercollectiondata",
     requireAuth,
     trimRequest.all,
     controller.addSuppliercollectiondata
-  )
+)
+
+router.post(
+    "/addResourceRating",
+    requireAuth,
+    trimRequest.all,
+    controller.addResourceRating
+)
 
 module.exports = router;
