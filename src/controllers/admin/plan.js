@@ -16,7 +16,9 @@ async function intervalCount(interval) {
         return 1
     } else if (interval === "yearly") {
         return 12
-    } else {
+    } else if (interval === "lifetime") {
+        return 0
+    }else {
         return 1
     }
 }
@@ -53,33 +55,44 @@ exports.createPlan = async (req, res) => {
             },
         });
 
-        const interval_count = await intervalCount(data.interval);
+        const interval_count = await intervalCount(data?.interval);
         let newinterval = ''
-        switch (data.interval) {
+        switch (data?.interval) {
             case 'monthly': newinterval = 'month'; break;
             case 'yearly': newinterval = 'year'; break;
             case 'weekly': newinterval = 'week'; break;
             case 'daily': newinterval = 'day'; break;
-            default: newinterval = 'month'; break;
+            default: newinterval = 'lifetime'; break;
         }
         console.log("newinterval : ", newinterval)
-        const price = await stripe.prices.create({
-            unit_amount: Math.round(data.price * 100),
-            currency: data.currency || 'usd',
-            recurring: {
-                interval: newinterval,
-                interval_count: interval_count,
-            },
-            product: product.id,
-            metadata: {
-                pricing_type: 'base'
-            }
-        });
-
+        let price = {}
         let per_user_price = {}
-        if (data.price_per_person && data.price_per_person > 0) {
-            per_user_price = await stripe.prices.create({
-                unit_amount: Math.round(data.price_per_person * 100),
+        if (newinterval == "lifetime") {
+            price = await stripe.prices.create({
+                unit_amount: Math.round(data.price * 100),
+                currency: data.currency || 'usd',
+                product: product.id,
+                metadata: {
+                    pricing_type: 'base',
+                    lifetime: 'true'
+                }
+            });
+
+            if (data.price_per_person && data.price_per_person > 0) {
+                per_user_price = await stripe.prices.create({
+                    unit_amount: Math.round(data.price_per_person * 100),
+                    currency: data.currency || 'usd',
+                    product: product.id,
+                    metadata: {
+                        pricing_type: 'per_user',
+                        lifetime: 'true'
+                    }
+                });
+                console.log("Created per-user price:", per_user_price?.id);
+            }
+        } else {
+            price = await stripe.prices.create({
+                unit_amount: Math.round(data.price * 100),
                 currency: data.currency || 'usd',
                 recurring: {
                     interval: newinterval,
@@ -87,13 +100,28 @@ exports.createPlan = async (req, res) => {
                 },
                 product: product.id,
                 metadata: {
-                    pricing_type: 'per_user'
+                    pricing_type: 'base'
                 }
             });
-            console.log("Created per-user price:", per_user_price?.id);
+
+            if (data.price_per_person && data.price_per_person > 0) {
+                per_user_price = await stripe.prices.create({
+                    unit_amount: Math.round(data.price_per_person * 100),
+                    currency: data.currency || 'usd',
+                    recurring: {
+                        interval: newinterval,
+                        interval_count: interval_count,
+                    },
+                    product: product.id,
+                    metadata: {
+                        pricing_type: 'per_user'
+                    }
+                });
+                console.log("Created per-user price:", per_user_price?.id);
+            }
         }
 
-        console.log("product : ", product, " price : ", price)
+        console.log("product : ", product, " price : ", price, " per_user_price : ", per_user_price);
 
         data.plan_id = planId
         data.interval_count = interval_count

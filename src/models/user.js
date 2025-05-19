@@ -365,7 +365,7 @@ const UserSchema = new mongoose.Schema(
       business_category: {
         type: String
       },
-      country_code: String,
+      phone_number_code: String,
       phone_number: {
         type: Number,
       },

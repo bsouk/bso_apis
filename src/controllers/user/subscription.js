@@ -67,6 +67,36 @@ exports.genrateClientScretKey = async (req, res) => {
             });
         }
 
+        const result = await Subscription.aggregate([
+            {
+                $match: {
+                    user_id: new mongoose.Types.ObjectId(userid),
+                    type: plandata.type
+                }
+            },
+            {
+                $lookup: {
+                    from: 'plans',
+                    localField: 'plan_id',
+                    foreignField: 'plan_id',
+                    as: 'plan'
+                }
+            },
+            {
+                $unwind: "$plan",
+                preserveNullAndEmptyArrays: true
+            }
+        ])
+        console.log("result : ", result)
+
+        if (result.length !== 0) {
+            if (result[0]?.plan?.interval === "lifetime") {
+                return res.status(404).json({
+                    message: "Already have a lifetime access",
+                    code: 404
+                });
+            }
+        }
         let customer = await getCustomerByEmail(user.email);
         if (!customer) {
             customer = await createStripeCustomer(user);
