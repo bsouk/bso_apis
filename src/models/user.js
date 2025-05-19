@@ -333,7 +333,7 @@ const UserSchema = new mongoose.Schema(
           type: String
         },
         zip_code: {
-          type: Number
+          type: String
         },
         country: {
           type: String
@@ -386,7 +386,7 @@ const UserSchema = new mongoose.Schema(
           type: String
         },
         zip_code: {
-          type: Number
+          type: String
         },
         country: {
           type: String
@@ -410,7 +410,7 @@ const UserSchema = new mongoose.Schema(
         type: String
       },
       zip_code: {
-        type: Number
+        type: String
       },
       country: {
         type: String

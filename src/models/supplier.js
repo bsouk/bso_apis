@@ -89,7 +89,7 @@ const SupplierSchema = new mongoose.Schema({
         type: String
       },
       zip_code: {
-        type: Number
+        type: String
       },
       country: {
         type: String
@@ -135,7 +135,7 @@ const SupplierSchema = new mongoose.Schema({
         type: String
       },
       zip_code: {
-        type: Number
+        type: String
       },
       country: {
         type: String
@@ -156,7 +156,7 @@ const SupplierSchema = new mongoose.Schema({
       type: String
     },
     zip_code: {
-      type: Number
+      type: String
     },
     country: {
       type: String
