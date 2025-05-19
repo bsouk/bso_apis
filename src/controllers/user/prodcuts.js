@@ -189,7 +189,7 @@ exports.getProduct = async (req, res) => {
 
 exports.getProductList = async (req, res) => {
   try {
-    const { search, offset = 0, limit = 10, category_id, status } = req.query;
+    const { search, offset = 0, limit = 10, category_id, status, from, to, time_filter } = req.query;
 
     const filter = {
       is_deleted: { $ne: true },
@@ -200,7 +200,7 @@ exports.getProductList = async (req, res) => {
       filter.name = { $regex: search, $options: "i" };
     }
 
-    if(status){
+    if (status) {
       filter.is_admin_approved = status
     }
 
@@ -214,6 +214,75 @@ exports.getProductList = async (req, res) => {
         filter.category_id = { $in: categoryIds.map(id => new mongoose.Types.ObjectId(id)) };
       }
     }
+
+    if (from && to) {
+      let newfrom = new Date(from);
+      let newto = new Date(to);
+      console.log("newfrom : ", newfrom, " newto : ", newto);
+      filter.createdAt = { $gte: newfrom, $lte: newto }
+    }
+
+    if (time_filter) {
+      const now = new Date();
+      let start, end;
+
+      switch (time_filter) {
+        case 'today': {
+          start = new Date(now.setHours(0, 0, 0, 0));
+          end = new Date(now.setHours(23, 59, 59, 999));
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'this_week': {
+          start = new Date();
+          start.setDate(now.getDate() - 6);
+          start.setHours(0, 0, 0, 0);
+
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'this_month': {
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'previous_month': {
+          const prevMonth = now.getMonth() - 1;
+          const year = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+          const month = (prevMonth + 12) % 12;
+          start = new Date(year, month, 1);
+          end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'this_year': {
+          // start = new Date(now.getFullYear(), 0, 1);
+          // end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+          start = new Date();
+          start.setFullYear(start.getFullYear() - 1);
+          start.setHours(0, 0, 0, 0);
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        default:
+          break;
+      }
+      if (start && end) {
+        filter.createdAt = { $gte: start, $lte: end };
+      }
+    }
+
+    console.log("filter : ", filter)
 
     // const productlist = await Product.find(filter)
     //   .sort({ createdAt: -1 })
