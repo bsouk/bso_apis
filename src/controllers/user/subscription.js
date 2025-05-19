@@ -83,8 +83,10 @@ exports.genrateClientScretKey = async (req, res) => {
                 }
             },
             {
-                $unwind: "$plan",
-                preserveNullAndEmptyArrays: true
+                $unwind: {
+                    path: "$plan",
+                    preserveNullAndEmptyArrays: true
+                }
             }
         ])
         console.log("result : ", result)
