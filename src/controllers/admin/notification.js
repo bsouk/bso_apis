@@ -55,7 +55,7 @@ exports.sendNotification = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: "fcmdevices",
+                    from: "fcm_devices",
                     localField: "_id",
                     foreignField: "user_id",
                     as: "device_token"
@@ -67,6 +67,11 @@ exports.sendNotification = async (req, res) => {
                     preserveNullAndEmptyArrays: true,
                 },
             },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            }
         ])
         console.log("users : ", users)
 
@@ -84,7 +89,7 @@ exports.sendNotification = async (req, res) => {
                 body: body
             }
             notificationToCreate.push(notificationData);
-            if (element.notification === true && element?.device_token) {
+            if (element?.device_token) {
                 device_tokens.push(element?.device_token?.token)
                 let notificationbody = {
                     title: title,
