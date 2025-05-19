@@ -361,6 +361,182 @@ exports.getProductList = async (req, res) => {
   }
 };
 
+exports.getMyProductList = async (req, res) => {
+  try {
+    const id = req.user._id
+    const { search, offset = 0, limit = 10, category_id, status, from, to, time_filter } = req.query;
+
+    const filter = {
+      user_id: new mongoose.Types.ObjectId(id),
+      is_deleted: { $ne: true },
+      is_admin_approved: "approved"
+    };
+
+    if (search) {
+      filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (status) {
+      filter.is_admin_approved = status
+    }
+
+    // if (category_id) {
+    //   filter.category_id = { $in: [new mongoose.Types.ObjectId(category_id)] }
+    // }
+
+    if (category_id) {
+      const categoryIds = category_id.split(',').map(id => id.trim()).filter(mongoose.Types.ObjectId.isValid);
+      if (categoryIds.length) {
+        filter.category_id = { $in: categoryIds.map(id => new mongoose.Types.ObjectId(id)) };
+      }
+    }
+
+    if (from && to) {
+      let newfrom = new Date(from);
+      let newto = new Date(to);
+      console.log("newfrom : ", newfrom, " newto : ", newto);
+      filter.createdAt = { $gte: newfrom, $lte: newto }
+    }
+
+    if (time_filter) {
+      const now = new Date();
+      let start, end;
+
+      switch (time_filter) {
+        case 'today': {
+          start = new Date(now.setHours(0, 0, 0, 0));
+          end = new Date(now.setHours(23, 59, 59, 999));
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'this_week': {
+          start = new Date();
+          start.setDate(now.getDate() - 6);
+          start.setHours(0, 0, 0, 0);
+
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'this_month': {
+          start = new Date(now.getFullYear(), now.getMonth(), 1);
+          end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'previous_month': {
+          const prevMonth = now.getMonth() - 1;
+          const year = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+          const month = (prevMonth + 12) % 12;
+          start = new Date(year, month, 1);
+          end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        case 'this_year': {
+          // start = new Date(now.getFullYear(), 0, 1);
+          // end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+          start = new Date();
+          start.setFullYear(start.getFullYear() - 1);
+          start.setHours(0, 0, 0, 0);
+          end = new Date();
+          end.setHours(23, 59, 59, 999);
+          console.log("start : ", start, " end : ", end);
+          break;
+        }
+
+        default:
+          break;
+      }
+      if (start && end) {
+        filter.createdAt = { $gte: start, $lte: end };
+      }
+    }
+
+    console.log("filter : ", filter)
+
+    // const productlist = await Product.find(filter)
+    //   .sort({ createdAt: -1 })
+    //   .skip(offset)
+    //   .limit(limit)
+    //   .populate('category_id').populate('sub_category_id').populate('sub_sub_category_id').populate('brand_id')
+    const productlist = await Product.aggregate([
+      { $match: { ...filter } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'product_categories',
+          localField: 'category_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'product_sub_category_types',
+          localField: 'sub_category_id',
+          foreignField: '_id',
+          as: 'sub_category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'product_sub_sub_category_types',
+          localField: 'sub_sub_category_id',
+          foreignField: '_id',
+          as: 'sub_sub_category'
+        }
+      },
+      {
+        $lookup: {
+          from: 'brands',
+          localField: 'brand_id',
+          foreignField: '_id',
+          as: 'brand'
+        }
+      },
+      { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
+      {
+        $sort: { createdAt: -1 }
+      },
+      {
+        $skip: parseInt(offset)
+      },
+      {
+        $limit: parseInt(limit)
+      },
+      {
+        $project: {
+          'user.password': 0,
+          // 'user.email': 0,
+          user_id: 0,
+          brand_id: 0,
+          category_id: 0,
+          sub_category_id: 0,
+          sub_sub_category_id: 0
+        }
+      }
+    ])
+    const count = await Product.countDocuments(filter);
+    res.json({ data: productlist, count, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
 exports.editProduct = async (req, res) => {
   try {
     const productId = req.params.id
