@@ -5686,6 +5686,17 @@ exports.getMyResourceRating = async (req, res) => {
         const ratingdata = await Rating.find({ user_id: id })
         console.log("ratingdata : ", ratingdata)
 
+        let totalrating = 0
+
+        const count = await Rating.countDocuments({ user_id: id })
+
+        let sum = 0
+        ratingdata.map(i => sum += i.count)
+
+        totalrating = sum / count
+
+        console.log("totalrating : ", totalrating, " sum : ", sum, " count : ", count)
+
         let chart = await Rating.aggregate([
             {
                 $match: {
@@ -5701,11 +5712,31 @@ exports.getMyResourceRating = async (req, res) => {
         ])
         console.log("chart : ", chart)
 
-        chart = chart.map(i => ({
-            count: i._id,
-            total: i.sum
-        }))
-        return res.status(200).json({ message: "data fetched successfully", data: ratingdata, chart: chart })
+        // chart = chart.map(i => ({
+        //     count: i._id,
+        //     total: i.sum
+        // }))
+
+        const chartMap = {};
+        chart.forEach(i => {
+            chartMap[i._id] = i.sum;
+        });
+
+        const normalizedChart = [];
+        for (let i = 1; i <= 5; i++) {
+            normalizedChart.push({
+                count: i,
+                total: chartMap[i] || 0
+            });
+        }
+
+        return res.status(200).json({
+            message: "data fetched successfully",
+            data: ratingdata,
+            average_rating: totalrating,
+            chart: normalizedChart,
+            total_count: count
+        })
     } catch (error) {
         console.log(error);
         utils.handleError(res, error);
