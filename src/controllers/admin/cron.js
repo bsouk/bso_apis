@@ -2,6 +2,7 @@ const cron = require("node-cron");
 const fcm_devices = require("../../models/fcm_devices");
 const Enquiry = require("../../models/Enquiry");
 const Notification = require("../../models/notification")
+const Subscription = require("../../models/subscription")
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const moment = require("moment");
