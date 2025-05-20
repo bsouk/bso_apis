@@ -520,7 +520,7 @@ exports.cancelSubscription = async (req, res) => {
 
     } catch (err) {
         console.error('Cancel subscription error:', err);
-        return res.status(500).json({ error: 'Failed to schedule subscription cancellation' });
+        utils.handleError(res, error);
     }
 }
 

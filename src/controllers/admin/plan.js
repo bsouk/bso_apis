@@ -18,7 +18,7 @@ async function intervalCount(interval) {
         return 12
     } else if (interval === "lifetime") {
         return 0
-    }else {
+    } else {
         return 1
     }
 }
@@ -48,14 +48,19 @@ exports.createPlan = async (req, res) => {
         // //     product: product.id,
         // // });
 
-        const product = await stripe.products.create({
-            name: data.plan_name,
-            description: data.plan_description || '',
-            metadata: data.metadata || {
-            },
-        });
+        let product = {}
+        let interval_count = 0
+        if (data?.interval !== "lifetime") {
+            product = await stripe.products.create({
+                name: data.plan_name,
+                description: data.plan_description || '',
+                metadata: data.metadata || {
+                },
+            });
 
-        const interval_count = await intervalCount(data?.interval);
+            interval_count = await intervalCount(data?.interval);
+        }
+
         let newinterval = ''
         switch (data?.interval) {
             case 'monthly': newinterval = 'month'; break;
@@ -67,30 +72,31 @@ exports.createPlan = async (req, res) => {
         console.log("newinterval : ", newinterval)
         let price = {}
         let per_user_price = {}
-        if (newinterval == "lifetime") {
-            price = await stripe.prices.create({
-                unit_amount: Math.round(data.price * 100),
-                currency: data.currency || 'usd',
-                product: product.id,
-                metadata: {
-                    pricing_type: 'base',
-                    lifetime: 'true'
-                }
-            });
+        // if (newinterval == "lifetime") {
+        //     price = await stripe.prices.create({
+        //         unit_amount: Math.round(data.price * 100),
+        //         currency: data.currency || 'usd',
+        //         product: product.id,
+        //         metadata: {
+        //             pricing_type: 'base',
+        //             lifetime: 'true'
+        //         }
+        //     });
 
-            if (data.price_per_person && data.price_per_person > 0) {
-                per_user_price = await stripe.prices.create({
-                    unit_amount: Math.round(data.price_per_person * 100),
-                    currency: data.currency || 'usd',
-                    product: product.id,
-                    metadata: {
-                        pricing_type: 'per_user',
-                        lifetime: 'true'
-                    }
-                });
-                console.log("Created per-user price:", per_user_price?.id);
-            }
-        } else {
+        //     if (data.price_per_person && data.price_per_person > 0) {
+        //         per_user_price = await stripe.prices.create({
+        //             unit_amount: Math.round(data.price_per_person * 100),
+        //             currency: data.currency || 'usd',
+        //             product: product.id,
+        //             metadata: {
+        //                 pricing_type: 'per_user',
+        //                 lifetime: 'true'
+        //             }
+        //         });
+        //         console.log("Created per-user price:", per_user_price?.id);
+        //     }
+        // }
+        if (newinterval !== "lifetime") {
             price = await stripe.prices.create({
                 unit_amount: Math.round(data.price * 100),
                 currency: data.currency || 'usd',
@@ -124,9 +130,9 @@ exports.createPlan = async (req, res) => {
         console.log("product : ", product, " price : ", price, " per_user_price : ", per_user_price);
 
         data.plan_id = planId
-        data.interval_count = interval_count
-        data.stripe_product_id = product.id
-        data.stripe_price_id = price.id
+        data.interval_count = interval_count ? interval_count : 0
+        data.stripe_product_id = product.id || ""
+        data.stripe_price_id = price.id || ""
         data.stripe_per_user_price_id = per_user_price?.id || ""
         const newplan = await plan.create(data);
         console.log("newplan : ", newplan)
