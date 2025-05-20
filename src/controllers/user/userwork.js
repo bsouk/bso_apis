@@ -4023,7 +4023,7 @@ exports.checksubscriptions = async (req, res) => {
     try {
         const userId = req.user._id;
         console.log(userId)
-        const subscription = await Subscription.find({
+        let subscription = await Subscription.find({
             user_id: userId,
             status: 'active',
         });
@@ -4035,22 +4035,28 @@ exports.checksubscriptions = async (req, res) => {
             });
         }
 
+        const subscriptionWithRecurring = [];
+
         for (const i of subscription) {
             try {
                 const stripeSubscription = await stripe.subscriptions.retrieve(i?.stripe_subscription_id);
                 const isRecurring = stripeSubscription.items.data[0]?.price?.recurring !== null;
-                i.is_recurring = isRecurring;
                 console.log("Is recurring?", isRecurring);
+                const subObj = i.toObject();
+                subObj.is_recurring = isRecurring;
+                subscriptionWithRecurring.push(subObj);
             } catch (err) {
                 console.error(`Error retrieving subscription ${i?.stripe_subscription_id}:`, err.message);
-                i.is_recurring = false;
+                const subObj = i.toObject();
+                subObj.is_recurring = false;
+                subscriptionWithRecurring.push(subObj);
             }
         }
 
 
         return res.status(200).json({
             message: "Active subscription found",
-            data: subscription,
+            data: subscriptionWithRecurring,
             code: 200
         });
 
