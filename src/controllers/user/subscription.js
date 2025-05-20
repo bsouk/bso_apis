@@ -188,7 +188,7 @@ exports.createSubscription = async (req, res) => {
             });
         }
 
-        const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type })
+        const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type, status: "active" })
         console.log("result : ", result)
 
         if (result) {
@@ -372,7 +372,7 @@ exports.createFreeSubscription = async (req, res) => {
             });
         }
 
-        const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type })
+        const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type, status: "active" })
         console.log("result : ", result)
 
         if (result) {
