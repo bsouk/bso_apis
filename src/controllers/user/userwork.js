@@ -4035,12 +4035,18 @@ exports.checksubscriptions = async (req, res) => {
             });
         }
 
-        subscription.forEach(async i => {
-            const stripesubscription = await stripe.subscriptions.retrieve(i?.stripe_subscription_id);
-            const isRecurring = stripesubscription.items.data[0].price.recurring !== null;
-            i.is_recurring = isRecurring
-            console.log("Is recurring?", isRecurring);
-        })
+        for (const i of subscription) {
+            try {
+                const stripeSubscription = await stripe.subscriptions.retrieve(i?.stripe_subscription_id);
+                const isRecurring = stripeSubscription.items.data[0]?.price?.recurring !== null;
+                i.is_recurring = isRecurring;
+                console.log("Is recurring?", isRecurring);
+            } catch (err) {
+                console.error(`Error retrieving subscription ${i?.stripe_subscription_id}:`, err.message);
+                i.is_recurring = false;
+            }
+        }
+
 
         return res.status(200).json({
             message: "Active subscription found",
