@@ -3832,7 +3832,7 @@ exports.searchenquiry = async (req, res) => {
         if (search) {
             aggregationPipeline.push({
                 $match: {
-                    enquiry_unique_id: search
+                    enquiry_unique_id: '#' + search?.replace('#', '')
                 }
             });
         }
