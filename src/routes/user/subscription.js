@@ -35,4 +35,20 @@ router.post(
     controller.createSubscription
 )
 
+
+router.post(
+    "/createFreeSubscription",
+    trimRequest.all,
+    requireAuth,
+    controller.createFreeSubscription
+)
+
+
+router.post(
+    "/cancelSubscription",
+    trimRequest.all,
+    requireAuth,
+    controller.cancelSubscription
+)
+
 module.exports = router

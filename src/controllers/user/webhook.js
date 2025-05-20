@@ -29,7 +29,7 @@ exports.handleStripeWebhook = async (req, res) => {
             const invoice = event.data.object;
             await Subscription.updateOne(
                 { stripe_subscription_id: invoice.subscription },
-                { 
+                {
                     status: 'active',
                     end_at: new Date(invoice.period_end * 1000)
                 }
@@ -41,6 +41,17 @@ exports.handleStripeWebhook = async (req, res) => {
             await Subscription.updateOne(
                 { stripe_subscription_id: failedInvoice.subscription },
                 { status: 'payment_failed' }
+            );
+            break;
+
+        case 'customer.subscription.deleted':
+            const deletedSubscription = event.data.object;
+            await Subscription.updateOne(
+                { stripe_subscription_id: deletedSubscription.id },
+                {
+                    status: 'terminated',
+                    end_at: new Date(deletedSubscription.current_period_end * 1000)
+                }
             );
             break;
 

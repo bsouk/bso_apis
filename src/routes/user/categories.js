@@ -16,6 +16,12 @@ router.get(
     controller.getCategoryList
 )
 
+router.post(
+    '/addBusinessCategory',
+    trimRequest.all,
+    controller.addBusinessCategory
+)
+
 router.get(
     '/getBusinessCategories',
     trimRequest.all,

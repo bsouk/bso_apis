@@ -178,6 +178,17 @@ exports.createSubscription = async (req, res) => {
                 code: 404,
             });
         }
+
+        const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type })
+        console.log("result : ", result)
+
+        if (result) {
+            return utils.handleError(res, {
+                message: "Already have an active Subscription. cancel it first !",
+                code: 404,
+            });
+        }
+
         const plandata = await plan.findOne({ plan_id: data?.plan_id })
         console.log("plandata : ", plandata)
         if (!plandata) {
@@ -274,8 +285,8 @@ exports.createSubscription = async (req, res) => {
         }
 
         console.log("newdata : ", newdata)
-        const result = await Subscription.updateMany({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type }, { status: 'terminated' }, { new: true })
-        console.log("result : ", result)
+        // const result = await Subscription.updateMany({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type }, { status: 'terminated' }, { new: true })
+        // console.log("result : ", result)
         const newsubscription = await Subscription.create(newdata);
         console.log("subscription : ", newsubscription)
 
@@ -335,6 +346,141 @@ exports.createSubscription = async (req, res) => {
             });
         }
         utils.handleError(res, error);
+    }
+}
+
+exports.createFreeSubscription = async (req, res) => {
+    try {
+        const { plan_id } = req.body;
+        const userid = req.user._id
+
+        const userdata = await User.findOne({ _id: userid })
+        console.log("userdata : ", userdata)
+        if (!userdata) {
+            return utils.handleError(res, {
+                message: "user not found",
+                code: 404,
+            });
+        }
+
+        const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type })
+        console.log("result : ", result)
+
+        if (result) {
+            return utils.handleError(res, {
+                message: "Already have an active Subscription",
+                code: 404,
+            });
+        }
+
+        const plandata = await plan.findOne({ plan_id: plan_id })
+        console.log("plandata : ", plandata)
+        if (!plandata) {
+            return utils.handleError(res, {
+                message: "Plan not found",
+                code: 404,
+            });
+        }
+
+        if (plandata.type !== "buyer" || plandata.type !== "resource") {
+            return utils.handleError(res, {
+                message: `Invalid plan`,
+                code: 404,
+            });
+        }
+
+        let newdata = {
+            user_id: userdata?._id,
+            subscription_id: await genrateSubscriptionId(),
+            plan_id: data.plan_id,
+            start_at: new Date(),
+            end_at: null,
+            status: "active",
+            type: plandata.type,
+            subscription_type: "unpaid"
+        }
+
+        console.log("newdata : ", newdata)
+        const newsubscription = await Subscription.create(newdata);
+        console.log("subscription : ", newsubscription)
+
+
+        // admin notification
+        const admins = await Admin.findOne({ role: 'super_admin' });
+        console.log("admins : ", admins)
+
+        if (admins) {
+            const notificationMessage = {
+                title: 'New Subscription created',
+                description: `${userdata.full_name} has created a new subscription . Plan ID : ${newsubscription.plan_id}`,
+                user_id: userid
+            };
+
+            const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+            console.log("adminFcmDevices : ", adminFcmDevices)
+
+            if (adminFcmDevices && adminFcmDevices.length > 0) {
+                adminFcmDevices.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const adminNotificationData = {
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    // description: notificationMessage.description,
+                    type: "new_subscription",
+                    receiver_id: admins._id,
+                    related_to: userid,
+                    related_to_type: "user",
+                    user_type: plandata.type
+                };
+                const newAdminNotification = new admin_received_notification(adminNotificationData);
+                console.log("newAdminNotification : ", newAdminNotification)
+                await newAdminNotification.save();
+            }
+        }
+        return res.status(200).json({
+            message: "Subscription created successfully",
+            data: newsubscription,
+            code: 200
+        })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.cancelSubscription = async (req, res) => {
+    try {
+        const { subscriptionId } = req.body;
+
+        const subscription = await Subscription.findOne({ subscription_id: subscriptionId });
+
+        if (!subscription) {
+            return utils.handleError(res, {
+                message: "Subscription not found",
+                code: 404,
+            });
+        }
+
+        const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+            cancel_at_period_end: true
+        });
+
+        subscription.status = 'cancelled_scheduled';
+        // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
+        await subscription.save();
+
+        return res.status(200).json({
+            message: 'Subscription cancellation scheduled at period end.',
+            data: stripeSub
+        });
+
+    } catch (err) {
+        console.error('Cancel subscription error:', err);
+        return res.status(500).json({ error: 'Failed to schedule subscription cancellation' });
     }
 }
 

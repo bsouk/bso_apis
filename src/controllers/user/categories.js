@@ -62,6 +62,33 @@ exports.getCategoryList = async (req, res) => {
     }
 };
 
+exports.addBusinessCategory = async (req, res) => {
+    try {
+        console.log("req.body is ", req.body)
+
+        const isExisted = await business_category.findOne({ name: req.body.name })
+
+        if (isExisted) {
+            return utils.handleError(res, {
+                message: "Business Category already existed",
+                code: 404,
+            });
+        }
+
+        const data = new business_category(req.body);
+        await data.save()
+        console.log("data is ", data)
+
+        return res.status(200).json({
+            message: "Business category added successfully",
+            data: data,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
 exports.getBusinessCategories = async (req, res) => {
     try {
         const data = await business_category.find()
