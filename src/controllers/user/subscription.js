@@ -454,9 +454,9 @@ exports.createFreeSubscription = async (req, res) => {
 
 exports.cancelSubscription = async (req, res) => {
     try {
-        const { subscriptionId } = req.body;
+        const { subscription_id } = req.body;
 
-        const subscription = await Subscription.findOne({ subscription_id: subscriptionId });
+        const subscription = await Subscription.findOne({ _id: subscription_id });
 
         if (!subscription) {
             return utils.handleError(res, {
