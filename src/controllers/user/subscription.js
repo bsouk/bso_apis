@@ -470,9 +470,12 @@ exports.cancelSubscription = async (req, res) => {
 
         const plandata = await plan.findById(subscription.plan_id);
 
-        const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-            cancel_at_period_end: true
-        });
+        if (subscription.subscription_type === "paid") {
+            const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+                cancel_at_period_end: true
+            });
+            console.log("stripeSub : ", stripeSub)
+        }
 
         subscription.status = 'cancelled_scheduled';
         // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
@@ -516,11 +519,11 @@ exports.cancelSubscription = async (req, res) => {
 
         return res.status(200).json({
             message: 'Subscription cancellation scheduled at period end.',
-            data: stripeSub
+            code: 200
         });
 
-    } catch (err) {
-        console.error('Cancel subscription error:', err);
+    } catch (error) {
+        console.error('Cancel subscription error:', error);
         utils.handleError(res, error);
     }
 }
