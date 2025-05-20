@@ -473,6 +473,42 @@ exports.cancelSubscription = async (req, res) => {
         // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
         await subscription.save();
 
+        // admin notification
+        const admins = await Admin.findOne({ role: 'super_admin' });
+        console.log("admins : ", admins)
+
+        if (admins) {
+            const notificationMessage = {
+                title: 'Existing Subscription cancelled',
+                description: `${userdata.full_name} has cancelled an existing subscription . Plan ID : ${subscription.plan_id}`,
+                user_id: subscription.user_id
+            };
+
+            const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+            console.log("adminFcmDevices : ", adminFcmDevices)
+
+            if (adminFcmDevices && adminFcmDevices.length > 0) {
+                adminFcmDevices.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const adminNotificationData = {
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    // description: notificationMessage.description,
+                    type: "canceled_subscription",
+                    receiver_id: admins._id,
+                    related_to: subscription.user_id,
+                    related_to_type: "user",
+                    user_type: plandata.type
+                };
+                const newAdminNotification = new admin_received_notification(adminNotificationData);
+                console.log("newAdminNotification : ", newAdminNotification)
+                await newAdminNotification.save();
+            }
+        }
+
         return res.status(200).json({
             message: 'Subscription cancellation scheduled at period end.',
             data: stripeSub
