@@ -465,6 +465,10 @@ exports.cancelSubscription = async (req, res) => {
             });
         }
 
+        const userdata = await User.findById(subscription.user_id);
+
+        const plandata = await plan.findById(subscription.plan_id);
+
         const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
             cancel_at_period_end: true
         });
