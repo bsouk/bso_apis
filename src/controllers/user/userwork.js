@@ -4035,14 +4035,16 @@ exports.checksubscriptions = async (req, res) => {
             });
         }
 
-        const stripesubscription = await stripe.subscriptions.retrieve('sub_1RNAchH1wLw5s25QeH5cPeBF');
-        const isRecurring = stripesubscription.items.data[0].price.recurring !== null;
-        console.log("Is recurring?", isRecurring);
+        subscription.forEach(async i => {
+            const stripesubscription = await stripe.subscriptions.retrieve(i?.stripe_subscription_id);
+            const isRecurring = stripesubscription.items.data[0].price.recurring !== null;
+            i.is_recurring = isRecurring
+            console.log("Is recurring?", isRecurring);
+        })
 
         return res.status(200).json({
             message: "Active subscription found",
             data: subscription,
-            is_recurring: isRecurring,
             code: 200
         });
 
