@@ -456,8 +456,9 @@ exports.createFreeSubscription = async (req, res) => {
 exports.cancelSubscription = async (req, res) => {
     try {
         const { subscription_id } = req.body;
+        console.log("data : ", req.body)
 
-        const subscription = await Subscription.findOne({ _id: subscription_id });
+        const subscription = await Subscription.findOne({ _id: new mongoose.Types.ObjectId(subscription_id) });
 
         if (!subscription) {
             return utils.handleError(res, {
@@ -468,7 +469,7 @@ exports.cancelSubscription = async (req, res) => {
 
         const userdata = await User.findById(subscription.user_id);
 
-        const plandata = await plan.findById(subscription.plan_id);
+        const plandata = await plan.findOne({ plan_id: subscription.plan_id });
 
         if (subscription.subscription_type === "paid") {
             const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
