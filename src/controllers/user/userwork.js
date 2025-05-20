@@ -42,6 +42,8 @@ const admin_received_notification = require("../../models/admin_received_notific
 const Order = require("../../models/order");
 const tracking_order = require("../../models/tracking_order");
 const Notification = require("../../models/notification")
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
