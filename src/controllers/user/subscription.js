@@ -179,21 +179,21 @@ exports.createSubscription = async (req, res) => {
             });
         }
 
+        const plandata = await plan.findOne({ plan_id: data?.plan_id })
+        console.log("plandata : ", plandata)
+        if (!plandata) {
+            return utils.handleError(res, {
+                message: "Plan not found",
+                code: 404,
+            });
+        }
+
         const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type })
         console.log("result : ", result)
 
         if (result) {
             return utils.handleError(res, {
                 message: "Already have an active Subscription. cancel it first !",
-                code: 404,
-            });
-        }
-
-        const plandata = await plan.findOne({ plan_id: data?.plan_id })
-        console.log("plandata : ", plandata)
-        if (!plandata) {
-            return utils.handleError(res, {
-                message: "Plan not found",
                 code: 404,
             });
         }
@@ -394,7 +394,7 @@ exports.createFreeSubscription = async (req, res) => {
             subscription_id: await genrateSubscriptionId(),
             plan_id: plan_id,
             start_at: new Date(),
-            end_at : "",
+            end_at: "",
             end_at: null,
             status: "active",
             type: plandata.type,
