@@ -382,7 +382,7 @@ exports.createFreeSubscription = async (req, res) => {
             });
         }
 
-        if (plandata.type !== "buyer" || plandata.type !== "resource") {
+        if (plandata.type !== "buyer" && plandata.type !== "resource") {
             return utils.handleError(res, {
                 message: `Invalid plan`,
                 code: 404,
@@ -392,8 +392,9 @@ exports.createFreeSubscription = async (req, res) => {
         let newdata = {
             user_id: userdata?._id,
             subscription_id: await genrateSubscriptionId(),
-            plan_id: data.plan_id,
+            plan_id: plan_id,
             start_at: new Date(),
+            end_at : "",
             end_at: null,
             status: "active",
             type: plandata.type,

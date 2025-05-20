@@ -30,7 +30,6 @@ const subscriptionSchema = new mongoose.Schema(
         },
         end_at: {
             type: Date,
-            required: true
         },
         type: {
             type: String,
