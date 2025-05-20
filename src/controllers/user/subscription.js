@@ -363,21 +363,21 @@ exports.createFreeSubscription = async (req, res) => {
             });
         }
 
+        const plandata = await plan.findOne({ plan_id: plan_id })
+        console.log("plandata : ", plandata)
+        if (!plandata) {
+            return utils.handleError(res, {
+                message: "Plan not found",
+                code: 404,
+            });
+        }
+
         const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type })
         console.log("result : ", result)
 
         if (result) {
             return utils.handleError(res, {
                 message: "Already have an active Subscription",
-                code: 404,
-            });
-        }
-
-        const plandata = await plan.findOne({ plan_id: plan_id })
-        console.log("plandata : ", plandata)
-        if (!plandata) {
-            return utils.handleError(res, {
-                message: "Plan not found",
                 code: 404,
             });
         }
