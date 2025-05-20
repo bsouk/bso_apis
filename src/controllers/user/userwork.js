@@ -5742,3 +5742,27 @@ exports.getMyResourceRating = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.deleteAccount = async (req, res) => {
+    try {
+        const id = req.user._id
+        const user = await User.findById(id);
+        if (!user)
+            return utils.handleError(res, {
+                message: "Account not found",
+                code: 404,
+            });
+        if (user.is_deleted)
+            return utils.handleError(res, {
+                message: "Account has been already deleted",
+                code: 400,
+            });
+        user.is_deleted = true;
+        await user.save();
+
+        res.json({ message: "Account has been deleted successfully", code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};

@@ -519,4 +519,12 @@ router.get(
     controller.getMyResourceRating
 )
 
+
+router.delete(
+    "/deleteAccount",
+    requireAuth,
+    trimRequest.all,
+    controller.deleteAccount
+)
+
 module.exports = router;
