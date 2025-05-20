@@ -15,7 +15,7 @@ async function intervalCount(interval) {
     if (interval === "monthly") {
         return 1
     } else if (interval === "yearly") {
-        return 12
+        return 1
     } else if (interval === "lifetime") {
         return 0
     } else {
