@@ -196,7 +196,7 @@ exports.editPlan = async (req, res) => {
                         interval: newinterval,
                         interval_count: interval_count,
                     },
-                    product: product.id,
+                    product: plandata.stripe_product_id,
                     metadata: {
                         pricing_type: 'per_user'
                     }
