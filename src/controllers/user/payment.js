@@ -257,6 +257,7 @@ exports.createPaymentIntent = async (req, res) => {
                 total_amount: enquiry_data?.grand_total,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
+                currency: enquiry_data?.currency || 'usd'
             }
             )
             console.log("paymenthistory : ", paymenthistory)
@@ -281,7 +282,7 @@ exports.createPaymentIntent = async (req, res) => {
 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(paymentAmount * 100),
-            currency: 'usd',
+            currency: enquiry_data?.currency || 'usd',
             customer: customer.id,
             automatic_payment_methods: {
                 enabled: true,
@@ -311,7 +312,7 @@ exports.createPaymentIntent = async (req, res) => {
                 customer_id: customer.id,
                 amount: paymentAmount,
                 schedule_id: my_schedule_id,
-                currency: 'usd'
+                currency: paymentIntent?.currency || 'usd'
             },
             code: 200
         });
@@ -390,6 +391,7 @@ exports.appPaymentIntent = async (req, res) => {
                 total_amount: enquiry_data?.grand_total,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
+                currency: enquiry_data?.currency || "usd"
             }
             )
             console.log("paymenthistory : ", paymenthistory)
@@ -422,7 +424,7 @@ exports.appPaymentIntent = async (req, res) => {
                 customer_id: customer.id,
                 amount: paymentAmount,
                 schedule_id: my_schedule_id,
-                currency: 'usd'
+                currency: enquiry_data?.currency || "usd",
             },
             code: 200
         });
