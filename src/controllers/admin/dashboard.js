@@ -1,6 +1,7 @@
 const User = require("../../models/user");
 const Address = require("../../models/address");
 const Order = require("../../models/order")
+const Payment = require("../../models/payment")
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
@@ -94,13 +95,14 @@ exports.getRevenueChartData = async (req, res) => {
 
         let filter = {
             createdAt: { $gte: startOfPeriod, $lte: endOfPeriod },
-            order_status: { $ne: 'cancelled' } // Exclude cancelled orders
+            // order_status: { $ne: 'cancelled' } // Exclude cancelled orders
+            payment_status : {$in : ['succeeded']}
         };
 
         let data = [];
 
         if (selectedPeriod === 'daily') {
-            const dailyData = await Order.aggregate([
+            const dailyData = await Payment.aggregate([
                 { $match: filter },
                 {
                     $project: {
@@ -145,7 +147,7 @@ exports.getRevenueChartData = async (req, res) => {
             const daysInMonth = endOfMonth.getDate();
             const weeksInMonth = Math.ceil((daysInMonth + firstDayOfWeek) / 7);
 
-            const weeksData = await Order.aggregate([
+            const weeksData = await Payment.aggregate([
                 { $match: filter },
                 {
                     $project: {
@@ -196,7 +198,7 @@ exports.getRevenueChartData = async (req, res) => {
                 0
             ).getDate();
             console.log("daysInMonth : ", daysInMonth)
-            const monthlyData = await Order.aggregate([
+            const monthlyData = await Payment.aggregate([
                 { $match: filter },
                 { $project: { day: { $dayOfMonth: "$createdAt" }, total_amount: 1 } },
                 { $group: { _id: "$day", total: { $sum: "$total_amount" } } },
@@ -215,7 +217,7 @@ exports.getRevenueChartData = async (req, res) => {
                 };
             });
         } else if (selectedPeriod === 'yearly') {
-            const yearlyData = await Order.aggregate([
+            const yearlyData = await Payment.aggregate([
                 { $match: filter },
                 { $project: { month: { $month: "$createdAt" }, total_amount: 1 } },
                 { $group: { _id: "$month", total: { $sum: "$total_amount" } } },

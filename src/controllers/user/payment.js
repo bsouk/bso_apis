@@ -439,7 +439,7 @@ exports.paynow = async (req, res) => {
         payment_data.logistics_charges = data?.logistics_charges
         payment_data.supplier_charges = data?.supplier_charges
         payment_data.payment_stage.push({
-            status: confirmedIntent.status || 'success',
+            status: confirmedIntent.status || 'succeeded',
             stripe_payment_intent: confirmedIntent.id,
             stripe_payment_method: data?.payment_method_id,
             payment_method: confirmedIntent.payment_method_types[0],
