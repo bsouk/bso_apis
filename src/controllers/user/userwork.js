@@ -4362,11 +4362,14 @@ exports.selectSupplierQuote = async (req, res) => {
         console.log("selected : ", selected)
 
         let totalprice = 0
+        let supplierfee = 0
         quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
         console.log("totalprice : ", totalprice)
 
         totalprice += (quotedata?.custom_charges_one?.value + quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
         console.log("totalprice : ", totalprice)
+
+        supplierfee = totalprice
 
         let servicefee = 0
         if (activeSubscription[0].plan.plan_step === "direct") {
@@ -4390,7 +4393,7 @@ exports.selectSupplierQuote = async (req, res) => {
         quotedata.final_price = totalprice
         enquiry.grand_total = totalprice
         enquiry.service_charges = servicefee
-        enquiry.supplier_charges = totalprice
+        enquiry.supplier_charges = supplierfee
         await quotedata.save()
         await enquiry.save()
 
