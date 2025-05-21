@@ -26,12 +26,12 @@ const TeamMemberSchema = new mongoose.Schema(
       enum: ["custom", "administrator", "super_manager","manager"],
     },
     permission: {
-      request: { type: String, enum: ["all", "own", "none"], default: "none" },
-      quotation: { type: String, enum: ["all", "own", "none"], default: "none" },
-      inventory: { type: String, enum: ["all", "own", "none"], default: "none" },
-      address: { type: String, enum: ["all", "own", "none"], default: "none" },
-      invoice: { type: String, enum: ["all", "own", "none"], default: "none" },
-      member: { type: String, enum: ["all", "own", "none"], default: "none" },
+      request: { type: String, enum: ["all", "own", "none"], default: "all" },
+      quotation: { type: String, enum: ["all", "own", "none"], default: "all" },
+      inventory: { type: String, enum: ["all", "own", "none"], default: "all" },
+      address: { type: String, enum: ["all", "own", "none"], default: "all" },
+      invoice: { type: String, enum: ["all", "own", "none"], default: "all" },
+      member: { type: String, enum: ["all", "own", "none"], default: "all" },
     },
   },
   {
