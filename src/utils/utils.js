@@ -614,8 +614,9 @@ exports.sendSMS = async (to, message) => {
   try {
     const response = await client.messages.create({
       body: message,
-      from: twilioPhone,
+      // from: twilioPhone,
       to: to,
+      messagingServiceSid: accountSid,
     });
     console.log("SMS sent:", response.sid);
     return response;

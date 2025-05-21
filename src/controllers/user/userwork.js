@@ -3693,6 +3693,28 @@ exports.GetTeamMember = async (req, res) => {
         const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id })
         console.log("teamLimit : ", teamLimit)
 
+        const plandata = await Subscription.aggregate([
+            {
+                $match: {
+                    user_id: new mongoose.Types.ObjectId(teamMembers?.admin_id?._id)
+                }
+            },
+            {
+                $lookup: {
+                    from: "plans",
+                    localField: "plan_id",
+                    foreignField: "plan_id",
+                    as: "plan"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$plan",
+                    preserveNullAndEmptyArrays: true
+                }
+            }
+        ])
+
         let teamLimitCount = 0;
         let teamMemberCount = 0
 
@@ -3709,6 +3731,7 @@ exports.GetTeamMember = async (req, res) => {
             data: teamMembers,
             team_limit: teamLimitCount !== 0 ? teamLimitCount : 3,
             count: teamMemberCount,
+            team_subscription: plandata,
             code: 200
         });
 
