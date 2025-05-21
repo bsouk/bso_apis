@@ -96,7 +96,7 @@ exports.getRevenueChartData = async (req, res) => {
         let filter = {
             createdAt: { $gte: startOfPeriod, $lte: endOfPeriod },
             // order_status: { $ne: 'cancelled' } // Exclude cancelled orders
-            payment_status : {$in : ['succeeded']}
+            // payment_status : {$in : ['succeeded']}
         };
 
         let data = [];
