@@ -159,6 +159,91 @@ exports.genrateClientScretKey = async (req, res) => {
     }
 };
 
+
+exports.createAppClientScretKey = async (req, res) => {
+    try {
+        const userid = req.user._id;
+        const { plan_id } = req.body;
+
+        if (!plan_id) {
+            return res.status(400).json({
+                message: "Plan ID is required",
+                code: 400
+            });
+        }
+
+        const [user, plandata] = await Promise.all([
+            User.findById(userid),
+            plan.findOne({ plan_id })
+        ]);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                code: 404
+            });
+        }
+        if (!plandata) {
+            return res.status(404).json({
+                message: "Plan not found",
+                code: 404
+            });
+        }
+
+        const result = await Subscription.aggregate([
+            {
+                $match: {
+                    user_id: new mongoose.Types.ObjectId(userid),
+                    type: plandata.type
+                }
+            },
+            {
+                $lookup: {
+                    from: 'plans',
+                    localField: 'plan_id',
+                    foreignField: 'plan_id',
+                    as: 'plan'
+                }
+            },
+            {
+                $unwind: {
+                    path: "$plan",
+                    preserveNullAndEmptyArrays: true
+                }
+            }
+        ])
+        console.log("result : ", result)
+
+        if (result.length !== 0) {
+            if (result[0]?.plan?.interval === "lifetime") {
+                return res.status(404).json({
+                    message: "Already have a lifetime access",
+                    code: 404
+                });
+            }
+        }
+        let customer = await getCustomerByEmail(user.email);
+        if (!customer) {
+            customer = await createStripeCustomer(user);
+        }
+
+        return res.status(200).json({
+            message: "Payment intent created",
+            data: {
+                amount: plandata.price,
+                currency: plandata.currency || 'usd',
+                customer_id: customer.id,
+                plan_id: plan_id,
+                requires_payment_method: true
+            },
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
 exports.createSubscription = async (req, res) => {
     try {
         const userid = req.user._id

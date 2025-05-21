@@ -28,6 +28,15 @@ router.post(
     controller.genrateClientScretKey
 )
 
+
+router.post(
+    "/createAppClientSecretKey",
+    trimRequest.all,
+    requireAuth,
+    controller.createAppClientScretKey
+)
+
+
 router.post(
     "/createSubscription",
     trimRequest.all,
