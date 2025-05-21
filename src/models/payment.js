@@ -48,7 +48,6 @@ const PaymentSchema = new mongoose.Schema(
         payment_method_type: String,
         payment_status: {
             type: String,
-            enum: ["pending", "complete"],
             default: "pending",
         },
         iloc_document: [String],
