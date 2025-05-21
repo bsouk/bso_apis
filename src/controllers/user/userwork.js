@@ -3683,10 +3683,8 @@ exports.GetTeamMember = async (req, res) => {
                 {
                     members: { $in: [new mongoose.Types.ObjectId(userId)] }
                 },
-                {
-                    team_type: type,
-                }
-            ]
+            ],
+            team_type: type
         }).populate('admin_id members')
         console.log("teamMembers : ", teamMembers)
 
@@ -3696,7 +3694,8 @@ exports.GetTeamMember = async (req, res) => {
         const plandata = await Subscription.aggregate([
             {
                 $match: {
-                    user_id: new mongoose.Types.ObjectId(teamMembers?.admin_id?._id)
+                    user_id: new mongoose.Types.ObjectId(teamMembers?.admin_id?._id),
+                    type: type
                 }
             },
             {
@@ -3731,7 +3730,7 @@ exports.GetTeamMember = async (req, res) => {
             data: teamMembers,
             team_limit: teamLimitCount !== 0 ? teamLimitCount : 3,
             count: teamMemberCount,
-            team_subscription: plandata,
+            team_subscription: plandata.length > 0 ? plandata[0] : null,
             code: 200
         });
 
