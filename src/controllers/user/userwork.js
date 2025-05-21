@@ -3955,6 +3955,14 @@ exports.addenquiryquotes = async (req, res) => {
         }
         const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id })
         console.log("buyerenquiry : ", buyerenquiry)
+
+        if (buyerenquiry.user_id === userId) {
+            return utils.handleError(res, {
+                message: "You can't quote on your own enquiry",
+                code: 400,
+            });
+        }
+
         // const buyersubscription = await Subscription.findOne({ user_id: enquirydata.user_id, status: "active", type: "" });
         const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) }).populate('enquiry_id');
         console.log("enquiryData : ", enquiryData);
@@ -4360,25 +4368,28 @@ exports.selectSupplierQuote = async (req, res) => {
         totalprice += (quotedata?.custom_charges_one?.value + quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
         console.log("totalprice : ", totalprice)
 
+        let servicefee = 0
+        if (activeSubscription[0].plan.plan_step === "direct") {
+            const commision = await Commision.findOne()
+            console.log("Commision : ", commision)
 
-        // if (activeSubscription[0].plan.plan_step === "direct") {
-        //     const commision = await Commision.findOne()
-        //     console.log("Commision : ", commision)
-
-        //     if (commision.charge_type === "percentage") {
-        //         if (totalprice > 0) {
-        //             totalprice += (totalprice) * ((commision.value) / 100)
-        //         }
-        //         console.log("totalprice : ", totalprice)
-        //     } else {
-        //         totalprice += commision.value
-        //         console.log("totalprice : ", totalprice)
-        //     }
-        // }
+            if (commision.charge_type === "percentage") {
+                if (totalprice > 0) {
+                    totalprice += (totalprice) * ((commision.value) / 100)
+                    servicefee = (totalprice) * ((commision.value) / 100)
+                }
+                console.log("totalprice : ", totalprice)
+            } else {
+                totalprice += commision.value
+                servicefee = commision.value
+                console.log("totalprice : ", totalprice)
+            }
+        }
 
         quotedata.is_selected = true
         quotedata.final_price = totalprice
         enquiry.grand_total = totalprice
+        enquiry.service_charges = servicefee
         enquiry.supplier_charges = totalprice
         await quotedata.save()
         await enquiry.save()
@@ -4532,6 +4543,13 @@ exports.submitLogisticsQuotes = async (req, res) => {
 
         const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id })
         console.log("buyerenquiry : ", buyerenquiry)
+
+        if (buyerenquiry.user_id === userId) {
+            return utils.handleError(res, {
+                message: "You can't quote on your own enquiry",
+                code: 400,
+            });
+        }
 
         const enquiryData = await logistics_quotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
         console.log("enquiryData : ", enquiryData);

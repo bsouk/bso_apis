@@ -638,7 +638,6 @@ exports.getAllPlan = async (req, res) => {
         if (type) {
             query.type = type;
         }
-
         const plandata = await plan.find(query)
             .skip(Number(offset))
             .limit(Number(limit))
