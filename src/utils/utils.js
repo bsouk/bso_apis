@@ -12,6 +12,7 @@ const key = crypto.scryptSync(secret, 'salt', 32)
 const iv = Buffer.alloc(16, 0) // Initialization crypto vector
 var bcrypt = require('bcrypt');
 const axios = require('axios');
+const twilio = require('twilio');
 const {
   uploadVideo,
 } = require("./helpers");
@@ -36,6 +37,15 @@ const { stringify } = require('csv-stringify');
 // const PDFDocument = require('pdfkit');
 const PDFDocument = require('pdfkit-table');
 const XLSX = require('xlsx');
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+
+const client = new twilio(accountSid, authToken);
+
+
+
 /**
  * Removes extension from file
  * @param {string} file - filename
@@ -597,3 +607,20 @@ exports.generatePDF = async (headers, data, res) => {
 
   doc.end();
 }
+
+
+
+exports.sendSMS = async (to, message) => {
+  try {
+    const response = await client.messages.create({
+      body: message,
+      from: twilioPhone,
+      to: to,
+    });
+    console.log("SMS sent:", response.sid);
+    return response;
+  } catch (error) {
+    console.error("Error sending SMS:", error);
+    throw error;
+  }
+};
