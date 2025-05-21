@@ -4361,24 +4361,25 @@ exports.selectSupplierQuote = async (req, res) => {
         console.log("totalprice : ", totalprice)
 
 
-        if (activeSubscription[0].plan.plan_step === "direct") {
-            const commision = await Commision.findOne()
-            console.log("Commision : ", commision)
+        // if (activeSubscription[0].plan.plan_step === "direct") {
+        //     const commision = await Commision.findOne()
+        //     console.log("Commision : ", commision)
 
-            if (commision.charge_type === "percentage") {
-                if (totalprice > 0) {
-                    totalprice += (totalprice) * ((commision.value) / 100)
-                }
-                console.log("totalprice : ", totalprice)
-            } else {
-                totalprice += commision.value
-                console.log("totalprice : ", totalprice)
-            }
-        }
+        //     if (commision.charge_type === "percentage") {
+        //         if (totalprice > 0) {
+        //             totalprice += (totalprice) * ((commision.value) / 100)
+        //         }
+        //         console.log("totalprice : ", totalprice)
+        //     } else {
+        //         totalprice += commision.value
+        //         console.log("totalprice : ", totalprice)
+        //     }
+        // }
 
         quotedata.is_selected = true
         quotedata.final_price = totalprice
         enquiry.grand_total = totalprice
+        enquiry.supplier_charges = totalprice
         await quotedata.save()
         await enquiry.save()
 
@@ -4711,6 +4712,7 @@ exports.selectLogisticsQuote = async (req, res) => {
         totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value + quotedata?.shipping_fee) - enquiry?.selected_supplier?.quote_id?.discount?.value
         console.log("totalprice : ", totalprice)
 
+        let commisionfee = 0
         if (activeSubscription[0].plan.plan_step === "direct") {
             const commision = await Commision.findOne()
             console.log("Commision : ", commision)
@@ -4718,16 +4720,20 @@ exports.selectLogisticsQuote = async (req, res) => {
             if (commision.charge_type === "percentage") {
                 if (totalprice > 0) {
                     totalprice += (totalprice) * ((commision.value) / 100)
+                    commisionfee = (totalprice) * ((commision.value) / 100)
                 }
                 console.log("totalprice : ", totalprice)
             } else {
                 totalprice += commision.value
+                commisionfee = commision.value
                 console.log("totalprice : ", totalprice)
             }
         }
 
         quotedata.is_selected = true
         enquiry.grand_total = totalprice
+        enquiry.logistics_charges = quotedata?.shipping_fee
+        enquiry.service_charges = commisionfee
         await quotedata.save()
         await enquiry.save()
 

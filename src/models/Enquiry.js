@@ -137,7 +137,7 @@ const EnquirySchema = new mongoose.Schema({
     },
     selected_payment_terms: {
         type: mongoose.Schema.Types.ObjectId,
-        ref : "payment_terms"
+        ref: "payment_terms"
     },
     additional_charges: {
         charge_type: {
@@ -154,6 +154,18 @@ const EnquirySchema = new mongoose.Schema({
         value: Number
     },
     grand_total: {
+        type: Number,
+        default: 0
+    },
+    service_charges: {
+        type: Number,
+        default: 0
+    },
+    logistics_charges: {
+        type: Number,
+        default: 0
+    },
+    supplier_charges: {
         type: Number,
         default: 0
     },
