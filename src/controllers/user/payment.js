@@ -538,9 +538,9 @@ exports.paynow = async (req, res) => {
         }
 
         // payment_data.total_amount = data?.total_amount
-        payment_data.service_charges = data?.service_charges
-        payment_data.logistics_charges = data?.logistics_charges
-        payment_data.supplier_charges = data?.supplier_charges
+        payment_data.service_charges = data?.service_charges || 0
+        payment_data.logistics_charges = data?.logistics_charges || 0
+        payment_data.supplier_charges = data?.supplier_charges ||0
         payment_data.payment_stage.push({
             status: confirmedIntent.status || 'succeeded',
             stripe_payment_intent: confirmedIntent.id,
