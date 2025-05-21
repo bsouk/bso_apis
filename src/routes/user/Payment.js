@@ -31,6 +31,14 @@ router.post(
     controller.createPaymentIntent
 )
 
+
+router.post(
+    '/createAppPaymentIntent',
+    trimRequest.all,
+    requireAuth,
+    controller.appPaymentIntent
+)
+
 router.post(
     '/paynow',
     trimRequest.all,
