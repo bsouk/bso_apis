@@ -492,8 +492,9 @@ exports.cancelSubscription = async (req, res) => {
             });
             console.log("stripeSub : ", stripeSub)
             subscription.status = 'cancelled_scheduled';
+        } else {
+            subscription.status = 'terminated';
         }
-        subscription.status = 'terminated';
         // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
         await subscription.save();
 
