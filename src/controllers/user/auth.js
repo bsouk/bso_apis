@@ -118,7 +118,9 @@ exports.sendOtpForSignup = async (req, res) => {
         await saveOTP.save();
       }
 
-      const result = await utils.sendSMS(phone_number, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+      const fullPhoneNumber = `${phone_number_code}${phone_number}`.replace(/\s+/g, '');
+
+      const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
       console.log("result : ", result);
       res.json({ code: 200, message: "OTP sent successfully", otp: otp });
     }
