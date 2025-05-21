@@ -2316,7 +2316,7 @@ exports.updateSubmitQuery = async (req, res) => {
           is_admin_updated: true,// Optional, based on your logic
           admin_price,
           logistics_price,
-          grand_total,
+          admin_grand_total: grand_total,
           admin_payment_terms: payment_terms
         }
       },

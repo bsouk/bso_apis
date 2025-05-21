@@ -196,6 +196,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         }
     },
     grand_total: Number,
+    admin_grand_total: Number,
     reply: {
         documents: {
             type: [String],
