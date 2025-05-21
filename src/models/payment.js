@@ -8,9 +8,14 @@ const PaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'orders'
         },
+        currency: String,
         enquiry_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'enquries'
+        },
+        subscription_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'subscriptions'
         },
         buyer_id: {
             type: mongoose.Schema.Types.ObjectId,
@@ -34,14 +39,23 @@ const PaymentSchema = new mongoose.Schema(
         stripe_customer_id: {
             type: String,
         },
+        stripe_subscription_id: {
+            type: String,
+        },
+        stripe_payment_method_id: {
+            type: String,
+        },
+        payment_method_type: String,
         payment_status: {
             type: String,
             enum: ["pending", "complete"],
             default: "pending",
         },
         iloc_document: [String],
+        receipt: String,
         payment_stage: [
             {
+                currency: String,
                 payment_method: {
                     type: String
                 },
@@ -60,6 +74,7 @@ const PaymentSchema = new mongoose.Schema(
                         return upperCaseUuid.substring(0, 10); // Take the first 10 characters
                     },
                 },
+                receipt: String,
                 promocode: {
                     type: Object,
                     default: null,

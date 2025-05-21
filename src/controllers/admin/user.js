@@ -2337,9 +2337,6 @@ exports.updateSubmitQuery = async (req, res) => {
     data: updatedItem,
     code: 200
   })
-
-
-
 }
 exports.getlogisticquote = async (req, res) => {
   try {

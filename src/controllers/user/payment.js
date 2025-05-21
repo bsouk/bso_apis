@@ -446,7 +446,9 @@ exports.paynow = async (req, res) => {
             txn_id: confirmedIntent.id,
             schedule_id: data?.schedule_id,
             schedule_status: "completed",
-            amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0
+            amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0,
+            receipt: confirmedIntent?.charges?.data?.[0]?.receipt_url || null,
+            currency: confirmedIntent?.currency,
         })
 
         await payment_data.save()

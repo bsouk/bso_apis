@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const plan = require("../../models/plan");
 const Subscription = require("../../models/subscription")
 const Admin = require("../../models/admin");
+const Payment = require("../../models/payment")
 const fcm_devices = require("../../models/fcm_devices");
 const admin_notification = require("../../models/admin_notification");
 const admin_received_notification = require("../../models/admin_received_notification");
@@ -289,6 +290,20 @@ exports.createSubscription = async (req, res) => {
         // console.log("result : ", result)
         const newsubscription = await Subscription.create(newdata);
         console.log("subscription : ", newsubscription)
+
+
+        const paymentrecord = await Payment.create({
+            subscription_id: newsubscription?._id,
+            buyer_id: userdata?._id,
+            total_amount: paymentIntent?.amount_received / 100,
+            currency: paymentIntent?.currency,
+            payment_status: paymentIntent?.status,
+            stripe_customer_id: customer.id,
+            stripe_subscription_id: stripeSubscription.id,
+            stripe_payment_method_id: payment_method_id,
+            receipt: paymentIntent?.charges?.data?.[0]?.receipt_url || null
+        })
+        console.log("paymentdata : ", paymentrecord)
 
 
         // admin notification
