@@ -540,27 +540,27 @@ exports.paynow = async (req, res) => {
         // payment_data.total_amount = enquiry_data?.total_amount
 
 
-        let totalprice = 0
-        enquiry_data?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
-        console.log("totalprice : ", totalprice)
+        // let totalprice = 0
+        // enquiry_data?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
+        // console.log("totalprice : ", totalprice)
 
-        totalprice += (enquiry_data?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry_data?.selected_supplier?.quote_id?.custom_charges_two?.value) - enquiry_data?.selected_supplier?.quote_id?.discount?.value
-        console.log("totalprice : ", totalprice)
+        // totalprice += (enquiry_data?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry_data?.selected_supplier?.quote_id?.custom_charges_two?.value) - enquiry_data?.selected_supplier?.quote_id?.discount?.value
+        // console.log("totalprice : ", totalprice)
 
-        let servicefee = 1
-        if (enquiry_data?.selected_supplier?.quote_id?.admin_charge === "percentage") {
-            if (enquiry_data > 0) {
-                servicefee += (servicefee) * ((enquiry_data?.selected_supplier?.quote_id?.admin_charge?.value) / 100)
-            }
-            console.log("servicefee : ", servicefee)
-        } else {
-            servicefee += enquiry_data?.selected_supplier?.quote_id?.admin_charge?.value
-            console.log("servicefee : ", servicefee)
-        }
+        // let servicefee = 1
+        // if (enquiry_data?.selected_supplier?.quote_id?.admin_charge === "percentage") {
+        //     if (enquiry_data > 0) {
+        //         servicefee += (servicefee) * ((enquiry_data?.selected_supplier?.quote_id?.admin_charge?.value) / 100)
+        //     }
+        //     console.log("servicefee : ", servicefee)
+        // } else {
+        //     servicefee += enquiry_data?.selected_supplier?.quote_id?.admin_charge?.value
+        //     console.log("servicefee : ", servicefee)
+        // }
 
-        payment_data.service_charges = servicefee
-        payment_data.logistics_charges = enquiry_data?.selected_logistics?.quote_id?.shipping_fee || data?.logistics_charges
-        payment_data.supplier_charges = totalprice
+        payment_data.service_charges = enquiry_data?.service_charges
+        payment_data.logistics_charges = enquiry_data?.logistics_charges
+        payment_data.supplier_charges = enquiry_data?.supplier_charges
         payment_data.payment_stage.push({
             status: confirmedIntent.status || 'succeeded',
             stripe_payment_intent: confirmedIntent.id,
