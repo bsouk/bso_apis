@@ -7,6 +7,7 @@ const User = require("../../models/user")
 const enquiry = require("../../models/Enquiry")
 const tracking_order = require("../../models/tracking_order");
 const payment_terms = require("../../models/payment_terms");
+const team = require("../../models/team");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
@@ -713,6 +714,104 @@ exports.checkoutOfflinePayment = async (req, res) => {
             },
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.createTeamLimitIntent = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { quantity, price_per_person, total_amount, currency } = req.body;
+
+        const user = await User.findById(userId);
+        console.log("user : ", user)
+        if (!user) {
+            return res.status(404).json({ error: "User not found", code: 404 });
+        }
+
+        let customer = await getCustomerByEmail(user.email);
+        if (!customer) {
+            customer = await createStripeCustomer(user);
+        }
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(total_amount * 100),
+            currency: currency || 'usd',
+            customer: customer.id,
+            automatic_payment_methods: {
+                enabled: true,
+            },
+            metadata: {
+                userId: userId.toString(),
+                paymentFor: "increasing team limit",
+                orderType: "one-time"
+            },
+        });
+        console.log("paymentIntent : ", paymentIntent)
+
+
+        return res.status(200).json({
+            message: "Payment intent created",
+            data: {
+                client_secret: paymentIntent.client_secret,
+                payment_intent_id: paymentIntent.id,
+                customer_id: customer.id,
+                currency: paymentIntent?.currency || 'usd'
+            },
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.createAppTeamLimitIntent = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { quantity, price_per_person, total_amount, currency } = req.body;
+
+        const user = await User.findById(userId);
+        console.log("user : ", user)
+        if (!user) {
+            return res.status(404).json({ error: "User not found", code: 404 });
+        }
+
+        let customer = await getCustomerByEmail(user.email);
+        if (!customer) {
+            customer = await createStripeCustomer(user);
+        }
+
+        // const paymentIntent = await stripe.paymentIntents.create({
+        //     amount: Math.round(total_amount * 100),
+        //     currency: currency || 'usd',
+        //     customer: customer.id,
+        //     automatic_payment_methods: {
+        //         enabled: true,
+        //     },
+        //     metadata: {
+        //         userId: userId.toString(),
+        //         paymentFor: "increasing team limit",
+        //         orderType: "one-time"
+        //     },
+        // });
+        // console.log("paymentIntent : ", paymentIntent)
+
+
+        return res.status(200).json({
+            message: "Payment intent created",
+            data: {
+                // client_secret: paymentIntent.client_secret,
+                // payment_intent_id: paymentIntent.id,
+                customer_id: customer.id,
+                // currency: paymentIntent?.currency || 'usd'
+            },
+            code: 200
+        });
+
     } catch (error) {
         utils.handleError(res, error);
     }

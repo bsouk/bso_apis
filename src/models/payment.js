@@ -8,6 +8,10 @@ const PaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'orders'
         },
+        team_id : {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'team'
+        },
         currency: String,
         enquiry_id: {
             type: mongoose.Schema.Types.ObjectId,

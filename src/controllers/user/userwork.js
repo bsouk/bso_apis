@@ -44,6 +44,28 @@ const tracking_order = require("../../models/tracking_order");
 const Notification = require("../../models/notification")
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+
+
+
+async function getCustomerByEmail(email) {
+    const customers = await stripe.customers.list({
+        email: email,
+        limit: 1,
+    });
+    return customers.data.length > 0 ? customers.data[0] : null;
+}
+
+async function createStripeCustomer(user) {
+    return await stripe.customers.create({
+        email: user.email,
+        name: user.full_name,
+        metadata: {
+            userId: user._id.toString()
+        }
+    });
+}
+
+
 //create password for users
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -3491,10 +3513,8 @@ exports.AddTeamMember = async (req, res) => {
                     {
                         members: { $in: [new mongoose.Types.ObjectId(userId)] }
                     },
-                    {
-                        team_type: data.type,
-                    }
-                ]
+                ],
+                team_type: data.type,
             }
         ).populate('admin_id')
         console.log("teamdata : ", teamdata)
@@ -3623,21 +3643,117 @@ exports.usermember = async (req, res) => {
         const userId = req.user._id;
         const data = req.body;
 
+        if (!data.payment_intent_id || !data.payment_method_id) {
+            return res.status(400).json({
+                error: "Payment Intent ID and Payment Method ID are required",
+                code: 400
+            });
+        }
+
+        const user = await User.findById(userId);
+        console.log("user : ", user)
+        if (!user) {
+            return res.status(404).json({ error: "User not found", code: 404 });
+        }
+
+        let customer = await getCustomerByEmail(user.email);
+        if (!customer) {
+            customer = await createStripeCustomer(user);
+        }
+
         // Check if a paid member already exists for this user
         let member = await UserMember.findOne({ user_id: userId, status: "paid" });
+
+        const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
+        let confirmedIntent = paymentIntent;
+
+        if (paymentIntent.status !== 'succeeded') {
+            const confirmedIntent = await stripe.paymentIntents.confirm(
+                data.payment_intent_id,
+                { payment_method: data.payment_method_id }
+            );
+
+            if (confirmedIntent.status === 'requires_action') {
+                return res.status(200).json({
+                    message: "Payment requires additional action",
+                    requires_action: true,
+                    client_secret: confirmedIntent.client_secret,
+                    code: 200
+                });
+            }
+
+            if (confirmedIntent.status !== 'succeeded') {
+                return res.status(400).json({
+                    error: `Payment failed: ${confirmedIntent.last_payment_error?.message || 'Unknown error'}`,
+                    code: 400
+                });
+            }
+        }
+
+        let teamdata = await Team.findOne(
+            {
+                $or: [
+                    {
+                        admin_id: new mongoose.Types.ObjectId(userId)
+                    },
+                    {
+                        members: { $in: [new mongoose.Types.ObjectId(userId)] }
+                    },
+                ],
+                team_type: data.type,
+            }
+        ).populate('admin_id')
+        console.log("teamdata : ", teamdata)
+
+        if (!teamdata) {
+            let tid = await genTeamId()
+            teamdata = await Team.create({
+                team_id: tid,
+                admin_id: userId,
+                team_type: data.type,
+            })
+        }
 
         if (member) {
             // Update existing member
             member = await UserMember.findOneAndUpdate(
                 { user_id: userId, status: "paid" },
-                { $set: data },
+                {
+                    $set: {
+                        member_count: data.member_count,
+                        type: data.type,
+                        status: confirmedIntent.status
+                    }
+                },
                 { new: true }
             );
         } else {
             // Create new member
             data.user_id = userId;
-            data.status = "paid";
+            data.status = confirmedIntent.status;
             member = await UserMember.create(data);
+        }
+
+        let paymenthistory = await payment.findOne({ team_id: teamdata?._id });
+        console.log("paymenthistory : ", paymenthistory)
+
+        if (!paymenthistory) {
+            paymenthistory = await payment.create({
+                team_id: teamdata?._id,
+                buyer_id: userId,
+                total_amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0,
+                payment_status: confirmedIntent.status,
+                stripe_customer_id: customer.id,
+                currency: enquiry_data?.currency || 'usd',
+                stripe_payment_intent: confirmedIntent.id,
+                stripe_payment_method: data?.payment_method_id,
+                payment_method: confirmedIntent.payment_method_types[0],
+                txn_id: confirmedIntent.id,
+                receipt: confirmedIntent?.charges?.data?.[0]?.receipt_url || null,
+                currency: confirmedIntent?.currency,
+            }
+            )
+            console.log("paymenthistory : ", paymenthistory)
         }
 
         return res.status(200).json({
@@ -5836,3 +5952,5 @@ exports.deleteAccount = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+

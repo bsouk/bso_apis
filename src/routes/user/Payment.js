@@ -54,4 +54,12 @@ router.post(
     controller.checkoutOfflinePayment
 )
 
+
+router.post(
+    '/createTeamLimitIntent',
+    trimRequest.all,
+    requireAuth,
+    controller.createTeamLimitIntent
+)
+
 module.exports = router
