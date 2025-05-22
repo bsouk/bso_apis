@@ -527,4 +527,20 @@ router.delete(
     controller.deleteAccount
 )
 
+
+router.post(
+    "/sendOtpForCompany",
+    trimRequest.all,
+    requireAuth,
+    controller.sendOtpForCompany
+)
+
+
+router.post(
+    "/verifyOtpForCompany",
+    trimRequest.all,
+    requireAuth,
+    controller.verifyOtpForCompany
+)
+
 module.exports = router;

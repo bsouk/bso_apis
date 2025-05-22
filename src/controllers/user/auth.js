@@ -397,21 +397,33 @@ exports.login = async (req, res) => {
 
 exports.forgetPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email = '', phone_number = '', phone_number_code } = req.body;
 
     const otp = utils.generateOTP();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({
+      $or: [
+        { email: email },
+        { phone_number: phone_number },
+      ]
+    });
     if (!user)
       return utils.handleError(res, {
         message: "No account found with the provided email",
         code: 400,
       });
 
-    const otpData = await OTP.findOne({ email: user.email });
+    const otpData = await OTP.findOne({
+      $or: [
+        { email: user.email },
+        { phone_number: user.phone_number },
+      ]
+    });
 
     const data = {
       email: user.email,
+      phone_number: user.phone_number,
+      phone_number_code: user.phone_number_code,
       otp,
       exp_time: new Date(Date.now() + 1000 * 60 * 10),
       is_used: false,
@@ -431,7 +443,19 @@ exports.forgetPassword = async (req, res) => {
       name: user.full_name,
     };
     emailer.sendEmail(null, mailOptions, "forgotPassword");
-    res.json({ code: 200, message: "OTP sent successfully" });
+
+
+    const fullPhoneNumber = `${user.phone_number_code}${user.phone_number}`.replace(/\s+/g, '');
+    const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+    console.log("result : ", result);
+
+    res.json({
+      code: 200,
+      message: "OTP sent successfully",
+      email: `${email.slice(0, 2)}****@${email.split('@').pop()}`,
+      phone_number: `${fullPhoneNumber.toString().slice(0, 4)}****${fullPhoneNumber.toString().slice(8)}`
+    });
+
   } catch (error) {
     utils.handleError(res, error);
   }
@@ -439,14 +463,14 @@ exports.forgetPassword = async (req, res) => {
 
 exports.verifyOTP = async (req, res) => {
   try {
-    const { otp, email } = req.body;
+    const { otp, email = '', phone_number = '' } = req.body;
 
-    const condition = {
-      otp,
-      email: email,
-    };
+    // const condition = {
+    //   otp,
+    //   email: email,
+    // };
 
-    const otpData = await OTP.findOne(condition);
+    const otpData = await OTP.findOne({ $or: [{ email: email }, { phone_number: phone_number }], otp });
     console.log(otpData)
 
     if (!otpData || otpData.otp !== otp)
@@ -477,11 +501,26 @@ exports.verifyOTP = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const { email, otp, password } = req.body;
-    const user = await User.findOne({ email: email });
-    const checkpass = await User.findOne({ email: email }).select("password");
+    const { email = '', phone_number = '', otp, password } = req.body;
+    const user = await User.findOne({
+      $or: [
+        { email: email },
+        { phone_number: phone_number }
+      ]
+    });
+    const checkpass = await User.findOne({
+      $or: [
+        { email: email },
+        { phone_number: phone_number }
+      ]
+    }).select("password");
 
-    const otpData = await OTP.findOne({ email, otp });
+    const otpData = await OTP.findOne({
+      $or: [
+        { email: email },
+        { phone_number: phone_number }
+      ], otp
+    });
     if (!otpData)
       return utils.handleError(res, {
         message: "The OTP you entered is incorrect. Please try again",

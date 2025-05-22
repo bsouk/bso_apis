@@ -42,6 +42,7 @@ const admin_received_notification = require("../../models/admin_received_notific
 const Order = require("../../models/order");
 const tracking_order = require("../../models/tracking_order");
 const Notification = require("../../models/notification")
+const OTP = require("../../models/otp")
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
@@ -4177,7 +4178,7 @@ exports.checksubscriptions = async (req, res) => {
                 }
             },
             {
-                $lookup : {
+                $lookup: {
                     from: 'plans',
                     localField: 'plan_id',
                     foreignField: 'plan_id',
@@ -4185,7 +4186,7 @@ exports.checksubscriptions = async (req, res) => {
                 }
             },
             {
-                $unwind : {
+                $unwind: {
                     path: '$plan',
                     preserveNullAndEmptyArrays: false
                 }
@@ -4207,12 +4208,12 @@ exports.checksubscriptions = async (req, res) => {
                 const stripeSubscription = await stripe.subscriptions.retrieve(i?.stripe_subscription_id);
                 const isRecurring = stripeSubscription.items.data[0]?.price?.recurring !== null;
                 console.log("Is recurring?", isRecurring);
-                const subObj = {...i};
+                const subObj = { ...i };
                 subObj.is_recurring = isRecurring;
                 subscriptionWithRecurring.push(subObj);
             } catch (err) {
                 console.error(`Error retrieving subscription ${i?.stripe_subscription_id}:`, err.message);
-                const subObj = {...i};
+                const subObj = { ...i };
                 subObj.is_recurring = false;
                 subscriptionWithRecurring.push(subObj);
             }
@@ -5115,13 +5116,12 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
 
 exports.sendOtpForEnquiry = async (req, res) => {
     try {
-
         const { enquiry_id, quote_id } = req.body;
         const enquiry = await Enquiry.findOne({ _id: enquiry_id })
         const user = await User.findOne({ _id: enquiry.user_id })
         const user_id = user._id;
-        if (!user || !user.email) {
-            return res.status(400).json({ code: 400, message: "User not found or missing email" });
+        if (!user || !user.email || !user.phone_number) {
+            return res.status(400).json({ code: 400, message: "User not found or missing email and phone number" });
         }
 
         const email = user.email;
@@ -5158,6 +5158,10 @@ exports.sendOtpForEnquiry = async (req, res) => {
         };
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
+
+        const fullPhoneNumber = `${user.phone_number_code}${user.phone_number}`.replace(/\s+/g, '');
+        const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+        console.log("result : ", result);
 
         res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop() }); // Remove `otp` if you don't want to expose it
     } catch (error) {
@@ -5170,8 +5174,8 @@ exports.sendOtpForQuote = async (req, res) => {
         const enquiry = await EnquiryQuotes.findOne({ _id: quote_id })
         const user = await User.findOne({ _id: enquiry.user_id })
         const user_id = user._id;
-        if (!user || !user.email) {
-            return res.status(400).json({ code: 400, message: "User not found or missing email" });
+        if (!user || !user.email || !user.phone_number) {
+            return res.status(400).json({ code: 400, message: "User not found or missing email and phone number" });
         }
 
         const email = user.email;
@@ -5208,6 +5212,10 @@ exports.sendOtpForQuote = async (req, res) => {
         };
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
+
+        const fullPhoneNumber = `${user.phone_number_code}${user.phone_number}`.replace(/\s+/g, '');
+        const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+        console.log("result : ", result);
 
         res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop() }); // Remove `otp` if you don't want to expose it
     } catch (error) {
@@ -5973,3 +5981,87 @@ exports.deleteAccount = async (req, res) => {
 };
 
 
+exports.sendOtpForCompany = async (req, res) => {
+    try {
+        const { userid, email = '', phone_number = '', phone_number_code } = req.body;
+        const user = await User.findOne({ _id: userid })
+        console.log("user : ", user)
+
+        if (!user || !user.email || !user.phone_number) {
+            return res.status(400).json({ code: 400, message: "User not found or missing email and phone number" });
+        }
+        const otp = Math.floor(100000 + Math.random() * 900000);
+        const existingOtp = await OTP.findOne({
+            $or: [
+                { email }, { phone_number }
+            ]
+        });
+
+        const data = {
+            email: email || "",
+            phone_number: phone_number || '',
+            phone_number_code : phone_number_code,
+            otp,
+            is_used: false,
+            verified: false,
+        };
+
+        if (existingOtp) {
+            await OTP.findByIdAndUpdate(existingOtp._id, data);
+        } else {
+            const newOtp = new OTP(data);
+            await newOtp.save();
+        }
+
+        const mailOptions = {
+            to: email,
+            subject: "Verify Your OTP",
+            app_name: process.env.APP_NAME,
+            otp: otp,
+        };
+
+        emailer.sendEmail(null, mailOptions, "verifyOTP");
+
+        const fullPhoneNumber = `${phone_number_code}${phone_number}`.replace(/\s+/g, '');
+        const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+        console.log("result : ", result);
+
+        res.json({
+            code: 200,
+            message: "OTP sent successfully",
+            email: `${email.slice(0, 2)}****@${email.split('@').pop()}`,
+            phone_number: `${fullPhoneNumber.toString().slice(0, 4)}****${fullPhoneNumber.toString().slice(8)}`
+        });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.verifyOtpForCompany = async (req, res) => {
+    try {
+        const { email = '', phone_number = '', otp } = req.body;
+
+        const otpdata = await OTP.findOne({
+            $or: [
+                { email: email },
+                { phone_number: phone_number }
+            ],
+            otp: otp,
+        })
+        console.log("otpdata : ", otpdata)
+        if (!otpdata)
+            return utils.handleError(res, {
+                message: "The OTP you entered is incorrect. Please try again",
+                code: 400,
+            });
+
+        otpdata.verified = true;
+        otpdata.is_used = true;
+        await otpdata.save();
+
+        return res.json({ code: 200, message: "Otp verified successfully" });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};

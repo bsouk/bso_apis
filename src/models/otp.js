@@ -7,19 +7,21 @@ const OTPSchema = new mongoose.Schema(
         email: {
             type: String,
         },
+        phone_number: String,
+        phone_number_code: String,
         otp: {
             type: String,
         },
-        is_used : {
-            type :Boolean,
-            default : false
+        is_used: {
+            type: Boolean,
+            default: false
         },
-        exp_time : {
-            type : Date
+        exp_time: {
+            type: Date
         },
-        verified : {
-            type : Boolean,
-            default : false
+        verified: {
+            type: Boolean,
+            default: false
         }
     },
     {
