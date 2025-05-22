@@ -5159,7 +5159,7 @@ exports.sendOtpForEnquiry = async (req, res) => {
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
 
-        const fullPhoneNumber = `${user.phone_number_code}${user.phone_number}`.replace(/\s+/g, '');
+        const fullPhoneNumber = `+${user.phone_number_code.trim()}${user.phone_number.trim()}`.replace(/\s+/g, '++');
         const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
         console.log("result : ", result);
 
@@ -5213,7 +5213,7 @@ exports.sendOtpForQuote = async (req, res) => {
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
 
-        const fullPhoneNumber = `${user.phone_number_code}${user.phone_number}`.replace(/\s+/g, '');
+        const fullPhoneNumber = `+${user.phone_number_code.trim()}${user.phone_number.trim()}`.replace(/\s+/g, '++');
         const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
         console.log("result : ", result);
 
@@ -6024,7 +6024,7 @@ exports.sendOtpForCompany = async (req, res) => {
         if (req.body.email) emailer.sendEmail(null, mailOptions, "verifyOTP");
 
         if (req.body.phone_number) {
-            const fullPhoneNumber = `${phone_number_code}${phone_number}`.replace(/\s+/g, '');
+            const fullPhoneNumber = `${phone_number_code}${phone_number}`;
             const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
             console.log("result : ", result);
         }
