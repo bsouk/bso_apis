@@ -450,7 +450,7 @@ exports.forgetPassword = async (req, res) => {
     res.json({
       code: 200,
       message: "OTP sent successfully",
-      email: `${email.slice(0, 2)}****@${email.split('@').pop()}`,
+      email: `${user.email.slice(0, 2)}****@${user.email.split('@').pop()}`,
       phone_number: `${fullPhoneNumber.toString().slice(0, 4)}****${fullPhoneNumber.toString().slice(8)}`
     });
 
