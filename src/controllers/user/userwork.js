@@ -3718,10 +3718,10 @@ exports.usermember = async (req, res) => {
         if (member) {
             // Update existing member
             member = await UserMember.findOneAndUpdate(
-                { user_id: userId, status: "paid" },
+                { user_id: userId },
                 {
+                    $inc: { member_count: data.member_count },
                     $set: {
-                        member_count: data.member_count,
                         type: data.type,
                         status: confirmedIntent.status
                     }
