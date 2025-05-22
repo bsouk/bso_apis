@@ -4191,6 +4191,7 @@ exports.checksubscriptions = async (req, res) => {
                 }
             }
         ]);
+        console.log("subscription : ", subscription)
 
         if (!subscription) {
             return res.status(201).json({
@@ -4206,12 +4207,12 @@ exports.checksubscriptions = async (req, res) => {
                 const stripeSubscription = await stripe.subscriptions.retrieve(i?.stripe_subscription_id);
                 const isRecurring = stripeSubscription.items.data[0]?.price?.recurring !== null;
                 console.log("Is recurring?", isRecurring);
-                const subObj = i.toObject();
+                const subObj = {...i};
                 subObj.is_recurring = isRecurring;
                 subscriptionWithRecurring.push(subObj);
             } catch (err) {
                 console.error(`Error retrieving subscription ${i?.stripe_subscription_id}:`, err.message);
-                const subObj = i.toObject();
+                const subObj = {...i};
                 subObj.is_recurring = false;
                 subscriptionWithRecurring.push(subObj);
             }
