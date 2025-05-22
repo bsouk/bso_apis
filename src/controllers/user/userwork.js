@@ -6023,17 +6023,17 @@ exports.sendOtpForCompany = async (req, res) => {
 
         if (req.body.email) emailer.sendEmail(null, mailOptions, "verifyOTP");
 
+        let fullPhoneNumber = ''
+
         if (req.body.phone_number) {
-            const fullPhoneNumber = `${phone_number_code}${phone_number}`;
+            fullPhoneNumber = `${phone_number_code}${phone_number}`;
             const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
             console.log("result : ", result);
         }
 
         res.json({
             code: 200,
-            message: "OTP sent successfully",
-            email: `${email.slice(0, 2)}****@${email.split('@').pop()}`,
-            phone_number: `${fullPhoneNumber.toString().slice(0, 4)}****${fullPhoneNumber.toString().slice(8)}`
+            message: "OTP sent successfully"
         });
     } catch (error) {
         utils.handleError(res, error);
