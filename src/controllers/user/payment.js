@@ -3,6 +3,8 @@ const Product = require("../../models/product");
 const Order = require("../../models/order")
 const utils = require("../../utils/utils");
 const Payment = require("../../models/payment")
+const Plan = require("../../models/plan")
+const Subscription = require("../../models/subscription")
 const User = require("../../models/user")
 const enquiry = require("../../models/Enquiry")
 const tracking_order = require("../../models/tracking_order");
@@ -723,12 +725,22 @@ exports.checkoutOfflinePayment = async (req, res) => {
 exports.createTeamLimitIntent = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { quantity, price_per_person, total_amount, currency } = req.body;
+        const { quantity, total_amount, currency, plan_id } = req.body;
 
         const user = await User.findById(userId);
         console.log("user : ", user)
         if (!user) {
             return res.status(404).json({ error: "User not found", code: 404 });
+        }
+
+        const plandata = await Plan.findOne({ _id: plan_id })
+        console.log("plandata : ", plandata)
+
+        if (!plandata.stripe_per_user_price_id || !plandata.price_per_person) {
+            return res.status(400).json({
+                error: "This plan doesn't support adding additional members",
+                code: 400
+            });
         }
 
         let customer = await getCustomerByEmail(user.email);
@@ -740,17 +752,22 @@ exports.createTeamLimitIntent = async (req, res) => {
             amount: Math.round(total_amount * 100),
             currency: currency || 'usd',
             customer: customer.id,
+            description: `Payment for ${additionalMembers} additional team members`,
             automatic_payment_methods: {
                 enabled: true,
             },
             metadata: {
                 userId: userId.toString(),
+                planId: plan_id,
+                additionalMembers: quantity,
+                paymentType: 'additional_members',
+                perUserPriceId: plandata.stripe_per_user_price_id,
+                perUserPrice: plandata.price_per_person,
                 paymentFor: "increasing team limit",
                 orderType: "one-time"
             },
         });
         console.log("paymentIntent : ", paymentIntent)
-
 
         return res.status(200).json({
             message: "Payment intent created",

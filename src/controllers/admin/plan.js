@@ -114,13 +114,14 @@ exports.createPlan = async (req, res) => {
                 per_user_price = await stripe.prices.create({
                     unit_amount: Math.round(data.price_per_person * 100),
                     currency: data.currency || 'usd',
-                    recurring: {
-                        interval: newinterval,
-                        interval_count: interval_count,
-                    },
+                    // recurring: {
+                    //     interval: newinterval,
+                    //     interval_count: interval_count,
+                    // },
                     product: product.id,
                     metadata: {
-                        pricing_type: 'per_user'
+                        pricing_type: 'per_user',
+                        payment_type: 'one_time'
                     }
                 });
                 console.log("Created per-user price:", per_user_price?.id);

@@ -4169,10 +4169,28 @@ exports.checksubscriptions = async (req, res) => {
     try {
         const userId = req.user._id;
         console.log(userId)
-        let subscription = await Subscription.find({
-            user_id: userId,
-            status: 'active',
-        });
+        let subscription = await Subscription.aggregate([
+            {
+                $match: {
+                    user_id: new mongoose.Types.ObjectId(userId),
+                    status: 'active',
+                }
+            },
+            {
+                $lookup : {
+                    from: 'plans',
+                    localField: 'plan_id',
+                    foreignField: 'plan_id',
+                    as: 'plan'
+                }
+            },
+            {
+                $unwind : {
+                    path: '$plan',
+                    preserveNullAndEmptyArrays: false
+                }
+            }
+        ]);
 
         if (!subscription) {
             return res.status(201).json({
