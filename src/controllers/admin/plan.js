@@ -288,6 +288,10 @@ exports.deletePlan = async (req, res) => {
         active: false
     });
 
+    if (plandata.stripe_product_id) {
+        await stripe.products.del(plandata.stripe_product_id);
+    }
+
     const result = await plan.deleteOne({ _id: id });
     console.log("result : ", result)
     return res.status(200).json({
