@@ -9,14 +9,20 @@ exports.getDashboardData = async (req, res) => {
     try {
         const userId = req.user._id;
         console.log("userid is", userId);
-        const { chartof } = req.body
-        console.log("body data : ", req.body)
+        const { chartof } = req.query
+
+        if (!chartof) {
+            utils.handleError(res, {
+                message: 'chart property is required',
+                code : 400
+            })
+        }
 
         let data = []
         let chart = []
 
         switch (chartof) {
-            case "my_queries":
+            case "queries":
                 {
                     data = await Enquiry.find({ user_id: userId }).sort({ createdAt: -1 }).limit(5)
                     chart = await Enquiry.aggregate([
@@ -32,7 +38,7 @@ exports.getDashboardData = async (req, res) => {
                     ])
                 };
                 break;
-            case "my_quotes":
+            case "quotes":
                 {
                     data = await EnquiryQuotes.find({ user_id: userId }).sort({ createdAt: -1 }).limit(5)
                     chart = await EnquiryQuotes.aggregate([
@@ -48,7 +54,7 @@ exports.getDashboardData = async (req, res) => {
                     ])
                 };
                 break;
-            case "job_posted":
+            case "jobposted":
                 {
                     data = await Job.find({ company_id: userId }).sort({ createdAt: -1 }).limit(5)
                     chart = await Job.aggregate([
@@ -64,7 +70,7 @@ exports.getDashboardData = async (req, res) => {
                     ])
                 };
                 break;
-            case "job_applied":
+            case "jobapplied":
                 {
                     data = await JobApplication.find({ canditate_id: userId }).sort({ createdAt: -1 }).limit(5)
                     chart = await JobApplication.aggregate([

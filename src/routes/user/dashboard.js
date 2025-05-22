@@ -12,6 +12,7 @@ const trimRequest = require('trim-request');
 router.get(
     '/getDashboardData',
     trimRequest.all,
+    requireAuth,
     controller.getDashboardData
 )
 
