@@ -118,7 +118,7 @@ exports.sendOtpForSignup = async (req, res) => {
         await saveOTP.save();
       }
 
-      const fullPhoneNumber = `${phone_number_code}${phone_number}`.replace(/\s+/g, '');
+      const fullPhoneNumber = `${phone_number_code}${phone_number}`;
 
       const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
       console.log("result : ", result);
@@ -398,6 +398,7 @@ exports.login = async (req, res) => {
 exports.forgetPassword = async (req, res) => {
   try {
     const reqdata = req.body;
+    console.log("reqdata : ", reqdata);
     const otp = utils.generateOTP();
 
     let filter = {}
@@ -442,7 +443,7 @@ exports.forgetPassword = async (req, res) => {
     };
     emailer.sendEmail(null, mailOptions, "forgotPassword");
 
-    const fullPhoneNumber = `+${user.phone_number_code.trim()}${user.phone_number.trim()}`.replace(/\s+/g, '++');
+    const fullPhoneNumber = `${user.phone_number_code.trim()}${user.phone_number.trim()}`;
     console.log("fullPhoneNumber : ", fullPhoneNumber);
     const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
     console.log("result : ", result);
