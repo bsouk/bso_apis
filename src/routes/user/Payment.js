@@ -62,4 +62,12 @@ router.post(
     controller.createTeamLimitIntent
 )
 
+
+router.post(
+    '/createAppTeamLimitIntent',
+    trimRequest.all,
+    requireAuth,
+    controller.createAppTeamLimitIntent
+)
+
 module.exports = router
