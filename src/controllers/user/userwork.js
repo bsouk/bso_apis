@@ -5983,25 +5983,20 @@ exports.deleteAccount = async (req, res) => {
 
 exports.sendOtpForCompany = async (req, res) => {
     try {
-        const { userid, email = '', phone_number = '', phone_number_code } = req.body;
+        const { email = '', phone_number = '', phone_number_code } = req.body;
+        let reqdata = req.body
         console.log("body : ", req.body);
-        const user = await User.findOne({
-            $or: [
-                { email: email },
-                { phone_number: phone_number },
-            ]
-        })
+        let filter = {}
+        if (reqdata.email) filter.email = reqdata.email
+        if (reqdata.phone_number) filter.phone_number = reqdata.phone_number
+        const user = await User.findOne(filter)
         console.log("user : ", user)
 
         if (!user || !user.email || !user.phone_number) {
             return res.status(400).json({ code: 400, message: "User not found or missing email and phone number" });
         }
         const otp = Math.floor(100000 + Math.random() * 900000);
-        const existingOtp = await OTP.findOne({
-            $or: [
-                { email }, { phone_number }
-            ]
-        });
+        const existingOtp = await OTP.findOne(filter);
 
         const data = {
             email: email || "",
@@ -6049,14 +6044,15 @@ exports.sendOtpForCompany = async (req, res) => {
 exports.verifyOtpForCompany = async (req, res) => {
     try {
         const { email = '', phone_number = '', otp } = req.body;
+        let reqdata = req.body
+        console.log("body : ", req.body);
+        let filter = {
+            otp: otp
+        }
+        if (reqdata.email) filter.email = reqdata.email
+        if (reqdata.phone_number) filter.phone_number = reqdata.phone_number
 
-        const otpdata = await OTP.findOne({
-            $or: [
-                { email: email },
-                { phone_number: phone_number }
-            ],
-            otp: otp,
-        })
+        const otpdata = await OTP.findOne(filter)
         console.log("otpdata : ", otpdata)
         if (!otpdata)
             return utils.handleError(res, {

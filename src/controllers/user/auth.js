@@ -462,13 +462,15 @@ exports.forgetPassword = async (req, res) => {
 exports.verifyOTP = async (req, res) => {
   try {
     const { otp, email = '', phone_number = '' } = req.body;
+    let reqdata = req.body
 
-    // const condition = {
-    //   otp,
-    //   email: email,
-    // };
+    let filter = {
+      otp: otp
+    }
+    if (reqdata.email) filter.email = reqdata.email
+    if (reqdata.phone_number) filter.phone_number = reqdata.phone_number
 
-    const otpData = await OTP.findOne({ $or: [{ email: email }, { phone_number: phone_number }], otp });
+    const otpData = await OTP.findOne(filter);
     console.log(otpData)
 
     if (!otpData || otpData.otp !== otp)
@@ -500,25 +502,16 @@ exports.verifyOTP = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { email = '', phone_number = '', otp, password } = req.body;
-    const user = await User.findOne({
-      $or: [
-        { email: email },
-        { phone_number: phone_number }
-      ]
-    });
-    const checkpass = await User.findOne({
-      $or: [
-        { email: email },
-        { phone_number: phone_number }
-      ]
-    }).select("password");
+    let reqdata = req.body
+    let filter = {
+      otp: otp
+    }
+    if (reqdata.email) filter.email = reqdata.email
+    if (reqdata.phone_number) filter.phone_number = reqdata.phone_number
+    const user = await User.findOne(filter);
+    const checkpass = await User.findOne(filter).select("password");
 
-    const otpData = await OTP.findOne({
-      $or: [
-        { email: email },
-        { phone_number: phone_number }
-      ], otp
-    });
+    const otpData = await OTP.findOne(filter);
     if (!otpData)
       return utils.handleError(res, {
         message: "The OTP you entered is incorrect. Please try again",
