@@ -444,10 +444,15 @@ exports.forgetPassword = async (req, res) => {
     };
     emailer.sendEmail(null, mailOptions, "forgotPassword");
 
+    // const fullPhoneNumber = `${user.phone_number_code}${user.phone_number}`.replace(/\s+/g, '');
+    // const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+    // console.log("result : ", result);
 
-    const fullPhoneNumber = `${user.phone_number_code}${user.phone_number}`.replace(/\s+/g, '');
-    const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
-    console.log("result : ", result);
+    const fullPhoneNumber = `${user.phone_number_code || phone_number_code}${user.phone_number}`.replace(/\s+/g, '').replace(/^0+/, '');
+    const formattedPhoneNumber = fullPhoneNumber.startsWith('+') ? fullPhoneNumber : `+${fullPhoneNumber}`;
+    const smsMessage = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 10 mins.\n\n🚀 Thank you for choosing us!`;
+    const result = await utils.sendSMS(formattedPhoneNumber, smsMessage);
+    console.log("SMS result:", result);
 
     res.json({
       code: 200,

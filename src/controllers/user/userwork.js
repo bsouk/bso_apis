@@ -5984,7 +5984,13 @@ exports.deleteAccount = async (req, res) => {
 exports.sendOtpForCompany = async (req, res) => {
     try {
         const { userid, email = '', phone_number = '', phone_number_code } = req.body;
-        const user = await User.findOne({ _id: userid })
+        console.log("body : ", req.body);
+        const user = await User.findOne({
+            $or: [
+                { email: email },
+                { phone_number: phone_number },
+            ]
+        })
         console.log("user : ", user)
 
         if (!user || !user.email || !user.phone_number) {
@@ -6000,7 +6006,7 @@ exports.sendOtpForCompany = async (req, res) => {
         const data = {
             email: email || "",
             phone_number: phone_number || '',
-            phone_number_code : phone_number_code,
+            phone_number_code: phone_number_code,
             otp,
             is_used: false,
             verified: false,
@@ -6020,11 +6026,13 @@ exports.sendOtpForCompany = async (req, res) => {
             otp: otp,
         };
 
-        emailer.sendEmail(null, mailOptions, "verifyOTP");
+        if (req.body.email) emailer.sendEmail(null, mailOptions, "verifyOTP");
 
-        const fullPhoneNumber = `${phone_number_code}${phone_number}`.replace(/\s+/g, '');
-        const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
-        console.log("result : ", result);
+        if (req.body.phone_number) {
+            const fullPhoneNumber = `${phone_number_code}${phone_number}`.replace(/\s+/g, '');
+            const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+            console.log("result : ", result);
+        }
 
         res.json({
             code: 200,

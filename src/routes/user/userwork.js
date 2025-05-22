@@ -531,7 +531,6 @@ router.delete(
 router.post(
     "/sendOtpForCompany",
     trimRequest.all,
-    requireAuth,
     controller.sendOtpForCompany
 )
 
@@ -539,7 +538,6 @@ router.post(
 router.post(
     "/verifyOtpForCompany",
     trimRequest.all,
-    requireAuth,
     controller.verifyOtpForCompany
 )
 
