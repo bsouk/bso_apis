@@ -6,7 +6,7 @@ const UserMemberSchema = new mongoose.Schema(
     user_id : {
       type : mongoose.Schema.Types.ObjectId
     },
-    status: { type: String, enum: ["pending", "paid"], default: "pending" },
+    status: { type: String, default: "pending" },
     last_name: {
       type: String,
     },

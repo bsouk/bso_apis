@@ -3745,7 +3745,7 @@ exports.usermember = async (req, res) => {
                 total_amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0,
                 payment_status: confirmedIntent.status,
                 stripe_customer_id: customer.id,
-                currency: enquiry_data?.currency || 'usd',
+                currency: confirmedIntent?.currency || 'usd',
                 stripe_payment_intent: confirmedIntent.id,
                 stripe_payment_method: data?.payment_method_id,
                 payment_method: confirmedIntent.payment_method_types[0],
