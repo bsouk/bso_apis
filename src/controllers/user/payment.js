@@ -752,7 +752,7 @@ exports.createTeamLimitIntent = async (req, res) => {
             amount: Math.round(total_amount * 100),
             currency: currency || 'usd',
             customer: customer.id,
-            description: `Payment for ${additionalMembers} additional team members`,
+            description: `Payment for ${quantity} additional team members`,
             automatic_payment_methods: {
                 enabled: true,
             },
