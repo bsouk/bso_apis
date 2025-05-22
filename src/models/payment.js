@@ -8,7 +8,7 @@ const PaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'orders'
         },
-        team_id : {
+        team_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'team'
         },
@@ -46,6 +46,7 @@ const PaymentSchema = new mongoose.Schema(
         stripe_subscription_id: {
             type: String,
         },
+        stripe_payment_intent: String,
         stripe_payment_method_id: {
             type: String,
         },

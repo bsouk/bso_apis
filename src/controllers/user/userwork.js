@@ -3663,7 +3663,7 @@ exports.usermember = async (req, res) => {
         }
 
         // Check if a paid member already exists for this user
-        let member = await UserMember.findOne({ user_id: userId, status: "paid" });
+        let member = await UserMember.findOne({ user_id: userId });
 
         const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
         let confirmedIntent = paymentIntent;
