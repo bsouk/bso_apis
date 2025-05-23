@@ -417,33 +417,33 @@ const UserSchema = new mongoose.Schema(
         type: String
       }
     },
-    // sample_products: {
-    //   type: [{
-    //     product_name: {
-    //       type: String
-    //     },
-    //     type: String,
-    //     price: {
-    //       type: Number
-    //     },
-    //     images: [String]
-    //   }],
-    //   default: []
-    // },
     sample_products: {
-      type: [
-        {
-          product_name: String,
-          type: String,
-          price: Number,
-          images: {
-            type: [String],
-            default: []
-          }
-        }
-      ],
+      type: [{
+        product_name: {
+          type: String
+        },
+        price_type: String,
+        price: {
+          type: Number
+        },
+        images: [String]
+      }],
       default: []
     },
+    // sample_products: {
+    //   type: [
+    //     {
+    //       product_name: String,
+    //       type: String,
+    //       price: Number,
+    //       images: {
+    //         type: [String],
+    //         default: []
+    //       }
+    //     }
+    //   ],
+    //   default: []
+    // },
     business_certificates: {
       type: Array,
     },
