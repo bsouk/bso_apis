@@ -591,6 +591,73 @@ exports.editProfile = async (req, res) => {
         //     }
         // })
 
+
+        if (data.company_data.address) {
+            const checkaddress = await Address.findOne({ user_id: id, address_type: "Company" });
+            console.log("checkaddress : ", checkaddress)
+            if (checkaddress) {
+                const newAddress = await Address.findOneAndUpdate(
+                    {
+                        user_id: id,
+                        address_type: "Company"
+                    },
+                    {
+                        $set: {
+                            first_name: req?.user?.full_name,
+                            company_name: data?.company_data?.name,
+                            phone_number: data?.company_data?.phone_number,
+                            email: data?.company_data?.email,
+                            address: {
+                                city: {
+                                    name: data?.company_data.city,
+                                },
+                                state: {
+                                    name: data?.company_data.state,
+                                },
+                                country: {
+                                    name: data?.company_data.country,
+                                },
+                                address_line_1: data?.company_data.address_line1,
+                                address_line_2: data?.company_data.address_line2,
+                                pin_code: data?.company_data?.zip_code
+                            },
+                            address_type: "Company",
+                        }
+                    },
+                    { new: true }
+                )
+                console.log("newAddress : ", newAddress)
+            } else {
+                const newAddress = await Address.create(
+                    {
+                        user_id: id,
+                        first_name: req?.user?.full_name,
+                        company_name: data?.company_data?.name,
+                        phone_number: data?.company_data?.phone_number,
+                        email: data?.company_data?.email,
+                        address: {
+                            city: {
+                                name: data?.company_data.city,
+                            },
+                            state: {
+                                name: data?.company_data.state,
+                            },
+                            country: {
+                                name: data?.company_data.country,
+                            },
+                            address_line_1: data?.company_data.address_line1,
+                            address_line_2: data?.company_data.address_line2,
+                            pin_code: data?.company_data?.zip_code
+                        },
+                        default_address: true,
+                        is_primary: true,
+                        address_type: "Company",
+                    }
+                )
+                console.log("newAddress : ", newAddress)
+            }
+        }
+
         res.json({ message: "Profile edit successfully", code: 200 });
     } catch (error) {
         utils.handleError(res, error);

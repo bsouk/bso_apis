@@ -96,7 +96,7 @@ const addressSchema = new mongoose.Schema(
         },
         address_type: {
             type: String,
-            enum: ["Home", "Work"],
+            enum: ["Home", "Work", "Company"],
             default: "Home"
         }
     },
