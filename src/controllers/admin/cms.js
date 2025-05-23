@@ -448,7 +448,9 @@ exports.viewClientTestimonial = async (req, res) => {
 exports.getClientTestimonial = async (req, res) => {
   try {
     const { offset = 0, limit = 10, search } = req.query
-    let filter = {}
+    let filter = {
+      view: true
+    }
     if (search) {
       filter[`$or`] = [
         {

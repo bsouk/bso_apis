@@ -9,7 +9,11 @@ const clientTestimonialSchema = new mongoose.Schema(
         phone_number: String,
         company_name: String,
         designation: String,
-        review: String
+        review: String,
+        view: {
+            type: Boolean,
+            default: true
+        }
     },
     {
         versionKey: false,
