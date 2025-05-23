@@ -3804,7 +3804,7 @@ exports.GetTeamMember = async (req, res) => {
         }).populate('admin_id members')
         console.log("teamMembers : ", teamMembers)
 
-        const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id })
+        const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id , type : type})
         console.log("teamLimit : ", teamLimit)
 
         const plandata = await Subscription.aggregate([
