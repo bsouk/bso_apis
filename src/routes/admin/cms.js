@@ -130,4 +130,42 @@ router.delete(
 )
 
 
+
+router.post(
+  "/addClientTestimonial",
+  requireAuth,
+  trimRequest.all,
+  controller.addClientTestimonial
+)
+
+router.patch(
+  "/editClientTestimonial",
+  requireAuth,
+  trimRequest.all,
+  controller.editClientTestimonial
+)
+
+router.get(
+  "/viewClientTestimonial/:id",
+  requireAuth,
+  trimRequest.all,
+  controller.viewClientTestimonial
+)
+
+router.get(
+  "/getClientTestimonial",
+  requireAuth,
+  trimRequest.all,
+  controller.getClientTestimonial
+)
+
+router.delete(
+  "/deleteClientTestimonial",
+  requireAuth,
+  trimRequest.all,
+  controller.deleteClientTestimonial
+)
+
+
+
 module.exports = router

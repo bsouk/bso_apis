@@ -7,6 +7,7 @@ const ContactUs = require("../../models/contact_us");
 const SupportDetails = require("../../models/support_details");
 const { response } = require("express");
 const payment_terms = require("../../models/payment_terms");
+const client_testimonials = require("../../models/client_testimonials");
 
 exports.addFaq = async (req, res) => {
   try {
@@ -367,6 +368,123 @@ exports.deletePaymentTerm = async (req, res) => {
 
     return res.status(200).json({
       message: "Payment terms deleted successfully",
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+
+exports.addClientTestimonial = async (req, res) => {
+  try {
+    const data = req.body
+    console.log("reqbody : ", data)
+
+    const newtestimonial = await client_testimonials.create(data)
+    console.log("newtestimonial : ", newtestimonial)
+
+    return res.status(200).json({
+      message: "client testimonial added successfully",
+      data: newtestimonial,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.editClientTestimonial = async (req, res) => {
+  try {
+    const data = req.body
+    console.log("reqbody : ", data)
+
+    const newtestimonial = await client_testimonials.findOneAndUpdate(
+      {
+        _id: data.id
+      },
+      {
+        $set: data
+      },
+      {
+        new: true
+      }
+    )
+    console.log("newtestimonial : ", newtestimonial)
+
+    return res.status(200).json({
+      message: "client testimonial edited successfully",
+      data: newtestimonial,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+
+exports.viewClientTestimonial = async (req, res) => {
+  try {
+    const { id } = req.params
+    const newtestimonial = await client_testimonials.findOne({
+      _id: id
+    })
+    console.log("newtestimonial : ", newtestimonial)
+
+    return res.status(200).json({
+      message: "client testimonial fetched successfully",
+      data: newtestimonial,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.getClientTestimonial = async (req, res) => {
+  try {
+    const { offset = 0, limit = 10, search } = req.query
+    let filter = {}
+    if (search) {
+      filter[`$or`] = [
+        {
+          name: { $regex: search, $otpions: "i" }
+        },
+        {
+          company_name: { $regex: search, $otpions: "i" }
+        }
+      ]
+    }
+    const newtestimonial = await client_testimonials.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+    console.log("newtestimonial : ", newtestimonial)
+
+    const count = await client_testimonials.countDocuments(filter)
+
+    return res.status(200).json({
+      message: "client testimonial fetched successfully",
+      data: newtestimonial,
+      count,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+
+exports.deleteClientTestimonial = async (req, res) => {
+  try {
+    const { ids } = req.body
+    const newtestimonial = await client_testimonials.deleteMany({ _id: { $in: ids } })
+    console.log("newtestimonial : ", newtestimonial)
+
+    return res.status(200).json({
+      message: "client testimonial deleted successfully",
       code: 200
     })
   } catch (error) {
