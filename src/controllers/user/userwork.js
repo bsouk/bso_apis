@@ -282,17 +282,38 @@ exports.editProfile = async (req, res) => {
 
         switch (updatedUser.current_user_type) {
             case "buyer": {
-                if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
-                    console.log("condition data is ", updatedUser.profile_completed)
+                // if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+                //     console.log("condition data is ", updatedUser.profile_completed)
+                //     updatedUser.profile_completed = true;
+                //     await updatedUser.save()
+                // }
+
+                const requiredFields = [
+                    'full_name',
+                    'email',
+                    'phone_number',
+                    "first_name",
+                    "last_name"
+                ];
+
+                console.log("buyer check fields is ", requiredFields)
+
+                const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+                console.log("isProfileComplete is ", isProfileComplete)
+
+                if (isProfileComplete) {
                     updatedUser.profile_completed = true;
-                    await updatedUser.save()
+                } else {
+                    updatedUser.profile_completed = false;
                 }
+
+                await updatedUser.save();
             }
                 break;
             case "supplier": {
                 const requiredFields = [
                     'full_name',
-
                     'email',
                     'phone_number',
                     'bank_details.account_holder_name',
