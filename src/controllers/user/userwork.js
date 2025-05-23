@@ -638,8 +638,8 @@ exports.editProfile = async (req, res) => {
                                 country: {
                                     name: data?.company_data.country,
                                 },
-                                address_line_1: data?.company_data.address_line1,
-                                address_line_2: data?.company_data.address_line2,
+                                address_line_1: data?.company_data.line1,
+                                address_line_2: data?.company_data.line2,
                                 pin_code: data?.company_data?.zip_code
                             },
                             address_type: "Company",
@@ -666,8 +666,8 @@ exports.editProfile = async (req, res) => {
                             country: {
                                 name: data?.company_data.country,
                             },
-                            address_line_1: data?.company_data.address_line1,
-                            address_line_2: data?.company_data.address_line2,
+                            address_line_1: data?.company_data.line1,
+                            address_line_2: data?.company_data.line2,
                             pin_code: data?.company_data?.zip_code
                         },
                         default_address: true,
