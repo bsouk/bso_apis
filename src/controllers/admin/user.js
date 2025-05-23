@@ -516,15 +516,15 @@ exports.deleteSelectedCustomer = async (req, res) => {
         message: "Please select at least one user",
         code: 400,
       });
-    const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
+    // const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
 
-    if (isAllDeleted.length == user_ids.length)
-      return utils.handleError(res, {
-        message: "All selected customers are already deleted",
-        code: 400,
-      });
+    // if (isAllDeleted.length == user_ids.length)
+    //   return utils.handleError(res, {
+    //     message: "All selected customers are already deleted",
+    //     code: 400,
+    //   });
 
-    await User.updateMany({ _id: user_ids }, { is_deleted: true });
+    await User.deleteMany({ _id: user_ids });
 
     res.json({ message: "Selected customer have been deleted", code: 200 });
   } catch (error) {
@@ -802,14 +802,16 @@ exports.deleteResource = async (req, res) => {
         message: "Resource not found",
         code: 404,
       });
-    if (user.is_deleted)
-      return utils.handleError(res, {
-        message: "Resource has been already deleted",
-        code: 400,
-      });
+    // if (user.is_deleted)
+    //   return utils.handleError(res, {
+    //     message: "Resource has been already deleted",
+    //     code: 400,
+    //   });
 
-    user.is_deleted = true;
-    await user.save();
+    // user.is_deleted = true;
+    // await user.save();
+
+    await User.deleteOne({ _id: id });
 
     res.json({ message: "Resource has been deleted successfully", code: 200 });
   } catch (error) {
@@ -826,15 +828,17 @@ exports.deleteSelectedResource = async (req, res) => {
         message: "Please select at least one user",
         code: 400,
       });
-    const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
+    // const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
 
-    if (isAllDeleted.length == user_ids.length)
-      return utils.handleError(res, {
-        message: "All selected resource are already deleted",
-        code: 400,
-      });
+    // if (isAllDeleted.length == user_ids.length)
+    //   return utils.handleError(res, {
+    //     message: "All selected resource are already deleted",
+    //     code: 400,
+    //   });
 
-    await User.updateMany({ _id: user_ids }, { is_deleted: true });
+    // await User.updateMany({ _id: user_ids }, { is_deleted: true });
+
+    await User.deleteMany({ _id: user_ids });
 
     res.json({ message: "Selected resource have been deleted", code: 200 });
   } catch (error) {
@@ -1191,14 +1195,16 @@ exports.deleteSupplier = async (req, res) => {
         message: "Customer not found",
         code: 404,
       });
-    if (user.is_deleted)
-      return utils.handleError(res, {
-        message: "Customer has been already deleted",
-        code: 400,
-      });
+    // if (user.is_deleted)
+    //   return utils.handleError(res, {
+    //     message: "Customer has been already deleted",
+    //     code: 400,
+    //   });
 
-    user.is_deleted = true;
-    await user.save();
+    // user.is_deleted = true;
+    // await user.save();
+
+    await User.deleteOne({ _id: id });
 
     res.json({ message: "Customer has been deleted successfully", code: 200 });
   } catch (error) {
@@ -1382,16 +1388,17 @@ exports.deleteSelectedSupplier = async (req, res) => {
         message: "Please select at least one user",
         code: 400,
       });
-    const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
+    // const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
 
-    if (isAllDeleted.length == user_ids.length)
-      return utils.handleError(res, {
-        message: "All selected customers are already deleted",
-        code: 400,
-      });
+    // if (isAllDeleted.length == user_ids.length)
+    //   return utils.handleError(res, {
+    //     message: "All selected customers are already deleted",
+    //     code: 400,
+    //   });
 
-    await User.updateMany({ _id: user_ids }, { is_deleted: true });
+    // await User.updateMany({ _id: user_ids }, { is_deleted: true });
 
+    await User.deleteMany({ _id: user_ids });
     res.json({ message: "Selected Supplier have been deleted", code: 200 });
   } catch (error) {
     utils.handleError(res, error);
@@ -1710,14 +1717,16 @@ exports.deleteLogisticsUser = async (req, res) => {
         message: "Logistics not found",
         code: 404,
       });
-    if (user.is_deleted)
-      return utils.handleError(res, {
-        message: "Logistics has been already deleted",
-        code: 400,
-      });
+    // if (user.is_deleted)
+    //   return utils.handleError(res, {
+    //     message: "Logistics has been already deleted",
+    //     code: 400,
+    //   });
 
-    user.is_deleted = true;
-    await user.save();
+    // user.is_deleted = true;
+    // await user.save();
+
+    await User.deleteOne({ _id: id });
 
     res.json({ message: "Logistics has been deleted successfully", code: 200 });
   } catch (error) {
@@ -1735,15 +1744,17 @@ exports.deleteSelectedLogisticsUser = async (req, res) => {
         message: "Please select at least one Logistics",
         code: 400,
       });
-    const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
+    // const isAllDeleted = await User.find({ _id: user_ids, is_deleted: true });
 
-    if (isAllDeleted.length == user_ids.length)
-      return utils.handleError(res, {
-        message: "All selected Logistics are already deleted",
-        code: 400,
-      });
+    // if (isAllDeleted.length == user_ids.length)
+    //   return utils.handleError(res, {
+    //     message: "All selected Logistics are already deleted",
+    //     code: 400,
+    //   });
 
-    await User.updateMany({ _id: user_ids }, { is_deleted: true });
+    // await User.updateMany({ _id: user_ids }, { is_deleted: true });
+
+    await User.deleteMany({ _id: user_ids });
 
     res.json({ message: "Selected Logistics have been deleted", code: 200 });
   } catch (error) {
