@@ -3663,7 +3663,7 @@ exports.usermember = async (req, res) => {
         }
 
         // Check if a paid member already exists for this user
-        let member = await UserMember.findOne({ user_id: userId });
+        let member = await UserMember.findOne({ user_id: userId, type: data.type });
 
         const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
         let confirmedIntent = paymentIntent;
@@ -3804,7 +3804,7 @@ exports.GetTeamMember = async (req, res) => {
         }).populate('admin_id members')
         console.log("teamMembers : ", teamMembers)
 
-        const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id , type : type})
+        const teamLimit = await UserMember.findOne({ user_id: teamMembers?.admin_id, type: type })
         console.log("teamLimit : ", teamLimit)
 
         const plandata = await Subscription.aggregate([
