@@ -52,6 +52,7 @@ const UserSchema = new mongoose.Schema(
     user_type: {
       type: [String],
       enum: ["buyer", "supplier", "logistics", "resource", "company"],
+      default: ["buyer"],
       required: true,
     },
     current_user_type: {
