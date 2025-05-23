@@ -16,4 +16,11 @@ router.get(
     controller.getDashboardData
 )
 
+
+router.get(
+    "/getClientTestimonial",
+    requireAuth,
+    controller.getClientTestimonial
+)
+
 module.exports = router

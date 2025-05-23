@@ -3,7 +3,8 @@ const utils = require("../../utils/utils")
 const Enquiry = require("../../models/Enquiry");
 const EnquiryQuotes = require("../../models/EnquiryQuotes");
 const Job = require("../../models/jobs")
-const JobApplication = require("../../models/job_applications")
+const JobApplication = require("../../models/job_applications");
+const client_testimonials = require("../../models/client_testimonials");
 
 exports.getDashboardData = async (req, res) => {
     try {
@@ -14,7 +15,7 @@ exports.getDashboardData = async (req, res) => {
         if (!chartof) {
             utils.handleError(res, {
                 message: 'chart property is required',
-                code : 400
+                code: 400
             })
         }
 
@@ -101,5 +102,37 @@ exports.getDashboardData = async (req, res) => {
 
     } catch (error) {
         handleError(res, error)
+    }
+}
+
+exports.getClientTestimonial = async (req, res) => {
+    try {
+        const { offset = 0, limit = 10, search } = req.query
+        let filter = {
+            view: true
+        }
+        if (search) {
+            filter[`$or`] = [
+                {
+                    name: { $regex: search, $$options: "i" }
+                },
+                {
+                    company_name: { $regex: search, $options: "i" }
+                }
+            ]
+        }
+        const newtestimonial = await client_testimonials.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+        console.log("newtestimonial : ", newtestimonial)
+
+        const count = await client_testimonials.countDocuments(filter)
+
+        return res.status(200).json({
+            message: "client testimonial fetched successfully",
+            data: newtestimonial,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
     }
 }
