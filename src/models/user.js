@@ -422,8 +422,9 @@ const UserSchema = new mongoose.Schema(
         product_name: {
           type: String
         },
+        type: String,
         price: {
-          type: Number
+          type: String
         },
         images: [String]
       }],
