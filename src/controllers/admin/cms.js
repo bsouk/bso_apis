@@ -454,7 +454,7 @@ exports.getClientTestimonial = async (req, res) => {
     if (search) {
       filter[`$or`] = [
         {
-          name: { $regex: search, $$options: "i" }
+          name: { $regex: search, $options: "i" }
         },
         {
           company_name: { $regex: search, $options: "i" }
