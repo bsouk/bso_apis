@@ -423,7 +423,9 @@ const UserSchema = new mongoose.Schema(
           type: String
         },
         type: String,
-        price: String,
+        price: {
+          type: Number
+        },
         images: [String]
       }],
       default: []
