@@ -630,17 +630,17 @@ exports.editProfile = async (req, res) => {
                             email: data?.company_data?.email,
                             address: {
                                 city: {
-                                    name: data?.company_data.city,
+                                    name: data?.company_data?.address?.city,
                                 },
                                 state: {
-                                    name: data?.company_data.state,
+                                    name: data?.company_data?.address?.state,
                                 },
                                 country: {
-                                    name: data?.company_data.country,
+                                    name: data?.company_data?.address?.country,
                                 },
-                                address_line_1: data?.company_data.line1,
-                                address_line_2: data?.company_data.line2,
-                                pin_code: data?.company_data?.zip_code
+                                address_line_1: data?.company_data?.address?.line1,
+                                address_line_2: data?.company_data?.address?.line2,
+                                pin_code: data?.company_data?.address?.zip_code
                             },
                             address_type: "Company",
                         }
@@ -658,17 +658,17 @@ exports.editProfile = async (req, res) => {
                         email: data?.company_data?.email,
                         address: {
                             city: {
-                                name: data?.company_data.city,
+                                name: data?.company_data?.address?.city,
                             },
                             state: {
-                                name: data?.company_data.state,
+                                name: data?.company_data?.address?.state,
                             },
                             country: {
-                                name: data?.company_data.country,
+                                name: data?.company_data?.address?.country,
                             },
-                            address_line_1: data?.company_data.line1,
-                            address_line_2: data?.company_data.line2,
-                            pin_code: data?.company_data?.zip_code
+                            address_line_1: data?.company_data?.address?.line1,
+                            address_line_2: data?.company_data?.address?.line2,
+                            pin_code: data?.company_data?.address?.zip_code
                         },
                         default_address: true,
                         is_primary: true,
