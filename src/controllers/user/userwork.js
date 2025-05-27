@@ -3618,7 +3618,7 @@ exports.AddTeamMember = async (req, res) => {
         }
 
         if (teamdata.members.length >= 3) {
-            const Member = await UserMember.findOne({ user_id: userId, status: "paid" });
+            const Member = await UserMember.findOne({ user_id: teamdata.admin_id, status: "paid" });
             if (!Member || teamdata.members.length >= Member.member_count) {
                 return res.status(402).json({
                     message: "You have reached your member limit",
