@@ -184,7 +184,16 @@ cron.schedule("0 10 * * *", async () => {
                     from: "payment_terms",
                     localField: "selected_payment_terms",
                     foreignField: "_id",
-                    as: "payment_terms"
+                    as: "payment_terms",
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: [{ $size: "$schedule" }, 1]
+                                }
+                            }
+                        }
+                    ]
                 }
             },
             { $unwind: "$payment_terms" },
@@ -196,16 +205,16 @@ cron.schedule("0 10 * * *", async () => {
                     }
                 }
             },
-            {
-                $match: {
-                    $expr: {
-                        $eq: [
-                            { $dateToString: { format: "%Y-%m-%d", date: "$due_date" } },
-                            today.format("YYYY-MM-DD")
-                        ]
-                    }
-                }
-            },
+            // {
+            //     $match: {
+            //         $expr: {
+            //             $eq: [
+            //                 { $dateToString: { format: "%Y-%m-%d", date: "$due_date" } },
+            //                 today.format("YYYY-MM-DD")
+            //             ]
+            //         }
+            //     }
+            // },
             {
                 $lookup: {
                     from: "users",
@@ -226,6 +235,7 @@ cron.schedule("0 10 * * *", async () => {
                 buyer_name: enquiry.user.full_name || enquiry.user.first_name,
                 enquiry_id: enquiry.enquiry_unique_id,
                 payment_due_date: moment(enquiry.due_date).format("dddd, MMMM D, YYYY"),
+                portal_url: ''
             };
 
             await emailer.sendEmail(null, mailOptions, "paymentReminder");
