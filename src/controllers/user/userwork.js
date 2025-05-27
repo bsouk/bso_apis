@@ -613,7 +613,7 @@ exports.editProfile = async (req, res) => {
         // })
 
 
-        if (data.company_data.address) {
+        if (data?.company_data?.address) {
             const checkaddress = await Address.findOne({ user_id: id, address_type: "Company" });
             console.log("checkaddress : ", checkaddress)
             if (checkaddress) {
