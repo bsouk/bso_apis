@@ -2302,8 +2302,7 @@ exports.finalquotes = async (req, res) => {
   }
 };
 exports.updateSubmitQuery = async (req, res) => {
-  const enq_id = req.params.id
-  const { items, admin_price, logistics_price, grand_total, payment_terms } = req.body
+  const { items, admin_price, logistics_price, grand_total, payment_terms, enq_id } = req.body
   console.log('dataaaaaaaaaaaaa', req.body)
   const enquiry = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(enq_id) })
   console.log("enquiry : ", enquiry)
