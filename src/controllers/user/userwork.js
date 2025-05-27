@@ -5560,6 +5560,7 @@ exports.getSingleSupplierQuotes = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
         const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) })
+            .populate({path : 'collection_readiness', populate : 'collection_address'})
             .populate('user_id', 'full_name email user_type current_user_type')
             .populate('payment_terms').populate('admin_payment_terms')
             .populate('enquiry_items.quantity.unit')
