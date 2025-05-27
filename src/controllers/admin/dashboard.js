@@ -167,7 +167,7 @@ cron.schedule("30 3 * * * ", async () => {
 
 
 // cron for reminder for within payment terms
-cron.schedule("* * * * *", async () => {
+cron.schedule("0 10 * * *", async () => {
     try {
         const today = moment().startOf("day");
         console.log("today : ", today)
