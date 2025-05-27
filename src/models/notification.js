@@ -27,6 +27,8 @@ const notificationSchema = new mongoose.Schema(
                 "password_changed",
                 "profile_updated",
 
+                "payment_reminder",
+
                 "product_listed",
                 "service_listed",
 

@@ -27,6 +27,7 @@ const AdminNotificationSchema = new mongoose.Schema(
                 "new_trial",
                 "free_trial_to_new_user",
                 "by_admin",
+                "payment_reminder"
             ],
             required: true,
         },
