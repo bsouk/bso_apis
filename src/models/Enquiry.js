@@ -157,6 +157,14 @@ const EnquirySchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    admin_grand_total: {
+        type: Number,
+        default: 0
+    },
+    admin_price: {
+        type: Number,
+        default: 0
+    },
     service_charges: {
         type: Number,
         default: 0

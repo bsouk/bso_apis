@@ -4608,12 +4608,15 @@ exports.selectSupplierQuote = async (req, res) => {
 
         let totalprice = 0
         let supplierfee = 0
-        quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
-        console.log("totalprice : ", totalprice)
-
-        totalprice += (quotedata?.custom_charges_one?.value + quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
-        console.log("totalprice : ", totalprice)
-
+        if (activeSubscription[0].plan.plan_step === "admin_involved") {
+            quotedata.enquiry_items.forEach(i => totalprice += (i.admin_unit_price * i.available_quantity))
+            console.log("totalprice : ", totalprice)
+        } else {
+            quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
+            console.log("totalprice : ", totalprice)
+            totalprice += (quotedata?.custom_charges_one?.value + quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
+            console.log("totalprice : ", totalprice)
+        }
         supplierfee = totalprice
 
         let servicefee = 0
@@ -4632,6 +4635,10 @@ exports.selectSupplierQuote = async (req, res) => {
                 servicefee = commision.value
                 console.log("totalprice : ", totalprice)
             }
+        }
+
+        if (shipment_type === "delivery" && activeSubscription[0].plan.plan_step === "admin_involved") {
+            totalprice += quotedata.logistics_price
         }
 
         quotedata.is_selected = true

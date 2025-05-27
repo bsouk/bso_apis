@@ -2305,6 +2305,8 @@ exports.updateSubmitQuery = async (req, res) => {
   const enq_id = req.params.id
   const { items, admin_price, logistics_price, grand_total, payment_terms } = req.body
   console.log('dataaaaaaaaaaaaa', req.body)
+  const enquiry = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(enq_id) })
+  console.log("enquiry : ", enquiry)
   // const exist=await EnquiryQuotes.findOne({_id:items.})
   // if(!exist) {
   //   return res.status(404).json({ 
@@ -2343,6 +2345,12 @@ exports.updateSubmitQuery = async (req, res) => {
       code: 400
     })
   }
+
+  enquiry.admin_grand_total = grand_total
+  enquiry.logistics_charges = logistics_price
+  enquiry.admin_price = admin_price
+  await enquiry.save()
+
   return res.status(200).json({
     message: 'Quote updated successfully',
     data: updatedItem,
