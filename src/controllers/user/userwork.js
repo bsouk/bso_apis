@@ -5125,6 +5125,9 @@ exports.getLogisticsQuotes = async (req, res) => {
                         },
                         {
                             path: "selected_payment_terms"
+                        },
+                        {
+                            path:'shipping_address'
                         }
                     ]
                 }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
