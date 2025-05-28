@@ -43,7 +43,21 @@ exports.OrderDetails = async (req, res) => {
     try {
         const { id } = req.params
         const order_data = await Order.findOne({ _id: id })
-            .populate({ path: 'enquiry_id', populate: [{ path: 'selected_payment_terms' },{path:'selected_supplier',populate: { path: 'quote_id' }}] })
+            .populate({
+                path: 'enquiry_id',
+                populate: [
+                    { path: 'selected_payment_terms' },
+                    {
+                        path: 'selected_supplier',
+                        populate: {
+                            path: 'quote_id',
+                            populate: {
+                                path: 'enquiry_items.quantity.unit'
+                            }
+                        }
+                    }
+                ]
+            })
             .populate('shipping_address').populate('billing_address')
             .populate('payment_id')
             .populate('tracking_id')
