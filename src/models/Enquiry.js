@@ -204,10 +204,15 @@ const EnquirySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "orders"
     },
-    logistics_selection_type: {
-        type: String,
-        enum: ["bso", "local"],
-    }
+    logistics_selection_data: {
+        name: {
+            type: String,
+            enum: ["bso", "local"],
+        },
+        tracking_id: String,
+        tracking_media: String,
+        details: String
+    },
 },
     {
         timestamps: true

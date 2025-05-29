@@ -575,7 +575,7 @@ exports.paynow = async (req, res) => {
         // let amt_per = data?.schedule_id ? enquiry_data?.selected_payment_terms?.schedule.find(i => i?.schedule_id === data?.schedule_id) : {}
         // console.log("amt_per : ", amt_per)
 
-        let per_amt = Math.floor(((confirmedIntent.amount / 100)/enquiry_data?.grand_total) * 100)
+        let per_amt = Math.floor(((confirmedIntent.amount / 100) / enquiry_data?.grand_total) * 100)
 
         payment_data.service_charges = enquiry_data?.service_charges
         payment_data.logistics_charges = enquiry_data?.logistics_charges

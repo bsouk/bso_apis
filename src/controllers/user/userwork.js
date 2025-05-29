@@ -3024,8 +3024,9 @@ exports.getAllEnquiry = async (req, res) => {
             filter.total_supplier_quotes = { $lte: 0 };
         }
         if (logisticsview) {
-            filter.shipment_type = "delivery",
-            filter.logistics_selection_type = "bso"
+            filter.shipment_type = "delivery"
+            filter.logistics_selection_data = {}
+            filter.logistics_selection_data.name = "bso"
             filter.selected_supplier = { $exists: true }
         }
 
@@ -6194,10 +6195,10 @@ exports.getBank = async (req, res) => {
 
 exports.selectLogisticsChoice = async (req, res) => {
     try {
-        const { enquiry_id, logistics_choice } = req.body;
-        console.log("data : ", req.body);
+        const data = req.body;
+        console.log("data : ", data);
 
-        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id })
+        const enquiry_data = await Enquiry.findOne({ _id: data.enquiry_id })
         console.log("enquiry_data : ", enquiry_data)
         if (!enquiry_data) {
             return utils.handleError(res, {
@@ -6206,9 +6207,10 @@ exports.selectLogisticsChoice = async (req, res) => {
             });
         }
 
-        enquiry_data.logistics_selection_type = logistics_choice;
-        await enquiry_data.save();
-        return res.json({ code: 200, message: "Logistics choice selected successfully", code: 200 });
+        const result = await Enquiry.findOneAndUpdate({ _id: data.enquiry_id }, {
+            $set: data
+        }, { new: true })
+        return res.json({ code: 200, message: "Logistics choice selected successfully", data: result, code: 200 });
 
     } catch (error) {
         utils.handleError(res, error);
