@@ -5127,7 +5127,7 @@ exports.getLogisticsQuotes = async (req, res) => {
                             path: "selected_payment_terms"
                         },
                         {
-                            path:'shipping_address'
+                            path: 'shipping_address'
                         }
                     ]
                 }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
@@ -5563,7 +5563,7 @@ exports.getSingleSupplierQuotes = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
         const data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) })
-            .populate({path : 'collection_readiness', populate : 'collection_address'})
+            .populate({ path: 'collection_readiness', populate: 'collection_address' })
             .populate('user_id', 'full_name email user_type current_user_type')
             .populate('payment_terms').populate('admin_payment_terms')
             .populate('enquiry_items.quantity.unit')
@@ -5833,6 +5833,15 @@ exports.addSuppliercollectiondata = async (req, res) => {
                 }
             })
             console.log("updatetrack : ", updatetrack)
+
+            const updateOrder = await Order.findOneAndUpdate({ _id: updateEnquiry.order_id },
+                {
+                    $set: {
+                        order_status: "shipment_ready"
+                    }
+                },
+                { new: true })
+            console.log("updateOrder : ", updateOrder)
         }
 
         if (!quotedata) {
