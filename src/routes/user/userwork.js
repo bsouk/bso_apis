@@ -548,4 +548,12 @@ router.get(
     controller.getBank
 )
 
+
+router.patch(
+    "/selectLogisticsChoice",
+    requireAuth,
+    trimRequest.all,
+    controller.selectLogisticsChoice
+)
+
 module.exports = router;

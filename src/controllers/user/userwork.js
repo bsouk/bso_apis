@@ -3024,8 +3024,8 @@ exports.getAllEnquiry = async (req, res) => {
             filter.total_supplier_quotes = { $lte: 0 };
         }
         if (logisticsview) {
-
-            filter.shipment_type = "delivery"
+            filter.shipment_type = "delivery",
+            filter.logistics_selection_type = "bso"
             filter.selected_supplier = { $exists: true }
         }
 
@@ -6182,10 +6182,34 @@ exports.verifyOtpForCompany = async (req, res) => {
 
 
 
-exports.getBank=async(req,res)=>{
+exports.getBank = async (req, res) => {
     try {
         const result = await Bank.find();
         return res.json({ message: "Bank fetched successfully", data: result[0], code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.selectLogisticsChoice = async (req, res) => {
+    try {
+        const { enquiry_id, logistics_choice } = req.body;
+        console.log("data : ", req.body);
+
+        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id })
+        console.log("enquiry_data : ", enquiry_data)
+        if (!enquiry_data) {
+            return utils.handleError(res, {
+                message: "Enquiry data not found",
+                code: 404,
+            });
+        }
+
+        enquiry_data.logistics_selection_type = logistics_choice;
+        await enquiry_data.save();
+        return res.json({ code: 200, message: "Logistics choice selected successfully", code: 200 });
+
     } catch (error) {
         utils.handleError(res, error);
     }
