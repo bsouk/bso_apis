@@ -225,6 +225,10 @@ exports.createPaymentIntent = async (req, res) => {
             return res.status(404).json({ error: "User not found", code: 404 });
         }
 
+        if (userId !== enquiry_data.user_id) {
+            return res.status(404).json({ error: "unauthorized access", code: 404 });
+        }
+
         let customer = await getCustomerByEmail(user.email);
         if (!customer) {
             customer = await createStripeCustomer(user);
@@ -359,6 +363,11 @@ exports.appPaymentIntent = async (req, res) => {
             return res.status(404).json({ error: "User not found", code: 404 });
         }
 
+        if (userId !== enquiry_data.user_id) {
+            return res.status(404).json({ error: "unauthorized access", code: 404 });
+        }
+
+
         let customer = await getCustomerByEmail(user.email);
         if (!customer) {
             customer = await createStripeCustomer(user);
@@ -457,7 +466,7 @@ exports.paynow = async (req, res) => {
             });
         }
 
-        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id')
+        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').populate('selected_payment_terms')
         console.log("enquiry_data : ", enquiry_data)
 
         if (!enquiry_data) {
@@ -563,6 +572,11 @@ exports.paynow = async (req, res) => {
         //     console.log("servicefee : ", servicefee)
         // }
 
+        // let amt_per = data?.schedule_id ? enquiry_data?.selected_payment_terms?.schedule.find(i => i?.schedule_id === data?.schedule_id) : {}
+        // console.log("amt_per : ", amt_per)
+
+        let per_amt = Math.floor(((confirmedIntent.amount / 100)/enquiry_data?.grand_total) * 100)
+
         payment_data.service_charges = enquiry_data?.service_charges
         payment_data.logistics_charges = enquiry_data?.logistics_charges
         payment_data.supplier_charges = enquiry_data?.supplier_charges
@@ -575,6 +589,7 @@ exports.paynow = async (req, res) => {
             schedule_id: data?.schedule_id,
             schedule_status: "completed",
             amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0,
+            payment_percentage: per_amt,
             receipt: confirmedIntent?.charges?.data?.[0]?.receipt_url || null,
             currency: confirmedIntent?.currency,
         })

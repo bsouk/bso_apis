@@ -65,6 +65,7 @@ const PaymentSchema = new mongoose.Schema(
                 },
                 schedule_id: String,
                 amount: Number,
+                payment_percentage: Number,
                 schedule_status: {
                     type: String,
                     enum: ["pending", "completed"],
@@ -86,9 +87,9 @@ const PaymentSchema = new mongoose.Schema(
                 receipt_image: {
                     type: String,
                 },
-                type:{
-                    type:String,
-                    default:"manual"
+                type: {
+                    type: String,
+                    default: "manual"
                 },
                 txn_id: {
                     type: String,
