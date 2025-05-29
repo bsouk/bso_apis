@@ -18,7 +18,7 @@ exports.addEditBank=async(req,res)=>{
 exports.getBank=async(req,res)=>{
     try {
         const result = await Bank.find();
-        return res.json({ message: "Bank fetched successfully", data: result, code: 200 });
+        return res.json({ message: "Bank fetched successfully", data: result[0], code: 200 });
     } catch (error) {
         utils.handleError(res, error);
     }
