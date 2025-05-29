@@ -261,7 +261,7 @@ exports.createPaymentIntent = async (req, res) => {
                 total_amount: enquiry_data?.grand_total,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
-                currency: enquiry_data?.currency || 'usd'
+                currency: enquiry_data?.selected_supplier?.quote_id?.currency || 'usd'
             }
             )
             console.log("paymenthistory : ", paymenthistory)
@@ -395,7 +395,7 @@ exports.appPaymentIntent = async (req, res) => {
                 total_amount: enquiry_data?.grand_total,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
-                currency: enquiry_data?.currency || "usd"
+                currency: enquiry_data?.selected_supplier?.quote_id?.currency || 'usd'
             }
             )
             console.log("paymenthistory : ", paymenthistory)
@@ -527,6 +527,7 @@ exports.paynow = async (req, res) => {
                 enquiry_id: data.enquiry_id,
                 buyer_id: userId,
                 total_amount: enquiry_data?.grand_total,
+                currency: enquiry_data?.selected_supplier?.quote_id?.currency || 'usd',
                 shipping_address: enquiry_data?.shipping_address,
                 billing_address: enquiry_data?.shipping_address,
                 logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
@@ -834,10 +835,10 @@ exports.createAppTeamLimitIntent = async (req, res) => {
         utils.handleError(res, error);
     }
 }
-exports.uploadReceipt= async(req,res)=>{
- try {
+exports.uploadReceipt = async (req, res) => {
+    try {
         const userId = req.user._id;
-        const { enquiry_id,receipt_image,txn_id } = req.body;
+        const { enquiry_id, receipt_image, txn_id } = req.body;
 
         if (!enquiry_id) {
             return res.status(400).json({ error: "Enquiry ID is required", code: 400 });
@@ -857,8 +858,6 @@ exports.uploadReceipt= async(req,res)=>{
             return res.status(404).json({ error: "User not found", code: 404 });
         }
 
-        
-
         let selected_pay_term = enquiry_data.selected_payment_terms
         console.log("selected_pay_term : ", selected_pay_term)
 
@@ -871,28 +870,18 @@ exports.uploadReceipt= async(req,res)=>{
             });
         }
 
-        // if (fetch_term.method != "scheduled") {
-        //     return utils.handleError(res, {
-        //         message: `Payment method is ${fetch_term.method}`
-        //     })
-        // }
-
         let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: userId });
         console.log("paymenthistory : ", paymenthistory)
 
         let totalAmount = enquiry_data?.grand_total
         let paymentAmount = 0
-        let my_schedule_id = ""
+        let my_schedule_id = fetch_term.schedule[0].schedule_id
         if (!paymenthistory) {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
                 buyer_id: userId,
                 total_amount: enquiry_data?.grand_total,
                 payment_status: 'pending',
-                payment_stage: [{
-                    receipt_image,
-                    txn_id
-                }]
             }
             )
             console.log("paymenthistory : ", paymenthistory)
@@ -915,19 +904,90 @@ exports.uploadReceipt= async(req,res)=>{
             }
         }
 
-        // const setupIntent = await stripe.setupIntents.create({
-        //     customer: customer.id,
-        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account'],
-        //     metadata: {
-        //         userId: userId.toString(),
-        //         enquiryId: enquiry_id
-        //     }
-        // });
+
+        let neworder = await Order.findOne({ enquiry_id: enquiry_id, buyer_id: userId })
+        console.log("neworder : ", neworder)
+        if (!neworder) {
+            const orderdata = {
+                order_unique_id: await generateUniqueId(),
+                enquiry_id: enquiry_id,
+                buyer_id: userId,
+                total_amount: enquiry_data?.grand_total,
+                currency: enquiry_data?.selected_supplier?.quote_id?.currency || 'usd',
+                shipping_address: enquiry_data?.shipping_address,
+                billing_address: enquiry_data?.shipping_address,
+                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+                order_pickup: enquiry_data?.shipment_type,
+            }
+
+            neworder = await Order.create(orderdata)
+            console.log("neworder : ", neworder)
+
+            enquiry_data.order_id = neworder?._id
+            await enquiry_data.save()
+            payment_data.order_id = neworder?._id
+        }
+
+        paymenthistory.service_charges = enquiry_data?.service_charges
+        paymenthistory.logistics_charges = enquiry_data?.logistics_charges
+        paymenthistory.supplier_charges = enquiry_data?.supplier_charges
+        paymenthistory.payment_stage.push({
+            // status: confirmedIntent.status || 'succeeded',
+            // stripe_payment_intent: confirmedIntent.id,
+            // stripe_payment_method: data?.payment_method_id,
+            // payment_method: confirmedIntent.payment_method_types[0],
+            // txn_id: confirmedIntent.id,
+            // schedule_id: data?.schedule_id,
+            // schedule_status: "completed",
+            // amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0,
+            // receipt: confirmedIntent?.charges?.data?.[0]?.receipt_url || null,
+            // currency: confirmedIntent?.currency,
+            receipt_image,
+            txn_id,
+            schedule_id: my_schedule_id,
+            status: "pending",
+            amount: paymentAmount,
+            payment_method: "bank_transfer",
+        })
+
+
+        await paymenthistory.save()
+
+        let newtracking = await tracking_order.findOne({ order_id: neworder?._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })
+        console.log("newtracking : ", newtracking)
+
+        if (!newtracking) {
+            const tracking_data = {
+                tracking_unique_id: await generateUniqueId(),
+                order_id: neworder._id,
+                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+                order_shipment_dates: [
+                    {
+                        order_status: "order created",
+                        date: new Date(),
+                    },
+                ]
+            }
+
+            newtracking = await tracking_order.create(tracking_data)
+            console.log("newtracking : ", newtracking)
+        }
+
+        newtracking.order_shipment_dates.push({
+            order_status: "payment schedule completed",
+            date: new Date(),
+            schedule_id: my_schedule_id
+        })
+
+        await newtracking.save()
+        neworder.payment_id = paymenthistory._id
+        neworder.tracking_id = newtracking._id
+
+        await neworder.save()
 
         return res.status(200).json({
             message: "Payment intent created",
             data: {
-                
                 amount: paymentAmount,
                 schedule_id: my_schedule_id,
                 receipt_image,
@@ -935,16 +995,10 @@ exports.uploadReceipt= async(req,res)=>{
             },
             code: 200
         });
+    }
+    catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
 
     }
-   catch (error) {
-    console.log(error);
-    utils.handleError(res, error);
-    
-  }
-
-  
- 
-  
-
 }
