@@ -10,6 +10,7 @@ const enquiry = require("../../models/Enquiry")
 const tracking_order = require("../../models/tracking_order");
 const payment_terms = require("../../models/payment_terms");
 const team = require("../../models/team");
+const payment = require("../../models/payment");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 
@@ -832,4 +833,118 @@ exports.createAppTeamLimitIntent = async (req, res) => {
     } catch (error) {
         utils.handleError(res, error);
     }
+}
+exports.uploadReceipt= async(req,res)=>{
+ try {
+        const userId = req.user._id;
+        const { enquiry_id,receipt_image,txn_id } = req.body;
+
+        if (!enquiry_id) {
+            return res.status(400).json({ error: "Enquiry ID is required", code: 400 });
+        }
+
+        const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
+            .populate('selected_supplier.quote_id')
+            .populate('selected_logistics.quote_id');
+
+        if (!enquiry_data) {
+            return res.status(404).json({ error: "Enquiry not found", code: 404 });
+        }
+
+        const user = await User.findById(userId);
+        console.log("user : ", user)
+        if (!user) {
+            return res.status(404).json({ error: "User not found", code: 404 });
+        }
+
+        
+
+        let selected_pay_term = enquiry_data.selected_payment_terms
+        console.log("selected_pay_term : ", selected_pay_term)
+
+        const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_pay_term) })
+        console.log("fetch_term : ", fetch_term)
+
+        if (!fetch_term) {
+            return utils.handleError(res, {
+                message: "Payment term not found"
+            });
+        }
+
+        // if (fetch_term.method != "scheduled") {
+        //     return utils.handleError(res, {
+        //         message: `Payment method is ${fetch_term.method}`
+        //     })
+        // }
+
+        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: userId });
+        console.log("paymenthistory : ", paymenthistory)
+
+        let totalAmount = enquiry_data?.grand_total
+        let paymentAmount = 0
+        let my_schedule_id = ""
+        if (!paymenthistory) {
+            paymenthistory = await Payment.create({
+                enquiry_id: enquiry_id,
+                buyer_id: userId,
+                total_amount: enquiry_data?.grand_total,
+                payment_status: 'pending',
+                payment_stage: [{
+                    receipt_image,
+                    txn_id
+                }]
+            }
+            )
+            console.log("paymenthistory : ", paymenthistory)
+        }
+
+        if (fetch_term.method == "advanced") {
+            paymentAmount = enquiry_data?.grand_total
+        }
+
+        if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
+            for (const i of fetch_term.schedule) {
+                const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id === i.schedule_id);
+                if (!alreadyPaid) {
+                    paymentAmount = i.value_type === "percentage"
+                        ? (totalAmount * i.value) / 100
+                        : i.value;
+                    my_schedule_id = i.schedule_id
+                    break;
+                }
+            }
+        }
+
+        // const setupIntent = await stripe.setupIntents.create({
+        //     customer: customer.id,
+        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account'],
+        //     metadata: {
+        //         userId: userId.toString(),
+        //         enquiryId: enquiry_id
+        //     }
+        // });
+
+        return res.status(200).json({
+            message: "Payment intent created",
+            data: {
+                
+                amount: paymentAmount,
+                schedule_id: my_schedule_id,
+                receipt_image,
+                txn_id
+            },
+            code: 200
+        });
+
+    }
+   catch (error) {
+    console.log(error);
+    utils.handleError(res, error);
+    
+  }
+
+  
+ 
+  
+
 }

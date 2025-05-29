@@ -83,6 +83,13 @@ const PaymentSchema = new mongoose.Schema(
                     type: Object,
                     default: null,
                 },
+                receipt_image: {
+                    type: String,
+                },
+                type:{
+                    type:String,
+                    default:"manual"
+                },
                 txn_id: {
                     type: String,
                     default: null,

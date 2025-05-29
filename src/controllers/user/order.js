@@ -29,10 +29,10 @@ exports.myOrder = async (req, res) => {
                         localField: "buyer_id",
                         foreignField: "_id",
                         as: "buyer_data",
-                        pipeline : [
+                        pipeline: [
                             {
                                 $project: {
-                                   password: 0,
+                                    password: 0,
                                 }
                             }
                         ]
@@ -64,10 +64,10 @@ exports.myOrder = async (req, res) => {
                         localField: "logistics_id",
                         foreignField: "_id",
                         as: "logistics_data",
-                        pipeline : [
+                        pipeline: [
                             {
                                 $project: {
-                                   password: 0,
+                                    password: 0,
                                 }
                             }
                         ]
@@ -181,10 +181,10 @@ exports.OrderDetails = async (req, res) => {
                         localField: "buyer_id",
                         foreignField: "_id",
                         as: "buyer_data",
-                        pipeline : [
+                        pipeline: [
                             {
                                 $project: {
-                                   password: 0,
+                                    password: 0,
                                 }
                             }
                         ]
@@ -201,7 +201,44 @@ exports.OrderDetails = async (req, res) => {
                         from: "enquires",
                         localField: "enquiry_id",
                         foreignField: "_id",
-                        as: "enquiry_data"
+                        as: "enquiry_data",
+                        pipeline: [
+                            {
+                                $lookup: {
+                                    from: "enquiry_quotes",
+                                    localField: "selected_supplier.quote_id",
+                                    foreignField: "_id",
+                                    as: "supplier_quote_data",
+                                }
+                            },
+                            {
+                                $lookup: {
+                                    from: "logistics_quotes",
+                                    localField: "selected_logistics.quote_id",
+                                    foreignField: "_id",
+                                    as: "logistics_quote_data",
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$supplier_quote_data",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $unwind: {
+                                    path: "$logistics_quote_data",
+                                    preserveNullAndEmptyArrays: true
+                                }
+                            },
+                            {
+                                $project: {
+                                    selected_logistics : 0,
+                                    selected_supplier : 0,
+                                    enquiry_items : 0
+                                }
+                            }
+                        ]
                     }
                 },
                 {
@@ -216,10 +253,10 @@ exports.OrderDetails = async (req, res) => {
                         localField: "logistics_id",
                         foreignField: "_id",
                         as: "logistics_data",
-                        pipeline : [
+                        pipeline: [
                             {
                                 $project: {
-                                   password: 0,
+                                    password: 0,
                                 }
                             }
                         ]

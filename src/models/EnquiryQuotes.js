@@ -90,6 +90,12 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                     ],
                     default: []
                 },
+               supplier_attachment: {
+                    type: [
+                        String
+                    ],
+                    default: []
+                },
                 // quantity: {
                 //     type: Number
                 // },

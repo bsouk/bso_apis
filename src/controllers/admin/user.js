@@ -12,7 +12,8 @@ const Enquiry = require("../../models/Enquiry")
 const subscription = require("../../models/subscription");
 const logistics_quotes = require("../../models/logistics_quotes");
 const fcm_devices = require("../../models/fcm_devices");
-const BusinessCategory = require("../../models/business_category")
+const BusinessCategory = require("../../models/business_category");
+const payment = require("../../models/payment");
 function createNewPassword() {
   const password = generatePassword.generate({
     length: 8,
@@ -2612,3 +2613,4 @@ exports.deleteFCMDevice = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+

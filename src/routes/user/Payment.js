@@ -69,5 +69,6 @@ router.post(
     requireAuth,
     controller.createAppTeamLimitIntent
 )
+router.post("/uploadReceipt", trimRequest.all, requireAuth, controller.uploadReceipt)
 
 module.exports = router
