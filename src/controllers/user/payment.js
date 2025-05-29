@@ -277,7 +277,7 @@ exports.createPaymentIntent = async (req, res) => {
 
         if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
             for (const i of fetch_term.schedule) {
-                const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id === i.schedule_id);
+                const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
                 if (!alreadyPaid) {
                     paymentAmount = i.value_type === "percentage"
                         ? (totalAmount * i.value) / 100
@@ -416,7 +416,7 @@ exports.appPaymentIntent = async (req, res) => {
 
         if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
             for (const i of fetch_term.schedule) {
-                const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id === i.schedule_id);
+                const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
                 if (!alreadyPaid) {
                     paymentAmount = i.value_type === "percentage"
                         ? (totalAmount * i.value) / 100
