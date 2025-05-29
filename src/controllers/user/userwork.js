@@ -4617,7 +4617,9 @@ exports.selectSupplierQuote = async (req, res) => {
         } else {
             quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
             console.log("totalprice : ", totalprice)
-            totalprice += (quotedata?.custom_charges_one?.value + quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
+            totalprice += (quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
+
+            shipment_type === "delivery" && (totalprice += quotedata?.custom_charges_one?.value )
             console.log("totalprice : ", totalprice)
         }
         supplierfee = totalprice
@@ -4985,7 +4987,8 @@ exports.selectLogisticsQuote = async (req, res) => {
         enquiry?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
         console.log("totalprice : ", totalprice)
 
-        totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value + quotedata?.shipping_fee) - enquiry?.selected_supplier?.quote_id?.discount?.value
+        totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value + quotedata?.shipping_fee) - enquiry?.selected_supplier?.quote_id?.discount?.value
+        enquiry?.shipment_type === "delivery" && (totalprice += enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value)
         console.log("totalprice : ", totalprice)
 
         let commisionfee = 0
