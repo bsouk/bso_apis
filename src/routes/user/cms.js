@@ -49,7 +49,6 @@ router.get(
 
 router.get(
     "/getClientTestimonial",
-    requireAuth,
     trimRequest.all,
     controller.getClientTestimonial
 )
