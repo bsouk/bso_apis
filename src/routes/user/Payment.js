@@ -71,4 +71,12 @@ router.post(
 )
 router.post("/uploadReceipt", trimRequest.all, requireAuth, controller.uploadReceipt)
 
+router.post(
+    '/uploadBankReceipt',
+    trimRequest.all,
+    requireAuth,
+    controller.uploadReceipt
+)
+
+
 module.exports = router
