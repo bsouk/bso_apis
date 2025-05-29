@@ -541,4 +541,11 @@ router.post(
     controller.verifyOtpForCompany
 )
 
+
+router.get(
+    "/get-bank",
+    trimRequest.all,
+    controller.getBank
+)
+
 module.exports = router;

@@ -3,6 +3,7 @@ const Address = require("../../models/address");
 const Supplier = require("../../models/supplier")
 const Admin = require("../../models/admin")
 const Rating = require("../../models/rating")
+const Bank = require("../../models/bank")
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
@@ -6178,3 +6179,14 @@ exports.verifyOtpForCompany = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+
+
+exports.getBank=async(req,res)=>{
+    try {
+        const result = await Bank.find();
+        return res.json({ message: "Bank fetched successfully", data: result[0], code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
