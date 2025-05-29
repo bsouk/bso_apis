@@ -225,7 +225,7 @@ exports.createPaymentIntent = async (req, res) => {
             return res.status(404).json({ error: "User not found", code: 404 });
         }
 
-        if (userId !== enquiry_data.user_id) {
+        if (userId.toString() !== enquiry_data.user_id.toString()) {
             return res.status(404).json({ error: "unauthorized access", code: 404 });
         }
 
@@ -363,7 +363,7 @@ exports.appPaymentIntent = async (req, res) => {
             return res.status(404).json({ error: "User not found", code: 404 });
         }
 
-        if (userId !== enquiry_data.user_id) {
+        if (userId.toString() !== enquiry_data.user_id.toString()) {
             return res.status(404).json({ error: "unauthorized access", code: 404 });
         }
 
