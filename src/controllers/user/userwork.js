@@ -6206,7 +6206,7 @@ exports.selectLogisticsChoice = async (req, res) => {
         const data = req.body;
         console.log("data : ", data);
 
-        const enquiry_data = await Enquiry.findOne({ _id: data.enquiry_id })
+        const enquiry_data = await Enquiry.findOne({ _id: data.enquiry_id }).populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
         console.log("enquiry_data : ", enquiry_data)
         if (!enquiry_data) {
             return utils.handleError(res, {
@@ -6216,6 +6216,10 @@ exports.selectLogisticsChoice = async (req, res) => {
         }
 
         const result = await Enquiry.findOneAndUpdate({ _id: data.enquiry_id }, {
+            $set: data
+        }, { new: true })
+
+        const quotresult = await EnquiryQuotes.findOneAndUpdate({ _id: enquiry_data?.selected_supplier?.quote_id?._id }, {
             $set: data
         }, { new: true })
         return res.json({ code: 200, message: "Logistics choice selected successfully", data: result, code: 200 });

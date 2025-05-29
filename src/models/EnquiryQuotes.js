@@ -246,7 +246,16 @@ const EnquiryQuotesSchema = new mongoose.Schema({
             ref: 'address'
         },
         document: String
-    }
+    },
+    logistics_selection_data: {
+        name: {
+            type: String,
+            enum: ["bso", "local"],
+        },
+        tracking_id: String,
+        tracking_media: String,
+        details: String
+    },
 },
     {
         timestamps: true
