@@ -3351,14 +3351,19 @@ exports.getEnquiryDetails = async (req, res) => {
         ) {
             const schedule = data.selected_payment_terms.schedule;
             const paymentStages = paymentdata?.payment_stage || [];
+            console.log("paymentStages : ", paymentStages)
 
             newschedule = schedule.map(sch => {
-                const matchedStage = paymentStages.find(p => p.schedule_id === sch.schedule_id);
+                const matchedStage = paymentStages.find(p => p.schedule_id.toString() === sch.schedule_id.toString());
+                let pricing = sch?.value_type === "percentage"
+                    ? parseFloat((data.grand_total * (sch.value / 100)).toFixed(2))
+                    : null;
                 return {
                     ...sch.toObject(),
                     status: matchedStage?.status || null,
-                    amount: matchedStage?.amount || null,
+                    amount: matchedStage?.amount ?? pricing,
                     txn_id: matchedStage?.txn_id || null,
+                    payment_method: matchedStage?.payment_method || null,
                     stripe_payment_intent: matchedStage?.stripe_payment_intent || null,
                     stripe_payment_method: matchedStage?.stripe_payment_method || null,
                     schedule_status: matchedStage?.schedule_status || "pending"
@@ -4619,7 +4624,7 @@ exports.selectSupplierQuote = async (req, res) => {
             console.log("totalprice : ", totalprice)
             totalprice += (quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
 
-            shipment_type === "delivery" && (totalprice += quotedata?.custom_charges_one?.value )
+            shipment_type === "delivery" && (totalprice += quotedata?.custom_charges_one?.value)
             console.log("totalprice : ", totalprice)
         }
         supplierfee = totalprice
