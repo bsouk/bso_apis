@@ -46,4 +46,12 @@ router.get(
     controller.getWalkthrough
 )
 
+
+router.get(
+    "/getClientTestimonial",
+    requireAuth,
+    trimRequest.all,
+    controller.getClientTestimonial
+)
+
 module.exports = router

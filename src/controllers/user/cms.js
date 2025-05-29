@@ -3,6 +3,7 @@ const CMS = require("../../models/cms");
 const SupportDetail = require("../../models/support_details")
 const ContactUs = require('../../models/contact_us');
 const Walkthrough = require("../../models/walkthrough")
+const client_testimonials = require("../../models/client_testimonials");
 
 const utils = require("../../utils/utils");
 
@@ -96,3 +97,36 @@ exports.getWalkthrough = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+
+
+exports.getClientTestimonial = async (req, res) => {
+  try {
+    const { offset = 0, limit = 10, search } = req.query
+    let filter = {
+      view: true
+    }
+    if (search) {
+      filter[`$or`] = [
+        {
+          name: { $regex: search, $options: "i" }
+        },
+        {
+          company_name: { $regex: search, $options: "i" }
+        }
+      ]
+    }
+    const newtestimonial = await client_testimonials.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+    console.log("newtestimonial : ", newtestimonial)
+
+    const count = await client_testimonials.countDocuments(filter)
+
+    return res.status(200).json({
+      message: "client testimonial fetched successfully",
+      data: newtestimonial,
+      count,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
