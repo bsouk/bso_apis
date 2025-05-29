@@ -945,7 +945,7 @@ exports.uploadReceipt = async (req, res) => {
             receipt_image,
             txn_id,
             schedule_id: my_schedule_id,
-            status: "pending",
+            status: "under_review",
             amount: paymentAmount,
             payment_method: "bank_transfer",
         })
@@ -999,6 +999,5 @@ exports.uploadReceipt = async (req, res) => {
     catch (error) {
         console.log(error);
         utils.handleError(res, error);
-
     }
 }
