@@ -943,6 +943,7 @@ exports.uploadReceipt = async (req, res) => {
             payment_data.order_id = neworder?._id
         }
 
+        paymenthistory.order_id = neworder?._id
         paymenthistory.service_charges = enquiry_data?.service_charges
         paymenthistory.logistics_charges = enquiry_data?.logistics_charges
         paymenthistory.supplier_charges = enquiry_data?.supplier_charges
