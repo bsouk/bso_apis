@@ -986,7 +986,7 @@ exports.uploadReceipt = async (req, res) => {
         await neworder.save()
 
         return res.status(200).json({
-            message: "Payment intent created",
+            message: "payment receipt uploaded successfully",
             data: {
                 amount: paymentAmount,
                 schedule_id: my_schedule_id,
