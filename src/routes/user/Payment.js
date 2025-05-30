@@ -44,18 +44,22 @@ router.post(
     requireAuth,
     controller.createPaymentIntentlogisticbuyer
 )
+
 router.post(
     '/createAppPaymentIntent',
     trimRequest.all,
     requireAuth,
     controller.appPaymentIntent
 )
+
 router.post(
     '/createappPaymentIntentsupplier',
     trimRequest.all,
     requireAuth,
     controller.createappPaymentIntentsupplier
 )
+
+
 router.post(
     '/createappPaymentIntentbuyer',
     trimRequest.all,
@@ -78,6 +82,16 @@ router.post(
     requireAuth,
     controller.logisticpaynow
 )
+
+
+router.post(
+    '/updatepaymentstatus',
+    trimRequest.all,
+    requireAuth,
+    controller.updatepaymentstatus
+)
+
+
 router.post(
     '/checkoutOfflinePayment',
     trimRequest.all,

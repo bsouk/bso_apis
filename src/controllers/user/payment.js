@@ -1763,3 +1763,42 @@ exports.uploadReceipt = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
+exports.updatepaymentstatus = async (req, res) => {
+    try {
+        const { payment_id, payment_stage_id } = req.body;
+
+        if (!payment_id || !payment_stage_id) {
+            return res.status(400).json({ error: "Payment ID and Payment Stage ID are required", code: 400 });
+        }
+
+   
+        const payment = await Payment.findOne({ _id: payment_id });
+        if (!payment) {
+            return res.status(404).json({ error: "Payment not found", code: 404 });
+        }
+
+       
+        const stageIndex = payment.payment_stage.findIndex(stage => stage._id.toString() === payment_stage_id);
+        if (stageIndex === -1) {
+            return res.status(404).json({ error: "Payment stage not found", code: 404 });
+        }
+
+
+        payment.payment_stage[stageIndex].status = "succeeded";
+        payment.payment_stage[stageIndex].schedule_status = "completed";
+
+        await payment.save();
+
+        return res.status(200).json({
+            message: "Payment stage updated to completed",
+            data: payment,
+            code: 200
+        });
+    } catch (error) {
+        console.error("Error in logisticpaynow:", error);
+        return res.status(500).json({ error: "Internal server error", code: 500 });
+    }
+}
