@@ -25,6 +25,11 @@ const PaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "users"
         },
+        supplier_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "users"
+        },
+        
         total_amount: {
             type: Number,
         },
@@ -57,6 +62,69 @@ const PaymentSchema = new mongoose.Schema(
         },
         iloc_document: [String],
         receipt: String,
+        
+        logistic_payment: [
+            {
+                currency: String,
+                payment_method: {
+                    type: String
+                },
+                schedule_id: String,
+                amount: Number,
+                payment_percentage: Number,
+                schedule_status: {
+                    type: String,
+                    enum: ["pending", "completed"],
+                    default: "pending"
+                },
+                receipt_number: {
+                    type: String,
+                    default: function () {
+                        const uuid = uuidv4().replace(/-/g, ""); // Generate UUID and remove hyphens
+                        const upperCaseUuid = uuid.toUpperCase(); // Convert UUID to uppercase
+                        return upperCaseUuid.substring(0, 10); // Take the first 10 characters
+                    },
+                },
+                receipt: String,
+                promocode: {
+                    type: Object,
+                    default: null,
+                },
+                receipt_image: {
+                    type: String,
+                },
+                txn_id: {
+                    type: String,
+                    default: null,
+                },
+                tid_number: {
+                    type: String,
+                },
+                status: {
+                    type: String,
+                    default: "pending",
+                },
+                payment_obj: {
+                    // from payu
+                    type: Object,
+                },
+                refund_obj: {
+                    // from payu
+                    type: Object,
+                },
+                transactionTimeStamps: {
+                    type: String,
+                },
+                paymentFrom: {
+                    type: String,
+                },
+                stripe_payment_intent: String,
+                stripe_payment_method: String,
+            }
+        ]
+
+
+
         payment_stage: [
             {
                 currency: String,
