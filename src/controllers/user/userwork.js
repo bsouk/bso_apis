@@ -4880,7 +4880,7 @@ exports.submitLogisticsQuotes = async (req, res) => {
         utils.handleError(res, error);
     }
 }
-
+ 
 
 exports.logisticsEnquiryDetails = async (req, res) => {
     try {
@@ -4890,6 +4890,9 @@ exports.logisticsEnquiryDetails = async (req, res) => {
             path: 'selected_supplier.quote_id', populate: [
                 {
                     path: "pickup_address"
+                },
+                {
+                     path: 'collection_readiness', populate: 'collection_address'
                 },
                 {
                     path: "enquiry_items.quantity.unit"

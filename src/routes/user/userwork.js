@@ -415,7 +415,7 @@ router.post(
     controller.submitLogisticsQuotes
 )
 
-
+ 
 router.get(
     "/getLogisticsEnquiryDetail/:id",
     trimRequest.all,
