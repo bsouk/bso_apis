@@ -23,4 +23,11 @@ router.get(
     controller.paymentDetails
 )
 
+router.post(
+    '/updatepaymentstatus',
+    trimRequest.all,
+    requireAuth,
+    controller.updatepaymentstatus
+)
+
 module.exports = router
