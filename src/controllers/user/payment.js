@@ -351,6 +351,7 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
         }
 
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
+            
             .populate('selected_logistics.quote_id');
         console.log("logistic:==", enquiry_data?.selected_logistics?.quote_id?.shipping_fee)
 

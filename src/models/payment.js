@@ -121,7 +121,7 @@ const PaymentSchema = new mongoose.Schema(
                 stripe_payment_intent: String,
                 stripe_payment_method: String,
             }
-        ]
+        ],
 
 
 
