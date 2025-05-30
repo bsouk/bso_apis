@@ -6217,7 +6217,10 @@ exports.selectLogisticsChoice = async (req, res) => {
                 code: 404,
             });
         }
-
+        if (data.logistics_selection_data?.name === 'local') {
+            data.status = 'logistic_pickup';
+        }
+        
         const result = await Enquiry.findOneAndUpdate({ _id: data.enquiry_id }, {
             $set: data
         }, { new: true })
