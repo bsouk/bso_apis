@@ -3023,13 +3023,56 @@ exports.getAllEnquiry = async (req, res) => {
         } else if (hide_quote) {
             filter.total_supplier_quotes = { $lte: 0 };
         }
+        // if (logisticsview) {
+        //     filter.shipment_type = "delivery"
+        //     filter.logistics_selection_data = {}
+        //     filter.logistics_selection_data.name = "bso"
+        //     filter.selected_supplier = { $exists: true }
+        // }
         if (logisticsview) {
-            filter.shipment_type = "delivery"
-            filter.logistics_selection_data = {}
-            filter.logistics_selection_data.name = "bso"
-            filter.selected_supplier = { $exists: true }
-        }
-
+            filter.shipment_type = "delivery";
+            filter.selected_supplier = { $exists: true };
+          
+            filter.$expr = {
+              $or: [
+                {
+                  $eq: [
+                    {
+                      $size: {
+                        $filter: {
+                          input: { $ifNull: ["$quotes", []] },
+                          as: "quote",
+                          cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+                        }
+                      }
+                    },
+                    0
+                  ]
+                },
+                {
+                  $and: [
+                    {
+                      $gt: [
+                        {
+                          $size: {
+                            $filter: {
+                              input: { $ifNull: ["$quotes", []] },
+                              as: "quote",
+                              cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+                            }
+                          }
+                        },
+                        0
+                      ]
+                    },
+                    { $eq: ["$logistics_selection_data.name", "bso"] }
+                  ]
+                }
+              ]
+            };
+          }
+          
+        
         if (countries) {
             const countryList = countries.split(',').map(country => country.trim());
             console.log("countryList : ", countryList)

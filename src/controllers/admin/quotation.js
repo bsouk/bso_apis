@@ -2010,3 +2010,35 @@ exports.getAddressList = async (req, res) => {
         utils.handleError(res, err);
     }
 }
+
+//edit address 
+exports.editAddress = async (req, res) => {
+    try {
+        const id = req.params.id
+        console.log("address id is ", id)
+
+        const data = req.body;
+        console.log("data to edited is ", data)
+
+        const addressdata = await Address.findById(id);
+        console.log("addressdata is ", addressdata)
+
+        if (Object.keys(addressdata).length === 0) {
+            return utils.handleError(res, {
+                message: "Address Not Found",
+                code: 400,
+            });
+        }
+
+        const result = await Address.findByIdAndUpdate(id, data, { new: true });
+
+        res.status(200).json({
+            status: true,
+            message: "Address edited Successfully",
+            data: result,
+            code: 200
+        })
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
