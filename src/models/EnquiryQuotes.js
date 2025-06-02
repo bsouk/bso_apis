@@ -62,6 +62,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     enquiry_items: {
         type: [
             {
+                variant_id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "enquires"
+                },
                 admin_unit_price: {
                     type: Number,
                     default: 0
@@ -255,6 +259,11 @@ const EnquiryQuotesSchema = new mongoose.Schema({
         tracking_id: String,
         tracking_media: String,
         details: String
+    },
+    type: {
+        type: String,
+        enum: ["admin", "supplier"],
+        default : 'supplier'
     },
 },
     {

@@ -139,5 +139,11 @@ router.get(
     trimRequest.all,
     controller.getStates
 )
+router.post(
+    '/addenquiryquotes',
+    trimRequest.all,
+    requireAuth,
+    controller.addenquiryquotes
+)
 
 module.exports = router

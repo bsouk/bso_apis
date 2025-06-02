@@ -13,6 +13,7 @@ const Address = require("../../models/address");
 const version_history = require("../../models/version_history");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 const { Country, State, City } = require('country-state-city');
+const EnquiryQuotes = require("../../models/EnquiryQuotes");
 
 exports.getQuotationList = async (req, res) => {
     try {
@@ -1873,94 +1874,75 @@ async function genQuoteId() {
     return `quote-${token}`
 }
 
-// exports.addenquiryquotes = async (req, res) => {
-//     try {
-//         const data = req.body;
-//         console.log("data : ", data)
-//         const userId = req.user._id;
+exports.addenquiryquotes = async (req, res) => {
+    try {
+        const data = req.body;
+        console.log("data : ", data)
+        const userId = req.user._id;
+        const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) }).populate('enquiry_id');
+        console.log("enquiryData : ", enquiryData);
+        let enquiry = {}
+        // if (enquiryData) {
+        //     enquiry = await EnquiryQuotes.findOneAndUpdate(
+        //         { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
+        //         { $set: data },
+        //         {
+        //             new: true
+        //         }
+        //     )
+        //     console.log("enquiry : ", enquiry);
+        // } else {
+            let quote_unique_id = await genQuoteId()
+            let type = "admin"
+            enquiry = await EnquiryQuotes.create({
+                ...data,
+                quote_unique_id,
+                user_id: userId,
+                type,
+            });
+            console.log("enquiry : ", enquiry);
+        // }
 
-//         // const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: "supplier" });
-//         // console.log("activeSubscription : ", activeSubscription)
+        //send notification
+        // const notificationMessage = {
+        //     title: 'New Quote submit by supplier',
+        //     description: `${req.user.full_name} has created a new quote . Enquiry ID : ${buyerenquiry?.enquiry_unique_id}`,
+        //     quote: enquiry._id
+        // };
 
-//         // if (!activeSubscription) {
-//         //     return utils.handleError(res, {
-//         //         message: "No supplier subscription found",
-//         //         code: 400,
-//         //     });
-//         // }
-//         // const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id })
-//         // console.log("buyerenquiry : ", buyerenquiry)
+        // const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+        // console.log("buyerfcm : ", buyerfcm)
 
-//         // if (buyerenquiry.user_id === userId) {
-//         //     return utils.handleError(res, {
-//         //         message: "You can't quote on your own enquiry",
-//         //         code: 400,
-//         //     });
-//         // }
+        // if (buyerfcm && buyerfcm.length > 0) {
+        //     buyerfcm.forEach(async i => {
+        //         const token = i.token
+        //         console.log("token : ", token)
+        //         await utils.sendNotification(token, notificationMessage);
+        //     })
+        //     const NotificationData = {
+        //         title: notificationMessage.title,
+        //         // body: notificationMessage.description,
+        //         description: notificationMessage.description,
+        //         type: "supplier_quote_added",
+        //         receiver_id: buyerenquiry.user_id,
+        //         related_to: buyerenquiry.user_id,
+        //         related_to_type: "user",
+        //     };
+        //     const newNotification = new Notification(NotificationData);
+        //     console.log("newNotification : ", newNotification)
+        //     await newNotification.save();
+        // }
 
-//         // const buyersubscription = await Subscription.findOne({ user_id: enquirydata.user_id, status: "active", type: "" });
-//         const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) }).populate('enquiry_id');
-//         console.log("enquiryData : ", enquiryData);
-//         let enquiry = {}
-//         if (enquiryData) {
-//             enquiry = await EnquiryQuotes.findOneAndUpdate(
-//                 { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
-//                 { $set: data },
-//                 {
-//                     new: true
-//                 }
-//             )
-//             console.log("enquiry : ", enquiry);
-//         } else {
-//             let quote_unique_id = await genQuoteId()
-//             enquiry = await EnquiryQuotes.create({
-//                 ...data,
-//                 quote_unique_id,
-//                 user_id: userId,
-//             });
-//             console.log("enquiry : ", enquiry);
-//         }
+        return res.status(200).json({
+            message: "Quotation saved Successfully",
+            data: enquiry,
+            code: 200
+        });
 
-//         //send notification
-//         // const notificationMessage = {
-//         //     title: 'New Quote submit by supplier',
-//         //     description: `${req.user.full_name} has created a new quote . Enquiry ID : ${buyerenquiry?.enquiry_unique_id}`,
-//         //     quote: enquiry._id
-//         // };
-
-//         // const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
-//         // console.log("buyerfcm : ", buyerfcm)
-
-//         // if (buyerfcm && buyerfcm.length > 0) {
-//         //     buyerfcm.forEach(async i => {
-//         //         const token = i.token
-//         //         console.log("token : ", token)
-//         //         await utils.sendNotification(token, notificationMessage);
-//         //     })
-//         //     const NotificationData = {
-//         //         title: notificationMessage.title,
-//         //         // body: notificationMessage.description,
-//         //         description: notificationMessage.description,
-//         //         type: "supplier_quote_added",
-//         //         receiver_id: buyerenquiry.user_id,
-//         //         related_to: buyerenquiry.user_id,
-//         //         related_to_type: "user",
-//         //     };
-//         //     const newNotification = new Notification(NotificationData);
-//         //     console.log("newNotification : ", newNotification)
-//         //     await newNotification.save();
-//         // }
-
-//         return res.status(200).json({
-//             message: "Quotation saved Successfully",
-//             data: enquiry,
-//             code: 200
-//         });
-
-//     } catch (error) {
-//         utils.handleError(res, error);
-//     }
-// }
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
 
 exports.addAddress = async (req, res) => {
     try {
@@ -2089,7 +2071,7 @@ exports.getEnquiryItem = async (req, res) => {
   
       return res.status(200).json({
         success: true,
-        item: data.enquiry_items,
+        item: data,
       });
     } catch (error) {
       console.error("Error fetching enquiry item:", error);
