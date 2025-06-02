@@ -534,111 +534,231 @@ exports.getSkuList = async (req, res) => {
     }
 }
 
+// exports.getInventoryList = async (req, res) => {
+//     try {
+//         const { offset = 0, limit = 10, search, low_stock, out_of_stock } = req.query
+//         let filter = {
+//             product_of : 'admin'
+//         }
+//         if (search) {
+//             filter['$or'] = [
+//                 {
+//                     name: { $regex: search, $options: "i" }
+//                 },
+//                 {
+//                     'variant.inventory_quantity': { $regex: search, $options: "i" }
+//                 }
+//             ]
+//         }
+//         if (low_stock) {
+//             filter['$expr'] = {
+//                 $lte: ["$variant.inventory_quantity", "$variant.Threshold_value"]
+//             };
+//         }
+
+//         if (out_of_stock) {
+//             filter['variant.inventory_quantity'] = { $eq: 0 };
+//         }
+//         const data = await Product.aggregate(
+//             [
+//                 {
+//                     $match: filter
+//                 },
+//                 {
+//                     $lookup: {
+//                         from: "product_categories",
+//                         let: { categoryIds: "$category_id" },
+//                         pipeline: [
+//                             {
+//                                 $match: {
+//                                     $expr: {
+//                                         $in: ["$_id", "$$categoryIds"]
+//                                     }
+//                                 }
+//                             }
+//                         ],
+//                         as: "categories"
+//                     }
+//                 },
+//                 {
+//                     $unwind: {
+//                         path: '$variant',
+//                         preserveNullAndEmptyArrays: true
+//                     }
+//                 },
+//                 {
+//                     $lookup: {
+//                         from: 'users',
+//                         let: { id: '$user_id' },
+//                         pipeline: [
+//                             {
+//                                 $match: {
+//                                     $expr: {
+//                                         $eq: ["$$id", "$_id"]
+//                                     }
+//                                 }
+//                             },
+//                             {
+//                                 $project: {
+//                                     _id: 1,
+//                                     full_name: 1,
+//                                     email: 1
+//                                 }
+//                             }
+//                         ],
+//                         as: 'supplier_data'
+//                     }
+//                 },
+//                 {
+//                     $unwind: {
+//                         path: '$supplier_data',
+//                         preserveNullAndEmptyArrays: true
+//                     }
+//                 },
+//                 {
+//                     $skip: parseInt(offset) || 0
+//                 },
+//                 {
+//                     $limit: parseInt(limit) || 10
+//                 },
+//                 {
+//                     $sort: { createdAt: -1 }
+//                 },
+//             ]
+//         )
+
+//         const count = await Product.countDocuments(filter)
+
+//         return res.status(200).json({
+//             message: "Inventory list fetched successfully",
+//             data,
+//             count,
+//             code: 200
+//         })
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }
 exports.getInventoryList = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, search, low_stock, out_of_stock } = req.query
-        let filter = {
-            product_of : 'admin'
-        }
-        if (search) {
-            filter['$or'] = [
-                {
-                    name: { $regex: search, $options: "i" }
-                },
-                {
-                    'variant.inventory_quantity': { $regex: search, $options: "i" }
+        const { offset = 0, limit = 10, search, low_stock, out_of_stock } = req.query;
+
+        const matchStage = {
+            product_of: 'admin'
+        };
+
+        const pipeline = [
+            { $match: matchStage },
+
+            // Unwind each variant to treat it as a row
+            {
+                $unwind: {
+                    path: "$variant",
+                    preserveNullAndEmptyArrays: false
                 }
-            ]
+            }
+        ];
+
+        // Apply per-variant filters
+        const variantMatch = {};
+
+        if (search) {
+            variantMatch['$or'] = [
+                { name: { $regex: search, $options: 'i' } },
+                { 'variant.inventory_quantity': { $regex: search, $options: 'i' } }
+            ];
         }
+
         if (low_stock) {
-            filter['$expr'] = {
+            variantMatch['$expr'] = {
                 $lte: ["$variant.inventory_quantity", "$variant.Threshold_value"]
             };
         }
 
         if (out_of_stock) {
-            filter['variant.inventory_quantity'] = { $eq: 0 };
+            variantMatch['variant.inventory_quantity'] = 0;
         }
-        const data = await Product.aggregate(
-            [
-                {
-                    $match: filter
-                },
-                {
-                    $lookup: {
-                        from: "product_categories",
-                        let: { categoryIds: "$category_id" },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $in: ["$_id", "$$categoryIds"]
-                                    }
-                                }
-                            }
-                        ],
-                        as: "categories"
-                    }
-                },
-                {
-                    $unwind: {
-                        path: '$variant',
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'users',
-                        let: { id: '$user_id' },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $eq: ["$$id", "$_id"]
-                                    }
-                                }
-                            },
-                            {
-                                $project: {
-                                    _id: 1,
-                                    full_name: 1,
-                                    email: 1
-                                }
-                            }
-                        ],
-                        as: 'supplier_data'
-                    }
-                },
-                {
-                    $unwind: {
-                        path: '$supplier_data',
-                        preserveNullAndEmptyArrays: true
-                    }
-                },
-                {
-                    $skip: parseInt(offset) || 0
-                },
-                {
-                    $limit: parseInt(limit) || 10
-                },
-                {
-                    $sort: { createdAt: -1 }
-                },
-            ]
-        )
 
-        const count = await Product.countDocuments(filter)
+        if (Object.keys(variantMatch).length > 0) {
+            pipeline.push({ $match: variantMatch });
+        }
+
+        // Lookup category info
+        pipeline.push(
+            {
+                $lookup: {
+                    from: "product_categories",
+                    let: { categoryIds: "$category_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $in: ["$_id", "$$categoryIds"] }
+                            }
+                        }
+                    ],
+                    as: "categories"
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    let: { id: "$user_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$$id", "$_id"] }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                full_name: 1,
+                                email: 1
+                            }
+                        }
+                    ],
+                    as: "supplier_data"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$supplier_data",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 10
+            }
+        );
+
+        // Execute pipeline
+        const data = await Product.aggregate(pipeline);
+
+        // Count total matching variants (requires same logic without $skip/limit/sort)
+        const countPipeline = pipeline.filter(stage => !stage.$skip && !stage.$limit && !stage.$sort)
+            .concat([{ $count: "total" }]);
+        const countResult = await Product.aggregate(countPipeline);
+        const count = countResult[0]?.total || 0;
 
         return res.status(200).json({
-            message: "Inventory list fetched successfully",
+            message: "Variant list fetched successfully",
             data,
             count,
             code: 200
-        })
+        });
+
     } catch (error) {
         utils.handleError(res, error);
     }
-}
+};
+
+
 
 exports.addThresholdValue = async (req, res) => {
     try {

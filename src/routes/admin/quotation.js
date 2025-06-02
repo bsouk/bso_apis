@@ -111,4 +111,33 @@ router.get(
     requireAuth,
     controller.getAddressList
 )
+router.patch(
+    "/editAddress/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.editAddress
+)
+router.get(
+    "/getAddressbyid/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.getAddressbyid
+)
+router.get(
+    "/getEnquiryItem",
+    trimRequest.all,
+    requireAuth,
+    controller.getEnquiryItem
+)
+router.get(
+    "/getCountries",
+    trimRequest.all,
+    controller.getCountry
+)
+router.get(
+    "/getStates/:country",
+    trimRequest.all,
+    controller.getStates
+)
+
 module.exports = router

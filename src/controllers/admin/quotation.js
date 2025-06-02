@@ -1,6 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const Query = require("../../models/query");
+const Enquiry = require("../../models/Enquiry");
 const BidSetting = require("../../models/bidsetting");
 const utils = require("../../utils/utils");
 const admin = require("../../models/admin");
@@ -11,7 +12,7 @@ const User = require("../../models/user");
 const Address = require("../../models/address");
 const version_history = require("../../models/version_history");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
-
+const { Country, State, City } = require('country-state-city');
 
 exports.getQuotationList = async (req, res) => {
     try {
@@ -2040,5 +2041,93 @@ exports.editAddress = async (req, res) => {
         })
     } catch (err) {
         utils.handleError(res, err);
+    }
+}
+
+exports.getAddressbyid = async (req, res) => {
+    try {
+        const id = req.params.id
+        console.log("address id is ", id)
+
+        const data = req.body;
+        console.log("data to edited is ", data)
+
+        const addressdata = await Address.findById(id);
+        
+
+        res.status(200).json({
+            status: true,
+            message: "Address Fetch Successfully",
+            data: addressdata,
+            code: 200
+        })
+    } catch (err) {
+        utils.handleError(res, err);
+    }
+}
+
+
+exports.getEnquiryItem = async (req, res) => {
+    try {
+      const { enquiryId, itemId } = req.query;
+  
+      // Validate ObjectIds
+      if (!mongoose.Types.ObjectId.isValid(enquiryId) || !mongoose.Types.ObjectId.isValid(itemId)) {
+        return res.status(400).json({ message: "Invalid ID format" });
+      }
+  
+      // Fetch only the matched enquiry item
+      const data = await Enquiry.findOne(
+        { _id: enquiryId, "enquiry_items._id": itemId },
+        { enquiry_items: { $elemMatch: { _id: itemId } } }
+      )
+      .populate("enquiry_items.quantity.unit");
+  
+      if (!data || data.enquiry_items.length === 0) {
+        return res.status(404).json({ message: "Enquiry item not found" });
+      }
+  
+      return res.status(200).json({
+        success: true,
+        item: data.enquiry_items,
+      });
+    } catch (error) {
+      console.error("Error fetching enquiry item:", error);
+      return res.status(500).json({ message: "Server error" });
+    }
+};
+
+exports.getCountry = async (req, res) => {
+    try {
+        const data = await Country.getAllCountries()
+        console.log("data : ", data)
+
+        return res.status(200).json(
+            {
+                message: "Countries data fetched successfully",
+                data,
+                code: 200
+            }
+        )
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+exports.getStates = async (req, res) => {
+    try {
+        const { country } = req.params;
+        const data = State.getStatesOfCountry(country);
+        console.log("data : ", data)
+        return res.status(200).json(
+            {
+                message: "Countries data fetched successfully",
+                data,
+                code: 200
+            }
+        )
+    } catch (error) {
+        utils.handleError(res, error);
     }
 }
