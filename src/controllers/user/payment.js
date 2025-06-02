@@ -353,6 +353,11 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
             .populate('selected_supplier.quote_id')
             .populate('selected_logistics.quote_id');
+
+            console.log("enquiry_data", enquiry_data)
+
+
+            
         console.log("logistic:==", enquiry_data?.selected_logistics?.quote_id?.shipping_fee)
 
         let supplieramount = enquiry_data?.selected_logistics?.quote_id?.shipping_fee;
@@ -367,7 +372,7 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             return res.status(404).json({ error: "User not found", code: 404 });
         }
 
-        if (userId.toString() !== enquiry_data.user_id.toString()) {
+        if (userId.toString() !== enquiry_data.selected_supplier.quote_id.user_id.toString()) {
             return res.status(404).json({ error: "unauthorized access", code: 404 });
         }
 
@@ -635,7 +640,7 @@ exports.appPaymentIntent = async (req, res) => {
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
             .populate('selected_supplier.quote_id')
             .populate('selected_logistics.quote_id');
-
+console.log("enquiry_data",enquiry_data)
         if (!enquiry_data) {
             return res.status(404).json({ error: "Enquiry not found", code: 404 });
         }

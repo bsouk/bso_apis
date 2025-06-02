@@ -99,5 +99,16 @@ router.get(
     requireAuth,
     controller.getFinalQuotationList
 )
-
+router.post(
+    '/addAddress',
+    trimRequest.all,
+    requireAuth,
+    controller.addAddress
+)
+router.get(
+    '/getAddress',
+    trimRequest.all,
+    requireAuth,
+    controller.getAddressList
+)
 module.exports = router
