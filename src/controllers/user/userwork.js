@@ -3378,14 +3378,6 @@ exports.getEnquiryDetails = async (req, res) => {
         }
 
         let newschedule = []
-        // if (data.selected_payment_terms && data.selected_payment_terms.schedule.length > 0) {
-        //     newschedule = data.selected_payment_terms.schedule.map(i => {
-        //         if (paymentdata.payment_stage.includes(i.schedule_id)) {
-        //             let index = paymentdata.payment_stage.indexOf(i.schedule_id)
-        //             console.log("index : ", index)
-        //         }
-        //     })
-        // }
 
         if (
             data.selected_payment_terms &&
@@ -3437,7 +3429,8 @@ exports.getEnquiryDetails = async (req, res) => {
             selected_supplier: selected_supplier?.quote_id || null,
             admincommission: commisiondata || null,
             // payment: paymentdata,
-            payment_schedule_details: newschedule
+            payment_schedule_details: newschedule,
+            logistics_payments : paymentdata?.logistic_payment ?? null
         };
 
         return res.status(200).json({
