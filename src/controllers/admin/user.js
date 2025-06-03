@@ -8,6 +8,7 @@ const generatePassword = require("generate-password");
 const product = require("../../models/product");
 const commision = require("../../models/commision");
 const EnquiryQuotes = require("../../models/EnquiryQuotes")
+const AdminQuotes = require("../../models/admin_quotes")
 const Enquiry = require("../../models/Enquiry")
 const subscription = require("../../models/subscription");
 const logistics_quotes = require("../../models/logistics_quotes");
@@ -2275,16 +2276,8 @@ exports.finalquotes = async (req, res) => {
         select: "address"
       }
     }).populate("pickup_address", "address")
-    // await Enquiry.findOneAndUpdate(
-    //   { _id: result.enquiry_id },
-    //   {
-    //     $set: {
-    //       selected_supplier: {
-    //         quote_id: id
-    //       }
-    //     }
-    //   }
-    // );
+    const adminquote = await AdminQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate("enquiry_items.quantity.unit")
+
     const suppiertotalprice = supplier.reduce((sum, quote) => {
       return sum + (quote.final_price || 0);
     }, 0);
@@ -2294,6 +2287,7 @@ exports.finalquotes = async (req, res) => {
       data: {
         enquiry,
         supplier,
+        adminquote,
         suppiertotalprice
       },
       code: 200
@@ -2330,7 +2324,8 @@ exports.updateSubmitQuery = async (req, res) => {
           admin_price,
           logistics_price,
           admin_grand_total: grand_total,
-          admin_payment_terms: payment_terms
+          admin_payment_terms: payment_terms,
+          ...req.body
         }
       },
       { new: true }

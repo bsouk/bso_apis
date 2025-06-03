@@ -66,6 +66,9 @@ const AdminQuotesSchema = new mongoose.Schema({
                     type: mongoose.Schema.Types.ObjectId,
                     ref: "products"
                 },
+                item_id: {
+                    type: mongoose.Schema.Types.ObjectId,
+                },
                 admin_unit_price: {
                     type: Number,
                     default: 0
@@ -94,7 +97,7 @@ const AdminQuotesSchema = new mongoose.Schema({
                     ],
                     default: []
                 },
-               supplier_attachment: {
+                supplier_attachment: {
                     type: [
                         String
                     ],
@@ -263,7 +266,7 @@ const AdminQuotesSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: ["admin", "supplier"],
-        default : 'supplier'
+        default: 'supplier'
     },
 },
     {

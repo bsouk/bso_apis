@@ -2137,13 +2137,33 @@ exports.addAdminquotes = async (req, res) => {
         console.log("enquiryData : ", enquiryData);
         let enquiry = {}
         if (enquiryData) {
-            enquiry = await AdminQuotes.findOneAndUpdate(
-                { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
-                { $set: data },
-                {
-                    new: true
-                }
-            )
+            const itemToCheck = data.enquiry_items[0]?.item_id
+            const check = enquiryData?.enquiry_items?.find(
+                (item) => item?.item_id == itemToCheck
+            );
+            console.log("check:", check);
+            if (check) {
+                enquiry = await AdminQuotes.findOneAndUpdate(
+                    { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
+                    {
+                        $set: {
+                            "enquiry_items.$[elem]": data.enquiry_items[0]
+                        }
+                    },
+                    {
+                        new: true,
+                        arrayFilters: [{ "elem.item_id": itemToCheck }]
+                    }
+                )
+            } else {
+                enquiry = await AdminQuotes.findOneAndUpdate(
+                    { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
+                    { $push: { enquiry_items: data?.enquiry_items } },
+                    {
+                        new: true
+                    }
+                )
+            }
             console.log("enquiry : ", enquiry);
         } else {
             let quote_unique_id = await genQuoteId()
@@ -2204,7 +2224,7 @@ exports.getSingleAdminQuotes = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
 
-        let data = await AdminQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(id), user_id: new mongoose.Types.ObjectId(userId) })
+        let data = await AdminQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(id), user_id: new mongoose.Types.ObjectId(userId) }).populate('enquiry_items.quantity.unit')
         console.log("data : ", data)
 
         return res.status(200).json({

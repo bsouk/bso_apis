@@ -203,12 +203,12 @@ exports.createJobApplication = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user data : ', req.user)
-        if (!req?.user?.user_type?.includes('resource')) {
-            return utils.handleError(res, {
-                message: "Only resource user can apply for a job",
-                code: 403,
-            });
-        }
+        // if (!req?.user?.user_type?.includes('resource')) {
+        //     return utils.handleError(res, {
+        //         message: "Only resource user can apply for a job",
+        //         code: 403,
+        //     });
+        // }
         const data = req.body
         const jobdata = await jobs.findOne({ _id: data.job_id })
         console.log('job data : ', jobdata)
