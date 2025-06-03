@@ -381,24 +381,6 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        // let selected_pay_term = enquiry_data.selected_payment_terms
-        // console.log("selected_pay_term : ", selected_pay_term)
-
-        // const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_pay_term) })
-        // console.log("fetch_term : ", fetch_term)
-
-        // if (!fetch_term) {
-        //     return utils.handleError(res, {
-        //         message: "Payment term not found"
-        //     });
-        // }
-
-        // if (fetch_term.method != "scheduled") {
-        //     return utils.handleError(res, {
-        //         message: `Payment method is ${fetch_term.method}`
-        //     })
-        // }
-
         let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, supplier_id: userId });
         console.log("paymenthistory : ", paymenthistory)
 
@@ -409,7 +391,7 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
                 supplier_id: userId,
-                total_amount: supplieramount,
+                total_amount: totalAmount,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
                 currency: enquiry_data?.selected_supplier?.quote_id?.currency || 'usd'
@@ -418,22 +400,7 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             console.log("paymenthistory : ", paymenthistory)
         }
         paymentAmount = supplieramount
-        // if (fetch_term.method == "advanced") {
-        //     
-        // }
-
-        // if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
-        //     for (const i of fetch_term.schedule) {
-        //         const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
-        //         if (!alreadyPaid) {
-        //             paymentAmount = i.value_type === "percentage"
-        //                 ? (totalAmount * i.value) / 100
-        //                 : i.value;
-        //             my_schedule_id = i.schedule_id
-        //             break;
-        //         }
-        //     }
-        // }
+       
 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(paymentAmount * 100),
@@ -448,16 +415,6 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
                 orderType: "one-time"
             },
         });
-
-        // const setupIntent = await stripe.setupIntents.create({
-        //     customer: customer.id,
-        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account'],
-        //     metadata: {
-        //         userId: userId.toString(),
-        //         enquiryId: enquiry_id
-        //     }
-        // });
-
         return res.status(200).json({
             message: "Payment intent created",
             data: {
@@ -499,10 +456,10 @@ exports.createPaymentIntentlogisticbuyer = async (req, res) => {
         }
 
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
-            .populate('selected_supplier.quote_id');
-        console.log("logistic:==", enquiry_data?.selected_supplier?.quote_id?.custom_charges_one)
+            .populate('selected_supplier.quote_id').populate('selected_logistics.quote_id');
+        console.log("logistic:==", enquiry_data?.selected_logistics?.quote_id)
 
-        let buyeramount = enquiry_data.selected_supplier?.quote_id?.custom_charges_one.value;
+        let buyeramount = enquiry_data.selected_logistics?.quote_id?.shipping_fee
         console.log("===========buyeramount", buyeramount)
         if (!enquiry_data) {
             return res.status(404).json({ error: "Enquiry not found", code: 404 });
@@ -523,24 +480,6 @@ exports.createPaymentIntentlogisticbuyer = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        // let selected_pay_term = enquiry_data.selected_payment_terms
-        // console.log("selected_pay_term : ", selected_pay_term)
-
-        // const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_pay_term) })
-        // console.log("fetch_term : ", fetch_term)
-
-        // if (!fetch_term) {
-        //     return utils.handleError(res, {
-        //         message: "Payment term not found"
-        //     });
-        // }
-
-        // if (fetch_term.method != "scheduled") {
-        //     return utils.handleError(res, {
-        //         message: `Payment method is ${fetch_term.method}`
-        //     })
-        // }
-
         let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: userId });
         console.log("paymenthistory : ", paymenthistory)
 
@@ -551,7 +490,7 @@ exports.createPaymentIntentlogisticbuyer = async (req, res) => {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
                 buyer_id: userId,
-                total_amount: buyeramount,
+                total_amount: totalAmount,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
                 currency: enquiry_data?.selected_supplier?.quote_id?.currency || 'usd'
@@ -560,22 +499,6 @@ exports.createPaymentIntentlogisticbuyer = async (req, res) => {
             console.log("paymenthistory : ", paymenthistory)
         }
         paymentAmount = buyeramount
-        // if (fetch_term.method == "advanced") {
-        //     
-        // }
-
-        // if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
-        //     for (const i of fetch_term.schedule) {
-        //         const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
-        //         if (!alreadyPaid) {
-        //             paymentAmount = i.value_type === "percentage"
-        //                 ? (totalAmount * i.value) / 100
-        //                 : i.value;
-        //             my_schedule_id = i.schedule_id
-        //             break;
-        //         }
-        //     }
-        // }
 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(paymentAmount * 100),
@@ -766,7 +689,7 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
             return res.status(404).json({ error: "User not found", code: 404 });
         }
 
-        if (userId.toString() !== enquiry_data.user_id.toString()) {
+        if (userId.toString() !== enquiry_data?.selected_supplier?.quote_id?.user_id?.toString()) {
             return res.status(404).json({ error: "unauthorized access", code: 404 });
         }
 
@@ -774,24 +697,6 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
         if (!customer) {
             customer = await createStripeCustomer(user);
         }
-
-        // let selected_pay_term = enquiry_data.selected_payment_terms
-        // console.log("selected_pay_term : ", selected_pay_term)
-
-        // const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_pay_term) })
-        // console.log("fetch_term : ", fetch_term)
-
-        // if (!fetch_term) {
-        //     return utils.handleError(res, {
-        //         message: "Payment term not found"
-        //     });
-        // }
-
-        // if (fetch_term.method != "scheduled") {
-        //     return utils.handleError(res, {
-        //         message: `Payment method is ${fetch_term.method}`
-        //     })
-        // }
 
         let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, supplier_id: userId });
         console.log("paymenthistory : ", paymenthistory)
@@ -803,7 +708,7 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
                 supplier_id: userId,
-                total_amount: supplieramount,
+                total_amount: totalAmount,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
                 currency: enquiry_data?.currency || 'usd'
@@ -812,45 +717,6 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
             console.log("paymenthistory : ", paymenthistory)
         }
         paymentAmount = supplieramount
-        // if (fetch_term.method == "advanced") {
-        //     
-        // }
-
-        // if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
-        //     for (const i of fetch_term.schedule) {
-        //         const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
-        //         if (!alreadyPaid) {
-        //             paymentAmount = i.value_type === "percentage"
-        //                 ? (totalAmount * i.value) / 100
-        //                 : i.value;
-        //             my_schedule_id = i.schedule_id
-        //             break;
-        //         }
-        //     }
-        // }
-
-        // const paymentIntent = await stripe.paymentIntents.create({
-        //     amount: Math.round(paymentAmount * 100),
-        //     currency: enquiry_data?.currency || 'usd',
-        //     customer: customer.id,
-        //     automatic_payment_methods: {
-        //         enabled: true,
-        //     },
-        //     metadata: {
-        //         userId: userId.toString(),
-        //         enquiryId: enquiry_id,
-        //         orderType: "one-time"
-        //     },
-        // });
-
-        // const setupIntent = await stripe.setupIntents.create({
-        //     customer: customer.id,
-        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account'],
-        //     metadata: {
-        //         userId: userId.toString(),
-        //         enquiryId: enquiry_id
-        //     }
-        // });
 
         return res.status(200).json({
             message: "Payment intent created",
@@ -868,15 +734,6 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
 
     } catch (error) {
         console.error("Payment intent error:", error);
-
-        // if (error.type === 'StripeInvalidRequestError') {
-        //     return res.status(400).json({
-        //         error: error.message,
-        //         code: 400,
-        //         stripe_code: error.code
-        //     });
-        // }
-
         utils.handleError(res, error);
     }
 };
@@ -917,24 +774,6 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        // let selected_pay_term = enquiry_data.selected_payment_terms
-        // console.log("selected_pay_term : ", selected_pay_term)
-
-        // const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_pay_term) })
-        // console.log("fetch_term : ", fetch_term)
-
-        // if (!fetch_term) {
-        //     return utils.handleError(res, {
-        //         message: "Payment term not found"
-        //     });
-        // }
-
-        // if (fetch_term.method != "scheduled") {
-        //     return utils.handleError(res, {
-        //         message: `Payment method is ${fetch_term.method}`
-        //     })
-        // }
-
         let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: userId });
         console.log("paymenthistory : ", paymenthistory)
 
@@ -945,7 +784,7 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
                 buyer_id: userId,
-                total_amount: buyeramount,
+                total_amount: totalAmount,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
                 currency: enquiry_data?.currency || 'usd'
@@ -954,32 +793,6 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
             console.log("paymenthistory : ", paymenthistory)
         }
         paymentAmount = buyeramount
-        // if (fetch_term.method == "advanced") {
-        //     
-        // }
-
-        // if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
-        //     for (const i of fetch_term.schedule) {
-        //         const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
-        //         if (!alreadyPaid) {
-        //             paymentAmount = i.value_type === "percentage"
-        //                 ? (totalAmount * i.value) / 100
-        //                 : i.value;
-        //             my_schedule_id = i.schedule_id
-        //             break;
-        //         }
-        //     }
-        // }
-
-     
-        // const setupIntent = await stripe.setupIntents.create({
-        //     customer: customer.id,
-        //     payment_method_types: ['card', 'paypal', 'link', 'us_bank_account'],
-        //     metadata: {
-        //         userId: userId.toString(),
-        //         enquiryId: enquiry_id
-        //     }
-        // });
 
         return res.status(200).json({
             message: "Payment intent created",
@@ -1234,25 +1047,9 @@ exports.logisticpaynow = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        // await stripe.paymentMethods.attach(data.payment_method_id, {
-        //     customer: customer.id,
-        // });
-
-        // await stripe.customers.update(customer.id, {
-        //     invoice_settings: {
-        //         default_payment_method: data.payment_method_id
-        //     }
-        // });
-
         const paymentIntent = await stripe.paymentIntents.retrieve(data.payment_intent_id);
         let confirmedIntent = paymentIntent;
 
-        // if (paymentIntent.status === 'succeeded') {
-        //     return res.status(400).json({
-        //         error: "Payment already completed",
-        //         code: 400
-        //     });
-        // } 
         if (paymentIntent.status !== 'succeeded') {
             const confirmedIntent = await stripe.paymentIntents.confirm(
                 data.payment_intent_id,
@@ -1276,9 +1073,9 @@ exports.logisticpaynow = async (req, res) => {
             }
         }
 
-        let neworder = await Order.findOne({ enquiry_id: data.enquiry_id, buyer_id: userId })
+        let neworder = await Order.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id })
         console.log("neworder : ", neworder)
-        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: userId })
+        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id})
         console.log("payment_data : ", payment_data)
 
         if (!neworder) {
@@ -1302,29 +1099,6 @@ exports.logisticpaynow = async (req, res) => {
             payment_data.order_id = neworder?._id
         }
 
-        // payment_data.total_amount = enquiry_data?.total_amount
-
-
-        // let totalprice = 0
-        // enquiry_data?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
-        // console.log("totalprice : ", totalprice)
-
-        // totalprice += (enquiry_data?.selected_supplier?.quote_id?.custom_charges_one?.value + enquiry_data?.selected_supplier?.quote_id?.custom_charges_two?.value) - enquiry_data?.selected_supplier?.quote_id?.discount?.value
-        // console.log("totalprice : ", totalprice)
-
-        // let servicefee = 1
-        // if (enquiry_data?.selected_supplier?.quote_id?.admin_charge === "percentage") {
-        //     if (enquiry_data > 0) {
-        //         servicefee += (servicefee) * ((enquiry_data?.selected_supplier?.quote_id?.admin_charge?.value) / 100)
-        //     }
-        //     console.log("servicefee : ", servicefee)
-        // } else {
-        //     servicefee += enquiry_data?.selected_supplier?.quote_id?.admin_charge?.value
-        //     console.log("servicefee : ", servicefee)
-        // }
-
-        // let amt_per = data?.schedule_id ? enquiry_data?.selected_payment_terms?.schedule.find(i => i?.schedule_id === data?.schedule_id) : {}
-        // console.log("amt_per : ", amt_per)
 
         let per_amt = Math.floor(((confirmedIntent.amount / 100) / enquiry_data?.grand_total) * 100)
 
@@ -1369,9 +1143,9 @@ exports.logisticpaynow = async (req, res) => {
         }
 
         newtracking.order_shipment_dates.push({
-            order_status: "payment schedule completed",
+            order_status: "logisticpayment completed",
             date: new Date(),
-            schedule_id: data?.schedule_id
+            schedule_id: data?.schedule_id || null
         })
 
         await newtracking.save()

@@ -29,7 +29,6 @@ const PaymentSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "users"
         },
-        
         total_amount: {
             type: Number,
         },
@@ -62,7 +61,7 @@ const PaymentSchema = new mongoose.Schema(
         },
         iloc_document: [String],
         receipt: String,
-        
+
         logistic_payment: [
             {
                 currency: String,
@@ -122,9 +121,6 @@ const PaymentSchema = new mongoose.Schema(
                 stripe_payment_method: String,
             }
         ],
-
-
-
         payment_stage: [
             {
                 currency: String,
