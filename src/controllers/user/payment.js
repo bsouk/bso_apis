@@ -1099,9 +1099,6 @@ exports.logisticpaynow = async (req, res) => {
             payment_data.order_id = neworder?._id
         }
 
-
-        let per_amt = Math.floor(((confirmedIntent.amount / 100) / enquiry_data?.grand_total) * 100)
-
         payment_data.service_charges = enquiry_data?.service_charges
         payment_data.logistics_charges = enquiry_data?.logistics_charges
         payment_data.supplier_charges = enquiry_data?.supplier_charges
@@ -1114,7 +1111,6 @@ exports.logisticpaynow = async (req, res) => {
             schedule_id: data?.schedule_id || null,
             schedule_status: "completed" ,
             amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0,
-            payment_percentage: per_amt || null,
             receipt: confirmedIntent?.charges?.data?.[0]?.receipt_url || null,
             currency: confirmedIntent?.currency || null,
         })
