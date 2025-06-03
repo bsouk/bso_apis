@@ -14,6 +14,13 @@ const version_history = require("../../models/version_history");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 const { Country, State, City } = require('country-state-city');
 const EnquiryQuotes = require("../../models/EnquiryQuotes");
+const AdminQuotes = require("../../models/admin_quotes")
+
+
+async function genQuoteId() {
+    let token = Math.floor(Math.random() * 100000000)
+    return `quote-${token}`
+}
 
 exports.getQuotationList = async (req, res) => {
     try {
@@ -1327,7 +1334,7 @@ exports.selectLogistics = async (req, res) => {
         }
 
         const logistics_list = await User.find({
-            user_type: {$in : ['logistics']},
+            user_type: { $in: ['logistics'] },
             company_data: { $exists: true, $ne: null }
         });
         console.log("Logistics List: ", logistics_list);
@@ -1892,15 +1899,15 @@ exports.addenquiryquotes = async (req, res) => {
         //     )
         //     console.log("enquiry : ", enquiry);
         // } else {
-            let quote_unique_id = await genQuoteId()
-            let type = "admin"
-            enquiry = await EnquiryQuotes.create({
-                ...data,
-                quote_unique_id,
-                user_id: userId,
-                type,
-            });
-            console.log("enquiry : ", enquiry);
+        let quote_unique_id = await genQuoteId()
+        let type = "admin"
+        enquiry = await EnquiryQuotes.create({
+            ...data,
+            quote_unique_id,
+            user_id: userId,
+            type,
+        });
+        console.log("enquiry : ", enquiry);
         // }
 
         //send notification
@@ -2035,7 +2042,7 @@ exports.getAddressbyid = async (req, res) => {
         console.log("data to edited is ", data)
 
         const addressdata = await Address.findById(id);
-        
+
 
         res.status(200).json({
             status: true,
@@ -2051,31 +2058,31 @@ exports.getAddressbyid = async (req, res) => {
 
 exports.getEnquiryItem = async (req, res) => {
     try {
-      const { enquiryId, itemId } = req.query;
-  
-      // Validate ObjectIds
-      if (!mongoose.Types.ObjectId.isValid(enquiryId) || !mongoose.Types.ObjectId.isValid(itemId)) {
-        return res.status(400).json({ message: "Invalid ID format" });
-      }
-  
-      // Fetch only the matched enquiry item
-      const data = await Enquiry.findOne(
-        { _id: enquiryId, "enquiry_items._id": itemId },
-        { enquiry_items: { $elemMatch: { _id: itemId } } }
-      )
-      .populate("enquiry_items.quantity.unit");
-  
-      if (!data || data.enquiry_items.length === 0) {
-        return res.status(404).json({ message: "Enquiry item not found" });
-      }
-  
-      return res.status(200).json({
-        success: true,
-        item: data,
-      });
+        const { enquiryId, itemId } = req.query;
+
+        // Validate ObjectIds
+        if (!mongoose.Types.ObjectId.isValid(enquiryId) || !mongoose.Types.ObjectId.isValid(itemId)) {
+            return res.status(400).json({ message: "Invalid ID format" });
+        }
+
+        // Fetch only the matched enquiry item
+        const data = await Enquiry.findOne(
+            { _id: enquiryId, "enquiry_items._id": itemId },
+            { enquiry_items: { $elemMatch: { _id: itemId } } }
+        )
+            .populate("enquiry_items.quantity.unit");
+
+        if (!data || data.enquiry_items.length === 0) {
+            return res.status(404).json({ message: "Enquiry item not found" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            item: data,
+        });
     } catch (error) {
-      console.error("Error fetching enquiry item:", error);
-      return res.status(500).json({ message: "Server error" });
+        console.error("Error fetching enquiry item:", error);
+        return res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -2109,6 +2116,102 @@ exports.getStates = async (req, res) => {
                 code: 200
             }
         )
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+
+exports.addAdminquotes = async (req, res) => {
+    try {
+        const data = req.body;
+        console.log("data : ", data)
+        const userId = req.user._id;
+
+        const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id })
+        console.log("buyerenquiry : ", buyerenquiry)
+
+        const enquiryData = await AdminQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) }).populate('enquiry_id');
+        console.log("enquiryData : ", enquiryData);
+        let enquiry = {}
+        if (enquiryData) {
+            enquiry = await AdminQuotes.findOneAndUpdate(
+                { enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) },
+                { $set: data },
+                {
+                    new: true
+                }
+            )
+            console.log("enquiry : ", enquiry);
+        } else {
+            let quote_unique_id = await genQuoteId()
+            enquiry = await AdminQuotes.create({
+                ...data,
+                quote_unique_id,
+                user_id: userId,
+            });
+            console.log("enquiry : ", enquiry);
+        }
+
+        // //send notification
+        // const notificationMessage = {
+        //     title: 'New Quote submit by supplier',
+        //     description: `${req.user.full_name} has created a new quote . Enquiry ID : ${buyerenquiry?.enquiry_unique_id}`,
+        //     quote: enquiry._id
+        // };
+
+        // const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+        // console.log("buyerfcm : ", buyerfcm)
+
+        // if (buyerfcm && buyerfcm.length > 0) {
+        //     buyerfcm.forEach(async i => {
+        //         const token = i.token
+        //         console.log("token : ", token)
+        //         await utils.sendNotification(token, notificationMessage);
+        //     })
+        //     const NotificationData = {
+        //         title: notificationMessage.title,
+        //         // body: notificationMessage.description,
+        //         description: notificationMessage.description,
+        //         type: "supplier_quote_added",
+        //         receiver_id: buyerenquiry.user_id,
+        //         related_to: buyerenquiry.user_id,
+        //         related_to_type: "user",
+        //     };
+        //     const newNotification = new Notification(NotificationData);
+        //     console.log("newNotification : ", newNotification)
+        //     await newNotification.save();
+        // }
+
+        return res.status(200).json({
+            message: "Admin Quotation Submit Successfully",
+            data: enquiry,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+
+
+exports.getSingleAdminQuotes = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { id } = req.params
+        console.log("id : ", id)
+
+        let data = await AdminQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(id), user_id: new mongoose.Types.ObjectId(userId) })
+        console.log("data : ", data)
+
+        return res.status(200).json({
+            message: "Admin quotes fetched successfully",
+            data,
+            code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }

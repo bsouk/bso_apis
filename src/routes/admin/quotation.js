@@ -146,4 +146,20 @@ router.post(
     controller.addenquiryquotes
 )
 
+
+
+router.post(
+    '/addAdminquotes',
+    trimRequest.all,
+    requireAuth,
+    controller.addAdminquotes
+)
+
+router.get(
+    '/getAdminQuotes/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getSingleAdminQuotes
+)
+
 module.exports = router
