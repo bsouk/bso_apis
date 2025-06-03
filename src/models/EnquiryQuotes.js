@@ -64,7 +64,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
             {
                 variant_id: {
                     type: mongoose.Schema.Types.ObjectId,
-                    ref: "enquires"
+                    ref: "products"
                 },
                 admin_unit_price: {
                     type: Number,

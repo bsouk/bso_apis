@@ -2297,8 +2297,8 @@ exports.finalquotes = async (req, res) => {
   }
 };
 exports.updateSubmitQuery = async (req, res) => {
-  const { items, admin_price, logistics_price, grand_total, payment_terms, enq_id } = req.body
-  console.log('dataaaaaaaaaaaaa', req.body)
+  const { updated_data, admin_price, logistics_price, grand_total, payment_terms, enq_id, items } = req.body
+  console.log('data: ', req.body)
   const enquiry = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(enq_id) })
   console.log("enquiry : ", enquiry)
   // const exist=await EnquiryQuotes.findOne({_id:items.})
@@ -2310,26 +2310,49 @@ exports.updateSubmitQuery = async (req, res) => {
   // }
   let updatedItem
   for (const item of items) {
-    updatedItem = await EnquiryQuotes.findOneAndUpdate(
-      {
-        _id: item.quote_id,
-        'enquiry_items._id': item.item_id
-      },
-      {
-        $set: {
-          'enquiry_items.$.admin_unit_price': item.newUnitPrice,
-          'enquiry_items.$.admin_margin_type': item.margin_type,
-          'enquiry_items.$.admin_margin_value': item.margin_value,
-          is_admin_updated: true,// Optional, based on your logic
-          admin_price,
-          logistics_price,
-          admin_grand_total: grand_total,
-          admin_payment_terms: payment_terms,
-          ...req.body
-        }
-      },
-      { new: true }
-    );
+    if (item.admin_quote_id) {
+      updatedItem = await AdminQuotes.findOneAndUpdate(
+        {
+          _id: item.admin_quote_id,
+          'enquiry_items._id': item.item_id
+        },
+        {
+          $set: {
+            'enquiry_items.$.admin_unit_price': item.newUnitPrice,
+            'enquiry_items.$.admin_margin_type': item.margin_type,
+            'enquiry_items.$.admin_margin_value': item.margin_value,
+            is_admin_updated: true,// Optional, based on your logic
+            admin_price,
+            logistics_price,
+            admin_grand_total: grand_total,
+            admin_payment_terms: payment_terms,
+            ...req.body
+          }
+        },
+        { new: true }
+      );
+    } else {
+      updatedItem = await EnquiryQuotes.findOneAndUpdate(
+        {
+          _id: item.quote_id,
+          'enquiry_items._id': item.item_id
+        },
+        {
+          $set: {
+            'enquiry_items.$.admin_unit_price': item.newUnitPrice,
+            'enquiry_items.$.admin_margin_type': item.margin_type,
+            'enquiry_items.$.admin_margin_value': item.margin_value,
+            is_admin_updated: true,// Optional, based on your logic
+            admin_price,
+            logistics_price,
+            admin_grand_total: grand_total,
+            admin_payment_terms: payment_terms,
+            ...req.body
+          }
+        },
+        { new: true }
+      );
+    }
   }
 
   console.log('updatedItem', updatedItem)
@@ -2345,6 +2368,56 @@ exports.updateSubmitQuery = async (req, res) => {
   enquiry.logistics_charges = logistics_price
   enquiry.admin_price = admin_price
   await enquiry.save()
+
+  // const quotedata = await EnquiryQuotes.create(updated_data)
+  // console.log("quotedata : ", quotedata)
+
+  // quotedata.admin_price = admin_price
+  // quotedata.logistics_price = logistics_price
+  // quotedata.admin_grand_total = grand_total
+  // quotedata.admin_payment_terms = payment_terms
+  // await quotedata.save()
+
+
+  // const quotePayload = {
+  //   ...updated_data,
+  //   enquiry_id: updated_data.enquiry_id._id,
+  //   user_id: updated_data.user_id,
+  //   pickup_address: updated_data.pickup_address._id,
+  //   admin_price: Number(admin_price),
+  //   logistics_price: Number(logistics_price),
+  //   admin_grand_total: Number(grand_total),
+  //   admin_payment_terms: payment_terms,
+  //   is_admin_updated: true,
+  //   type: "supplier"
+  // };
+
+  // // Ensure `enquiry_items` are mapped properly
+  // quotePayload.enquiry_items = updated_data.enquiry_items.map(item => ({
+  //   // variant_id: item._id,
+  //   admin_unit_price: item.admin_unit_price?.custom_price ?? 0,
+  //   admin_margin_type: item.admin_unit_price?.charge_type ?? "flat",
+  //   admin_margin_value: item.admin_unit_price?.marginvalue ?? 0,
+  //   brand: item.brand,
+  //   part_no: item.part_no,
+  //   description: item.description,
+  //   notes: item.notes || "",
+  //   attachment: item.attachment || [],
+  //   supplier_attachment: item.supplier_attachment || [],
+  //   available_quantity: item.available_quantity,
+  //   unit_price: item.unit_price,
+  //   amount: item.unit_price * item.quantity.value,
+  //   quantity: {
+  //     unit: item.quantity.unit._id,
+  //     value: item.quantity.value
+  //   },
+  //   unit_weight: item.unit_weight,
+  //   manufacturer: item.manufacturer
+  // }));
+
+  // // Create new supplier quote
+  // const newQuote = await EnquiryQuotes.create(quotePayload);
+  // console.log("New Quote Created:", newQuote);
 
   return res.status(200).json({
     message: 'Quote updated successfully',

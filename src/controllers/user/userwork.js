@@ -3032,47 +3032,47 @@ exports.getAllEnquiry = async (req, res) => {
         if (logisticsview) {
             filter.shipment_type = "delivery";
             filter.selected_supplier = { $exists: true };
-          
+
             filter.$expr = {
-              $or: [
-                {
-                  $eq: [
+                $or: [
                     {
-                      $size: {
-                        $filter: {
-                          input: { $ifNull: ["$supplier_quotes", []] },
-                          as: "quote",
-                          cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
-                        }
-                      }
+                        $eq: [
+                            {
+                                $size: {
+                                    $filter: {
+                                        input: { $ifNull: ["$supplier_quotes", []] },
+                                        as: "quote",
+                                        cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+                                    }
+                                }
+                            },
+                            0
+                        ]
                     },
-                    0
-                  ]
-                },
-                {
-                  $and: [
                     {
-                      $gt: [
-                        {
-                          $size: {
-                            $filter: {
-                              input: { $ifNull: ["$supplier_quotes", []] },
-                              as: "quote",
-                              cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
-                            }
-                          }
-                        },
-                        0
-                      ]
-                    },
-                    { $eq: ["$logistics_selection_data.name", "bso"] }
-                  ]
-                }
-              ]
+                        $and: [
+                            {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: { $ifNull: ["$supplier_quotes", []] },
+                                                as: "quote",
+                                                cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            { $eq: ["$logistics_selection_data.name", "bso"] }
+                        ]
+                    }
+                ]
             };
-          }
-          
-        
+        }
+
+
         if (countries) {
             const countryList = countries.split(',').map(country => country.trim());
             console.log("countryList : ", countryList)
@@ -3430,7 +3430,7 @@ exports.getEnquiryDetails = async (req, res) => {
             admincommission: commisiondata || null,
             // payment: paymentdata,
             payment_schedule_details: newschedule,
-            logistics_payments : paymentdata?.logistic_payment ?? null
+            logistics_payments: paymentdata?.logistic_payment ?? null
         };
 
         return res.status(200).json({
@@ -4916,7 +4916,7 @@ exports.submitLogisticsQuotes = async (req, res) => {
         utils.handleError(res, error);
     }
 }
- 
+
 
 exports.logisticsEnquiryDetails = async (req, res) => {
     try {
@@ -4928,7 +4928,7 @@ exports.logisticsEnquiryDetails = async (req, res) => {
                     path: "pickup_address"
                 },
                 {
-                     path: 'collection_readiness', populate: 'collection_address'
+                    path: 'collection_readiness', populate: 'collection_address'
                 },
                 {
                     path: "enquiry_items.quantity.unit"
@@ -5167,7 +5167,10 @@ exports.getLogisticsQuotes = async (req, res) => {
                     populate: [
                         {
                             path: "selected_supplier.quote_id",
-                            populate: { path: "pickup_address", strictPopulate: false }
+                            populate: [
+                                { path: "pickup_address", strictPopulate: false },
+                                { path: "enquiry_items.quantity.unit" }
+                            ]
                         },
                         {
                             path: "enquiry_items.quantity.unit"
@@ -6256,7 +6259,7 @@ exports.selectLogisticsChoice = async (req, res) => {
         if (data.logistics_selection_data?.name === 'local') {
             data.status = 'logistic_pickup';
         }
-        
+
         const result = await Enquiry.findOneAndUpdate({ _id: data.enquiry_id }, {
             $set: data
         }, { new: true })
