@@ -3040,7 +3040,7 @@ exports.getAllEnquiry = async (req, res) => {
                     {
                       $size: {
                         $filter: {
-                          input: { $ifNull: ["$quotes", []] },
+                          input: { $ifNull: ["$supplier_quotes", []] },
                           as: "quote",
                           cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
                         }
@@ -3056,7 +3056,7 @@ exports.getAllEnquiry = async (req, res) => {
                         {
                           $size: {
                             $filter: {
-                              input: { $ifNull: ["$quotes", []] },
+                              input: { $ifNull: ["$supplier_quotes", []] },
                               as: "quote",
                               cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
                             }
