@@ -2700,7 +2700,7 @@ exports.deleteAdminQuote = async (req, res) => {
   try {
     const { id } = req.body
     console.log('data', req.body)
-    const result = await AdminQuotes.deleteOne({ _id: id })
+    const result = await AdminQuotes.deleteOne({ _id: new mongoose.Types.ObjectId(id) })
     console.log('result', result)
     res.json({
       message: "Admin quote deleted successfully",
