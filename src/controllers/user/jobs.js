@@ -30,6 +30,8 @@ exports.createJob = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user id : ', userId)
+        const data = req.body
+        console.log('data : ', data)
 
         const user_data = await User.findOne({ _id: userId })
         console.log("user data : ", user_data)
@@ -37,6 +39,16 @@ exports.createJob = async (req, res) => {
             return utils.handleError(res, {
                 message: "Only authorised company can create job",
                 code: 404,
+            });
+        }
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: "recruiter" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
             });
         }
 
@@ -58,7 +70,6 @@ exports.createJob = async (req, res) => {
             });
         }
 
-        const data = req.body
         const job_id = await generateUniqueId()
 
         const job_data = {
@@ -398,6 +409,16 @@ exports.acceptApplication = async (req, res) => {
             return utils.handleError(res, {
                 message: "Only authorised company can accept job",
                 code: 404,
+            });
+        }
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userId), status: "active", type: "recruiter" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
             });
         }
 
@@ -1051,6 +1072,16 @@ exports.editJob = async (req, res) => {
         console.log("company is : ", companyId)
         const data = req.body
         console.log('data : ', data)
+
+        const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(companyId), status: "active", type: "recruiter" });
+        console.log("activeSubscription : ", activeSubscription)
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                code: 400,
+            });
+        }
 
         const jobdata = await jobs.findOne({ _id: new mongoose.Types.ObjectId(data.id), company_id: new mongoose.Types.ObjectId(companyId) })
         console.log("jobdata : ", jobdata)
