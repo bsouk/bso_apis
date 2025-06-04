@@ -2324,6 +2324,7 @@ exports.updateSubmitQuery = async (req, res) => {
             'enquiry_items.$.admin_unit_price': item.newUnitPrice,
             'enquiry_items.$.admin_margin_type': item.margin_type,
             'enquiry_items.$.admin_margin_value': item.margin_value,
+            'enquiry_items.$.admin_quantity': item.admin_quantity,
             is_admin_updated: true,// Optional, based on your logic
             admin_price,
             logistics_price,
@@ -2345,6 +2346,7 @@ exports.updateSubmitQuery = async (req, res) => {
             'enquiry_items.$.admin_unit_price': item.newUnitPrice,
             'enquiry_items.$.admin_margin_type': item.margin_type,
             'enquiry_items.$.admin_margin_value': item.margin_value,
+            'enquiry_items.$.admin_quantity': item.admin_quantity,
             is_admin_updated: true,// Optional, based on your logic
             admin_price,
             logistics_price,
