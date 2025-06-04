@@ -5685,16 +5685,16 @@ exports.verifyOtpForBuyer = async (req, res) => {
         const paymentdata = await payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data.user_id })
         console.log("paymentdata : ", paymentdata)
 
-        if (fetch_term.method == "cash-on-delivery") {
+        if (fetch_term?.method == "cash-on-delivery") {
             paymentdata.payment_status = "succeeded"
-            if (paymentdata.payment_stage && paymentdata.payment_stage.length > 0) {
+            if (paymentdata?.payment_stage && paymentdata?.payment_stage?.length > 0) {
                 paymentdata.payment_stage[0].status = "succeeded"
                 paymentdata.payment_stage[0].schedule_status = "completed"
             }
             await paymentdata.save();
         }
-        if (fetch_term.method == "scheduled" && fetch_term.schedule.includes({ payment_stage: "upon-delivery" })) {
-            paymentdata.payment_stage.push({
+        if (fetch_term?.method == "scheduled" && fetch_term?.schedule?.includes({ payment_stage: "upon-delivery" })) {
+            paymentdata?.payment_stage?.push({
                 status: 'succeeded',
                 payment_method: "cash-on-delivery",
                 schedule_status: "completed"
