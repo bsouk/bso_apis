@@ -2418,6 +2418,7 @@ exports.updateSubmitQuery = async (req, res) => {
       unit_price: item.unit_price,
       amount: item.unit_price * item.quantity.value,
       quantity: item.quantity,
+      admin_quantity: item.admin_quantity,
       unit_weight: item.unit_weight,
       manufacturer: item.manufacturer
     }));
