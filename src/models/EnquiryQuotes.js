@@ -121,6 +121,9 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                         default: 0
                     }
                 },
+                admin_quantity : {
+                    type: Number
+                },
                 unit_weight: {
                     type: Number
                 },
