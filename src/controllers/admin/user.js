@@ -15,6 +15,14 @@ const logistics_quotes = require("../../models/logistics_quotes");
 const fcm_devices = require("../../models/fcm_devices");
 const BusinessCategory = require("../../models/business_category");
 const payment = require("../../models/payment");
+
+
+async function genQuoteId() {
+  let token = Math.floor(Math.random() * 100000000)
+  return `quote-${token}`
+}
+
+
 function createNewPassword() {
   const password = generatePassword.generate({
     length: 8,
@@ -2102,12 +2110,13 @@ exports.getCommission = async (req, res) => {
 exports.getAllSupplierQuotes = async (req, res) => {
   try {
     const { id } = req.params
-    console.log("id : ", id)
+    console.log("enquiry id : ", id)
 
-    const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
+    const data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_merged_quote: false })
+      .populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address")
     console.log("data : ", data)
 
-    const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
+    const count = await EnquiryQuotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id), is_merged_quote: false })
 
     return res.status(200).json({
       message: "Supplier quotes fetched successfully",
@@ -2297,7 +2306,7 @@ exports.finalquotes = async (req, res) => {
   }
 };
 exports.updateSubmitQuery = async (req, res) => {
-  const { updated_data, admin_price, logistics_price, grand_total, payment_terms, enq_id, items } = req.body
+  const { updated_data, admin_price, logistics_price, grand_total, payment_terms, enq_id, items, pickup_address } = req.body
   console.log('data: ', req.body)
   const enquiry = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(enq_id) })
   console.log("enquiry : ", enquiry)
@@ -2378,46 +2387,52 @@ exports.updateSubmitQuery = async (req, res) => {
   // quotedata.admin_payment_terms = payment_terms
   // await quotedata.save()
 
+  delete updated_data._id
+  delete updated_data.quote_unique_id
+  if (req.body.admin_included) {
+    let quote_unique_id = await genQuoteId()
 
-  // const quotePayload = {
-  //   ...updated_data,
-  //   enquiry_id: updated_data.enquiry_id._id,
-  //   user_id: updated_data.user_id,
-  //   pickup_address: updated_data.pickup_address._id,
-  //   admin_price: Number(admin_price),
-  //   logistics_price: Number(logistics_price),
-  //   admin_grand_total: Number(grand_total),
-  //   admin_payment_terms: payment_terms,
-  //   is_admin_updated: true,
-  //   type: "supplier"
-  // };
+    const quotePayload = {
+      ...updated_data,
+      quote_unique_id,
+      enquiry_id: enq_id,
+      user_id: updated_data?.user_id,
+      pickup_address: pickup_address,
+      admin_price: Number(admin_price),
+      logistics_price: Number(logistics_price),
+      admin_grand_total: Number(grand_total),
+      admin_payment_terms: payment_terms,
+      is_admin_updated: true,
+      is_admin_approved: true,
+      is_merged_quote: true,
+      type: "admin"
+    };
 
-  // // Ensure `enquiry_items` are mapped properly
-  // quotePayload.enquiry_items = updated_data.enquiry_items.map(item => ({
-  //   // variant_id: item._id,
-  //   admin_unit_price: item.admin_unit_price?.custom_price ?? 0,
-  //   admin_margin_type: item.admin_unit_price?.charge_type ?? "flat",
-  //   admin_margin_value: item.admin_unit_price?.marginvalue ?? 0,
-  //   brand: item.brand,
-  //   part_no: item.part_no,
-  //   description: item.description,
-  //   notes: item.notes || "",
-  //   attachment: item.attachment || [],
-  //   supplier_attachment: item.supplier_attachment || [],
-  //   available_quantity: item.available_quantity,
-  //   unit_price: item.unit_price,
-  //   amount: item.unit_price * item.quantity.value,
-  //   quantity: {
-  //     unit: item.quantity.unit._id,
-  //     value: item.quantity.value
-  //   },
-  //   unit_weight: item.unit_weight,
-  //   manufacturer: item.manufacturer
-  // }));
+    // Ensure `enquiry_items` are mapped properly
+    quotePayload.enquiry_items = updated_data.enquiry_items.map(item => ({
+      variant_id: item.variant_id ?? null,
+      admin_unit_price: item.admin_unit_price?.custom_price ?? null,
+      admin_margin_type: item.admin_unit_price?.charge_type ?? "flat",
+      admin_margin_value: item.admin_unit_price?.marginvalue ?? 0,
+      brand: item.brand,
+      part_no: item.part_no,
+      description: item.description,
+      notes: item.notes || "",
+      attachment: item.attachment || [],
+      supplier_attachment: item.supplier_attachment || [],
+      available_quantity: item.available_quantity,
+      unit_price: item.unit_price,
+      amount: item.unit_price * item.quantity.value,
+      quantity: item.quantity,
+      unit_weight: item.unit_weight,
+      manufacturer: item.manufacturer
+    }));
 
-  // // Create new supplier quote
-  // const newQuote = await EnquiryQuotes.create(quotePayload);
-  // console.log("New Quote Created:", newQuote);
+    // Create new supplier quote
+    console.log("quotePayload : ", quotePayload)
+    const newQuote = await EnquiryQuotes.create(quotePayload);
+    console.log("New Quote Created:", newQuote);
+  }
 
   return res.status(200).json({
     message: 'Quote updated successfully',

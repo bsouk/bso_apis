@@ -4687,6 +4687,75 @@ exports.selectSupplierQuote = async (req, res) => {
             totalprice += quotedata.logistics_price
         }
 
+        // for (const i of quotedata.enquiry_items) {
+        //     if (i.variant_id) {
+        //         await Product.findOneAndUpdate(
+        //             { 'variant._id': new mongoose.Types.ObjectId(i.variant_id) },
+        //             {
+        //                 $inc: { 'variant.$.inventory_quantity': -i.available_quantity } // subtracting quantity
+        //             },
+        //             { new: true }
+        //         );
+        //     }
+        // }
+
+        for (const i of quotedata.enquiry_items) {
+            if (i.variant_id) {
+                const product = await Product.findOne({ 'variant._id': new mongoose.Types.ObjectId(i.variant_id) });
+
+                if (product) {
+                    const variant = product.variant.find(v => v._id.toString() === i.variant_id.toString());
+
+                    if (variant) {
+                        const currentQty = Number(variant.inventory_quantity) || 0;
+                        const updatedQty = currentQty - i.available_quantity;
+
+                        await Product.updateOne(
+                            { 'variant._id': new mongoose.Types.ObjectId(i.variant_id) },
+                            { $set: { 'variant.$.inventory_quantity': updatedQty.toString() } }
+                        );
+
+                        if (updatedQty <= variant.Threshold_value) {
+                            // admin notification
+                            const admins = await Admin.findOne({ role: 'super_admin' });
+                            console.log("admins : ", admins)
+
+                            if (admins) {
+                                const notificationMessage = {
+                                    title: 'Low Stock Alert',
+                                    description: `${product?.name} variant with sku id ${variant?.sku_id} is under the Threshold value`,
+                                    product: product?._id
+                                };
+
+                                const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+                                console.log("adminFcmDevices : ", adminFcmDevices)
+
+                                if (adminFcmDevices && adminFcmDevices.length > 0) {
+                                    adminFcmDevices.forEach(async i => {
+                                        const token = i.token
+                                        console.log("token : ", token)
+                                        await utils.sendNotification(token, notificationMessage);
+                                    })
+                                    const adminNotificationData = {
+                                        title: notificationMessage.title,
+                                        body: notificationMessage.description,
+                                        // description: notificationMessage.description,
+                                        type: "stock_alert",
+                                        receiver_id: admins._id,
+                                        related_to: product?._id,
+                                        related_to_type: "product",
+                                    };
+                                    const newAdminNotification = new admin_received_notification(adminNotificationData);
+                                    console.log("newAdminNotification : ", newAdminNotification)
+                                    await newAdminNotification.save();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         quotedata.is_selected = true
         quotedata.final_price = totalprice
         enquiry.grand_total = totalprice

@@ -94,7 +94,7 @@ const EnquiryQuotesSchema = new mongoose.Schema({
                     ],
                     default: []
                 },
-               supplier_attachment: {
+                supplier_attachment: {
                     type: [
                         String
                     ],
@@ -263,8 +263,12 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: ["admin", "supplier"],
-        default : 'supplier'
+        default: 'supplier'
     },
+    is_merged_quote: {
+        type: Boolean,
+        default: false
+    }
 },
     {
         timestamps: true
