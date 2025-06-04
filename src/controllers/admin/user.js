@@ -2717,7 +2717,7 @@ exports.editAdminQuote = async (req, res) => {
   try {
     const data = req.body
     console.log('data', req.body)
-    const result = await AdminQuotes.findOneAndUpdate({ _id: data?.id }, { $set: data }, { new: true })
+    const result = await AdminQuotes.findOneAndUpdate({ _id: new mongoose.Types.ObjectId(data?.id) }, { $set: data }, { new: true })
     console.log('result', result)
     res.json({
       message: "Admin quote edited successfully",
