@@ -12,7 +12,7 @@ const planSchema = new mongoose.Schema(
         // },
         type: {
             type: String,
-            enum: ["supplier", "buyer", "logistics", "resource"]
+            enum: ["supplier", "buyer", "logistics", "resource", "recruiter"]
         },
         plan_name: {
             type: String,

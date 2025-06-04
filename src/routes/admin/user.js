@@ -324,4 +324,19 @@ router.post(
 )
 
 
+
+router.delete(
+  "/deleteAdminQuote",
+  requireAuth,
+  trimRequest.all,
+  controller.deleteAdminQuote
+)
+
+router.patch(
+  "/editAdminQuote",
+  requireAuth,
+  trimRequest.all,
+  controller.editAdminQuote
+)
+
 module.exports = router;

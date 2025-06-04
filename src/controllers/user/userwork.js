@@ -446,6 +446,37 @@ exports.editProfile = async (req, res) => {
 
             }
                 break;
+            case "recruiter": {
+                const requiredFields = [                   
+                    'company_data.name',
+                    'company_data.business_category',
+                    'company_data.phone_number',
+                    'company_data.name',
+                    'company_data.registration_number',
+                    'company_data.incorporation_date',
+                    'company_data.vat_number',
+                    'company_data.email',
+                    'company_data.address.line1',
+                    'company_data.address.city',
+                    'company_data.address.state',
+                    'company_data.address.zip_code',
+                    'company_data.address.country',                  
+                ];
+
+                console.log("supplier check fields is ", requiredFields)
+
+                const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+                console.log("isProfileComplete is ", isProfileComplete)
+
+                if (isProfileComplete) {
+                    updatedUser.profile_completed = true;
+                } else {
+                    updatedUser.profile_completed = false;
+                }
+
+                await updatedUser.save();
+            }
             default: {
                 updatedUser.profile_completed = false
                 await updatedUser.save()

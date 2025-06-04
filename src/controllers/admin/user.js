@@ -2310,13 +2310,7 @@ exports.updateSubmitQuery = async (req, res) => {
   console.log('data: ', req.body)
   const enquiry = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(enq_id) })
   console.log("enquiry : ", enquiry)
-  // const exist=await EnquiryQuotes.findOne({_id:items.})
-  // if(!exist) {
-  //   return res.status(404).json({ 
-  //     message: 'Quote not found',
-  //     code: 404
-  //   })
-  // }
+
   let updatedItem
   for (const item of items) {
     if (item.admin_quote_id) {
@@ -2697,3 +2691,37 @@ exports.deleteFCMDevice = async (req, res) => {
   }
 };
 
+
+
+exports.deleteAdminQuote = async (req, res) => {
+  try {
+    const { id } = req.body
+    console.log('data', req.body)
+    const result = await AdminQuotes.deleteOne({ _id: id })
+    console.log('result', result)
+    res.json({
+      message: "Admin quote deleted successfully",
+      code: 200,
+    });
+  } catch (error) {
+    console.log(error);
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.editAdminQuote = async (req, res) => {
+  try {
+    const data = req.body
+    console.log('data', req.body)
+    const result = await AdminQuotes.findOneAndUpdate({ _id: data?.id }, { $set: data }, { new: true })
+    console.log('result', result)
+    res.json({
+      message: "Admin quote edited successfully",
+      code: 200,
+    });
+  } catch (error) {
+    console.log(error);
+    utils.handleError(res, error);
+  }
+}

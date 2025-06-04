@@ -269,7 +269,7 @@ exports.deletePlan = async (req, res) => {
         return utils.handleError(res, {
             message: "Plan not found",
             code: 404,
-        });
+        })
     }
 
     const subscriptionCount = await subscription.countDocuments({
