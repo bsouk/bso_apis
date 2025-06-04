@@ -2698,19 +2698,22 @@ exports.deleteFCMDevice = async (req, res) => {
 
 exports.deleteAdminQuote = async (req, res) => {
   try {
-    const { id, iteam_id } = req.body
+    const { id, item_id } = req.body
     console.log('data', req.body)
     const result = await AdminQuotes.findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id) },
+      {
+        _id: new mongoose.Types.ObjectId(id),
+        'enquiry_items._id': new mongoose.Types.ObjectId(item_id)
+      },
       {
         $pull: {
-          enquiry_items: { _id: new mongoose.Types.ObjectId(iteam_id) }
-        }
+          enquiry_items: { _id: new mongoose.Types.ObjectId(item_id) }
+        },
       },
       { new: true }
     );
     console.log('result', result)
-    res.json({
+    return res.status(200).json({
       message: "Admin quote deleted successfully",
       code: 200,
     });

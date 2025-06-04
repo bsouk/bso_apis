@@ -51,13 +51,13 @@ const UserSchema = new mongoose.Schema(
     },
     user_type: {
       type: [String],
-      enum: ["buyer", "supplier", "logistics", "resource", "company"],
+      enum: ["buyer", "supplier", "logistics", "resource", "company", "recruiter"],
       default: ["buyer"],
       required: true,
     },
     current_user_type: {
       type: String,
-      enum: ["buyer", "supplier", "logistics", "resource", "company"],
+      enum: ["buyer", "supplier", "logistics", "resource", "company", "recruiter"],
       default: "buyer"
     },
     joining_date: {
