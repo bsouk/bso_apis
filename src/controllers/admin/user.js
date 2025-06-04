@@ -2730,12 +2730,19 @@ exports.editAdminQuote = async (req, res) => {
         _id: new mongoose.Types.ObjectId(data?.id),
         'enquiry_items._id': new mongoose.Types.ObjectId(data?.item_id)
       },
-      { $set: data },
+      {
+        $set: {
+          'enquiry_items.$.unit_weight': data?.unit_weight,
+          'enquiry_items.$.unit_price': data?.unit_price,
+          'enquiry_items.$.available_quantity': data?.available_quantity
+        }
+      },
       { new: true }
     )
     console.log('result', result)
     res.json({
       message: "Admin quote edited successfully",
+      data: result,
       code: 200,
     });
   } catch (error) {
