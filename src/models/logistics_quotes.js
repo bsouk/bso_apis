@@ -14,6 +14,9 @@ const logisticsQuotesSchema = new mongoose.Schema({
     shipping_fee: {
         type: Number
     },
+    shipment_document: {
+        type: String
+    },
     notes: String,
     is_selected: {
         type: Boolean,
