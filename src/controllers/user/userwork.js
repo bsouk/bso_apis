@@ -5751,6 +5751,9 @@ exports.getSingleLogisticsQuotes = async (req, res) => {
                             { path: "enquiry_items.quantity.unit" }
                         ]
                     },
+                    {
+                        path: "shipping_address"
+                    }
                     // {
                     //     path: "enquiry_items.quantity.unit"
                     // }
