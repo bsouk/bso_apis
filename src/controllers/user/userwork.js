@@ -2623,7 +2623,8 @@ exports.createEnquiry = async (req, res) => {
         let newdata = {
             ...data,
             enquiry_unique_id: enquiryId,
-            user_id: id
+            user_id: id,
+            buyer_plan_step: subscription[0]?.plan?.plan_step ?? null
         }
         console.log("newdata : ", newdata)
         const newquery = await Enquiry.create(newdata);
@@ -4606,7 +4607,7 @@ exports.getAllSupplierQuotes = async (req, res) => {
 exports.selectSupplierQuote = async (req, res) => {
     try {
         const user_id = req.user._id
-        const { quote_id, shipment_type, selected_payment_terms } = req.body
+        const { quote_id, shipment_type, selected_payment_terms, delivery_selection_data } = req.body
         console.log("data : ", req.body)
 
         const pterm_data = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_payment_terms) })
@@ -4677,6 +4678,7 @@ exports.selectSupplierQuote = async (req, res) => {
                         quote_id: new mongoose.Types.ObjectId(quote_id)
                     },
                     shipment_type: shipment_type,
+                    delivery_selection_data,
                     selected_payment_terms: selected_payment_terms,
                 }
             }, { new: true }

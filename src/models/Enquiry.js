@@ -200,6 +200,15 @@ const EnquirySchema = new mongoose.Schema({
         type: String,
         enum: ["self-pickup", "delivery"],
     },
+    delivery_selection_data: {
+        name: {
+            type: String,
+            enum: ["self", "platform", "supplier"],
+        },
+        tracking_id: String,
+        tracking_media: String,
+        details: String
+    },
     order_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "orders"
@@ -213,6 +222,7 @@ const EnquirySchema = new mongoose.Schema({
         tracking_media: String,
         details: String
     },
+    buyer_plan_step: String
 },
     {
         timestamps: true
