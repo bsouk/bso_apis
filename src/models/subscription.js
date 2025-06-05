@@ -33,7 +33,7 @@ const subscriptionSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: ["supplier", "buyer", "logistics", "resource"]
+            enum: ["supplier", "buyer", "logistics", "resource", "recruiter"]
         },
         status: {
             type: String,
