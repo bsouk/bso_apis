@@ -7,6 +7,7 @@ const saved_job = require("../../models/saved_job");
 const saved_resources = require("../../models/saved_resources");
 const fcm_devices = require("../../models/fcm_devices");
 const Notification = require("../../models/notification")
+const Subscription = require("../../models/subscription")
 
 async function generateUniqueId() {
     const id = await Math.floor(Math.random() * 1000000)
