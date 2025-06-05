@@ -4609,7 +4609,7 @@ exports.selectSupplierQuote = async (req, res) => {
         const { quote_id, shipment_type, selected_payment_terms } = req.body
         console.log("data : ", req.body)
 
-        const pterm_data = await payment_terms({ _id: new mongoose.Types.ObjectId(selected_payment_terms) })
+        const pterm_data = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_payment_terms) })
         console.log("pterm_data : ", pterm_data)
 
         // const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active", type: "buyer" });
@@ -4859,7 +4859,7 @@ exports.selectSupplierQuote = async (req, res) => {
                 related_to_type: "user",
             };
             const newNotification = new Notification(NotificationData);
-            console.log("newNotification : ", newNotification)
+            // console.log("newNotification : ", newNotification)
             await newNotification.save();
         }
 
@@ -4871,7 +4871,7 @@ exports.selectSupplierQuote = async (req, res) => {
                 console.log("advancepay : ", advancepay)
                 const paymentdata = await payment.findOne({ enquiry_id: new mongoose.Types.ObjectId(enquiry?._id), buyer_id: new mongoose.Types.ObjectId(user_id) })
                 console.log("paymentdata : ", paymentdata)
-                if (paymentdata?.payment_stage?.length > 0 && !paymentdata?.payment_stage?.some(item => item.schedule_id.toString() === advancepay.schedule_id.toString())) {
+                if (!paymentdata) {
                     const notificationMessage = {
                         title: 'Advance payment is pending',
                         description: `An advance payment is pending. Enquiry ID : ${enquiry?.enquiry_unique_id}`,
@@ -4893,7 +4893,7 @@ exports.selectSupplierQuote = async (req, res) => {
                             related_to_type: "user",
                         };
                         const newNotification = new Notification(NotificationData);
-                        console.log("newNotification : ", newNotification)
+                        // console.log("newNotification : ", newNotification)
                         await newNotification.save();
                     }
 
@@ -4903,9 +4903,9 @@ exports.selectSupplierQuote = async (req, res) => {
                     console.log("payamt : ", payamt)
 
                     const mailOptions = {
-                        to: quotedata.user_id.email,
+                        to: enquiry?.user_id?.email,
                         subject: "Payment Pending - Blue Sky",
-                        supplier_name: quotedata.user_id.full_name,
+                        // supplier_name: quotedata.user_id.full_name,
                         enquiry_id: selected.enquiry_unique_id,
                         buyer_name: selected.user_id.full_name,
                         portal_url: "",
