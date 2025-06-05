@@ -447,7 +447,7 @@ exports.editProfile = async (req, res) => {
             }
                 break;
             case "recruiter": {
-                const requiredFields = [                   
+                const requiredFields = [
                     'company_data.name',
                     'company_data.business_category',
                     'company_data.phone_number',
@@ -460,7 +460,7 @@ exports.editProfile = async (req, res) => {
                     'company_data.address.city',
                     'company_data.address.state',
                     'company_data.address.zip_code',
-                    'company_data.address.country',                  
+                    'company_data.address.country',
                 ];
 
                 console.log("supplier check fields is ", requiredFields)
@@ -5745,12 +5745,17 @@ exports.getSingleLogisticsQuotes = async (req, res) => {
                 populate: [
                     {
                         path: "selected_supplier.quote_id",
-                        populate: { path: "pickup_address", strictPopulate: false }
+                        populate: [
+                            { path: "pickup_address", strictPopulate: false },
+                            { path: "collection_readiness.collection_address" },
+                            { path: "enquiry_items.quantity.unit" }
+                        ]
                     },
-                    {
-                        path: "enquiry_items.quantity.unit"
-                    }
-                ]
+                    // {
+                    //     path: "enquiry_items.quantity.unit"
+                    // }
+                ],
+                select: '-enquiry_items'
             }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
         return res.status(200).json({
             message: "logistics quote data fetched successfully",
