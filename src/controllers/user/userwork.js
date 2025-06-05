@@ -4609,6 +4609,9 @@ exports.selectSupplierQuote = async (req, res) => {
         const { quote_id, shipment_type, selected_payment_terms } = req.body
         console.log("data : ", req.body)
 
+        const pterm_data = await payment_terms({ _id: new mongoose.Types.ObjectId(selected_payment_terms) })
+        console.log("pterm_data : ", pterm_data)
+
         // const activeSubscription = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(user_id), status: "active", type: "buyer" });
         // console.log("activeSubscription : ", activeSubscription)
 
@@ -4654,10 +4657,10 @@ exports.selectSupplierQuote = async (req, res) => {
         )
         console.log("quotedata : ", quotedata)
 
-        const enquiry = await Enquiry.findOne({ _id: quotedata.enquiry_id }).populate('user_id')
+        const enquiry = await Enquiry.findOne({ _id: quotedata?.enquiry_id?._id }).populate('user_id')
         console.log("enquiry : ", enquiry)
 
-        if (quotedata?.enquiry_id?.selected_supplier?.quote_id && mongoose.isValidObjectId(quotedata?.enquiry_id?.selected_supplier?.quote_id)) {
+        if (enquiry?.selected_supplier?.quote_id && mongoose.isValidObjectId(enquiry?.selected_supplier?.quote_id)) {
             return utils.handleError(res, {
                 message: "Enquiry has already an assigned Supplier",
                 code: 400
@@ -4858,6 +4861,61 @@ exports.selectSupplierQuote = async (req, res) => {
             const newNotification = new Notification(NotificationData);
             console.log("newNotification : ", newNotification)
             await newNotification.save();
+        }
+
+
+        //send buyer for advance payment 
+        if (pterm_data.schedule && pterm_data.schedule.length > 0) {
+            if (pterm_data.schedule.some(item => item.payment_stage === "advance")) {
+                const advancepay = pterm_data.schedule.find(i => i.payment_stage === "advance")
+                console.log("advancepay : ", advancepay)
+                const paymentdata = await payment.findOne({ enquiry_id: new mongoose.Types.ObjectId(enquiry?._id), buyer_id: new mongoose.Types.ObjectId(user_id) })
+                console.log("paymentdata : ", paymentdata)
+                if (paymentdata?.payment_stage?.length > 0 && !paymentdata?.payment_stage?.some(item => item.schedule_id.toString() === advancepay.schedule_id.toString())) {
+                    const notificationMessage = {
+                        title: 'Advance payment is pending',
+                        description: `An advance payment is pending. Enquiry ID : ${enquiry?.enquiry_unique_id}`,
+                        enquiry: enquiry?._id
+                    };
+                    if (fcm && fcm.length > 0) {
+                        fcm.forEach(async i => {
+                            const token = i.token
+                            console.log("token : ", token)
+                            await utils.sendNotification(token, notificationMessage);
+                        })
+                        const NotificationData = {
+                            title: notificationMessage.title,
+                            // body: notificationMessage.description,
+                            description: notificationMessage.description,
+                            type: "payment_pending",
+                            receiver_id: quotedata?.user_id?._id || quotedata?.user_id,
+                            related_to: quotedata?.user_id?._id || quotedata?.user_id,
+                            related_to_type: "user",
+                        };
+                        const newNotification = new Notification(NotificationData);
+                        console.log("newNotification : ", newNotification)
+                        await newNotification.save();
+                    }
+
+                    let payamt = advancepay?.value_type === "percentage"
+                        ? (totalprice * advancepay?.value) / 100
+                        : advancepay?.value;
+                    console.log("payamt : ", payamt)
+
+                    const mailOptions = {
+                        to: quotedata.user_id.email,
+                        subject: "Payment Pending - Blue Sky",
+                        supplier_name: quotedata.user_id.full_name,
+                        enquiry_id: selected.enquiry_unique_id,
+                        buyer_name: selected.user_id.full_name,
+                        portal_url: "",
+                        amount: payamt,
+                        schedule: advancepay?.schedule_id
+                    }
+
+                    emailer.sendEmail(null, mailOptions, "advancePaymentReminder");
+                }
+            }
         }
 
         return res.status(200).json({
@@ -5102,7 +5160,7 @@ exports.selectLogisticsQuote = async (req, res) => {
         const quotedata = await logistics_quotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id')
         console.log("quotedata : ", quotedata)
 
-        const enquiry = await Enquiry.findOne({ _id: quotedata.enquiry_id }).populate({ path: 'selected_supplier.quote_id', populate: 'pickup_address' }).populate('user_id')
+        const enquiry = await Enquiry.findOne({ _id: quotedata?.enquiry_id }).populate({ path: 'selected_supplier.quote_id', populate: 'pickup_address' }).populate('user_id')
         console.log("enquiry : ", enquiry)
 
         if (enquiry?.selected_logistics?.quote_id && mongoose.isValidObjectId(enquiry?.selected_logistics?.quote_id)) {
