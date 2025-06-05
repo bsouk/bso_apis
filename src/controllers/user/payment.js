@@ -1461,7 +1461,7 @@ exports.uploadReceipt = async (req, res) => {
 
             enquiry_data.order_id = neworder?._id
             await enquiry_data.save()
-            payment_data.order_id = neworder?._id
+            paymenthistory.order_id = neworder?._id
         }
 
         paymenthistory.order_id = neworder?._id
