@@ -4697,7 +4697,9 @@ exports.selectSupplierQuote = async (req, res) => {
             console.log("totalprice : ", totalprice)
             totalprice += (quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
 
-            shipment_type === "delivery" && delivery_selection_data == "supplier" && (totalprice += quotedata?.custom_charges_one?.value)
+            if (shipment_type === "delivery" && delivery_selection_data == "supplier") {
+                (totalprice += quotedata?.custom_charges_one?.value)
+            }
             console.log("totalprice : ", totalprice)
         }
         supplierfee = totalprice
