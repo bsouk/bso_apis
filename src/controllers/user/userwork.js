@@ -4695,9 +4695,13 @@ exports.selectSupplierQuote = async (req, res) => {
         } else {
             quotedata.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
             console.log("totalprice : ", totalprice)
-            totalprice += (quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
 
-            if (shipment_type === "delivery" && delivery_selection_data == "supplier") {
+            let charge2 = quotedata?.custom_charges_two?.charge_type === "percentage" ? (totalprice) * ((quotedata?.custom_charges_two?.value) / 100) : quotedata?.custom_charges_two?.value
+            let discountamt = quotedata?.discount?.charge_type === "percentage" ? (totalprice) * ((quotedata?.discount?.value) / 100) : quotedata?.discount?.value
+            // totalprice += (quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
+            totalprice += (charge2 - discountamt)
+
+            if (shipment_type === "delivery" && delivery_selection_data?.name == "supplier") {
                 (totalprice += quotedata?.custom_charges_one?.value)
             }
             console.log("totalprice : ", totalprice)
