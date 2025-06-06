@@ -3064,13 +3064,51 @@ exports.getAllEnquiry = async (req, res) => {
         if (logisticsview) {
             filter.shipment_type = "delivery";
             filter.selected_supplier = { $exists: true };
-            filter.delivery_selection_data = {}
-            filter.delivery_selection_data.name = "platform";
+            // filter.delivery_selection_data = {}
+            // filter.delivery_selection_data.name = "platform";
+
+            // filter.$expr = {
+            //     $or: [
+            //         {
+            //             $eq: [
+            //                 {
+            //                     $size: {
+            //                         $filter: {
+            //                             input: { $ifNull: ["$supplier_quotes", []] },
+            //                             as: "quote",
+            //                             cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+            //                         }
+            //                     }
+            //                 },
+            //                 0
+            //             ]
+            //         },
+            //         {
+            //             $and: [
+            //                 {
+            //                     $gt: [
+            //                         {
+            //                             $size: {
+            //                                 $filter: {
+            //                                     input: { $ifNull: ["$supplier_quotes", []] },
+            //                                     as: "quote",
+            //                                     cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+            //                                 }
+            //                             }
+            //                         },
+            //                         0
+            //                     ]
+            //                 },
+            //                 { $eq: ["$logistics_selection_data.name", "bso"] }
+            //             ]
+            //         }
+            //     ]
+            // };
 
             filter.$expr = {
-                $or: [
+                $and: [
                     {
-                        $eq: [
+                        $gt: [
                             {
                                 $size: {
                                     $filter: {
@@ -3084,22 +3122,16 @@ exports.getAllEnquiry = async (req, res) => {
                         ]
                     },
                     {
-                        $and: [
+                        $or: [
                             {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: { $ifNull: ["$supplier_quotes", []] },
-                                                as: "quote",
-                                                cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
+                                $eq: ["$delivery_selection_data.name", "platform"]
                             },
-                            { $eq: ["$logistics_selection_data.name", "bso"] }
+                            {
+                                $and: [
+                                    { $eq: ["$delivery_selection_data.name", "supplier"] },
+                                    { $eq: ["$logistics_selection_data.name", "bso"] }
+                                ]
+                            }
                         ]
                     }
                 ]
@@ -3345,27 +3377,6 @@ exports.getAllEnquiry = async (req, res) => {
                     quotes: 0
                 }
             },
-            // {
-            //     $group: {
-            //         _id: "$_id",
-            //         user_id: { $first: "$user_id" },
-            //         enquiry_unique_id: { $first: "$enquiry_unique_id" },
-            //         status: { $first: "$status" },
-            //         expiry_date: { $first: "$expiry_date" },
-            //         priority: { $first: "$priority" },
-            //         enquiry_number: { $first: "$enquiry_number" },
-            //         // shipping_address: { $first: "$shipping_address" },
-            //         shipping_address: { $first: "$shipping_address_data" },
-            //         currency: { $first: "$currency" },
-            //         documents: { $first: "$documents" },
-            //         enquiry_items: { $push: "$enquiry_items" },
-            //         delivery_charges: { $first: "$delivery_charges" },
-            //         reply: { $first: "$reply" },
-            //         total_quotes: { $first: "$total_quotes" },
-            //         createdAt: { $first: "$createdAt" },
-            //         updatedAt: { $first: "$updatedAt" },
-            //     }
-            // },
             {
                 $sort: { createdAt: -1 }
             },
@@ -3378,6 +3389,7 @@ exports.getAllEnquiry = async (req, res) => {
                 $count: "totalCount"
             }
         ]);
+        console.log("count : ", count)
 
         return res.json({ data, count: count.length > 0 ? count[0].totalCount : 0, code: 200 });
 
