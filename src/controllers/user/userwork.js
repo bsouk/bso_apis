@@ -3064,6 +3064,7 @@ exports.getAllEnquiry = async (req, res) => {
         if (logisticsview) {
             filter.shipment_type = "delivery";
             filter.selected_supplier = { $exists: true };
+            filter.delivery_selection_data = {}
             filter.delivery_selection_data.name = "platform";
 
             filter.$expr = {
@@ -4716,7 +4717,7 @@ exports.selectSupplierQuote = async (req, res) => {
             if (commision.charge_type === "percentage") {
                 if (totalprice > 0) {
                     totalprice += (totalprice) * ((commision.value) / 100)
-                    servicefee = (totalprice) * ((commision.value) / 100)
+                    servicefee = (totalprice * commision.value / 100)
                 }
                 console.log("totalprice : ", totalprice)
             } else {
