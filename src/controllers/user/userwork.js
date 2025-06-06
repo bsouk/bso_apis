@@ -4835,6 +4835,7 @@ exports.selectSupplierQuote = async (req, res) => {
                     shipment_type: shipment_type,
                     delivery_selection_data,
                     selected_payment_terms: selected_payment_terms,
+                    currency : quotedata?.currency
                 }
             }, { new: true }
         ).populate('shipping_address user_id')
