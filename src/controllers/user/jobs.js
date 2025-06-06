@@ -586,12 +586,12 @@ exports.getJobAppliedResources = async (req, res) => {
         }
         const applicants = await job_applications.find({ job_id, company_id: companyId }).populate('canditate_id').sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit))
         const count = await job_applications.countDocuments({ job_id, company_id: companyId })
-        if (!applicants || applicants.length === 0) {
-            return utils.handleError(res, {
-                message: "No record found",
-                code: 404,
-            });
-        }
+        // if (!applicants || applicants.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "No record found",
+        //         code: 404,
+        //     });
+        // }
         return res.status(200).json({
             message: "resources fetched successfully",
             data: applicants,

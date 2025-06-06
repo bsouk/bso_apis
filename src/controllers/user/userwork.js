@@ -3064,6 +3064,7 @@ exports.getAllEnquiry = async (req, res) => {
         if (logisticsview) {
             filter.shipment_type = "delivery";
             filter.selected_supplier = { $exists: true };
+            filter.delivery_selection_data.name = "platform";
 
             filter.$expr = {
                 $or: [
@@ -4696,7 +4697,7 @@ exports.selectSupplierQuote = async (req, res) => {
             console.log("totalprice : ", totalprice)
             totalprice += (quotedata?.custom_charges_two?.value) - quotedata?.discount?.value
 
-            shipment_type === "delivery" && (totalprice += quotedata?.custom_charges_one?.value)
+            shipment_type === "delivery" && delivery_selection_data == "supplier" && (totalprice += quotedata?.custom_charges_one?.value)
             console.log("totalprice : ", totalprice)
         }
         supplierfee = totalprice
