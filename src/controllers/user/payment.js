@@ -794,6 +794,16 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
         }
         paymentAmount = buyeramount
 
+        if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
+            for (const i of fetch_term.schedule) {
+                const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
+                if (!alreadyPaid) {                   
+                    my_schedule_id = i.schedule_id
+                    break;
+                }
+            }
+        }
+
         return res.status(200).json({
             message: "Payment intent created",
             data: {
