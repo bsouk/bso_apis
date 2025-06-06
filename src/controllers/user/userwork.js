@@ -3294,101 +3294,242 @@ exports.getAllEnquiry = async (req, res) => {
             ]
         );
 
-        count = await Enquiry.aggregate([
-            {
-                $unwind: {
-                    path: "$enquiry_items",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $match: brandfilter
-            },
-            {
-                $lookup: {
-                    from: "quantity_units",
-                    let: { unitId: "$enquiry_items.quantity.unit" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: { $eq: ["$_id", "$$unitId"] }
-                            }
-                        },
-                        {
-                            $project: {
-                                _id: 1,
-                                unit: 1
-                            }
-                        }
-                    ],
-                    as: "enquiry_items.quantity_unit_data"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$enquiry_items.quantity_unit_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
+        count = await Enquiry.aggregate(
+            // [
+            //     {
+            //         $unwind: {
+            //             path: "$enquiry_items",
+            //             preserveNullAndEmptyArrays: true
+            //         }
+            //     },
+            //     {
+            //         $match: brandfilter
+            //     },
+            //     {
+            //         $lookup: {
+            //             from: "quantity_units",
+            //             let: { unitId: "$enquiry_items.quantity.unit" },
+            //             pipeline: [
+            //                 {
+            //                     $match: {
+            //                         $expr: { $eq: ["$_id", "$$unitId"] }
+            //                     }
+            //                 },
+            //                 {
+            //                     $project: {
+            //                         _id: 1,
+            //                         unit: 1
+            //                     }
+            //                 }
+            //             ],
+            //             as: "enquiry_items.quantity_unit_data"
+            //         }
+            //     },
+            //     {
+            //         $unwind: {
+            //             path: "$enquiry_items.quantity_unit_data",
+            //             preserveNullAndEmptyArrays: true
+            //         }
+            //     },
 
-            {
-                $lookup: {
-                    from: "addresses",
-                    localField: "shipping_address",
-                    foreignField: "_id",
-                    as: "shipping_address_data"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$shipping_address_data",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $lookup: {
-                    from: "enquiry_quotes",
-                    let: { id: "$_id" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $eq: ["$$id", "$enquiry_id"]
+            //     {
+            //         $lookup: {
+            //             from: "addresses",
+            //             localField: "shipping_address",
+            //             foreignField: "_id",
+            //             as: "shipping_address_data"
+            //         }
+            //     },
+            //     {
+            //         $unwind: {
+            //             path: "$shipping_address_data",
+            //             preserveNullAndEmptyArrays: true
+            //         }
+            //     },
+            //     {
+            //         $lookup: {
+            //             from: "enquiry_quotes",
+            //             let: { id: "$_id" },
+            //             pipeline: [
+            //                 {
+            //                     $match: {
+            //                         $expr: {
+            //                             $eq: ["$$id", "$enquiry_id"]
+            //                         }
+            //                     }
+            //                 }
+            //             ],
+            //             as: "quotes"
+            //         }
+            //     },
+            //     {
+            //         $addFields: {
+            //             total_quotes: { $size: "$quotes" }
+            //         }
+            //     },
+            //     {
+            //         $match: {
+            //             ...filter,
+            //             ...countryFilter
+            //         },
+            //     },
+            //     {
+            //         $project: {
+            //             quotes: 0
+            //         }
+            //     },
+            //     {
+            //         $sort: { createdAt: -1 }
+            //     },
+            //     {
+            //         $group: {
+            //             _id: "$_id",
+            //         }
+            //     },
+            //     {
+            //         $count: "totalCount"
+            //     }
+            // ]
+            [
+                {
+                    $unwind: {
+                        path: "$enquiry_items",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $match: brandfilter
+                },
+                {
+                    $lookup: {
+                        from: "quantity_units",
+                        let: { unitId: "$enquiry_items.quantity.unit" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$_id", "$$unitId"] }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 1,
+                                    unit: 1
                                 }
                             }
-                        }
-                    ],
-                    as: "quotes"
-                }
-            },
-            {
-                $addFields: {
-                    total_quotes: { $size: "$quotes" }
-                }
-            },
-            {
-                $match: {
-                    ...filter,
-                    ...countryFilter
+                        ],
+                        as: "enquiry_items.quantity_unit_data"
+                    }
                 },
-            },
-            {
-                $project: {
-                    quotes: 0
+                {
+                    $unwind: {
+                        path: "$enquiry_items.quantity_unit_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+
+                {
+                    $lookup: {
+                        from: "addresses",
+                        localField: "shipping_address",
+                        foreignField: "_id",
+                        as: "shipping_address_data"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$shipping_address_data",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "enquiry_quotes",
+                        let: { id: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$enquiry_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "supplier_quotes"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "logistics_quotes",
+                        let: { id: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$$id", "$enquiry_id"]
+                                    }
+                                }
+                            }
+                        ],
+                        as: "logistics_quotes"
+                    }
+                },
+                {
+                    $addFields: {
+                        total_supplier_quotes: { $size: "$supplier_quotes" },
+                        total_logistics_quotes: { $size: "$logistics_quotes" }
+                    }
+                },
+                {
+                    $match: {
+                        ...filter,
+                        ...countryFilter
+                    },
+                },
+                {
+                    $project: {
+                        quotes: 0
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                        user_id: { $first: "$user_id" },
+                        enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        status: { $first: "$status" },
+                        expiry_date: { $first: "$expiry_date" },
+                        priority: { $first: "$priority" },
+                        enquiry_number: { $first: "$enquiry_number" },
+                        // shipping_address: { $first: "$shipping_address" },
+                        shipping_address: { $first: "$shipping_address_data" },
+                        currency: { $first: "$currency" },
+                        documents: { $first: "$documents" },
+                        enquiry_items: { $push: "$enquiry_items" },
+                        delivery_charges: { $first: "$delivery_charges" },
+                        reply: { $first: "$reply" },
+                        total_supplier_quotes: { $first: "$total_supplier_quotes" },
+                        total_logistics_quotes: { $first: "$total_logistics_quotes" },
+                        shipment_type: { $first: "$shipment_type" },
+                        selected_supplier: { $first: "$selected_supplier" },
+                        createdAt: { $first: "$createdAt" },
+                        updatedAt: { $first: "$updatedAt" },
+                    }
+                },
+                {
+                    $sort: { createdAt: -1 }
+                },
+                {
+                    $group: {
+                        _id: "$_id",
+                    }
+                },
+                {
+                    $count: "totalCount"
                 }
-            },
-            {
-                $sort: { createdAt: -1 }
-            },
-            {
-                $group: {
-                    _id: "$_id",
-                }
-            },
-            {
-                $count: "totalCount"
-            }
-        ]);
+            ]
+        );
         console.log("count : ", count)
 
         return res.json({ data, count: count.length > 0 ? count[0].totalCount : 0, code: 200 });
