@@ -2618,6 +2618,14 @@ exports.createEnquiry = async (req, res) => {
         //         data.is_approved = "approved"
         //     else data.is_approved = "pending"
         // }
+
+        if (subscription.length === 0) {
+            return utils.handleError(res, {
+                message: "No subscription found",
+                status: 404,
+            })
+        }
+
         data.is_approved = "approved"
         let enquiryId = await EnquiryId();
         let newdata = {
@@ -3059,6 +3067,7 @@ exports.getAllEnquiry = async (req, res) => {
         if (logisticsview) {
             filter.shipment_type = "delivery";
             filter.selected_supplier = { $exists: true };
+            filter.status = "shipement_ready"
 
             // filter.$expr = {
             //     $and: [
@@ -5917,12 +5926,12 @@ exports.verifyOtpForBuyer = async (req, res) => {
             await paymentdata.save();
         }
         if (fetch_term?.method == "scheduled" && fetch_term?.schedule?.includes({ payment_stage: "upon-delivery" })) {
-            paymentdata?.payment_stage?.push({
-                status: 'succeeded',
-                payment_method: "cash-on-delivery",
-                schedule_status: "completed"
-            })
-            await paymentdata.save();
+            // paymentdata?.payment_stage?.push({
+            //     status: 'succeeded',
+            //     payment_method: "cash-on-delivery",
+            //     schedule_status: "completed"
+            // })
+            // await paymentdata.save();
         }
 
         return res.json({ code: 200, message: "Otp verified successfullyyy" });
@@ -5945,7 +5954,7 @@ exports.getSingleSupplierQuotes = async (req, res) => {
             .populate('payment_terms')
             .populate('admin_payment_terms')
             .populate("pickup_address")
-            .populate({ path: 'enquiry_id', select: 'priority shipping_address enquiry_unique_id expiry_date delivery_selection_data', populate: { path: 'shipping_address' } })
+            .populate({ path: 'enquiry_id', select: 'priority shipping_address enquiry_unique_id expiry_date delivery_selection_data', populate: [{ path: 'shipping_address' }, { path: 'selected_logistics.quote_id' }] })
             .sort({ createdAt: -1 })
         return res.status(200).json({
             message: "Supplier quote data fetched successfully",
