@@ -40,7 +40,7 @@ router.get(
     '/getMyProductList',
     trimRequest.all,
     requireAuth,
-    controller.getProductList
+    controller.getMyProductList
 )
 
 router.patch(

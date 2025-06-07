@@ -65,7 +65,7 @@ exports.addBrand = async (req, res) => {
         const saveBrand = new Brand(data);
         await saveBrand.save()
 
-        res.json({ message: "Brand added successfully", code: 200 });
+        res.json({ message: "Brand added successfully", data: saveBrand, code: 200 });
     } catch (error) {
         utils.handleError(res, error);
     }

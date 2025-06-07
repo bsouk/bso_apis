@@ -473,7 +473,7 @@ exports.getMyProductList = async (req, res) => {
       }
     }
 
-    console.log("filter : ", filter)
+    console.log("filter : ", filter, "queryFilter : ", queryFilter);
 
     // const productlist = await Product.find(filter)
     //   .sort({ createdAt: -1 })
