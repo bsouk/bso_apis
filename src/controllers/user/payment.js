@@ -212,9 +212,9 @@ exports.createPaymentIntent = async (req, res) => {
         }
 
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
-        .populate('selected_supplier.quote_id')
-        .populate('selected_logistics.quote_id');
-            
+            .populate('selected_supplier.quote_id')
+            .populate('selected_logistics.quote_id');
+
 
         console.log("===========enquiry_data", enquiry_data)
         if (!enquiry_data) {
@@ -354,10 +354,10 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             .populate('selected_supplier.quote_id')
             .populate('selected_logistics.quote_id');
 
-            console.log("enquiry_data", enquiry_data)
+        console.log("enquiry_data", enquiry_data)
 
 
-            
+
         console.log("logistic:==", enquiry_data?.selected_logistics?.quote_id?.shipping_fee)
 
         let supplieramount = enquiry_data?.selected_logistics?.quote_id?.shipping_fee;
@@ -400,7 +400,7 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             console.log("paymenthistory : ", paymenthistory)
         }
         paymentAmount = supplieramount
-       
+
 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(paymentAmount * 100),
@@ -563,7 +563,7 @@ exports.appPaymentIntent = async (req, res) => {
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
             .populate('selected_supplier.quote_id')
             .populate('selected_logistics.quote_id');
-console.log("enquiry_data",enquiry_data)
+        console.log("enquiry_data", enquiry_data)
         if (!enquiry_data) {
             return res.status(404).json({ error: "Enquiry not found", code: 404 });
         }
@@ -671,9 +671,9 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
             .populate('selected_supplier.quote_id')
             .populate('selected_logistics.quote_id');
-            console.log("logistic:==", enquiry_data)
+        console.log("logistic:==", enquiry_data)
 
-       console.log("=========enquiry_data",enquiry_data?.currency)
+        console.log("=========enquiry_data", enquiry_data?.currency)
 
         console.log("logistic:==", enquiry_data?.selected_logistics?.quote_id?.shipping_fee)
 
@@ -774,6 +774,15 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
+        const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(enquiry_data?.selected_payment_terms) })
+        console.log("fetch_term : ", fetch_term)
+
+        if (!fetch_term) {
+            return utils.handleError(res, {
+                message: "Payment term not found"
+            });
+        }
+
         let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: userId });
         console.log("paymenthistory : ", paymenthistory)
 
@@ -797,7 +806,7 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
         if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
             for (const i of fetch_term.schedule) {
                 const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
-                if (!alreadyPaid) {                   
+                if (!alreadyPaid) {
                     my_schedule_id = i.schedule_id
                     break;
                 }
@@ -811,7 +820,7 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
                 customer_id: customer.id,
                 amount: paymentAmount,
                 schedule_id: my_schedule_id,
-                currency:  enquiry_data?.currency || 'usd'
+                currency: enquiry_data?.currency || 'usd'
             },
             code: 200
         });
@@ -1085,7 +1094,7 @@ exports.logisticpaynow = async (req, res) => {
 
         let neworder = await Order.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id })
         console.log("neworder : ", neworder)
-        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id})
+        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id })
         console.log("payment_data : ", payment_data)
 
         if (!neworder) {
@@ -1119,14 +1128,14 @@ exports.logisticpaynow = async (req, res) => {
             payment_method: confirmedIntent.payment_method_types[0] || null,
             txn_id: confirmedIntent.id || null,
             schedule_id: data?.schedule_id || null,
-            schedule_status: "completed" ,
+            schedule_status: "completed",
             amount: confirmedIntent.amount ? confirmedIntent.amount / 100 : 0,
             receipt: confirmedIntent?.charges?.data?.[0]?.receipt_url || null,
             currency: confirmedIntent?.currency || null,
         })
 
         await payment_data.save()
-        
+
 
         let newtracking = await tracking_order.findOne({ order_id: neworder?._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })
         console.log("newtracking : ", newtracking)
@@ -1559,13 +1568,13 @@ exports.updatepaymentstatus = async (req, res) => {
             return res.status(400).json({ error: "Payment ID and Payment Stage ID are required", code: 400 });
         }
 
-   
+
         const payment = await Payment.findOne({ _id: payment_id });
         if (!payment) {
             return res.status(404).json({ error: "Payment not found", code: 404 });
         }
 
-       
+
         const stageIndex = payment.payment_stage.findIndex(stage => stage._id.toString() === payment_stage_id);
         if (stageIndex === -1) {
             return res.status(404).json({ error: "Payment stage not found", code: 404 });
