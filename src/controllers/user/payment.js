@@ -749,11 +749,11 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
         }
 
         const enquiry_data = await enquiry.findOne({ _id: enquiry_id })
-            .populate('selected_supplier.quote_id');
+            .populate('selected_supplier.quote_id').populate('selected_logistics.quote_id');
         console.log("enquiry_data:==", enquiry_data)
-        console.log("logistic:==", enquiry_data?.selected_supplier?.quote_id?.custom_charges_one)
+        console.log("logistic:==", enquiry_data.selected_logistics?.quote_id?.shipping_fee)
 
-        let buyeramount = enquiry_data.selected_supplier?.quote_id?.custom_charges_one.value;
+        let buyeramount = enquiry_data.selected_logistics?.quote_id?.shipping_fee
         console.log("===========buyeramount", buyeramount)
         if (!enquiry_data) {
             return res.status(404).json({ error: "Enquiry not found", code: 404 });
@@ -803,15 +803,15 @@ exports.createappPaymentIntentbuyer = async (req, res) => {
         }
         paymentAmount = buyeramount
 
-        if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
-            for (const i of fetch_term.schedule) {
-                const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
-                if (!alreadyPaid) {
-                    my_schedule_id = i.schedule_id
-                    break;
-                }
-            }
-        }
+        // if (fetch_term.method == "scheduled" && fetch_term.schedule && fetch_term.schedule.length > 0) {
+        //     for (const i of fetch_term.schedule) {
+        //         const alreadyPaid = paymenthistory.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
+        //         if (!alreadyPaid) {
+        //             my_schedule_id = i.schedule_id
+        //             break;
+        //         }
+        //     }
+        // }
 
         return res.status(200).json({
             message: "Payment intent created",
