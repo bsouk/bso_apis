@@ -5857,11 +5857,11 @@ exports.verifyOtpForBuyer = async (req, res) => {
     try {
         const { enquiry_id, quote_id, otp } = req.body;
 
-        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id }).populate({ path: 'order_id', populate: { path: "tracking_id" } }).populate("shipping_address").populate("enquiry_items.quantity.unit")
+        const enquiry_data = await Enquiry.findOne({ _id: enquiry_id }).populate('user_id').populate({ path: 'order_id', populate: { path: "tracking_id" } }).populate("shipping_address").populate("enquiry_items.quantity.unit")
             .populate({ path: 'selected_supplier.quote_id', populate: [{ path: "pickup_address" }, { path: 'enquiry_items.quantity.unit' }] })
         console.log("enquiry_data : ", enquiry_data)
 
-        const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(enquiry_data?.selected_pay_term) })
+        const fetch_term = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(enquiry_data?.selected_payment_terms) })
         console.log("fetch_term : ", fetch_term)
 
         const otpData = await EnquiryOtp.findOne({
@@ -5914,7 +5914,7 @@ exports.verifyOtpForBuyer = async (req, res) => {
         );
         console.log("orderdata : ", orderdata)
 
-        const paymentdata = await payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data.user_id })
+        const paymentdata = await payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data?.user_id?._id })
         console.log("paymentdata : ", paymentdata)
 
         if (fetch_term?.method == "cash-on-delivery") {
@@ -5925,13 +5925,65 @@ exports.verifyOtpForBuyer = async (req, res) => {
             }
             await paymentdata.save();
         }
-        if (fetch_term?.method == "scheduled" && fetch_term?.schedule?.includes({ payment_stage: "upon-delivery" })) {
+        if (fetch_term?.method == "scheduled" && fetch_term?.schedule?.some(x => x.payment_stage == "upon-delivery")) {
             // paymentdata?.payment_stage?.push({
             //     status: 'succeeded',
             //     payment_method: "cash-on-delivery",
             //     schedule_status: "completed"
             // })
             // await paymentdata.save();
+            for (const i of fetch_term.schedule) {
+                if (i.payment_stage = "upon-delivery") {
+                    const alreadyPaid = paymentdata.payment_stage.some(p => p.schedule_id.toString() === i.schedule_id.toString());
+                    if (!alreadyPaid) {
+                        const fcm = await fcm_devices.find({ user_id: enquiry_data?.user_id?._id });
+                        console.log("fcm : ", fcm)
+
+                        const notificationMessage = {
+                            title: 'On Delivery payment is pending',
+                            description: `On Delivery payment is pending. Reminder to pay earlier. Enquiry ID : ${enquiry_data?.enquiry_unique_id}`,
+                            enquiry: enquiry_data?._id
+                        };
+                        if (fcm && fcm.length > 0) {
+                            fcm.forEach(async i => {
+                                const token = i.token
+                                console.log("token : ", token)
+                                await utils.sendNotification(token, notificationMessage);
+                            })
+                            const NotificationData = {
+                                title: notificationMessage.title,
+                                // body: notificationMessage.description,
+                                description: notificationMessage.description,
+                                type: "payment_pending",
+                                receiver_id: enquiry_data?.user_id?._id,
+                                related_to: enquiry_data?.user_id?._id,
+                                related_to_type: "user",
+                            };
+                            const newNotification = new Notification(NotificationData);
+                            // console.log("newNotification : ", newNotification)
+                            await newNotification.save();
+                        }
+
+                        let payamt = i?.value_type === "percentage"
+                            ? (enquiry_data?.grand_total * i?.value) / 100
+                            : i?.value;
+                        console.log("payamt : ", payamt)
+
+                        const mailOptions = {
+                            to: enquiry_data?.user_id?.email,
+                            subject: "Payment Pending - Blue Sky",
+                            // supplier_name: quotedata.user_id.full_name,
+                            enquiry_id: enquiry_data.enquiry_unique_id,
+                            buyer_name: enquiry_data.user_id.full_name,
+                            portal_url: "",
+                            amount: payamt,
+                            schedule: i?.schedule_id
+                        }
+
+                        emailer.sendEmail(null, mailOptions, "advancePaymentReminder");
+                    }
+                }
+            }
         }
 
         return res.json({ code: 200, message: "Otp verified successfullyyy" });
