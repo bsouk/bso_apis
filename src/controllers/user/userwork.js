@@ -5349,36 +5349,36 @@ exports.selectLogisticsQuote = async (req, res) => {
 
         console.log("selected : ", selected)
 
-        let totalprice = 0
-        enquiry?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
-        console.log("totalprice : ", totalprice)
+        // let totalprice = 0
+        // enquiry?.selected_supplier?.quote_id?.enquiry_items.forEach(i => totalprice += (i.unit_price * i.available_quantity))
+        // console.log("totalprice : ", totalprice)
 
-        totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value + quotedata?.shipping_fee) - enquiry?.selected_supplier?.quote_id?.discount?.value
-        enquiry?.shipment_type === "delivery" && (totalprice += enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value)
-        console.log("totalprice : ", totalprice)
+        // totalprice += (enquiry?.selected_supplier?.quote_id?.custom_charges_two?.value + quotedata?.shipping_fee) - enquiry?.selected_supplier?.quote_id?.discount?.value
+        // enquiry?.shipment_type === "delivery" && (totalprice += enquiry?.selected_supplier?.quote_id?.custom_charges_one?.value)
+        // console.log("totalprice : ", totalprice)
 
-        let commisionfee = 0
-        if (activeSubscription[0].plan.plan_step === "direct") {
-            const commision = await Commision.findOne()
-            console.log("Commision : ", commision)
+        // let commisionfee = 0
+        // if (activeSubscription[0].plan.plan_step === "direct") {
+        //     const commision = await Commision.findOne()
+        //     console.log("Commision : ", commision)
 
-            if (commision.charge_type === "percentage") {
-                if (totalprice > 0) {
-                    totalprice += (totalprice) * ((commision.value) / 100)
-                    commisionfee = (totalprice) * ((commision.value) / 100)
-                }
-                console.log("totalprice : ", totalprice)
-            } else {
-                totalprice += commision.value
-                commisionfee = commision.value
-                console.log("totalprice : ", totalprice)
-            }
-        }
+        //     if (commision.charge_type === "percentage") {
+        //         if (totalprice > 0) {
+        //             totalprice += (totalprice) * ((commision.value) / 100)
+        //             commisionfee = (totalprice) * ((commision.value) / 100)
+        //         }
+        //         console.log("totalprice : ", totalprice)
+        //     } else {
+        //         totalprice += commision.value
+        //         commisionfee = commision.value
+        //         console.log("totalprice : ", totalprice)
+        //     }
+        // }
 
         quotedata.is_selected = true
-        enquiry.grand_total = totalprice
+        // enquiry.grand_total = totalprice
         enquiry.logistics_charges = quotedata?.shipping_fee
-        enquiry.service_charges = commisionfee
+        // enquiry.service_charges = commisionfee
         await quotedata.save()
         await enquiry.save()
 
