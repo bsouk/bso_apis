@@ -4835,7 +4835,7 @@ exports.selectSupplierQuote = async (req, res) => {
                     shipment_type: shipment_type,
                     delivery_selection_data,
                     selected_payment_terms: selected_payment_terms,
-                    currency : quotedata?.currency
+                    currency: quotedata?.currency
                 }
             }, { new: true }
         ).populate('shipping_address user_id')
@@ -5482,6 +5482,10 @@ exports.getLogisticsQuotes = async (req, res) => {
                 code: 200
             })
         }
+
+        const enquirydata = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(id) })
+        console.log("enquirydata : ", enquirydata)
+
         if (plan[0]?.plan?.plan_step === "direct") {
             data = await logistics_quotes.find({ enquiry_id: id })
                 .populate({
@@ -5527,9 +5531,13 @@ exports.getLogisticsQuotes = async (req, res) => {
 
         const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
 
+        const paymentdata = await payment.findOne({ enquiry_id: new mongoose.Types.ObjectId(id), buyer_id: new mongoose.Types.ObjectId(enquirydata?.user_id) })
+        console.log("payment : ", paymentdata)
+
         return res.status(200).json({
             message: "Logistics quotes fetched successfully",
             data,
+            payment: paymentdata,
             count,
             code: 200
         })
@@ -5635,7 +5643,7 @@ exports.sendOtpForEnquiry = async (req, res) => {
         const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
         console.log("result : ", result);
 
-        res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop() , enquiry_id, quote_id}); // Remove `otp` if you don't want to expose it
+        res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop(), enquiry_id, quote_id }); // Remove `otp` if you don't want to expose it
     } catch (error) {
         utils.handleError(res, error);
     }
@@ -5982,9 +5990,12 @@ exports.getSingleLogisticsQuotes = async (req, res) => {
                 ],
                 select: '-enquiry_items'
             }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
+        const paymentdata = await payment.findOne({ enquiry_id: data?.enquiry_id?._id, buyer_id: data?.enquiry_id?.user_id })
+        console.log("paymentdata : ", paymentdata)
         return res.status(200).json({
             message: "logistics quote data fetched successfully",
             data,
+            payment: paymentdata,
             code: 200
         })
     } catch (error) {
