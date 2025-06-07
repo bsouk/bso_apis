@@ -372,8 +372,23 @@ exports.getMyProductList = async (req, res) => {
       is_admin_approved: "approved"
     };
 
+    let queryFilter = {}
+
     if (search) {
-      filter.name = { $regex: search, $options: "i" };
+      queryFilter['$or'] = [
+        { name: { $regex: search, $options: "i" } },
+        { 'brand.name': { $regex: search, $options: "i" } },
+        {
+          variant: {
+            $elemMatch: {
+              $or: [
+                { sku_id: { $regex: search, $options: "i" } },
+                { part_id: { $regex: search, $options: "i" } }
+              ]
+            }
+          }
+        }
+      ]
     }
 
     if (status) {
@@ -509,6 +524,7 @@ exports.getMyProductList = async (req, res) => {
         }
       },
       { $unwind: { path: '$brand', preserveNullAndEmptyArrays: true } },
+      { $match: queryFilter },
       {
         $sort: { createdAt: -1 }
       },

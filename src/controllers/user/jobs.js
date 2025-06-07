@@ -109,7 +109,11 @@ exports.getJobs = async (req, res) => {
             filter.skills = { $in: skills }
         }
         if (location) {
-            filter.location = { $regex: location, $options: "i" }
+            filter['$or'] = [
+                { 'office_address.address_line_1': { $regex: location, $options: "i" } },
+                { 'office_address.city': { $regex: location, $options: "i" } },
+                { 'office_address.pincode': { $regex: location, $options: "i" } },
+            ]
         }
         const jobs_data = await jobs.aggregate(
             [
@@ -272,7 +276,11 @@ exports.getappliedJobs = async (req, res) => {
             newfilter["job_data.job_category_data.name"] = { $in: industries };
         }
         if (location) {
-            newfilter["job_data.location"] = { $regex: location, $options: "i" };
+            newfilter['$or'] = [
+                { 'job_data.office_address.address_line_1': { $regex: location, $options: "i" } },
+                { 'job_data.office_address.city': { $regex: location, $options: "i" } },
+                { 'job_data.office_address.pincode': { $regex: location, $options: "i" } },
+            ]
         }
         console.log("new filter : ", newfilter)
 
@@ -491,9 +499,17 @@ exports.getCompanyPostedJobs = async (req, res) => {
             skills = JSON.parse(skills);
             filter.skills = { $in: skills }
         }
+        // if (location) {
+        //     filter.location = { $regex: location, $options: "i" };
+        // }
         if (location) {
-            filter.location = { $regex: location, $options: "i" };
+            filter['$or'] = [
+                { 'office_address.address_line_1': { $regex: location, $options: "i" } },
+                { 'office_address.city': { $regex: location, $options: "i" } },
+                { 'office_address.pincode': { $regex: location, $options: "i" } },
+            ]
         }
+
         const jobs_data = await jobs.aggregate(
             [
                 {
