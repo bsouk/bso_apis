@@ -6614,3 +6614,26 @@ exports.selectLogisticsChoice = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+
+exports.addLosgisticsShipmentdoc = async (req, res) => {
+    try {
+        const data = req.body;
+        const logistics_data = await logistics_quotes.findOne({ _id: data.quotes_id })
+        console.log("logistics_data : ", logistics_data)
+
+        if (!logistics_data) {
+            return utils.handleError(res, {
+                message: "Logistics data not found",
+                code: 404,
+            });
+        }
+
+        logistics_data.shipment_document = data.shipment_document
+        await logistics_data.save()
+        return res.json({ code: 200, message: "Shipment document added successfully", code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

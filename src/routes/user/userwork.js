@@ -556,4 +556,12 @@ router.patch(
     controller.selectLogisticsChoice
 )
 
+
+router.patch(
+    "/addShipmentDocument",
+    requireAuth,
+    trimRequest.all,
+    controller.addLosgisticsShipmentdoc
+)
+
 module.exports = router;
