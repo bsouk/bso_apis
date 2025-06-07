@@ -139,7 +139,7 @@ exports.addProductSubCategory = async (req, res) => {
     try {
         const { name, icon, product_category_type_id } = req.body
 
-        if (!name || !icon || !product_category_type_id) return res.json({ "message": "Send valid data", "code": 500 })
+        if (!name ||  !product_category_type_id) return res.json({ "message": "Send valid data", "code": 500 })
 
         //mark main category have further sub category
         const mainCategory = await ProductCategory.findById({ _id: product_category_type_id })
