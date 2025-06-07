@@ -648,7 +648,7 @@ exports.getProductNameList = async (req, res) => {
 
     const productlist = await Product.aggregate([
       { $match: { ...filter, is_deleted: false, is_admin_approved: "approved" } },
-      { $project: { _id: 1, name: 1 } },
+      { $project: { _id: 1, name: 1, brand_id: 1, category_id: 1, sub_category_id: 1 } },
       { $sort: { createdAt: -1 } },
       { $skip: parseInt(offset) || 0 },
       { $limit: parseInt(limit) || 10 }
