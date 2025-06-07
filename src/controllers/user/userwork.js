@@ -6699,3 +6699,26 @@ exports.addLosgisticsShipmentdoc = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.addBuyerDeliverytracking = async (req, res) => {
+    try {
+        const data = req.body
+        console.log("data : ", data)
+        const result = await Enquiry.findOneAndUpdate({ _id: data.enquiry_id }, {
+            $set: {
+                delivery_selection_data: data.delivery_selection_data
+            }
+        }, { new: true })
+        console.log("result : ", result)
+        if (!result) {
+            return utils.handleError(res, {
+                message: "Enquiry data not found",
+                code: 404,
+            });
+        }
+        return res.json({ code: 200, message: "Delivery tracking added successfully", data: result, code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}

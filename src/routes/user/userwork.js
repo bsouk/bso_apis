@@ -415,7 +415,7 @@ router.post(
     controller.submitLogisticsQuotes
 )
 
- 
+
 router.get(
     "/getLogisticsEnquiryDetail/:id",
     trimRequest.all,
@@ -562,6 +562,13 @@ router.patch(
     requireAuth,
     trimRequest.all,
     controller.addLosgisticsShipmentdoc
+)
+
+router.patch(
+    "/addBuyerDeliverySelectionData",
+    requireAuth,
+    trimRequest.all,
+    controller.addBuyerDeliverytracking
 )
 
 module.exports = router;
