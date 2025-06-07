@@ -3055,22 +3055,16 @@ exports.getAllEnquiry = async (req, res) => {
         } else if (hide_quote) {
             filter.total_supplier_quotes = { $lte: 0 };
         }
-        // if (logisticsview) {
-        //     filter.shipment_type = "delivery"
-        //     filter.logistics_selection_data = {}
-        //     filter.logistics_selection_data.name = "bso"
-        //     filter.selected_supplier = { $exists: true }
-        // }
+
         if (logisticsview) {
             filter.shipment_type = "delivery";
             filter.selected_supplier = { $exists: true };
-            // filter.delivery_selection_data = {}
-            // filter.delivery_selection_data.name = "platform";
 
             // filter.$expr = {
-            //     $or: [
+            //     $and: [
+            //         { $eq: ["$buyer_plan_step", "direct"] },
             //         {
-            //             $eq: [
+            //             $gt: [
             //                 {
             //                     $size: {
             //                         $filter: {
@@ -3084,58 +3078,56 @@ exports.getAllEnquiry = async (req, res) => {
             //             ]
             //         },
             //         {
-            //             $and: [
+            //             $or: [
             //                 {
-            //                     $gt: [
-            //                         {
-            //                             $size: {
-            //                                 $filter: {
-            //                                     input: { $ifNull: ["$supplier_quotes", []] },
-            //                                     as: "quote",
-            //                                     cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
-            //                                 }
-            //                             }
-            //                         },
-            //                         0
-            //                     ]
+            //                     $eq: ["$delivery_selection_data.name", "platform"]
             //                 },
-            //                 { $eq: ["$logistics_selection_data.name", "bso"] }
+            //                 {
+            //                     $and: [
+            //                         { $eq: ["$delivery_selection_data.name", "supplier"] },
+            //                         { $eq: ["$logistics_selection_data.name", "bso"] }
+            //                     ]
+            //                 }
             //             ]
             //         }
             //     ]
             // };
-
             filter.$expr = {
-                $and: [
+                $or: [
+                    { $ne: ["$buyer_plan_step", "direct"] }, // Allow everything that's not 'direct'
                     {
-                        $gt: [
+                        $and: [
+                            { $eq: ["$buyer_plan_step", "direct"] },
                             {
-                                $size: {
-                                    $filter: {
-                                        input: { $ifNull: ["$supplier_quotes", []] },
-                                        as: "quote",
-                                        cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: { $ifNull: ["$supplier_quotes", []] },
+                                                as: "quote",
+                                                cond: { $gt: ["$$quote.custom_charges_one.value", 0] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
+                            },
+                            {
+                                $or: [
+                                    { $eq: ["$delivery_selection_data.name", "platform"] },
+                                    {
+                                        $and: [
+                                            { $eq: ["$delivery_selection_data.name", "supplier"] },
+                                            { $eq: ["$logistics_selection_data.name", "bso"] }
+                                        ]
                                     }
-                                }
-                            },
-                            0
-                        ]
-                    },
-                    {
-                        $or: [
-                            {
-                                $eq: ["$delivery_selection_data.name", "platform"]
-                            },
-                            {
-                                $and: [
-                                    { $eq: ["$delivery_selection_data.name", "supplier"] },
-                                    { $eq: ["$logistics_selection_data.name", "bso"] }
                                 ]
                             }
                         ]
                     }
                 ]
             };
+
         }
 
 
@@ -3278,6 +3270,7 @@ exports.getAllEnquiry = async (req, res) => {
                         total_logistics_quotes: { $first: "$total_logistics_quotes" },
                         shipment_type: { $first: "$shipment_type" },
                         selected_supplier: { $first: "$selected_supplier" },
+                        buyer_plan_step: { $first: "$buyer_plan_step" },
                         createdAt: { $first: "$createdAt" },
                         updatedAt: { $first: "$updatedAt" },
                     }
@@ -5697,7 +5690,7 @@ exports.sendOtpForQuote = async (req, res) => {
         const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
         console.log("result : ", result);
 
-        res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop() }); // Remove `otp` if you don't want to expose it
+        res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop(), enquiry_id, quote_id }); // Remove `otp` if you don't want to expose it
     } catch (error) {
         utils.handleError(res, error);
     }
