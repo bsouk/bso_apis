@@ -6620,7 +6620,7 @@ exports.selectLogisticsChoice = async (req, res) => {
 exports.addLosgisticsShipmentdoc = async (req, res) => {
     try {
         const data = req.body;
-        const logistics_data = await logistics_quotes.findOne({ _id: data.quotes_id })
+        const logistics_data = await logistics_quotes.findOne({ _id: new mongoose.Type.ObjectId(data.quotes_id) })
         console.log("logistics_data : ", logistics_data)
 
         if (!logistics_data) {
