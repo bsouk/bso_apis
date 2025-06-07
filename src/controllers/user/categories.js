@@ -127,7 +127,7 @@ exports.addProductCategory = async (req, res) => {
         const category = new ProductCategory({ icon, name });
         await category.save();
 
-        res.json({ message: "Category added successfully", code: 200 });
+        res.json({ message: "Category added successfully", data:category, code: 200 });
 
     } catch (error) {
         utils.handleError(res, error);
@@ -160,7 +160,7 @@ exports.addProductSubCategory = async (req, res) => {
 
         const newSubCategory = new ProductSubCategory({ name, icon, product_category_type_id });
         await newSubCategory.save();
-        return res.json({ "message": "Subcategory added successfully", "code": 500 })
+        return res.json({ "message": "Subcategory added successfully",data:newSubCategory, "code": 500 })
 
     } catch (error) {
         utils.handleError(res, error);
