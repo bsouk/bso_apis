@@ -38,7 +38,7 @@ const productSchema = new mongoose.Schema(
         sku_id: {
           type: String
         },
-        part_id: String,
+        part_no: String,
         description: {
           type: String,
         },

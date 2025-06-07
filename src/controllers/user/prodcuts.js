@@ -383,7 +383,7 @@ exports.getMyProductList = async (req, res) => {
             $elemMatch: {
               $or: [
                 { sku_id: { $regex: search, $options: "i" } },
-                { part_id: { $regex: search, $options: "i" } }
+                { part_no: { $regex: search, $options: "i" } }
               ]
             }
           }
