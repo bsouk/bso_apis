@@ -381,7 +381,7 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data?.user_id });
+        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, supplier_id: userId });
         console.log("paymenthistory : ", paymenthistory)
 
         let totalAmount = enquiry_data?.grand_total
@@ -390,7 +390,7 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
         if (!paymenthistory) {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
-                buyer_id: enquiry_data?.user_id,
+                supplier_id: userId,
                 total_amount: totalAmount,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
@@ -1094,7 +1094,7 @@ exports.logisticpaynow = async (req, res) => {
 
         let neworder = await Order.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id })
         console.log("neworder : ", neworder)
-        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id })
+        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, supplier_id: userId })
         console.log("payment_data : ", payment_data)
 
         if (!neworder) {
