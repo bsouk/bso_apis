@@ -698,7 +698,7 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, supplier_id: userId });
+        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data?.user_id });
         console.log("paymenthistory : ", paymenthistory)
 
         let totalAmount = enquiry_data?.grand_total
@@ -707,7 +707,7 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
         if (!paymenthistory) {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
-                supplier_id: userId,
+                buyer_id: enquiry_data?.user_id,
                 total_amount: totalAmount,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
