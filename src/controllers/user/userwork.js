@@ -5877,13 +5877,13 @@ exports.verifyOtpForBuyer = async (req, res) => {
                 code: 400,
             });
 
-        if (otpData.verified == true) {
-            console.log("Otp already verified")
-            return utils.handleError(res, {
-                message: "Otp already used",
-                code: 400,
-            });
-        }
+        // if (otpData.verified == true) {
+        //     console.log("Otp already verified")
+        //     return utils.handleError(res, {
+        //         message: "Otp already used",
+        //         code: 400,
+        //     });
+        // }
 
         const updatedStatus = await Enquiry.findOneAndUpdate(
             { _id: enquiry_id },
