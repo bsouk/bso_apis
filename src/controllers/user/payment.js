@@ -871,7 +871,7 @@ exports.paynow = async (req, res) => {
             });
         }
 
-        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').populate('selected_payment_terms').populate('user_id')
+        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate({ path: 'selected_supplier.quote_id', populate: { path: 'user_id' } }).populate('selected_logistics.quote_id').populate('selected_payment_terms').populate('user_id')
         console.log("enquiry_data : ", enquiry_data)
 
         if (!enquiry_data) {
@@ -1056,7 +1056,7 @@ exports.paynow = async (req, res) => {
             enquiry: enquiry_data?._id
         };
 
-        const fcm = await fcm_devices.find({ user_id: enquiry_data?.selected_supplier?.quote_id?.user_id });
+        const fcm = await fcm_devices.find({ user_id: enquiry_data?.selected_supplier?.quote_id?.user_id?._id });
         console.log("fcm : ", fcm)
 
         if (fcm && fcm.length > 0) {
@@ -1106,7 +1106,7 @@ exports.logisticpaynow = async (req, res) => {
             });
         }
 
-        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').populate('selected_payment_terms').populate('user_id')
+        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate({ path: 'selected_logistics.quote_id', populate: 'user_id' }).populate('selected_payment_terms').populate('user_id')
         console.log("enquiry_data : ", enquiry_data)
 
         if (!enquiry_data) {
@@ -1163,7 +1163,7 @@ exports.logisticpaynow = async (req, res) => {
                 currency: enquiry_data?.selected_supplier?.quote_id?.currency || 'usd',
                 shipping_address: enquiry_data?.shipping_address,
                 billing_address: enquiry_data?.shipping_address,
-                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id?._id,
                 order_pickup: enquiry_data?.shipment_type,
             }
 
@@ -1194,14 +1194,14 @@ exports.logisticpaynow = async (req, res) => {
         await payment_data.save()
 
 
-        let newtracking = await tracking_order.findOne({ order_id: neworder?._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })
+        let newtracking = await tracking_order.findOne({ order_id: neworder?._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id?._id })
         console.log("newtracking : ", newtracking)
 
         if (!newtracking) {
             const tracking_data = {
                 tracking_unique_id: await generateUniqueId(),
                 order_id: neworder?._id,
-                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
+                logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id?._id,
                 order_shipment_dates: [
                     {
                         order_status: "order created",
@@ -1249,7 +1249,7 @@ exports.logisticpaynow = async (req, res) => {
             enquiry: enquiry_data?._id
         };
 
-        const fcm = await fcm_devices.find({ user_id: enquiry_data?.selected_logistics?.quote_id?.user_id });
+        const fcm = await fcm_devices.find({ user_id: enquiry_data?.selected_logistics?.quote_id?.user_id?._id });
         console.log("fcm : ", fcm)
 
         if (fcm && fcm.length > 0) {
