@@ -1245,7 +1245,7 @@ exports.logisticpaynow = async (req, res) => {
         //send notification
         const notificationMessage = {
             title: 'Payment Released',
-            description: `$Logistic payment for enquiry ${enquiry_data?.enquiry_unique_id} has been successfully released`,
+            description: `Logistic payment for enquiry ${enquiry_data?.enquiry_unique_id} has been successfully released`,
             enquiry: enquiry_data?._id
         };
 
