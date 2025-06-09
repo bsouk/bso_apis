@@ -1036,7 +1036,7 @@ exports.paynow = async (req, res) => {
 
         //send notification for payment
         const mailOptions = {
-            to: enquiry_data?.user_id?.email,
+            to: enquiry_data?.selected_supplier?.quote_id?.user_id?.email,
             subject: "Payment Confirmation",
             buyer_name: enquiry_data?.user_id?.full_name,
             user: "buyer",
@@ -1056,7 +1056,7 @@ exports.paynow = async (req, res) => {
             enquiry: enquiry_data?._id
         };
 
-        const fcm = await fcm_devices.find({ user_id: enquiry_data?.user_id?._id });
+        const fcm = await fcm_devices.find({ user_id: enquiry_data?.selected_supplier?.quote_id?.user_id });
         console.log("fcm : ", fcm)
 
         if (fcm && fcm.length > 0) {
