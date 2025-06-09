@@ -323,13 +323,8 @@ cron.schedule("0 10 * * *", async () => {
     }
 });
 
-
-
 cron.schedule("0 11 * * *", async () => {
     try {
-        const today = moment().startOf("day");
-        console.log("today : ", today)
-
         const enquiries = await Enquiry.aggregate([
             {
                 $match: {
@@ -342,37 +337,10 @@ cron.schedule("0 11 * * *", async () => {
                     from: "payment_terms",
                     localField: "selected_payment_terms",
                     foreignField: "_id",
-                    as: "payment_terms",
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $eq: [{ $size: "$schedule" }, 1]
-                                }
-                            }
-                        }
-                    ]
+                    as: "payment_terms"
                 }
             },
             { $unwind: "$payment_terms" },
-            { $unwind: "$payment_terms.schedule" },
-            {
-                $addFields: {
-                    due_date: {
-                        $add: ["$createdAt", { $multiply: ["$payment_terms.schedule.days", 24 * 60 * 60 * 1000] }]
-                    }
-                }
-            },
-            // {
-            //     $match: {
-            //         $expr: {
-            //             $eq: [
-            //                 { $dateToString: { format: "%Y-%m-%d", date: "$due_date" } },
-            //                 today.format("YYYY-MM-DD")
-            //             ]
-            //         }
-            //     }
-            // },
             {
                 $lookup: {
                     from: "users",
@@ -381,69 +349,82 @@ cron.schedule("0 11 * * *", async () => {
                     as: "user"
                 }
             },
-            { $unwind: "$user" }
+            { $unwind: "$user" },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            }
         ]);
+
         console.log("enquiries : ", enquiries)
 
         for (const enquiry of enquiries) {
+            const schedules = enquiry.payment_terms.schedule || [];
+            const grandTotal = enquiry.grand_total || 0;
+
             const paydata = await Payment.findOne({
                 enquiry_id: enquiry._id,
                 buyer_id: enquiry.user_id
             });
 
-            let shouldSendReminder = false;
+            const paidScheduleIds = paydata?.payment_stage.map(p => p.schedule_id.toString()) || [];
 
-            if (paydata) {
-                const paidScheduleIds = paydata.payment_stage.map(p => p.schedule_id.toString());
-                if (!paidScheduleIds.includes(enquiry.payment_terms.schedule._id.toString())) {
-                    shouldSendReminder = true;
+            for (const schedule of schedules) {
+                const scheduleIdStr = schedule._id.toString();
+
+                if (!paidScheduleIds.includes(scheduleIdStr)) {
+                    const payamt = schedule.value_type === "percentage"
+                        ? ((grandTotal * schedule.value) / 100).toFixed(2)
+                        : schedule.value;
+
+                    const mailOptions = {
+                        to: enquiry.user.email,
+                        subject: "Payment Pending - Blue Sky",
+                        enquiry_id: enquiry.enquiry_unique_id,
+                        buyer_name: enquiry.user.full_name,
+                        portal_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry._id}` || "",
+                        pay_type: "schedule",
+                        amount: payamt,
+                        schedule: schedule?.schedule_id
+                    };
+
+                    // Send email
+                    emailer.sendEmail(null, mailOptions, "advancePaymentReminder");
+
+                    // Send push notification
+                    const fcmTokens = await fcm_devices.find({ user_id: enquiry.user_id });
+                    const notificationBody = {
+                        title: 'Schedule payment is pending',
+                        description: `A payment schedule is pending for amount ${payamt}.Enquiry ID: ${enquiry?.enquiry_unique_id}`,
+                        enquiry: enquiry?._id
+                    };
+
+                    for (const device of fcmTokens) {
+                        await utils.sendNotification(device.token, notificationBody);
+                    }
+
+                    // DB Notification
+                    const dbNotification = {
+                        title: notificationBody.title,
+                        description: notificationBody.description,
+                        type: "payment_reminder",
+                        receiver_id: enquiry.user_id,
+                        related_to: enquiry._id,
+                        related_to_type: "enquiry"
+                    };
+
+                    await new Notification(dbNotification).save();
                 }
-            } else {
-                shouldSendReminder = true;
-            }
-
-            if (shouldSendReminder) {
-                const formattedDueDate = moment(enquiry.due_date).format("dddd, MMMM D, YYYY");
-
-                const mailOptions = {
-                    to: enquiry.user.email,
-                    subject: "Payment Reminder",
-                    buyer_name: enquiry.user.full_name || enquiry.user.first_name,
-                    enquiry_id: enquiry.enquiry_unique_id,
-                    payment_due_date: formattedDueDate,
-                    portal_url: `${appurl}/enquiry-review-page/${enquiry._id}`
-                };
-
-                await emailer.sendEmail(null, mailOptions, "paymentReminder");
-
-                const fcmTokens = await fcm_devices.find({ user_id: enquiry.user_id });
-
-                const notificationBody = {
-                    title: "Payment Reminder",
-                    description: `Your payment for enquiry ${enquiry.enquiry_unique_id} is due on ${formattedDueDate}, based on your selected payment terms (within ${enquiry.payment_terms.schedule.days} days of enquiry creation).`,
-                };
-
-                for (const device of fcmTokens) {
-                    await utils.sendNotification(device.token, notificationBody);
-                }
-
-                const dbNotification = {
-                    title: notificationBody.title,
-                    description: notificationBody.description,
-                    type: "payment_reminder",
-                    receiver_id: enquiry.user_id,
-                    related_to: enquiry._id,
-                    related_to_type: "enquiry"
-                };
-
-                await new Notification(dbNotification).save();
             }
         }
-        console.log(`✅ Payment reminders sent for ${enquiries.length} enquiries on ${today.format("YYYY-MM-DD")}`);
+
+        console.log("✅ Payment reminders sent successfully.");
     } catch (err) {
         console.error("❌ Error in payment reminder cron:", err);
     }
 });
+
 
 
 exports.dashboardChartData = async (req, res) => {
