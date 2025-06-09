@@ -1151,7 +1151,7 @@ exports.logisticpaynow = async (req, res) => {
 
         let neworder = await Order.findOne({ enquiry_id: data.enquiry_id, buyer_id: enquiry_data?.user_id })
         console.log("neworder : ", neworder)
-        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, supplier_id: userId })
+        const payment_data = await Payment.findOne({ enquiry_id: data.enquiry_id, $or: [{ buyer_id: userId }, { supplier_id: userId }] })
         console.log("payment_data : ", payment_data)
 
         if (!neworder) {
