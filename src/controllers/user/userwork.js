@@ -5075,6 +5075,7 @@ exports.selectSupplierQuote = async (req, res) => {
                         enquiry_id: selected.enquiry_unique_id,
                         buyer_name: selected.user_id.full_name,
                         portal_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry._id}` || "",
+                        pay_type: "advance",
                         amount: payamt,
                         schedule: advancepay?.schedule_id
                     }
@@ -5983,7 +5984,8 @@ exports.verifyOtpForBuyer = async (req, res) => {
                             // supplier_name: quotedata.user_id.full_name,
                             enquiry_id: enquiry_data.enquiry_unique_id,
                             buyer_name: enquiry_data.user_id.full_name,
-                            portal_url: "",
+                            portal_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry_data._id}` || "",
+                            pay_type: "On Delivery",
                             amount: payamt,
                             schedule: i?.schedule_id
                         }
