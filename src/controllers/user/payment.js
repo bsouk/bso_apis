@@ -1039,7 +1039,7 @@ exports.logisticpaynow = async (req, res) => {
     try {
         const data = req.body
         console.log("body : ", data)
-        const userId = req.user._id
+        const userId = req.user?._id
         console.log("userId : ", userId)
 
         if (!data.enquiry_id || !data.payment_intent_id || !data.payment_method_id) {
@@ -1143,7 +1143,7 @@ exports.logisticpaynow = async (req, res) => {
         if (!newtracking) {
             const tracking_data = {
                 tracking_unique_id: await generateUniqueId(),
-                order_id: neworder._id,
+                order_id: neworder?._id,
                 logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id,
                 order_shipment_dates: [
                     {
