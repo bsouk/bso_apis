@@ -5074,7 +5074,7 @@ exports.selectSupplierQuote = async (req, res) => {
                         // supplier_name: quotedata.user_id.full_name,
                         enquiry_id: selected.enquiry_unique_id,
                         buyer_name: selected.user_id.full_name,
-                        portal_url: "",
+                        portal_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry._id}` || "",
                         amount: payamt,
                         schedule: advancepay?.schedule_id
                     }

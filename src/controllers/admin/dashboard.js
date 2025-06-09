@@ -16,7 +16,7 @@ const Enquiry = require("../../models/Enquiry");
 const Notification = require("../../models/notification")
 const Subscription = require("../../models/subscription")
 const moment = require("moment");
-
+const appurl = process.env.APP_URL
 
 
 
@@ -227,42 +227,96 @@ cron.schedule("0 10 * * *", async () => {
         ]);
         console.log("enquiries : ", enquiries)
 
-        for (let i = 0; i < enquiries.length; i++) {
-            const enquiry = enquiries[i];
-            const mailOptions = {
-                to: enquiry.user.email,
-                subject: "Payment Reminder",
-                buyer_name: enquiry.user.full_name || enquiry.user.first_name,
-                enquiry_id: enquiry.enquiry_unique_id,
-                payment_due_date: moment(enquiry.due_date).format("dddd, MMMM D, YYYY"),
-                portal_url: ''
-            };
+        // for (let i = 0; i < enquiries.length; i++) {
+        //     const enquiry = enquiries[i];
+        //     const mailOptions = {
+        //         to: enquiry.user.email,
+        //         subject: "Payment Reminder",
+        //         buyer_name: enquiry.user.full_name || enquiry.user.first_name,
+        //         enquiry_id: enquiry.enquiry_unique_id,
+        //         payment_due_date: moment(enquiry.due_date).format("dddd, MMMM D, YYYY"),
+        //         portal_url: ''
+        //     };
 
-            await emailer.sendEmail(null, mailOptions, "paymentReminder");
+        //     await emailer.sendEmail(null, mailOptions, "paymentReminder");
 
-            // Notification
-            const fcmTokens = await fcm_devices.find({ user_id: enquiry.user_id });
-            const notificationbody = {
-                title: "Payment Reminder",
-                // description: `Your payment for enquiry ${enquiry.enquiry_unique_id} is due today.`,
-                description: `Your payment for enquiry ${enquiry.enquiry_unique_id} is due on ${moment(enquiry.due_date).format("dddd, MMMM D, YYYY")}, based on your selected payment terms (within ${enquiry.payment_terms.schedule.days} days of enquiry creation).`,
-            };
+        //     // Notification
+        //     const fcmTokens = await fcm_devices.find({ user_id: enquiry.user_id });
+        //     const notificationbody = {
+        //         title: "Payment Reminder",
+        //         // description: `Your payment for enquiry ${enquiry.enquiry_unique_id} is due today.`,
+        //         description: `Your payment for enquiry ${enquiry.enquiry_unique_id} is due on ${moment(enquiry.due_date).format("dddd, MMMM D, YYYY")}, based on your selected payment terms (within ${enquiry.payment_terms.schedule.days} days of enquiry creation).`,
+        //     };
 
-            for (const device of fcmTokens) {
-                await utils.sendNotification(device.token, notificationbody);
+        //     for (const device of fcmTokens) {
+        //         await utils.sendNotification(device.token, notificationbody);
+        //     }
+
+        //     const dbnotificationbody = {
+        //         title: notificationbody.title,
+        //         description: notificationbody.description,
+        //         type: "payment_reminder",
+        //         receiver_id: enquiry.user_id,
+        //         related_to: enquiry._id,
+        //         related_to_type: "enquiry",
+        //     };
+        //     await new Notification(dbnotificationbody).save();
+        // }
+
+        for (const enquiry of enquiries) {
+            const paydata = await Payment.findOne({
+                enquiry_id: enquiry._id,
+                buyer_id: enquiry.user_id
+            });
+
+            let shouldSendReminder = false;
+
+            if (paydata) {
+                const paidScheduleIds = paydata.payment_stage.map(p => p.schedule_id.toString());
+                if (!paidScheduleIds.includes(enquiry.payment_terms.schedule._id.toString())) {
+                    shouldSendReminder = true;
+                }
+            } else {
+                shouldSendReminder = true;
             }
 
-            const dbnotificationbody = {
-                title: notificationbody.title,
-                description: notificationbody.description,
-                type: "payment_reminder",
-                receiver_id: enquiry.user_id,
-                related_to: enquiry._id,
-                related_to_type: "enquiry",
-            };
-            await new Notification(dbnotificationbody).save();
-        }
+            if (shouldSendReminder) {
+                const formattedDueDate = moment(enquiry.due_date).format("dddd, MMMM D, YYYY");
 
+                const mailOptions = {
+                    to: enquiry.user.email,
+                    subject: "Payment Reminder",
+                    buyer_name: enquiry.user.full_name || enquiry.user.first_name,
+                    enquiry_id: enquiry.enquiry_unique_id,
+                    payment_due_date: formattedDueDate,
+                    portal_url: `${appurl}/enquiry-review-page/${enquiry._id}`
+                };
+
+                await emailer.sendEmail(null, mailOptions, "paymentReminder");
+
+                const fcmTokens = await fcm_devices.find({ user_id: enquiry.user_id });
+
+                const notificationBody = {
+                    title: "Payment Reminder",
+                    description: `Your payment for enquiry ${enquiry.enquiry_unique_id} is due on ${formattedDueDate}, based on your selected payment terms (within ${enquiry.payment_terms.schedule.days} days of enquiry creation).`,
+                };
+
+                for (const device of fcmTokens) {
+                    await utils.sendNotification(device.token, notificationBody);
+                }
+
+                const dbNotification = {
+                    title: notificationBody.title,
+                    description: notificationBody.description,
+                    type: "payment_reminder",
+                    receiver_id: enquiry.user_id,
+                    related_to: enquiry._id,
+                    related_to_type: "enquiry"
+                };
+
+                await new Notification(dbNotification).save();
+            }
+        }
         console.log(`✅ Payment reminders sent for ${enquiries.length} enquiries on ${today.format("YYYY-MM-DD")}`);
     } catch (err) {
         console.error("❌ Error in payment reminder cron:", err);
