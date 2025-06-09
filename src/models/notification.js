@@ -29,6 +29,8 @@ const notificationSchema = new mongoose.Schema(
 
                 "payment_reminder",
                 "payment_pending",
+                "payment_ongoing",
+                "payment_completed",
 
                 "product_listed",
                 "service_listed",

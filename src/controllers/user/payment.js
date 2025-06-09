@@ -10,6 +10,9 @@ const enquiry = require("../../models/Enquiry")
 const tracking_order = require("../../models/tracking_order");
 const payment_terms = require("../../models/payment_terms");
 const team = require("../../models/team");
+const fcm_devices = require("../../models/fcm_devices");
+const Notification = require("../../models/notification")
+const admin_received_notification = require("../../models/admin_received_notification");
 const payment = require("../../models/payment");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -260,6 +263,7 @@ exports.createPaymentIntent = async (req, res) => {
         let totalAmount = enquiry_data?.grand_total
         let paymentAmount = 0
         let my_schedule_id = ""
+        let paystage = ""
         if (!paymenthistory) {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
@@ -285,6 +289,7 @@ exports.createPaymentIntent = async (req, res) => {
                         ? (totalAmount * i.value) / 100
                         : i.value;
                     my_schedule_id = i.schedule_id
+                    paystage = i.payment_stage
                     break;
                 }
             }
@@ -300,7 +305,9 @@ exports.createPaymentIntent = async (req, res) => {
             metadata: {
                 userId: userId.toString(),
                 enquiryId: enquiry_id,
-                orderType: "one-time"
+                orderType: "one-time",
+                paymentFor: paystage,
+                scheduleId: my_schedule_id,
             },
         });
 
@@ -322,6 +329,7 @@ exports.createPaymentIntent = async (req, res) => {
                 customer_id: customer.id,
                 amount: paymentAmount,
                 schedule_id: my_schedule_id,
+                pay_for: paystage,
                 currency: paymentIntent?.currency || 'usd'
             },
             code: 200
@@ -608,6 +616,7 @@ exports.appPaymentIntent = async (req, res) => {
         let totalAmount = enquiry_data?.grand_total
         let paymentAmount = 0
         let my_schedule_id = ""
+        let paystage = ""
         if (!paymenthistory) {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
@@ -633,6 +642,7 @@ exports.appPaymentIntent = async (req, res) => {
                         ? (totalAmount * i.value) / 100
                         : i.value;
                     my_schedule_id = i.schedule_id
+                    paystage = i.payment_stage
                     break;
                 }
             }
@@ -648,6 +658,7 @@ exports.appPaymentIntent = async (req, res) => {
                 customer_id: customer.id,
                 amount: paymentAmount,
                 schedule_id: my_schedule_id,
+                pay_for: paystage,
                 currency: enquiry_data?.currency || "usd",
             },
             code: 200
@@ -698,7 +709,7 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
             customer = await createStripeCustomer(user);
         }
 
-        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, buyer_id: enquiry_data?.user_id });
+        let paymenthistory = await Payment.findOne({ enquiry_id: enquiry_id, supplier_id: userId });
         console.log("paymenthistory : ", paymenthistory)
 
         let totalAmount = enquiry_data?.grand_total
@@ -707,7 +718,7 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
         if (!paymenthistory) {
             paymenthistory = await Payment.create({
                 enquiry_id: enquiry_id,
-                buyer_id: enquiry_data?.user_id,
+                supplier_id: userId,
                 total_amount: totalAmount,
                 payment_status: 'pending',
                 stripe_customer_id: customer.id,
@@ -859,7 +870,7 @@ exports.paynow = async (req, res) => {
             });
         }
 
-        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').populate('selected_payment_terms')
+        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').populate('selected_payment_terms').populate('user_id')
         console.log("enquiry_data : ", enquiry_data)
 
         if (!enquiry_data) {
@@ -1022,6 +1033,51 @@ exports.paynow = async (req, res) => {
 
         await neworder.save()
 
+        //send notification for payment
+        const mailOptions = {
+            to: enquiry_data?.user_id?.email,
+            subject: "Payment Confirmation",
+            buyer_name: enquiry_data?.user_id?.full_name,
+            user: "buyer",
+            enquiry_id: enquiry_data?.enquiry_unique_id,
+            user_name: enquiry_data?.selected_supplier?.quote_id?.user_id?.full_name,
+            amount: confirmedIntent.amount / 100,
+            schedule: confirmedIntent?.metadata?.scheduleId,
+            transaction_id: confirmedIntent?.id,
+            portal_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry_data._id}`,
+            paytype: confirmedIntent?.metadata?.paymentFor || data?.pay_for
+        }
+        emailer.sendEmail(null, mailOptions, "paymentConfirmation");
+        //send notification
+        const notificationMessage = {
+            title: 'Payment Released',
+            description: `${confirmedIntent?.metadata?.paymentFor} payment for enquiry ${enquiry_data?.enquiry_unique_id} from buyer has been successfully released`,
+            enquiry: enquiry_data?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: enquiry_data?.user_id?._id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "payment_completed",
+                receiver_id: enquiry_data?.user_id?._id,
+                related_to: enquiry_data?.user_id?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
+
         return res.status(200).json({
             message: "checkout successfull!",
             data: {
@@ -1049,7 +1105,7 @@ exports.logisticpaynow = async (req, res) => {
             });
         }
 
-        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').populate('selected_payment_terms')
+        const enquiry_data = await enquiry.findOne({ _id: data.enquiry_id }).populate('selected_supplier.quote_id').populate('selected_logistics.quote_id').populate('selected_payment_terms').populate('user_id')
         console.log("enquiry_data : ", enquiry_data)
 
         if (!enquiry_data) {
@@ -1168,6 +1224,52 @@ exports.logisticpaynow = async (req, res) => {
         neworder.tracking_id = newtracking._id
 
         await neworder.save()
+
+
+        //send notification for payment
+        const mailOptions = {
+            to: enquiry_data?.selected_logistics?.quote_id?.user_id?.email,
+            subject: "Payment Confirmation",
+            buyer_name: enquiry_data?.user_id?.full_name,
+            user: data?.payment_from ?? "",
+            enquiry_id: enquiry_data?.enquiry_unique_id,
+            user_name: enquiry_data?.selected_logistics?.quote_id?.user_id?.full_name,
+            amount: confirmedIntent.amount / 100,
+            schedule: confirmedIntent?.metadata?.scheduleId,
+            transaction_id: confirmedIntent?.id,
+            portal_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry_data._id}`,
+            paytype: "logistic"
+        }
+        emailer.sendEmail(null, mailOptions, "paymentConfirmation");
+        //send notification
+        const notificationMessage = {
+            title: 'Payment Released',
+            description: `$Logistic payment for enquiry ${enquiry_data?.enquiry_unique_id} has been successfully released`,
+            enquiry: enquiry_data?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: enquiry_data?.selected_logistics?.quote_id?.user_id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "payment_completed",
+                receiver_id: enquiry_data?.user_id?._id,
+                related_to: enquiry_data?.user_id?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
 
         return res.status(200).json({
             message: "checkout successfull!",
