@@ -2,6 +2,7 @@ const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const Order = require("../../models/order")
 const utils = require("../../utils/utils");
+const emailer = require("../../utils/emailer");
 const Payment = require("../../models/payment")
 const Plan = require("../../models/plan")
 const Subscription = require("../../models/subscription")
