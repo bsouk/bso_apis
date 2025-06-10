@@ -221,6 +221,7 @@ exports.updatepaymentstatus = async (req, res) => {
             schedule: payment.payment_stage[stageIndex]?.schedule_id,
             transaction_id: payment.payment_stage[stageIndex]?.txn_id,
             method: payment.payment_stage[stageIndex]?.payment_method,
+            receipt : payment.payment_stage[stageIndex]?.receipt_number,
             portal_url: `${process.env.APP_URL}/enquiry-review-page/${payment?.enquiry_id?._id}`,
         }
         emailer.sendEmail(null, mailOptions, "adminPaymentConfirmation");
