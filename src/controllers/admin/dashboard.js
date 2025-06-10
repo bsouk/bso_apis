@@ -13,6 +13,7 @@ const Ads = require("../../models/ads");
 
 const fcm_devices = require("../../models/fcm_devices");
 const Enquiry = require("../../models/Enquiry");
+const EnquiryQuotes = require("../../models/EnquiryQuotes");
 const Notification = require("../../models/notification")
 const Subscription = require("../../models/subscription")
 const moment = require("moment");
@@ -425,6 +426,235 @@ cron.schedule("0 11 * * *", async () => {
     }
 });
 
+cron.schedule("0 12 * * *", async () => {
+    try {
+        const today = moment().startOf("day");
+        console.log("today : ", today.format("YYYY-MM-DD"));
+
+        const quotations = await EnquiryQuotes.aggregate([
+            {
+                $match: {
+                    status: { $ne: "delivered" },
+                },
+            },
+
+            // Extract number and unit from delivery_time
+            {
+                $addFields: {
+                    delivery_number_str: {
+                        $let: {
+                            vars: {
+                                regexResult: {
+                                    $regexFind: {
+                                        input: "$delivery_time",
+                                        regex: /^[0-9]+/,
+                                    },
+                                },
+                            },
+                            in: "$$regexResult.match",
+                        },
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    delivery_number: {
+                        $cond: [
+                            { $ifNull: ["$delivery_number_str", false] },
+                            { $toInt: "$delivery_number_str" },
+                            null,
+                        ],
+                    },
+                    delivery_unit: {
+                        $toLower: {
+                            $let: {
+                                vars: {
+                                    parts: {
+                                        $cond: [
+                                            { $ifNull: ["$delivery_time", false] },
+                                            { $split: ["$delivery_time", " "] },
+                                            [],
+                                        ],
+                                    },
+                                },
+                                in: {
+                                    $cond: [
+                                        { $gte: [{ $size: "$$parts" }, 2] },
+                                        { $arrayElemAt: ["$$parts", 1] },
+                                        null,
+                                    ],
+                                },
+                            },
+                        },
+                    },
+
+                },
+            },
+
+            // Calculate delivery days, expected delivery date, and notify date
+            {
+                $addFields: {
+                    delivery_days: {
+                        $cond: [
+                            { $eq: ["$delivery_unit", "weeks"] },
+                            { $multiply: ["$delivery_number", 7] },
+                            "$delivery_number",
+                        ],
+                    },
+                },
+            },
+            {
+                $addFields: {
+                    expected_delivery_date: {
+                        $cond: [
+                            { $ifNull: ["$delivery_days", false] },
+                            {
+                                $add: [
+                                    "$createdAt",
+                                    { $multiply: ["$delivery_days", 24 * 60 * 60 * 1000] },
+                                ],
+                            },
+                            null,
+                        ],
+                    },
+                    notify_date: {
+                        $cond: [
+                            { $ifNull: ["$delivery_days", false] },
+                            {
+                                $subtract: [
+                                    {
+                                        $add: [
+                                            "$createdAt",
+                                            { $multiply: ["$delivery_days", 24 * 60 * 60 * 1000] },
+                                        ],
+                                    },
+                                    2 * 24 * 60 * 60 * 1000,
+                                ],
+                            },
+                            null,
+                        ],
+                    },
+                },
+            },
+
+            // Match only those where notify_date is today
+            {
+                $match: {
+                    $expr: {
+                        $eq: [
+                            { $dateToString: { date: "$notify_date", format: "%Y-%m-%d" } },
+                            today.format("YYYY-MM-DD"),
+                        ],
+                    },
+                },
+            },
+
+            // Lookup related enquiry and buyer
+            {
+                $lookup: {
+                    from: "enquires",
+                    localField: "enquiry_id",
+                    foreignField: "_id",
+                    as: "enquiry",
+                    pipeline: [
+                        {
+                            $lookup: {
+                                from: "users",
+                                localField: "user_id",
+                                foreignField: "_id",
+                                as: "buyer",
+                            },
+                        },
+                        { $unwind: { path: "$buyer", preserveNullAndEmptyArrays: true } },
+                    ],
+                },
+            },
+            { $unwind: "$enquiry" },
+            {
+                $match: { "enquiry.status": { $ne: "delivered" } },
+            },
+
+            // Lookup supplier
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user_id",
+                    foreignField: "_id",
+                    as: "user",
+                },
+            },
+            { $unwind: "$user" },
+        ]);
+
+        console.log("quotations : ", quotations.length);
+
+        for (const q of quotations) {
+            const deliveryDate = moment(q.expected_delivery_date).format("dddd, MMMM D, YYYY");
+
+            const suppliermailOptions = {
+                to: q.user.email,
+                subject: "Delivery Reminder",
+                buyer_name: q.enquiry.buyer.full_name,
+                enquiry_id: q.enquiry.enquiry_unique_id,
+                expected_date: deliveryDate,
+                user_name: q.user.full_name,
+                portal_url: `${appurl}/enquiry-review-page/${q.enquiry._id}`,
+                status: q.enquiry.status,
+            };
+
+            const buyermailOptions = {
+                to: q.enquiry.buyer.email,
+                subject: "Delivery Reminder",
+                buyer_name: q.enquiry.buyer.full_name,
+                enquiry_id: q.enquiry.enquiry_unique_id,
+                user_name: q.enquiry.buyer.full_name,
+                expected_date: deliveryDate,
+                portal_url: `${appurl}/enquiry-review-page/${q.enquiry._id}`,
+                status: q.enquiry.status,
+            };
+
+            await emailer.sendEmail(null, suppliermailOptions, "deliveryReminder");
+            await emailer.sendEmail(null, buyermailOptions, "deliveryReminder");
+
+            const supplierfcmTokens = await fcm_devices.find({ user_id: q.user._id });
+            const buyerfcmTokens = await fcm_devices.find({ user_id: q.enquiry.buyer._id });
+
+            const notification = {
+                title: "Delivery Reminder",
+                description: `Expected delivery for enquiry ${q.enquiry.enquiry_unique_id} is due on ${deliveryDate}.`,
+            };
+
+            for (const device of supplierfcmTokens) {
+                await utils.sendNotification(device.token, notification);
+            }
+            for (const device of buyerfcmTokens) {
+                await utils.sendNotification(device.token, notification);
+            }
+
+            await new Notification({
+                title: notification.title,
+                description: notification.description,
+                type: "delivery_reminder",
+                receiver_id: q.user._id,
+                related_to: q.enquiry._id,
+                related_to_type: "enquiry",
+            }).save();
+
+            await new Notification({
+                title: notification.title,
+                description: notification.description,
+                type: "delivery_reminder",
+                receiver_id: q.enquiry.buyer._id,
+                related_to: q.enquiry._id,
+                related_to_type: "enquiry",
+            }).save();
+        }
+
+        console.log(`✅ Delivery reminders sent for ${quotations.length} quotations on ${today.format("YYYY-MM-DD")}`);
+    } catch (error) {
+        console.error("❌ Error in delivery reminder cron:", error);
+    }
+});
 
 
 exports.dashboardChartData = async (req, res) => {
