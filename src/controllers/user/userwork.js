@@ -3554,8 +3554,9 @@ exports.getEnquiryDetails = async (req, res) => {
             });
         }
 
-        const paymentdata = await payment.findOne({ enquiry_id: id })
-        console.log("paymentdata : ", paymentdata)
+        const paymentdata = await payment.findOne({ enquiry_id: id, buyer_id: data?.user_id })
+        const supplierpaymentdata = await payment.findOne({ enquiry_id: id, supplier_id: data?.selected_supplier?.quote_id?.user_id })
+        console.log("paymentdata : ", paymentdata, " supplierpayment : ", supplierpaymentdata)
 
         const { selected_supplier, ...rest } = data.toObject();
 
@@ -3619,7 +3620,7 @@ exports.getEnquiryDetails = async (req, res) => {
             admincommission: commisiondata || null,
             // payment: paymentdata,
             payment_schedule_details: newschedule,
-            logistics_payments: paymentdata?.logistic_payment ?? null
+            logistics_payments: paymentdata?.logistic_payment.length === 0 ? supplierpaymentdata?.logistic_payment : paymentdata?.logistic_payment
         };
 
         return res.status(200).json({
