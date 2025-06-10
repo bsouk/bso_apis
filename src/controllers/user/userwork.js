@@ -5642,7 +5642,12 @@ exports.sendOtpForEnquiry = async (req, res) => {
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
 
-        const fullPhoneNumber = `${user.phone_number_code.trim()}${user.phone_number.trim()}`;
+        let phoneCode = user.phone_number_code.trim();
+        if (!phoneCode.startsWith("+")) {
+            phoneCode = "+" + phoneCode;
+        }
+
+        const fullPhoneNumber = `${phoneCode}${user.phone_number.trim()}`;
         const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
         console.log("result : ", result);
 
@@ -5696,7 +5701,12 @@ exports.sendOtpForQuote = async (req, res) => {
 
         emailer.sendEmail(null, mailOptions, "verifyOTP");
 
-        const fullPhoneNumber = `${user.phone_number_code.trim()}${user.phone_number.trim()}`;
+        let phoneCode = user.phone_number_code.trim();
+        if (!phoneCode.startsWith("+")) {
+            phoneCode = "+" + phoneCode;
+        }
+
+        const fullPhoneNumber = `${phoneCode}${user.phone_number.trim()}`;
         const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
         console.log("result : ", result);
 
