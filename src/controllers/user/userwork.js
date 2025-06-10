@@ -6049,7 +6049,7 @@ exports.verifyOtpForBuyer = async (req, res) => {
             tracking_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry_data._id}` || "",
         }
 
-        emailer.sendEmail(null, mailOptions, "orderconfirmation");
+        emailer.sendEmail(null, mailOptions, "orderConfirmation");
 
         return res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
