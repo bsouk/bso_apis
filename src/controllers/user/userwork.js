@@ -6007,6 +6007,49 @@ exports.verifyOtpForBuyer = async (req, res) => {
             }
         }
 
+
+        //order delivery notification
+        const fcm = await fcm_devices.find({ user_id: enquiry_data?.user_id?._id });
+        console.log("fcm : ", fcm)
+
+        const notificationMessage = {
+            title: 'Order delivered Successfully',
+            description: `Your order has been delivered successfully. Order ID : ${orderdata?.order_unique_id}`,
+            order: orderdata?._id
+        };
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "order_delivered",
+                receiver_id: enquiry_data?.user_id?._id,
+                related_to: enquiry_data?.user_id?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            // console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
+
+        const mailOptions = {
+            to: enquiry_data?.user_id?.email,
+            subject: "Order Delivered - Blue Sky",
+            // supplier_name: quotedata.user_id.full_name,
+            order_id: orderdata?.order_unique_id,
+            delivery_date: moment(orderdata?.createdAt).format("lll"),
+            tracking_number: trackingdata?.tracking_unique_id,
+            user_name: enquiry_data.user_id.full_name,
+            tracking_url: `${process.env.APP_URL}/enquiry-review-page/${enquiry_data._id}` || "",
+        }
+
+        emailer.sendEmail(null, mailOptions, "orderconfirmation");
+
         return res.json({ code: 200, message: "Otp verified successfullyyy" });
     } catch (error) {
         utils.handleError(res, error);

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order Delivery Notification - Blue Sky</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .email-container {
+      max-width: 700px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #28a745;
+      color: #fff;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+    .content {
+      padding: 30px 40px;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    .content h2 {
+      color: #28a745;
+      margin-top: 0;
+    }
+    .quote-box {
+      background-color: #d4edda;
+      padding: 15px;
+      margin: 20px 0;
+      border-left: 4px solid #28a745;
+      border-radius: 4px;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      background-color: #28a745;
+      color: #fff;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #28a745;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>Blue Sky</h1>
+    </div>
+    <div class="content">
+      <p><strong>Hello <%= user_name %>,</strong></p>
+
+      <p>We're excited to inform you that your order <strong><%= order_id %></strong> has been successfully delivered!</p>
+      
+      <div class="quote-box">
+        <strong>Order Number:</strong> <%= order_id %><br/>
+        <strong>Delivery Date:</strong> <%= delivery_date %><br/>
+        <strong>Tracking Number:</strong> <%= tracking_number %><br/>
+      </div>
+
+      <p>Your items should now be with you. Please inspect the package upon receipt and let us know if there are any issues.</p>
+
+      <a href="<%= tracking_url %>" class="btn">Track Your Package</a>
+
+      <p style="margin-top: 30px;">We hope you're satisfied with your purchase. If you have any questions or need assistance, please don't hesitate to contact us.</p>
+
+      <p>Best regards,<br><strong>Blue Sky Customer Support Team</strong></p>
+    </div>
+    <div class="footer">
+      &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
