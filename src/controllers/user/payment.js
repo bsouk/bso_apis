@@ -1,5 +1,6 @@
 const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
+const Admin = require("../../models/admin");
 const Order = require("../../models/order")
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
@@ -1643,6 +1644,41 @@ exports.uploadReceipt = async (req, res) => {
         neworder.tracking_id = newtracking._id
 
         await neworder.save()
+
+        // admin notification
+        const admins = await Admin.findOne({ role: 'super_admin' });
+        console.log("admins : ", admins)
+
+        if (admins) {
+            const notificationMessage = {
+                title: 'Payment Receipt submited',
+                description: `${req?.user?.full_name} has uploaded a payment receipt. Need to verify it . Order ID : ${neworder?.order_unique_id}`,
+                order_id: neworder?._id
+            };
+
+            const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+            console.log("adminFcmDevices : ", adminFcmDevices)
+
+            if (adminFcmDevices && adminFcmDevices.length > 0) {
+                adminFcmDevices.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const adminNotificationData = {
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    // description: notificationMessage.description,
+                    type: "payment_receipt_uploaded",
+                    receiver_id: admins?._id,
+                    related_to: neworder?._id,
+                    related_to_type: "order"
+                };
+                const newAdminNotification = new admin_received_notification(adminNotificationData);
+                console.log("newAdminNotification : ", newAdminNotification)
+                await newAdminNotification.save();
+            }
+        }
 
         return res.status(200).json({
             message: "payment receipt uploaded successfully",
