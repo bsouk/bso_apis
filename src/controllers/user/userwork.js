@@ -6373,7 +6373,16 @@ exports.addSuppliercollectiondata = async (req, res) => {
                 tracking_id: "",
                 tracking_url: ""
             }
+            const buyermailOptions = {
+                to: quotedata?.enquiry_id?.user_id?.email,
+                subject: "Shipment Pickup details",
+                buyer_name: quotedata?.enquiry_id?.user_id?.full_name,
+                pickup_location: full_address,
+                tracking_id: "",
+                tracking_url: ""
+            }
             emailer.sendEmail(null, mailOptions, "shipmentPickup");
+            emailer.sendEmail(null, buyermailOptions, "shipmentPickup");
             //send notification
             const notificationMessage = {
                 title: 'shipment is ready for pickup',
