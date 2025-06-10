@@ -2,10 +2,13 @@ const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const Order = require("../../models/order")
 const utils = require("../../utils/utils");
+const emailer = require("../../utils/emailer");
 const Payment = require("../../models/payment")
 const User = require("../../models/user")
 const enquiry = require("../../models/Enquiry")
 const tracking_order = require("../../models/tracking_order");
+const Notification = require("../../models/notification")
+const fcm_devices = require("../../models/fcm_devices");
 
 
 exports.getPaymentListing = async (req, res) => {
@@ -129,7 +132,7 @@ exports.paymentDetails = async (req, res) => {
                                     first_name: 1,
                                     last_name: 1,
                                     email: 1,
-                                    profile_image : 1
+                                    profile_image: 1
                                 }
                             }
                         ]
@@ -188,13 +191,14 @@ exports.updatepaymentstatus = async (req, res) => {
             return res.status(400).json({ error: "Payment ID and Payment Stage ID are required", code: 400 });
         }
 
-   
-        const payment = await Payment.findOne({ _id: payment_id });
+
+        const payment = await Payment.findOne({ _id: payment_id }).populate('buyer_id').populate('supplier_id').populate('enquiry_id');
+        console.log("payment : ", payment)
         if (!payment) {
             return res.status(404).json({ error: "Payment not found", code: 404 });
         }
 
-       
+
         const stageIndex = payment.payment_stage.findIndex(stage => stage._id.toString() === payment_stage_id);
         if (stageIndex === -1) {
             return res.status(404).json({ error: "Payment stage not found", code: 404 });
@@ -205,6 +209,52 @@ exports.updatepaymentstatus = async (req, res) => {
         payment.payment_stage[stageIndex].schedule_status = "completed";
 
         await payment.save();
+
+
+        //send notification for payment
+        const mailOptions = {
+            to: payment?.buyer_id?.email || payment?.supplier_id?.email,
+            subject: "Payment Approved",
+            enquiry_id: payment?.enquiry_id?.enquiry_unique_id,
+            user_name: payment?.buyer_id?.user_id?.full_name || payment?.supplier_id?.user_id?.full_name,
+            amount: payment.payment_stage[stageIndex]?.amount,
+            schedule: payment.payment_stage[stageIndex]?.schedule_id,
+            transaction_id: payment.payment_stage[stageIndex]?.txn_id,
+            method: payment.payment_stage[stageIndex]?.payment_method,
+            portal_url: `${process.env.APP_URL}/enquiry-review-page/${payment?.enquiry_id?._id}`,
+        }
+        emailer.sendEmail(null, mailOptions, "adminPaymentConfirmation");
+        //send notification
+        const notificationMessage = {
+            title: 'Payment Approved',
+            description: `Your payment for enquiry ${payment?.enquiry_id?.enquiry_unique_id} that has been uploaded to review has been approved by bso`,
+            enquiry: payment?.enquiry_id?._id
+        };
+
+        let id = payment?.buyer_id?._id ?? payment?.supplier_id?._id;
+        const fcm = await fcm_devices.find({ user_id: new mongoose.Types.ObjectId(id) });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "payment_completed",
+                receiver_id: id,
+                related_to: id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
+
 
         return res.status(200).json({
             message: "Payment stage updated to completed",
