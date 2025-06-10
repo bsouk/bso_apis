@@ -15,7 +15,7 @@ const PaymentSchema = new mongoose.Schema(
         currency: String,
         enquiry_id: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'enquries'
+            ref: 'enquires'
         },
         subscription_id: {
             type: mongoose.Schema.Types.ObjectId,
