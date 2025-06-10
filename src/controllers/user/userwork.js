@@ -6289,7 +6289,7 @@ exports.addSuppliercollectiondata = async (req, res) => {
         )
         console.log("quotedata : ", quotedata)
 
-        const updateEnquiry = await Enquiry.findOneAndUpdate({ _id: quotedata.enquiry_id._id }, { $set: { status: 'shipement_ready' } }, { new: true })
+        const updateEnquiry = await Enquiry.findOneAndUpdate({ _id: quotedata.enquiry_id._id }, { $set: { status: 'shipement_ready' } }, { new: true }).populate({ path: 'order_id', populate: { path: 'tracking_id' } }).populate('selected_payment_terms')
         console.log("updateEnquiry : ", updateEnquiry)
 
         if (updateEnquiry.order_id) {
@@ -6323,6 +6323,10 @@ exports.addSuppliercollectiondata = async (req, res) => {
             });
         }
 
+
+        const paymentdata = await payment.findOne({ enquiry_id: quotedata?.enquiry_id?._id, buyer_id: quotedata?.enquiry_id?.user_id })
+        console.log("paymentdata : ", paymentdata)
+
         if (quotedata.enquiry_id.shipment_type === "self-pickup") {
             let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
             const mailOptions = {
@@ -6330,7 +6334,7 @@ exports.addSuppliercollectiondata = async (req, res) => {
                 subject: "Shipment Pickup details",
                 buyer_name: quotedata?.enquiry_id?.user_id?.full_name,
                 pickup_location: full_address,
-                tracking_id: "",
+                tracking_id: updateEnquiry?.order_id?.tracking_id?.tracking_unique_id,
                 tracking_url: ""
             }
             emailer.sendEmail(null, mailOptions, "shipmentPickup");
@@ -6370,19 +6374,27 @@ exports.addSuppliercollectiondata = async (req, res) => {
                 subject: "Shipment Pickup details",
                 buyer_name: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?.full_name,
                 pickup_location: full_address,
-                tracking_id: "",
+                tracking_id: updateEnquiry?.order_id?.tracking_id?.tracking_unique_id,
                 tracking_url: ""
             }
-            const buyermailOptions = {
-                to: quotedata?.enquiry_id?.user_id?.email,
-                subject: "Shipment Pickup details",
-                buyer_name: quotedata?.enquiry_id?.user_id?.full_name,
-                pickup_location: full_address,
-                tracking_id: "",
-                tracking_url: ""
+
+            if (updateEnquiry?.selected_payment_terms?.schedule.length > 0 && updateEnquiry?.selected_payment_terms?.schedule.some(i => i.payment_stage === "readiness")) {
+                let stage = updateEnquiry?.selected_payment_terms?.schedule.find(i => i.payment_stage === "readiness")
+                console.log("stage : ", stage)
+
+                let amt = updateEnquiry?.grand_total * stage?.value / 100
+                const buyermailOptions = {
+                    to: quotedata?.enquiry_id?.user_id?.email,
+                    subject: "Shipement Ready",
+                    user_name: quotedata?.enquiry_id?.user_id?.full_name,
+                    enquiry_id: quotedata?.enquiry_id?.enquiry_unique_id,
+                    amount: amt,
+                    schedule: stage?.schedule_id,
+                    portal_url: `${process.env.APP_URL}/enquiry-review-page/${quotedata?.enquiry_id?._id}`
+                }
+                emailer.sendEmail(null, buyermailOptions, "readinessPaymentReminder");
             }
             emailer.sendEmail(null, mailOptions, "shipmentPickup");
-            emailer.sendEmail(null, buyermailOptions, "shipmentPickup");
             //send notification
             const notificationMessage = {
                 title: 'shipment is ready for pickup',
