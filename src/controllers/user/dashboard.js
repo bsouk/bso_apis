@@ -73,7 +73,7 @@ exports.getDashboardData = async (req, res) => {
                 break;
             case "jobapplied":
                 {
-                    data = await JobApplication.find({ canditate_id: userId }).populate('job_id').populate('company_id').sort({ createdAt: -1 }).limit(5)
+                    data = await JobApplication.find({ canditate_id: userId }).populate('job_id').populate('company_id', { select: "company_data" }).sort({ createdAt: -1 }).limit(5)
                     chart = await JobApplication.aggregate([
                         {
                             $match: { canditate_id: userId }
