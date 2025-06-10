@@ -6066,7 +6066,11 @@ exports.getSingleLogisticsQuotes = async (req, res) => {
                 select: '-enquiry_items'
             }).populate({ path: 'user_id', select: "company_data" }).sort({ createdAt: -1 })
         const paymentdata = await payment.findOne({ enquiry_id: data?.enquiry_id?._id, buyer_id: data?.enquiry_id?.user_id })
-        console.log("paymentdata : ", paymentdata)
+        const supplierpay = await payment.findOne({ enquiry_id: data?.enquiry_id?._id, supplier_id: data?.enquiry_id?.selected_supplier?.quote_id?.user_id })
+        console.log("paymentdata : ", paymentdata, " supplierpay : ", supplierpay)
+        if (paymentdata.logistic_payment.length === 0) {
+            paymentdata.logistic_payment = supplierpay.logistic_payment
+        }
         return res.status(200).json({
             message: "logistics quote data fetched successfully",
             data,
