@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment Released Notification - Blue Sky</title>
   <style>
     body {
@@ -12,6 +13,7 @@
       padding: 0;
       color: #333;
     }
+
     .email-container {
       max-width: 700px;
       margin: 30px auto;
@@ -20,25 +22,30 @@
       overflow: hidden;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
     }
+
     .header {
       background-color: #28a745;
       color: #fff;
       text-align: center;
       padding: 30px 20px;
     }
+
     .header h1 {
       margin: 0;
       font-size: 26px;
     }
+
     .content {
       padding: 30px 40px;
       font-size: 16px;
       line-height: 1.7;
     }
+
     .content h2 {
       color: #28a745;
       margin-top: 0;
     }
+
     .quote-box {
       background-color: #d4edda;
       padding: 15px;
@@ -46,6 +53,7 @@
       border-left: 4px solid #28a745;
       border-radius: 4px;
     }
+
     .footer {
       text-align: center;
       padding: 20px;
@@ -53,6 +61,7 @@
       background-color: #28a745;
       color: #fff;
     }
+
     .btn {
       display: inline-block;
       margin-top: 15px;
@@ -65,6 +74,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="email-container">
     <div class="header">
@@ -73,14 +83,19 @@
     <div class="content">
       <p><strong>Hello <%= user_name %>,</strong></p>
 
-      <p>We’re pleased to inform you that the payment for enquiry <strong><%= enquiry_id %></strong> that has been uploaded to review has been approved by bso. Here is the details of payment</p>
+      <p>We’re pleased to inform you that the payment for enquiry <strong>
+          <%= enquiry_id %>
+        </strong> that has been uploaded to review has been approved by bso. Here is the details of payment</p>
 
       <div class="quote-box">
-        <strong>Payment Amount:</strong> <%= amount %><br/>
-        <strong>Payment Schedule:</strong> <%= schedule %><br/>
-        <strong>Payment Receipt No:</strong> <%= receipt %><br/>
-        <strong>Transaction ID:</strong> <%= transaction_id %><br/>
-        <strong>Payment Method:</strong> <%= method %><br/>
+        <strong>Payment Amount:</strong>
+        <%= amount %><br />
+          <strong>Payment Schedule:</strong>
+          <%= schedule %><br />
+            <strong>Payment Receipt No:</strong>
+            <%= receipt %><br />
+              <strong>Payment Method:</strong>
+              <%= method %><br />
       </div>
 
       <p>You may now proceed with the next steps.</p>
@@ -96,4 +111,5 @@
     </div>
   </div>
 </body>
+
 </html>

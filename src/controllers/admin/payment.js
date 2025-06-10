@@ -216,12 +216,12 @@ exports.updatepaymentstatus = async (req, res) => {
             to: payment?.buyer_id?.email || payment?.supplier_id?.email,
             subject: "Payment Approved",
             enquiry_id: payment?.enquiry_id?.enquiry_unique_id,
-            user_name: payment?.buyer_id?.user_id?.full_name || payment?.supplier_id?.user_id?.full_name,
+            user_name: payment?.buyer_id?.full_name || payment?.supplier_id?.full_name,
             amount: payment.payment_stage[stageIndex]?.amount,
             schedule: payment.payment_stage[stageIndex]?.schedule_id,
-            transaction_id: payment.payment_stage[stageIndex]?.txn_id,
+            // transaction_id: payment.payment_stage[stageIndex]?.txn_id,
             method: payment.payment_stage[stageIndex]?.payment_method,
-            receipt : payment.payment_stage[stageIndex]?.receipt_number,
+            receipt: payment.payment_stage[stageIndex]?.receipt_number,
             portal_url: `${process.env.APP_URL}/enquiry-review-page/${payment?.enquiry_id?._id}`,
         }
         emailer.sendEmail(null, mailOptions, "adminPaymentConfirmation");
