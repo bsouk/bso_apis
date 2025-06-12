@@ -6455,12 +6455,15 @@ exports.getResourceList = async (req, res) => {
 
         const condition = {
             user_type: { $in: ["resource"] },
-            profile_completed: true,
+            // profile_completed: true,
             is_deleted: false,
         };
 
         if (search) {
             condition["$or"] = [
+                {
+                    full_name: { $regex: search, $options: "i" },
+                },
                 {
                     profile_title: { $regex: search, $options: "i" },
                 },
@@ -6933,15 +6936,15 @@ exports.deleteAccount = async (req, res) => {
                 message: "Account not found",
                 code: 404,
             });
-        // if (user.is_deleted)
-        //     return utils.handleError(res, {
-        //         message: "Account has been already deleted",
-        //         code: 400,
-        //     });
-        // user.is_deleted = true;
-        // await user.save();
-        const result = await User.deleteOne({ _id: id });
-        console.log("result : ", result);
+        if (user.is_deleted)
+            return utils.handleError(res, {
+                message: "Account has been already deleted",
+                code: 400,
+            });
+        user.is_deleted = true;
+        await user.save();
+        // const result = await User.deleteOne({ _id: id });
+        // console.log("result : ", result);
         res.json({ message: "Account has been deleted successfully", code: 200 });
     } catch (error) {
         utils.handleError(res, error);

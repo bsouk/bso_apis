@@ -471,7 +471,7 @@ router.get("/getSingleLogisticsQuotes/:id", trimRequest.all, controller.getSingl
 router.get(
     "/getResourceList",
     trimRequest.all,
-    requireAuth,
+    // requireAuth,
     controller.getResourceList
 );
 
