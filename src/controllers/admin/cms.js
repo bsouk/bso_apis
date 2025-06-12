@@ -533,9 +533,24 @@ exports.getdeletedAccounts = async (req, res) => {
 exports.approveRejectDeletedAccounts = async (req, res) => {
   try {
     const { ids, status } = req.body
-    if (status === "accept") {
+    if (status === "accepted") {
       const result = await User.updateMany({ _id: { $in: ids } }, { $set: { is_deleted: true } })
       console.log("result : ", result)
+
+      for (let i = 0; i < ids.length; i++) {
+        const user = await User.findById(ids[i])
+        console.log("user : ", user)
+        //send notification for payment
+        const mailOptions = {
+          to: user?.email,
+          subject: `Account Deletion Request ${status === 'accepted' ? 'Approved' : 'Rejected'} - Blue Sky`,
+          user_name: user?.full_name,
+          request_data: moment(user?.deletion_request_on).format("DD-MM-YYYY"),
+          support_url: `${process.env.APP_URL}/contact-us`,
+          status: status
+        }
+        emailer.sendEmail(null, mailOptions, "accountDeletionReply");
+      }
     } else {
       const result = await User.updateMany({ _id: { $in: ids } }, { $set: { deletion_requested: false, deletion_request_on: null } })
       console.log("result : ", result)
@@ -546,12 +561,13 @@ exports.approveRejectDeletedAccounts = async (req, res) => {
         //send notification for payment
         const mailOptions = {
           to: user?.email,
-          subject: "Account Deletion Request Rejected - Blue Sky",
+          subject: `Account Deletion Request ${status === 'accepted' ? 'Approved' : 'Rejected'} - Blue Sky`,
           user_name: user?.full_name,
           request_data: moment(user?.deletion_request_on).format("DD-MM-YYYY"),
           support_url: `${process.env.APP_URL}/contact-us`,
+          status: status
         }
-        emailer.sendEmail(null, mailOptions, "jobapplicationNotification");
+        emailer.sendEmail(null, mailOptions, "accountDeletionReply");
         //send notification
         const notificationMessage = {
           title: 'Account Deletion Request Rejected - Blue Sky',

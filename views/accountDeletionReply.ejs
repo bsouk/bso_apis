@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Account Deletion Request Rejected - Blue Sky</title>
+  <title>Account Deletion Request - Blue Sky</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -73,18 +73,34 @@
     <div class="content">
       <p><strong>Hello <%= user_name %>,</strong></p>
 
-      <p>We have reviewed your recent request for account deletion. After careful consideration, we regret to inform you that your request has been <strong>rejected</strong> by our team.</p>
+      <% if (status === 'accepted') { %>
+        <p>We have reviewed your request for account deletion and are writing to inform you that your request has been <strong>approved</strong>.</p>
 
-      <div class="quote-box">
-        <strong>Request Status:</strong> Rejected<br/>
-        <strong>Submitted On:</strong> <%= request_date %><br/>
-      </div>
+        <div class="quote-box">
+          <strong>Request Status:</strong> Approved<br/>
+          <strong>Submitted On:</strong> <%= request_date %><br/>
+        </div>
 
-      <p>If you believe this was done in error or you have further concerns, feel free to contact our support team.</p>
+        <p>Your account and all associated data will be deleted as per our data policy. If this was done by mistake or you wish to retain your account, please contact our support team immediately.</p>
 
-      <a href="<%= support_url %>" class="btn">Contact Support</a>
+        <a href="<%= support_url %>" class="btn">Contact Support</a>
 
-      <p style="margin-top: 30px;">We appreciate your understanding.</p>
+        <p style="margin-top: 30px;">Thank you for being with Blue Sky.</p>
+
+      <% } else { %>
+        <p>We have reviewed your recent request for account deletion. After careful consideration, we regret to inform you that your request has been <strong>rejected</strong> by our team.</p>
+
+        <div class="quote-box">
+          <strong>Request Status:</strong> Rejected<br/>
+          <strong>Submitted On:</strong> <%= request_date %><br/>
+        </div>
+
+        <p>If you believe this was done in error or have further concerns, feel free to contact our support team.</p>
+
+        <a href="<%= support_url %>" class="btn">Contact Support</a>
+
+        <p style="margin-top: 30px;">We appreciate your understanding.</p>
+      <% } %>
 
       <p>Best regards,<br><strong>Blue Sky Support Team</strong></p>
     </div>
