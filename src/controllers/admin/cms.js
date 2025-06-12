@@ -1,6 +1,7 @@
 const FAQ = require("../../models/faq");
 const CMS = require("../../models/cms");
 const utils = require("../../utils/utils");
+const emailer = require("../../utils/emailer");
 const Walkthrough = require("../../models/walkthrough");
 const mongoose = require("mongoose");
 const ContactUs = require("../../models/contact_us");
