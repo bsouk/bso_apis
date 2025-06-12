@@ -2752,7 +2752,7 @@ exports.getMyEnquiry = async (req, res) => {
             if (teamdata) {
                 switch (mypermission) {
                     case "all": {
-                        userMatchCondition.user_id = { $in: [...teamdata.members, ...teamdata.admin_id] }
+                        userMatchCondition.user_id = { $in: [...teamdata.members, teamdata.admin_id] }
                     }; break;
                     case "none": {
                         return res.json({ data: [], count: 0, code: 200 });
