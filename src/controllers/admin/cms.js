@@ -11,6 +11,7 @@ const payment_terms = require("../../models/payment_terms");
 const moment = require("moment");
 const client_testimonials = require("../../models/client_testimonials");
 const User = require("../../models/user");
+const fcm_devices = require("../../models/fcm_devices");
 
 exports.addFaq = async (req, res) => {
   try {
@@ -546,7 +547,7 @@ exports.approveRejectDeletedAccounts = async (req, res) => {
           to: user?.email,
           subject: `Account Deletion Request ${status === 'accepted' ? 'Approved' : 'Rejected'} - Blue Sky`,
           user_name: user?.full_name,
-          request_data: moment(user?.deletion_request_on).format("DD-MM-YYYY"),
+          request_date: moment(user?.deletion_request_on).format("lll"),
           support_url: `${process.env.APP_URL}/contact-us`,
           status: status
         }
@@ -564,7 +565,7 @@ exports.approveRejectDeletedAccounts = async (req, res) => {
           to: user?.email,
           subject: `Account Deletion Request ${status === 'accepted' ? 'Approved' : 'Rejected'} - Blue Sky`,
           user_name: user?.full_name,
-          request_data: moment(user?.deletion_request_on).format("DD-MM-YYYY"),
+          request_date: moment(user?.deletion_request_on).format("lll"),
           support_url: `${process.env.APP_URL}/contact-us`,
           status: status
         }
