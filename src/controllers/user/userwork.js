@@ -948,8 +948,49 @@ exports.getUserAddressList = async (req, res) => {
         const userId = req.user._id;
         console.log("userid is ", userId);
 
-        const addresslist = await Address.find({ user_id: userId }).populate("user_id", "full_name");
+        let teamdata = await Team.findOne(
+            {
+                $or: [
+                    {
+                        admin_id: new mongoose.Types.ObjectId(userId)
+                    },
+                    {
+                        members: { $in: [new mongoose.Types.ObjectId(userId)] }
+                    },
+                ],
+                team_type: "supplier",
+            }
+        ).populate('admin_id')
+        console.log("teamdata : ", teamdata)
+
+        const mymemberdata = await User.findOne({ _id: new mongoose.Types.ObjectId(userId) })
+        console.log("mymemberdata : ", mymemberdata)
+
+        let mypermission = mymemberdata?.permission?.quotation
+        console.log("mypermission : ", mypermission)
+
+        let filter = {}
+
+        if (teamdata) {
+            switch (mypermission) {
+                case "all": {
+                    filter.user_id = { $in: [...teamdata?.members, teamdata?.admin_id?._id] }
+                }; break;
+                case "none": {
+                    return res.json({ data: [], count: 0, code: 200 });
+                }
+                default: {
+                    filter.user_id = new mongoose.Types.ObjectId(userId)
+                }
+            }
+        } else {
+            filter.user_id = new mongoose.Types.ObjectId(userId)
+        }
+
+        const addresslist = await Address.find(filter).populate("user_id", "full_name");
         console.log("addressList is ", addresslist);
+
+        const count = await Address.countDocuments(filter);
 
         // if (!addresslist || addresslist.length === 0) {
         //     return utils.handleError(res, {
@@ -963,6 +1004,7 @@ exports.getUserAddressList = async (req, res) => {
             success: true,
             message: "User Address List Fetched Successfully",
             data: addresslist,
+            count,
             code: 200
         })
     } catch (err) {
