@@ -3069,7 +3069,7 @@ exports.getMyEnquiry = async (req, res) => {
         if (teamdata) {
             switch (mypermission) {
                 case "all": {
-                    userMatchCondition.user_id = { $in: [...teamdata.members, teamdata.admin_id] }
+                    userMatchCondition.user_id = { $in: [...teamdata.members, teamdata.admin_id._id] }
                 }; break;
                 case "none": {
                     return res.json({ data: [], count: 0, code: 200 });
@@ -5363,10 +5363,10 @@ exports.getMyAllQuotes = async (req, res) => {
             console.log("mypermission : ", mypermission)
             switch (mypermission) {
                 case "all": {
-                    data = await EnquiryQuotes.find({ user_id: { $in: [...teamdata?.members, teamdata?.admin_id] } }).populate('payment_terms').populate('admin_payment_terms').populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+                    data = await EnquiryQuotes.find({ user_id: { $in: [...teamdata?.members, teamdata?.admin_id?._id] } }).populate('payment_terms').populate('admin_payment_terms').populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
                     console.log("data : ", data)
 
-                    count = await EnquiryQuotes.countDocuments({ user_id: { $in: [...teamdata?.members, teamdata?.admin_id] } })
+                    count = await EnquiryQuotes.countDocuments({ user_id: { $in: [...teamdata?.members, teamdata?.admin_id?._id] } })
                 }; break;
                 case "none": {
                     data = []
