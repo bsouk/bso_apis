@@ -361,6 +361,8 @@ exports.login = async (req, res) => {
       });
     }
 
+    if (user.is_deleted === true) return utils.handleError(res, { message: "Your account has been deleted", code: 400 });
+
     const isPasswordMatch = await utils.checkPassword(password, user);
     if (!isPasswordMatch)
       return utils.handleError(res, {
