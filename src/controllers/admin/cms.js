@@ -501,7 +501,7 @@ exports.getdeletedAccounts = async (req, res) => {
   try {
     const { offset = 0, limit = 10, search } = req.query
     let filter = {
-      is_deleted: true
+      deletion_requested: true
     }
     if (search) {
       filter[`$or`] = [
@@ -519,7 +519,7 @@ exports.getdeletedAccounts = async (req, res) => {
     const count = await User.countDocuments(filter)
 
     return res.status(200).json({
-      message: "client testimonial fetched successfully",
+      message: "accounts fetched successfully",
       data: newtestimonial,
       count,
       code: 200
@@ -534,10 +534,10 @@ exports.approveRejectDeletedAccounts = async (req, res) => {
   try {
     const { ids, status } = req.body
     if (status === "accept") {
-      const result = await User.deleteMany({ _id: { $in: ids } })
+      const result = await User.updateMany({ _id: { $in: ids } }, { $set: { is_deleted: true } })
       console.log("result : ", result)
     } else {
-      const result = await User.updateMany({ _id: { $in: ids } }, { $set: { is_deleted: false } })
+      const result = await User.updateMany({ _id: { $in: ids } }, { $set: { deletion_requested: false, deletion_request_on: null } })
       console.log("result : ", result)
 
       for (let i = 0; i < ids.length; i++) {
@@ -548,7 +548,7 @@ exports.approveRejectDeletedAccounts = async (req, res) => {
           to: user?.email,
           subject: "Account Deletion Request Rejected - Blue Sky",
           user_name: user?.full_name,
-          request_data: moment(updatedAt).format("DD-MM-YYYY"),
+          request_data: moment(user?.deletion_request_on).format("DD-MM-YYYY"),
           support_url: `${process.env.APP_URL}/contact-us`,
         }
         emailer.sendEmail(null, mailOptions, "jobapplicationNotification");

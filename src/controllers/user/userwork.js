@@ -6941,7 +6941,8 @@ exports.deleteAccount = async (req, res) => {
                 message: "Account has been already deleted",
                 code: 400,
             });
-        user.is_deleted = true;
+        user.deletion_requested = true;
+        user.deletion_request_on = new Date();
         await user.save();
         // const result = await User.deleteOne({ _id: id });
         // console.log("result : ", result);

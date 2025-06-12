@@ -489,6 +489,13 @@ const UserSchema = new mongoose.Schema(
     rating: {
       type: Number,
       default: 0
+    },
+    deletion_requested: {
+      type: Boolean,
+      default: false
+    },
+    deletion_request_on: {
+      type: Date
     }
   },
   {
