@@ -2,6 +2,7 @@ const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const utils = require("../../utils/utils");
 const Team = require("../../models/team");
+const User = require("../../models/user");
 
 exports.addProduct = async (req, res) => {
   try {
@@ -382,7 +383,7 @@ exports.getMyProductList = async (req, res) => {
     ).populate('admin_id')
     console.log("teamdata : ", teamdata)
 
-    const mymemberdata = await User.findOne({ _id: new mongoose.Types.ObjectId(userId) })
+    const mymemberdata = await User.findOne({ _id: new mongoose.Types.ObjectId(id) })
     console.log("mymemberdata : ", mymemberdata)
 
     let mypermission = mymemberdata?.permission?.quotation
