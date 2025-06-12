@@ -48,8 +48,8 @@ exports.addSubAdmin = async (req, res) => {
         }
         const password = await createNewPassword();
         const subadminData = {
-            first_name : data.first_name,
-            last_name : data.last_name,
+            first_name: data.first_name,
+            last_name: data.last_name,
             full_name: data.full_name,
             email: data.email,
             role: "sub_admin",
@@ -66,6 +66,7 @@ exports.addSubAdmin = async (req, res) => {
         const mailOptions = {
             to: newsubadmin.email,
             subject: `Welcome to ${process.env.APP_NAME}! Your Account Has Been Created as SubAdmin`,
+            name: data?.first_name,
             app_name: process.env.APP_NAME,
             email: newsubadmin.email,
             account_type: "sub admin",

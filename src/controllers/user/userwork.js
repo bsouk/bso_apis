@@ -4152,9 +4152,10 @@ exports.AddTeamMember = async (req, res) => {
             ...data,
             password,
             decoded_password: password,
-            company_data: {
-                name: data.company, // or whatever the field is
-            },
+            company_data: user.company_data,
+            // company_data: {
+            //     name: data.company, // or whatever the field is
+            // },
         };
 
         const Adduser = new User(userData);
@@ -4191,6 +4192,7 @@ exports.AddTeamMember = async (req, res) => {
         return res.status(200).json({
             message: "Team Member Added successfully",
             data: Adduser,
+            link,
             code: 200
         });
 
@@ -4229,6 +4231,7 @@ exports.ResendInvite = async (req, res) => {
         emailer.sendEmail(null, mailOptions, "teamInvite");
         return res.status(200).json({
             message: "Invite resent successfully",
+            link,
             code: 200
         });
     } catch (error) {
