@@ -4060,6 +4060,7 @@ exports.usermember = async (req, res) => {
             // Create new member
             data.user_id = userId;
             data.status = confirmedIntent.status;
+            data.member_count = data.member_count + 3
             member = await UserMember.create(data);
         }
 
