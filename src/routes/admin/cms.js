@@ -167,5 +167,18 @@ router.delete(
 )
 
 
+router.get(
+  "/getdeletedAccounts",
+  trimRequest.all,
+  controller.getdeletedAccounts
+)
+
+
+router.post(
+  "/approveRejectDeletedAccounts",
+  trimRequest.all,
+  controller.approveRejectDeletedAccounts
+)
+
 
 module.exports = router

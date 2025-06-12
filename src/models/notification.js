@@ -26,6 +26,8 @@ const notificationSchema = new mongoose.Schema(
                 "account_creation",
                 "password_changed",
                 "profile_updated",
+                "new_job_application",
+                "account_deletion_request_rejected",
 
                 "payment_reminder",
                 "payment_pending",

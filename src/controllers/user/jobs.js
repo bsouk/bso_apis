@@ -226,10 +226,10 @@ exports.createJobApplication = async (req, res) => {
         //     });
         // }
         const data = req.body
-        const jobdata = await jobs.findOne({ _id: data.job_id })
+        const jobdata = await jobs.findOne({ _id: data.job_id }).populate('company_id')
         console.log('job data : ', jobdata)
 
-        const check = await job_applications.findOne({ job_id: data.job_id, canditate_id: userId, company_id: jobdata.company_id })
+        const check = await job_applications.findOne({ job_id: data.job_id, canditate_id: userId, company_id: jobdata?.company_id?._id })
         console.log('check : ', check)
         if (check) {
             return utils.handleError(res, {
@@ -239,8 +239,56 @@ exports.createJobApplication = async (req, res) => {
         }
 
         const application_id = await generateUniqueId()
-        const new_application = await job_applications.create({ application_id, ...data, company_id: jobdata.company_id, canditate_id: userId, status: 'active' })
+        const new_application = await job_applications.create({ application_id, ...data, company_id: jobdata?.company_id?._id, canditate_id: userId, status: 'active' })
         console.log('new application : ', new_application)
+
+
+        if (jobdata.get_individual_email) {
+            //send notification 
+            const mailOptions = {
+                to: jobdata?.email,
+                subject: "New Application Notification - Blue Sky",
+                recruiter_name: jobdata?.company_id?.company_data?.name,
+                job_title: jobdata?.job_title,
+                applicant_name: req?.user?.full_name,
+                applicant_email: req?.user?.email,
+                applicant_phone: req?.user?.phone_number,
+                application_date: moment(new Date()).format('DD-MM-YYYY'),
+                portal_url: `${process.env.APP_URL}/freelance-profile/${new_application?.canditate_id}`,
+            }
+            emailer.sendEmail(null, mailOptions, "jobapplicationNotification");
+            //send notification
+            const notificationMessage = {
+                title: 'New Application Notification',
+                description: `${req.user?.full_name} has applied for ${jobdata?.job_title} job ${jobdata?.job_unique_id}`,
+                job_application: new_application?._id
+            };
+
+            const fcm = await fcm_devices.find({ user_id: jobdata?.company_id?._id });
+            console.log("fcm : ", fcm)
+
+            if (fcm && fcm.length > 0) {
+                fcm.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    // body: notificationMessage.description,
+                    description: notificationMessage.description,
+                    type: "new_job_application",
+                    receiver_id: jobdata?.company_id?._id,
+                    related_to: jobdata?.company_id?._id,
+                    related_to_type: "company",
+                };
+                const newNotification = new Notification(NotificationData);
+                console.log("newNotification : ", newNotification)
+                await newNotification.save();
+            }
+
+        }
+
         return res.status(200).json({
             message: "Job applied successfully",
             data: new_application,

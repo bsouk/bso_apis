@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account Deletion Request Rejected - Blue Sky</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    .email-container {
+      max-width: 700px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      background-color: #ffc107;
+      color: #fff;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 26px;
+    }
+    .content {
+      padding: 30px 40px;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    .content h2 {
+      color: #dc3545;
+      margin-top: 0;
+    }
+    .quote-box {
+      background-color: #fff3cd;
+      padding: 15px;
+      margin: 20px 0;
+      border-left: 4px solid #ffc107;
+      border-radius: 4px;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 14px;
+      background-color: #ffc107;
+      color: #fff;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #ffc107;
+      color: #333;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="header">
+      <h1>Blue Sky</h1>
+    </div>
+    <div class="content">
+      <p><strong>Hello <%= user_name %>,</strong></p>
+
+      <p>We have reviewed your recent request for account deletion. After careful consideration, we regret to inform you that your request has been <strong>rejected</strong> by our team.</p>
+
+      <div class="quote-box">
+        <strong>Request Status:</strong> Rejected<br/>
+        <strong>Submitted On:</strong> <%= request_date %><br/>
+      </div>
+
+      <p>If you believe this was done in error or you have further concerns, feel free to contact our support team.</p>
+
+      <a href="<%= support_url %>" class="btn">Contact Support</a>
+
+      <p style="margin-top: 30px;">We appreciate your understanding.</p>
+
+      <p>Best regards,<br><strong>Blue Sky Support Team</strong></p>
+    </div>
+    <div class="footer">
+      &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>

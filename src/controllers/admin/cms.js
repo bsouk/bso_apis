@@ -7,7 +7,9 @@ const ContactUs = require("../../models/contact_us");
 const SupportDetails = require("../../models/support_details");
 const { response } = require("express");
 const payment_terms = require("../../models/payment_terms");
+const moment = require("moment");
 const client_testimonials = require("../../models/client_testimonials");
+const User = require("../../models/user");
 
 exports.addFaq = async (req, res) => {
   try {
@@ -86,7 +88,7 @@ exports.addCMS = async (req, res) => {
   try {
     const { type, content, images } = req.body;
 
-    if (!["privacy_policy", "terms_and_conditions", "about_us", "support", "quality_procedures", "health_and_safety_procedures", "anti_corruption_policy", "environmental_policy"].includes(type))
+    if (!["privacy_policy", "terms_and_conditions", "about_us", "support", "quality_procedures", "health_and_safety_procedures", "anti_corruption_policy", "environmental_policy", "declaration"].includes(type))
       return utils.handleError(res, {
         message: "Please provide valid type",
         code: 400,
@@ -487,6 +489,103 @@ exports.deleteClientTestimonial = async (req, res) => {
 
     return res.status(200).json({
       message: "client testimonial deleted successfully",
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.getdeletedAccounts = async (req, res) => {
+  try {
+    const { offset = 0, limit = 10, search } = req.query
+    let filter = {
+      is_deleted: true
+    }
+    if (search) {
+      filter[`$or`] = [
+        {
+          name: { $regex: search, $options: "i" }
+        },
+        {
+          email: { $regex: search, $options: "i" }
+        }
+      ]
+    }
+    const newtestimonial = await User.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+    console.log("newtestimonial : ", newtestimonial)
+
+    const count = await User.countDocuments(filter)
+
+    return res.status(200).json({
+      message: "client testimonial fetched successfully",
+      data: newtestimonial,
+      count,
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+}
+
+
+exports.approveRejectDeletedAccounts = async (req, res) => {
+  try {
+    const { ids, status } = req.body
+    if (status === "accept") {
+      const result = await User.deleteMany({ _id: { $in: ids } })
+      console.log("result : ", result)
+    } else {
+      const result = await User.updateMany({ _id: { $in: ids } }, { $set: { is_deleted: false } })
+      console.log("result : ", result)
+
+      for (let i = 0; i < ids.length; i++) {
+        const user = await User.findById(ids[i])
+        console.log("user : ", user)
+        //send notification for payment
+        const mailOptions = {
+          to: user?.email,
+          subject: "Account Deletion Request Rejected - Blue Sky",
+          user_name: user?.full_name,
+          request_data: moment(updatedAt).format("DD-MM-YYYY"),
+          support_url: `${process.env.APP_URL}/contact-us`,
+        }
+        emailer.sendEmail(null, mailOptions, "jobapplicationNotification");
+        //send notification
+        const notificationMessage = {
+          title: 'Account Deletion Request Rejected - Blue Sky',
+          description: `BSO has rejected your account deletion request.`,
+          user: user?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: user?._id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+          fcm.forEach(async i => {
+            const token = i.token
+            console.log("token : ", token)
+            await utils.sendNotification(token, notificationMessage);
+          })
+          const NotificationData = {
+            title: notificationMessage.title,
+            // body: notificationMessage.description,
+            description: notificationMessage.description,
+            type: "account_deletion_request_rejected",
+            receiver_id: user?._id,
+            related_to: user?._id,
+            related_to_type: "user",
+          };
+          const newNotification = new Notification(NotificationData);
+          console.log("newNotification : ", newNotification)
+          await newNotification.save();
+        }
+
+      }
+    }
+    return res.status(200).json({
+      message: "account deletion request processed successfully",
       code: 200
     })
   } catch (error) {
