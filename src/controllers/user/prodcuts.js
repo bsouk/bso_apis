@@ -1,6 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const Product = require("../../models/product");
 const utils = require("../../utils/utils");
+const Team = require("../../models/team");
 
 exports.addProduct = async (req, res) => {
   try {
@@ -366,11 +367,47 @@ exports.getMyProductList = async (req, res) => {
     const id = req.user._id
     const { search, offset = 0, limit = 10, category_id, status, from, to, time_filter } = req.query;
 
+    let teamdata = await Team.findOne(
+      {
+        $or: [
+          {
+            admin_id: new mongoose.Types.ObjectId(id)
+          },
+          {
+            members: { $in: [new mongoose.Types.ObjectId(id)] }
+          },
+        ],
+        team_type: "supplier",
+      }
+    ).populate('admin_id')
+    console.log("teamdata : ", teamdata)
+
+    const mymemberdata = await User.findOne({ _id: new mongoose.Types.ObjectId(userId) })
+    console.log("mymemberdata : ", mymemberdata)
+
+    let mypermission = mymemberdata?.permission?.quotation
+    console.log("mypermission : ", mypermission)
+
     const filter = {
-      user_id: new mongoose.Types.ObjectId(id),
       is_deleted: { $ne: true },
       is_admin_approved: "approved"
     };
+
+    if (teamdata) {
+      switch (mypermission) {
+        case "all": {
+          filter.user_id = { $in: [...teamdata.members, ...teamdata.admin_id] }
+        }; break;
+        case "none": {
+          return res.json({ data: [], count: 0, code: 200 });
+        }
+        default: {
+          filter.user_id = new mongoose.Types.ObjectId(id)
+        }
+      }
+    } else {
+      filter.user_id = new mongoose.Types.ObjectId(id)
+    }
 
     let queryFilter = {}
 
@@ -547,7 +584,7 @@ exports.getMyProductList = async (req, res) => {
       }
     ])
     const count = await Product.countDocuments(filter);
-    res.json({ data: productlist, count, code: 200 });
+    return res.json({ data: productlist, count, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }

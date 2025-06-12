@@ -2690,8 +2690,26 @@ exports.getMyEnquiry = async (req, res) => {
         const userId = req.user._id;
         console.log("userid is", userId);
 
+        let teamdata = await Team.findOne(
+            {
+                $or: [
+                    {
+                        admin_id: new mongoose.Types.ObjectId(id)
+                    },
+                    {
+                        members: { $in: [new mongoose.Types.ObjectId(id)] }
+                    },
+                ],
+                team_type: "supplier",
+            }
+        ).populate('admin_id')
+        console.log("teamdata : ", teamdata)
+
         const userDetails = await User.findById(userId);
         console.log("userdetails:", userDetails);
+
+        let mypermission = userDetails?.permission?.quotation
+        console.log("mypermission : ", mypermission)
 
         const { status, search, offset = 0, limit = 10, brand, countries } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
@@ -2730,7 +2748,22 @@ exports.getMyEnquiry = async (req, res) => {
         let count = 0
         console.log("brandfilter : ", brandfilter, " filter : ", filter)
         if (userDetails.current_user_type = "supplier") {
-            const userMatchCondition = { user_id: new mongoose.Types.ObjectId(userId) }
+            let userMatchCondition = {}
+            if (teamdata) {
+                switch (mypermission) {
+                    case "all": {
+                        userMatchCondition.user_id = { $in: [...teamdata.members, ...teamdata.admin_id] }
+                    }; break;
+                    case "none": {
+                        return res.json({ data: [], count: 0, code: 200 });
+                    }
+                    default: {
+                        userMatchCondition.user_id = new mongoose.Types.ObjectId(userId)
+                    }
+                }
+            } else {
+                userMatchCondition.user_id = new mongoose.Types.ObjectId(userId)
+            }
             // console.log('if condition block')
             data = await Enquiry.aggregate(
                 [
@@ -2903,12 +2936,14 @@ exports.getMyEnquiry = async (req, res) => {
 
             count = await Enquiry.countDocuments({ ...filter, ...userMatchCondition, ...brandfilter, ...countryFilter });
         } else if (userDetails.current_user_type = "buyer") {
+            const userMatchCondition = { user_id: new mongoose.Types.ObjectId(userId) }
             // console.log("else condition")
             const aggregate_data = [
                 {
                     $match: {
                         ...filter,
-                        ...countryFilter
+                        ...countryFilter,
+                        ...userMatchCondition
                     },
                 },
                 {
@@ -3024,7 +3059,8 @@ exports.getMyEnquiry = async (req, res) => {
 
             count = await Enquiry.countDocuments({
                 ...filter,
-                ...countryFilter
+                ...countryFilter,
+                ...userMatchCondition
             });
             console.log("count : ", count)
         }
@@ -5111,10 +5147,54 @@ exports.getMyAllQuotes = async (req, res) => {
         const userId = req.user._id
         console.log("userId : ", userId)
 
-        const data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate('payment_terms').populate('admin_payment_terms').populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
-        console.log("data : ", data)
+        let teamdata = await Team.findOne(
+            {
+                $or: [
+                    {
+                        admin_id: new mongoose.Types.ObjectId(userId)
+                    },
+                    {
+                        members: { $in: [new mongoose.Types.ObjectId(userId)] }
+                    },
+                ],
+                team_type: "supplier",
+            }
+        ).populate('admin_id')
+        console.log("teamdata : ", teamdata)
 
-        const count = await EnquiryQuotes.countDocuments({ user_id: new mongoose.Types.ObjectId(userId) })
+        const mymemberdata = await User.findOne({ _id: new mongoose.Types.ObjectId(userId) })
+        console.log("mymemberdata : ", mymemberdata)
+
+        let data = []
+        let count = 0
+
+        if (teamdata) {
+            let mypermission = mymemberdata?.permission?.quotation
+            console.log("mypermission : ", mypermission)
+            switch (mypermission) {
+                case "all": {
+                    data = await EnquiryQuotes.find({ user_id: { $in: [...teamdata?.members, ...teamdata?.admin_id] } }).populate('payment_terms').populate('admin_payment_terms').populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+                    console.log("data : ", data)
+
+                    count = await EnquiryQuotes.countDocuments({ user_id: { $in: [...teamdata?.members, ...teamdata?.admin_id] } })
+                }; break;
+                case "none": {
+                    data = []
+                    count = 0
+                }; break;
+                default: {
+                    data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate('payment_terms').populate('admin_payment_terms').populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+                    console.log("data : ", data)
+
+                    count = await EnquiryQuotes.countDocuments({ user_id: new mongoose.Types.ObjectId(userId) })
+                }
+            }
+        } else {
+            data = await EnquiryQuotes.find({ user_id: new mongoose.Types.ObjectId(userId) }).populate('payment_terms').populate('admin_payment_terms').populate({ path: "pickup_address", select: "address" }).populate("enquiry_items.quantity.unit").populate("enquiry_id").sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+            console.log("data : ", data)
+
+            count = await EnquiryQuotes.countDocuments({ user_id: new mongoose.Types.ObjectId(userId) })
+        }
 
         return res.status(200).json({
             message: "All quotes fetched successfully",
