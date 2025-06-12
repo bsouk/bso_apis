@@ -435,7 +435,7 @@ exports.editProfile = async (req, res) => {
                     Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
                     // Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
 
-                    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+                    console.log("isProfileComplete is ", isProfileComplete)
 
                 if (isProfileComplete && hasRequiredArrays) {
                     updatedUser.profile_completed = true;
