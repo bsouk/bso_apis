@@ -2694,10 +2694,10 @@ exports.getMyEnquiry = async (req, res) => {
             {
                 $or: [
                     {
-                        admin_id: new mongoose.Types.ObjectId(id)
+                        admin_id: new mongoose.Types.ObjectId(userId)
                     },
                     {
-                        members: { $in: [new mongoose.Types.ObjectId(id)] }
+                        members: { $in: [new mongoose.Types.ObjectId(userId)] }
                     },
                 ],
                 team_type: "supplier",
