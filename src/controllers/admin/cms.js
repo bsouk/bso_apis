@@ -12,6 +12,7 @@ const moment = require("moment");
 const client_testimonials = require("../../models/client_testimonials");
 const User = require("../../models/user");
 const fcm_devices = require("../../models/fcm_devices");
+const Notification = require("../../models/notification");
 
 exports.addFaq = async (req, res) => {
   try {
@@ -515,7 +516,7 @@ exports.getdeletedAccounts = async (req, res) => {
         }
       ]
     }
-    const newtestimonial = await User.find(filter).sort({ createdAt: -1 }).skip(Number(offset)).limit(Number(limit))
+    const newtestimonial = await User.find(filter).sort({ deletion_request_on: -1 }).skip(Number(offset)).limit(Number(limit))
     console.log("newtestimonial : ", newtestimonial)
 
     const count = await User.countDocuments(filter)
