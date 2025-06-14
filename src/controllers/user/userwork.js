@@ -6991,7 +6991,7 @@ exports.getMyResourceRating = async (req, res) => {
         const { id } = req.params
         console.log("id : ", id)
 
-        const ratingdata = await Rating.find({ user_id: id }).populate('user_id')
+        const ratingdata = await Rating.find({ user_id: id }).populate({ path: 'user_id', select: 'full_name profile_image' })
         console.log("ratingdata : ", ratingdata)
 
         let totalrating = 0
