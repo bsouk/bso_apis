@@ -221,6 +221,8 @@ exports.createJobApplication = async (req, res) => {
     try {
         const userId = req.user._id
         console.log('user data : ', req.user)
+        const userdata = req.user
+        console.log('user data : ', userdata)
         // if (!req?.user?.user_type?.includes('resource')) {
         //     return utils.handleError(res, {
         //         message: "Only resource user can apply for a job",
@@ -289,6 +291,48 @@ exports.createJobApplication = async (req, res) => {
                 await newNotification.save();
             }
 
+        }
+
+
+        //notification
+        const mailOptions = {
+            to: userdata?.email,
+            subject: "Application Status - Blue Sky Careers",
+            applicant_name: userdata?.full_name,
+            portal_url: `${process.env.APP_URL}/job-details/${jobdata?._id}`,
+            job_title: jobdata?.job_title,
+            status: "pending",
+            application_id: new_application?.application_id,
+        }
+        emailer.sendEmail(null, mailOptions, "jobsStatus");
+        //send notification
+        const notificationMessage = {
+            title: `Application submited - Blue Sky Careers`,
+            description: `${userdata?.full_name} your accplication has been submited for ${jobdata?.job_title}.`,
+            user_id: userdata?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: userdata?._id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "job_status",
+                receiver_id: userdata?._id,
+                related_to: userdata?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
         }
 
         return res.status(200).json({
