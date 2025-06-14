@@ -4525,6 +4525,9 @@ exports.deleteTeamMember = async (req, res) => {
             });
         }
 
+        const userdata = await User.findOne({ _id: Id })
+        console.log("userdata : ", userdata)
+
         const deletedMember = await User.findOneAndDelete(
             { _id: Id },
         );
@@ -4549,6 +4552,47 @@ exports.deleteTeamMember = async (req, res) => {
         console.log("result : ", result)
 
         await Team.deleteMany({ admin_id: new mongoose.Types.ObjectId(Id), team_type: type });
+
+
+        //notification
+        const mailOptions = {
+            to: userdata?.email,
+            subject: "Account detected",
+            user_name: userdata?.full_name,
+            status: "deleted",
+            action_date: moment(new Date()).format('lll')
+        }
+        emailer.sendEmail(null, mailOptions, "teamSuspendActivate");
+        //send notification
+        const notificationMessage = {
+            title: 'Account detected',
+            description: `${userdata?.full_name} your account has been deleted by team leader`,
+            user_id: userdata?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: userdata?._id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "account_deleted",
+                receiver_id: userdata?._id,
+                related_to: userdata?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
+
 
         return res.status(200).json({
             message: "Team Member deleted successfully",
@@ -5018,7 +5062,7 @@ exports.ActivateTeamMember = async (req, res) => {
             subject: "Account Activated",
             user_name: SuspendedMember?.full_name,
             portal_url: `${process.env.APP_URL}/my-account`,
-            status: "activated",
+            status: "reactivated",
             action_date: moment(new Date()).format('lll')
         }
         emailer.sendEmail(null, mailOptions, "teamSuspendActivate");
