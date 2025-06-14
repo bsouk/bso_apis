@@ -549,8 +549,8 @@ exports.acceptApplication = async (req, res) => {
                 // body: notificationMessage.description,
                 description: notificationMessage.description,
                 type: "job_status",
-                receiver_id: SuspendedMember?._id,
-                related_to: SuspendedMember?._id,
+                receiver_id: job_application_data?.canditate_id?._id,
+                related_to: job_application_data?.canditate_id?._id,
                 related_to_type: "user",
             };
             const newNotification = new Notification(NotificationData);
