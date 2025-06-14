@@ -523,7 +523,7 @@ exports.acceptApplication = async (req, res) => {
             subject: "Application Status - Blue Sky Careers",
             applicant_name: job_application_data?.canditate_id?.full_name,
             portal_url: `${process.env.APP_URL}/job-details/${job_application_data?.job_id?._id}`,
-            job_title: job_application_data?.job_id?.title,
+            job_title: job_application_data?.job_id?.job_title,
             status: status === true || status === "true" ? "shortlisted" : "rejected",
             application_id: job_application_data?.application_id,
         }
