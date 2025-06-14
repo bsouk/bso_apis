@@ -4926,6 +4926,46 @@ exports.SuspendTeamMember = async (req, res) => {
         const result = await expireToken(Id)
         console.log("result : ", result)
 
+        //notification
+        const mailOptions = {
+            to: SuspendedMember?.email,
+            subject: "Account Suspended",
+            user_name: SuspendedMember?.full_name,
+            support_url: `${process.env.APP_URL}/contact-us`,
+            status: "suspended",
+            action_date: moment(new Date()).format('lll')
+        }
+        emailer.sendEmail(null, mailOptions, "teamSuspendActivate");
+        //send notification
+        const notificationMessage = {
+            title: 'Account Suspended',
+            description: `${SuspendedMember?.full_name} your account has been suspended by team leader`,
+            user_id: SuspendedMember?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: SuspendedMember?._id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "account_suspended",
+                receiver_id: SuspendedMember?._id,
+                related_to: SuspendedMember?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
+
         return res.status(200).json({
             message: "Team Member suspended successfully",
             data: SuspendedMember,
@@ -4969,6 +5009,47 @@ exports.ActivateTeamMember = async (req, res) => {
                 message: "Team Member not found",
                 code: 404
             });
+        }
+
+
+        //notification
+        const mailOptions = {
+            to: SuspendedMember?.email,
+            subject: "Account Activated",
+            user_name: SuspendedMember?.full_name,
+            portal_url: `${process.env.APP_URL}/my-account`,
+            status: "activated",
+            action_date: moment(new Date()).format('lll')
+        }
+        emailer.sendEmail(null, mailOptions, "teamSuspendActivate");
+        //send notification
+        const notificationMessage = {
+            title: 'Account Activated',
+            description: `${SuspendedMember?.full_name} your account has been activated by team leader`,
+            user_id: SuspendedMember?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: SuspendedMember?._id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "account_activated",
+                receiver_id: SuspendedMember?._id,
+                related_to: SuspendedMember?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
         }
 
         return res.status(200).json({

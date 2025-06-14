@@ -496,6 +496,9 @@ const UserSchema = new mongoose.Schema(
     },
     deletion_request_on: {
       type: Date
+    },
+    resume: {
+      type: String
     }
   },
   {

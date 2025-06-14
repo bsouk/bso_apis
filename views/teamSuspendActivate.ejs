@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account Status Notification - Blue Sky</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .email-wrapper {
+      max-width: 700px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .email-header {
+      background-color: #004085;
+      color: #ffffff;
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    .email-header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .email-body {
+      padding: 30px 40px;
+      font-size: 15px;
+      line-height: 1.8;
+      color: #333;
+    }
+
+    .email-body h2 {
+      color: #004085;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .status-box {
+      background-color: #e9ecef;
+      border-left: 5px solid #004085;
+      padding: 15px 20px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background-color: #004085;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .email-footer {
+      text-align: center;
+      font-size: 13px;
+      color: #777;
+      padding: 20px;
+      background-color: #f1f3f5;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-header">
+      <h1>Blue Sky</h1>
+    </div>
+    <div class="email-body">
+      <p><strong>Hello <%= user_name %>,</strong></p>
+
+      <% if (status === 'suspended') { %>
+        <h2>Account Suspension Notice</h2>
+        <p>We regret to inform you that your account has been <strong>suspended</strong> as of <strong><%= action_date %></strong>.</p>
+
+        <div class="status-box">
+          <p><strong>Status:</strong> Suspended</p>
+          <p><strong>Reactivation Date:</strong> <%= action_date %></p>
+        </div>
+
+        <p>If you believe this was done in error or you wish to appeal this decision, please contact our support team using the link below.</p>
+
+        <a href="<%= support_url %>" class="btn">Contact Support</a>
+
+      <% } else { %>
+        <h2>Account Reactivated</h2>
+        <p>We’re pleased to inform you that your account has been <strong>reactivated</strong> on <strong><%= action_date %></strong>.</p>
+
+        <div class="status-box" style="border-left-color: #28a745;">
+          <p><strong>Status:</strong> Active</p>
+          <p><strong>Reactivation Date:</strong> <%= action_date %></p>
+        </div>
+
+        <p>You now have full access to all platform features. You may log in at your convenience.</p>
+
+        <a href="<%= portal_url %>" class="btn" style="background-color: #28a745;">Access My Account</a>
+      <% } %>
+
+      <p style="margin-top: 30px;">Thank you for being part of the Blue Sky community.</p>
+
+      <p>Best regards,<br /><strong>Blue Sky Support Team</strong></p>
+    </div>
+    <div class="email-footer">
+      &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>

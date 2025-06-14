@@ -499,7 +499,7 @@ exports.acceptApplication = async (req, res) => {
             });
         }
 
-        const job_application_data = await job_applications.findOne({ _id: job_application_id, company_id: userId })
+        const job_application_data = await job_applications.findOne({ _id: job_application_id, company_id: userId }).populate('canditate_id').populate('job_id')
         if (!job_application_data) {
             return utils.handleError(res, {
                 message: "Job application record not found",
@@ -515,6 +515,48 @@ exports.acceptApplication = async (req, res) => {
                 }
             }, { new: true }
         )
+
+
+        //notification
+        const mailOptions = {
+            to: job_application_data?.canditate_id?.email,
+            subject: "Application Status - Blue Sky Careers",
+            applicant_name: job_application_data?.canditate_id?.full_name,
+            portal_url: `${process.env.APP_URL}/job-details/${job_application_data?.job_id?._id}`,
+            job_title: job_application_data?.job_id?.title,
+            status: status === true || status === "true" ? "shortlisted" : "rejected",
+            application_id: job_application_data?.application_id,
+        }
+        emailer.sendEmail(null, mailOptions, "jobsStatus");
+        //send notification
+        const notificationMessage = {
+            title: `Application ${status === true || status === "true" ? "shortlisted" : "rejected"} - Blue Sky Careers`,
+            description: `${job_application_data?.canditate_id?.full_name} your accplication has been ${status === true || status === "true" ? "shortlisted" : "rejected"} for ${job_application_data?.job_id?.job_title}.`,
+            user_id: job_application_data?.canditate_id?._id
+        };
+
+        const fcm = await fcm_devices.find({ user_id: job_application_data?.canditate_id?._id });
+        console.log("fcm : ", fcm)
+
+        if (fcm && fcm.length > 0) {
+            fcm.forEach(async i => {
+                const token = i.token
+                console.log("token : ", token)
+                await utils.sendNotification(token, notificationMessage);
+            })
+            const NotificationData = {
+                title: notificationMessage.title,
+                // body: notificationMessage.description,
+                description: notificationMessage.description,
+                type: "job_status",
+                receiver_id: SuspendedMember?._id,
+                related_to: SuspendedMember?._id,
+                related_to_type: "user",
+            };
+            const newNotification = new Notification(NotificationData);
+            console.log("newNotification : ", newNotification)
+            await newNotification.save();
+        }
 
         return res.status(200).json({
             message: "job application accepted successfully",

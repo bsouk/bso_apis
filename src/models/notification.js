@@ -24,10 +24,13 @@ const notificationSchema = new mongoose.Schema(
             type: String,
             enum: [
                 "account_creation",
+                "account_suspended",
+                "account_activated",
                 "password_changed",
                 "profile_updated",
                 "new_job_application",
                 "account_deletion_request_rejected",
+                "job_status",
 
                 "payment_reminder",
                 "payment_pending",
