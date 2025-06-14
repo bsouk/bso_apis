@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Application Status - Blue Sky Careers</title>
   <style>
     body {
@@ -75,6 +76,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="email-wrapper">
     <div class="email-header">
@@ -83,49 +85,66 @@
     <div class="email-body">
       <p><strong>Hello <%= applicant_name %>,</strong></p>
 
-      <h2>Regarding Your Application for <%= job_title %></h2>
+      <h2>Regarding Your Application for <%= job_title %>
+      </h2>
 
-      <% if (status === 'shortlisted') { %>
-        <p>Congratulations! We are pleased to inform you that you have been <strong>shortlisted</strong> for the next round of the selection process.</p>
+      <% if (status==='shortlisted' ) { %>
+        <p>Congratulations! We are pleased to inform you that you have been <strong>shortlisted</strong> for the next
+          round of the selection process.</p>
 
         <div class="status-box">
           <p><strong>Status:</strong> Shortlisted</p>
-          <p><strong>Position:</strong> <%= job_title %></p>
-          <p><strong>Application ID:</strong> <%= application_id %></p>
+          <p><strong>Position:</strong>
+            <%= job_title %>
+          </p>
+          <p><strong>Application ID:</strong>
+            <%= application_id %>
+          </p>
         </div>
 
         <p>Our team will reach out shortly with the interview details. Please keep an eye on your inbox.</p>
 
-        <a href="<%= portal_url %>" class="btn">View Application</a>
+        <a href="<%= portal_url %>" class="btn" style="color : white;">View Application</a>
 
-      <% } else if (status === 'rejected') { %>
-        <p>Thank you for your interest in the <strong><%= job_title %></strong> position. After careful consideration, we regret to inform you that you have not been selected for this role.</p>
+        <% } else if (status==='rejected' ) { %>
+          <p>Thank you for your interest in the <strong>
+              <%= job_title %>
+            </strong> position. After careful consideration, we regret to inform you that you have not been selected for
+            this role.</p>
 
-        <div class="status-box" style="border-left-color: #dc3545;">
-          <p><strong>Status:</strong> Not Selected</p>
-          <p><strong>Application ID:</strong> <%= application_id %></p>
-        </div>
+          <div class="status-box" style="border-left-color: #dc3545;">
+            <p><strong>Status:</strong> Not Selected</p>
+            <p><strong>Application ID:</strong>
+              <%= application_id %>
+            </p>
+          </div>
 
-        <p>We encourage you to apply again in the future for other suitable opportunities.</p>
+          <p>We encourage you to apply again in the future for other suitable opportunities.</p>
 
-      <% } else { %>
-        <p>This is to confirm that your application for the <strong><%= job_title %></strong> position has been <strong>received</strong> and is currently under review by our recruitment team.</p>
+          <% } else { %>
+            <p>This is to confirm that your application for the <strong>
+                <%= job_title %>
+              </strong> position has been <strong>received</strong> and is currently under review by our recruitment
+              team.</p>
 
-        <div class="status-box">
-          <p><strong>Status:</strong> Under Review</p>
-          <p><strong>Application ID:</strong> <%= application_id %></p>
-        </div>
+            <div class="status-box">
+              <p><strong>Status:</strong> Under Review</p>
+              <p><strong>Application ID:</strong>
+                <%= application_id %>
+              </p>
+            </div>
 
-        <p>We will contact you if your qualifications match our needs for the role.</p>
-      <% } %>
+            <p>We will contact you if your qualifications match our needs for the role.</p>
+            <% } %>
 
-      <p style="margin-top: 30px;">Thank you for your time and interest in joining Blue Sky.</p>
+              <p style="margin-top: 30px;">Thank you for your time and interest in joining Blue Sky.</p>
 
-      <p>Best regards,<br /><strong>Blue Sky Recruitment Team</strong></p>
+              <p>Best regards,<br /><strong>Blue Sky Recruitment Team</strong></p>
     </div>
     <div class="email-footer">
       &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
     </div>
   </div>
 </body>
+
 </html>
