@@ -7336,7 +7336,7 @@ exports.generateResumePDF = async (req, res) => {
         const pdfBuffer = await page.pdf({
             format: 'A4',
             printBackground: true,
-            margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+            // margin: { top: '1mm', bottom: '1mm', left: '10mm', right: '10mm' }
         });
 
         await browser.close();
