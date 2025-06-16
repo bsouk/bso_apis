@@ -715,15 +715,103 @@ exports.getResource = async (req, res) => {
   }
 };
 
+// exports.editResource = async (req, res) => {
+//   try {
+//     const data = req.body;
+//     const id = req.params.id;
+
+//     const user = await User.findById(id);
+//     if (!user)
+//       return utils.handleError(res, {
+//         message: "Resource not found",
+//         code: 404,
+//       });
+
+//     if (user.is_deleted)
+//       return utils.handleError(res, {
+//         message: "You cannot edit an account that has been deleted",
+//         code: 400,
+//       });
+
+//     if (data.email) {
+//       const doesEmailExists = await User.findOne({
+//         email: data.email,
+//         _id: { $ne: new mongoose.Types.ObjectId(id) },
+//       });
+
+//       if (doesEmailExists)
+//         return utils.handleError(res, {
+//           message: "This email address is already registered",
+//           code: 400,
+//         });
+//     }
+
+//     if (data.phone_number) {
+//       const doesPhoneNumberExist = await User.findOne({
+//         phone_number: data.phone_number,
+//         _id: { $ne: new mongoose.Types.ObjectId(id) },
+//       });
+//       if (doesPhoneNumberExist)
+//         return utils.handleError(res, {
+//           message: "This phone number is already registered",
+//           code: 400,
+//         });
+//     }
+
+//     const updatedUser = await User.findByIdAndUpdate(id, data);
+//     const requiredFields = [
+//       "full_name",
+//       "email",
+//       "phone_number",
+//       "profile_image",
+//       "profile_title",
+//       "profile_description",
+//       "specialisations",
+//       "rate_per_hour",
+//       "project_pricing_model",
+//       "resource_availability"
+//     ]
+
+//     console.log("resource check fields is ", requiredFields)
+
+//     const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+//     const hasRequiredArrays =
+//       Array.isArray(updatedUser.work_exprience) && updatedUser.work_exprience.length > 0 &&
+//       Array.isArray(updatedUser.education) && updatedUser.education.length > 0 &&
+//       Array.isArray(updatedUser.portfolio) && updatedUser.portfolio.length > 0 &&
+//       Array.isArray(updatedUser.skills) && updatedUser.skills.length > 0 &&
+//       Array.isArray(updatedUser.certifications) && updatedUser.certifications.length > 0 &&
+//       Array.isArray(updatedUser.languages) && updatedUser.languages.length > 0 &&
+//       Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
+//       Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
+
+//     console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+//     if (isProfileComplete && hasRequiredArrays) {
+//       updatedUser.profile_completed = true;
+//     } else {
+//       updatedUser.profile_completed = false;
+//     }
+
+//     await updatedUser.save();
+
+//     res.json({ message: "Resource edit successfully", code: 200 });
+//   } catch (error) {
+//     utils.handleError(res, error);
+//   }
+// };
+
 exports.editResource = async (req, res) => {
   try {
     const data = req.body;
     const id = req.params.id;
 
     const user = await User.findById(id);
+    console.log("user is ", user)
     if (!user)
       return utils.handleError(res, {
-        message: "Resource not found",
+        message: "Profile not found",
         code: 404,
       });
 
@@ -758,45 +846,481 @@ exports.editResource = async (req, res) => {
         });
     }
 
+    if (data.switch_to) {
+      let types = user.user_type
+      if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
+        return utils.handleError(res, {
+          message: `You are already ${data.switch_to} user`,
+          code: 400,
+        });
+      }
+      if (!types.includes(data.switch_to.trim())) {
+        types.push(data.switch_to.trim())
+      }
+      data.user_type = types
+      data.current_user_type = data.switch_to
+    }
+    console.log("data : ", data)
     const updatedUser = await User.findByIdAndUpdate(id, data);
-    const requiredFields = [
-      "full_name",
-      "email",
-      "phone_number",
-      "profile_image",
-      "profile_title",
-      "profile_description",
-      "specialisations",
-      "rate_per_hour",
-      "project_pricing_model",
-      "resource_availability"
-    ]
+    console.log("updated user is ", updatedUser);
 
-    console.log("resource check fields is ", requiredFields)
+    // if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+    //     console.log("condition data is ", updatedUser.profile_completed)
+    //     updatedUser.profile_completed = true;
+    //     await updatedUser.save()
+    // }
+    // else {
+    //     updatedUser.profile_completed = false
+    //     await updatedUser.save()
+    // }
 
-    const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+    //function for checking field values 
+    const isFieldPopulated = (obj, path) => {
+      console.log("object is ", obj, " and path is ", path)
+      const keys = path.split('.');
+      console.log("keys is ", keys)
+      let current = obj;
+      for (let key of keys) {
+        console.log("cond is ", current, "key is ", current[key])
+        if (!current || !current[key]) {
+          return { path, code: false };
+        }
+        current = current[key];
+      }
+      return { path, code: true };
+    };
 
-    const hasRequiredArrays =
-      Array.isArray(updatedUser.work_exprience) && updatedUser.work_exprience.length > 0 &&
-      Array.isArray(updatedUser.education) && updatedUser.education.length > 0 &&
-      Array.isArray(updatedUser.portfolio) && updatedUser.portfolio.length > 0 &&
-      Array.isArray(updatedUser.skills) && updatedUser.skills.length > 0 &&
-      Array.isArray(updatedUser.certifications) && updatedUser.certifications.length > 0 &&
-      Array.isArray(updatedUser.languages) && updatedUser.languages.length > 0 &&
-      Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
-      Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
+    switch (updatedUser.current_user_type) {
+      case "buyer": {
+        // if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+        //     console.log("condition data is ", updatedUser.profile_completed)
+        //     updatedUser.profile_completed = true;
+        //     await updatedUser.save()
+        // }
 
-    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+        const requiredFields = [
+          'full_name',
+          'email',
+          'phone_number',
+          "first_name",
+          "last_name"
+        ];
 
-    if (isProfileComplete && hasRequiredArrays) {
-      updatedUser.profile_completed = true;
-    } else {
-      updatedUser.profile_completed = false;
+        console.log("buyer check fields is ", requiredFields)
+
+        const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        console.log("isProfileComplete is ", isProfileComplete)
+
+        if (isProfileComplete) {
+          updatedUser.profile_completed = true;
+        } else {
+          updatedUser.profile_completed = false;
+        }
+
+        await updatedUser.save();
+      }
+        break;
+      case "supplier": {
+        const requiredFields = [
+          'full_name',
+          'email',
+          'phone_number',
+          'bank_details.account_holder_name',
+          'bank_details.account_number',
+          'bank_details.bank_name',
+          'bank_details.swift_code',
+          'bank_details.iban_number',
+          'bank_details.address.line1',
+          'bank_details.address.city',
+          'bank_details.address.state',
+          'bank_details.address.zip_code',
+          'bank_details.address.country',
+
+          'company_data.name',
+          'company_data.business_category',
+          'company_data.phone_number',
+          'company_data.name',
+          'company_data.registration_number',
+          'company_data.incorporation_date',
+          'company_data.vat_number',
+          'company_data.email',
+          'company_data.address.line1',
+          'company_data.address.city',
+          'company_data.address.state',
+          'company_data.address.zip_code',
+          'company_data.address.country',
+          'beneficiary_address.line1',
+          'beneficiary_address.city',
+          'beneficiary_address.state',
+          'beneficiary_address.zip_code',
+          'beneficiary_address.country',
+        ];
+
+        console.log("supplier check fields is ", requiredFields)
+
+        const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        const hasRequiredArrays =
+          Array.isArray(updatedUser.sample_products) && updatedUser.sample_products.length > 0 &&
+          Array.isArray(updatedUser.business_certificates) && updatedUser.business_certificates.length > 0 &&
+          Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+        console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+        if (isProfileComplete && hasRequiredArrays) {
+          updatedUser.profile_completed = true;
+        } else {
+          updatedUser.profile_completed = false;
+        }
+
+        await updatedUser.save();
+      }
+        break;
+      case "logistics": {
+        const requiredFields = [
+          'full_name',
+          'email',
+          'phone_number',
+          'company_data.name',
+          'company_data.business_category',
+          'company_data.phone_number',
+          'company_data.email',
+          'company_data.address.line1',
+          'company_data.address.city',
+          'company_data.address.zip_code',
+          'company_data.address.state',
+          'company_data.address.country',
+          'company_data.address.service_area',
+          'delivery_type'
+        ];
+
+        console.log("logistics check fields is ", requiredFields)
+
+        const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        const hasRequiredArrays =
+          Array.isArray(updatedUser.insurances) && updatedUser.insurances.length > 0 &&
+          Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+        console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+        if (isProfileComplete && hasRequiredArrays) {
+          updatedUser.profile_completed = true;
+        } else {
+          updatedUser.profile_completed = false;
+        }
+
+        await updatedUser.save();
+
+      }
+        break;
+      case "resource": {
+        const requiredFields = [
+          "full_name",
+          "email",
+          "phone_number",
+          "profile_image",
+          "profile_title",
+          "profile_description",
+          "specialisations",
+          "rate_per_hour",
+          "project_pricing_model",
+          "resource_availability"
+        ]
+
+        console.log("resource check fields is ", requiredFields)
+
+        const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        const hasRequiredArrays =
+          Array.isArray(updatedUser.work_exprience) && updatedUser.work_exprience.length > 0 &&
+          Array.isArray(updatedUser.education) && updatedUser.education.length > 0 &&
+          Array.isArray(updatedUser.portfolio) && updatedUser.portfolio.length > 0 &&
+          Array.isArray(updatedUser.skills) && updatedUser.skills.length > 0 &&
+          Array.isArray(updatedUser.certifications) && updatedUser.certifications.length > 0 &&
+          Array.isArray(updatedUser.languages) && updatedUser.languages.length > 0 &&
+          Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0
+        // Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
+
+        console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+        if (isProfileComplete && hasRequiredArrays) {
+          updatedUser.profile_completed = true;
+        } else {
+          updatedUser.profile_completed = false;
+        }
+
+        await updatedUser.save();
+
+      }
+        break;
+      case "recruiter": {
+        const requiredFields = [
+          'company_data.name',
+          'company_data.business_category',
+          'company_data.phone_number',
+          'company_data.name',
+          'company_data.registration_number',
+          'company_data.incorporation_date',
+          'company_data.vat_number',
+          'company_data.email',
+          'company_data.address.line1',
+          'company_data.address.city',
+          'company_data.address.state',
+          'company_data.address.zip_code',
+          'company_data.address.country',
+        ];
+
+        console.log("supplier check fields is ", requiredFields)
+
+        const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+        console.log("isProfileComplete is ", isProfileComplete)
+
+        if (isProfileComplete) {
+          updatedUser.profile_completed = true;
+        } else {
+          updatedUser.profile_completed = false;
+        }
+
+        await updatedUser.save();
+      }
+      default: {
+        updatedUser.profile_completed = false
+        await updatedUser.save()
+      }
     }
 
-    await updatedUser.save();
+    // updatedUser.user_type.forEach(async i => {
+    //     switch (i) {
+    //         case "buyer": {
+    //             if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
+    //                 console.log("condition data is ", updatedUser.profile_completed)
+    //                 updatedUser.profile_completed = true;
+    //                 await updatedUser.save()
+    //             }
+    //         }
+    //             break;
+    //         case "supplier": {
+    //             const requiredFields = [
+    //                 'full_name',
+    //                 'profile_image',
+    //                 'email',
+    //                 'phone_number',
+    //                 'bank_details.account_holder_name',
+    //                 'bank_details.account_number',
+    //                 'bank_details.bank_name',
+    //                 'bank_details.swift_code',
+    //                 'bank_details.iban_number',
+    //                 'bank_details.address.line1',
+    //                 'bank_details.address.line2',
+    //                 'bank_details.address.city',
+    //                 'bank_details.address.state',
+    //                 'bank_details.address.zip_code',
+    //                 'bank_details.address.country',
+    //                 'company_data.company_logo',
+    //                 'company_data.name',
+    //                 'company_data.business_category',
+    //                 'company_data.phone_number',
+    //                 'company_data.name',
+    //                 'company_data.registration_number',
+    //                 'company_data.incorporation_date',
+    //                 'company_data.vat_number',
+    //                 'company_data.business_category',
+    //                 'company_data.phone_number',
+    //                 'company_data.email',
+    //                 'company_data.address.line1',
+    //                 'company_data.address.line2',
+    //                 'company_data.address.city',
+    //                 'company_data.address.state',
+    //                 'company_data.address.zip_code',
+    //                 'company_data.address.country',
+    //                 'beneficiary_address.line1',
+    //                 'beneficiary_address.line2',
+    //                 'beneficiary_address.city',
+    //                 'beneficiary_address.state',
+    //                 'beneficiary_address.zip_code',
+    //                 'beneficiary_address.country',
+    //                 'additional_notes',
+    //             ];
 
-    res.json({ message: "Resource edit successfully", code: 200 });
+    //             console.log("supplier check fields is ", requiredFields)
+
+    //             const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+    //             const hasRequiredArrays =
+    //                 Array.isArray(updatedUser.sample_products) && updatedUser.sample_products.length > 0 &&
+    //                 Array.isArray(updatedUser.business_certificates) && updatedUser.business_certificates.length > 0 &&
+    //                 Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+    //             console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+    //             if (isProfileComplete && hasRequiredArrays) {
+    //                 updatedUser.profile_completed = true;
+    //             } else {
+    //                 updatedUser.profile_completed = false;
+    //             }
+
+    //             await updatedUser.save();
+    //         }
+    //             break;
+    //         case "logistics": {
+    //             const requiredFields = [
+    //                 'full_name',
+    //                 'profile_image',
+    //                 'email',
+    //                 'phone_number',
+    //                 'company_data.company_logo',
+    //                 'company_data.name',
+    //                 'company_data.business_category',
+    //                 'company_data.phone_number',
+    //                 'company_data.email',
+    //                 'company_data.address.line1',
+    //                 'company_data.address.line2',
+    //                 'company_data.address.city',
+    //                 'company_data.address.zip_code',
+    //                 'company_data.address.state',
+    //                 'company_data.address.country',
+    //                 'company_data.address.service_area',
+    //                 'delivery_type'
+    //             ];
+
+    //             console.log("logistics check fields is ", requiredFields)
+
+    //             const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+    //             const hasRequiredArrays =
+    //                 Array.isArray(updatedUser.insurances) && updatedUser.insurances.length > 0 &&
+    //                 Array.isArray(updatedUser.licenses) && updatedUser.licenses.length > 0;
+
+    //             console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+    //             if (isProfileComplete && hasRequiredArrays) {
+    //                 updatedUser.profile_completed = true;
+    //             } else {
+    //                 updatedUser.profile_completed = false;
+    //             }
+
+    //             await updatedUser.save();
+
+    //         }
+    //             break;
+    //         case "resource": {
+    //             const requiredFields = [
+    //                 "full_name",
+    //                 "email",
+    //                 "phone_number",
+    //                 "profile_image",
+    //                 "profile_title",
+    //                 "profile_description",
+    //                 "specialisations",
+    //                 "rate_per_hour",
+    //                 "project_pricing_model",
+    //                 "resource_availability"
+    //             ]
+
+    //             console.log("resource check fields is ", requiredFields)
+
+    //             const isProfileComplete = requiredFields.map(field => isFieldPopulated(updatedUser, field));
+
+    //             const hasRequiredArrays =
+    //                 Array.isArray(updatedUser.work_exprience) && updatedUser.work_exprience.length > 0 &&
+    //                 Array.isArray(updatedUser.education) && updatedUser.education.length > 0 &&
+    //                 Array.isArray(updatedUser.portfolio) && updatedUser.portfolio.length > 0 &&
+    //                 Array.isArray(updatedUser.skills) && updatedUser.skills.length > 0 &&
+    //                 Array.isArray(updatedUser.certifications) && updatedUser.certifications.length > 0 &&
+    //                 Array.isArray(updatedUser.languages) && updatedUser.languages.length > 0 &&
+    //                 Array.isArray(updatedUser.testimonials) && updatedUser.testimonials.length > 0 &&
+    //                 Array.isArray(updatedUser.employement_history) && updatedUser.employement_history.length > 0;
+
+    //             console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
+
+    //             if (isProfileComplete && hasRequiredArrays) {
+    //                 updatedUser.profile_completed = true;
+    //             } else {
+    //                 updatedUser.profile_completed = false;
+    //             }
+
+    //             await updatedUser.save();
+
+    //         }
+    //             break;
+    //         default: {
+    //             updatedUser.profile_completed = false
+    //             await updatedUser.save()
+    //         }
+    //     }
+    // })
+
+
+    if (data?.company_data?.address) {
+      const checkaddress = await Address.findOne({ user_id: id, address_type: "Company" });
+      console.log("checkaddress : ", checkaddress)
+      if (checkaddress) {
+        const newAddress = await Address.findOneAndUpdate(
+          {
+            user_id: id,
+            address_type: "Company"
+          },
+          {
+            $set: {
+              first_name: req?.user?.full_name,
+              company_name: data?.company_data?.name,
+              phone_number: data?.company_data?.phone_number,
+              email: data?.company_data?.email,
+              address: {
+                city: {
+                  name: data?.company_data?.address?.city,
+                },
+                state: {
+                  name: data?.company_data?.address?.state,
+                },
+                country: {
+                  name: data?.company_data?.address?.country,
+                },
+                address_line_1: data?.company_data?.address?.line1,
+                address_line_2: data?.company_data?.address?.line2,
+                pin_code: data?.company_data?.address?.zip_code
+              },
+              address_type: "Company",
+            }
+          },
+          { new: true }
+        )
+        console.log("newAddress : ", newAddress)
+      } else {
+        const newAddress = await Address.create(
+          {
+            user_id: id,
+            first_name: req?.user?.full_name,
+            company_name: data?.company_data?.name,
+            phone_number: data?.company_data?.phone_number,
+            email: data?.company_data?.email,
+            address: {
+              city: {
+                name: data?.company_data?.address?.city,
+              },
+              state: {
+                name: data?.company_data?.address?.state,
+              },
+              country: {
+                name: data?.company_data?.address?.country,
+              },
+              address_line_1: data?.company_data?.address?.line1,
+              address_line_2: data?.company_data?.address?.line2,
+              pin_code: data?.company_data?.address?.zip_code
+            },
+            default_address: true,
+            is_primary: true,
+            address_type: "Company",
+          }
+        )
+        console.log("newAddress : ", newAddress)
+      }
+    }
+
+    res.json({ message: "Profile edit successfully", code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
