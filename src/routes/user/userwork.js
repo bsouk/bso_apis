@@ -579,4 +579,13 @@ router.post(
     controller.generateResumePDF
 )
 
+
+router.get(
+    "/getNotificationList",
+    requireAuth,
+    trimRequest.all,
+    controller.getNotificationList
+)
+
+
 module.exports = router;

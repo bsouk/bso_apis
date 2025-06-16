@@ -7361,3 +7361,17 @@ exports.generateResumePDF = async (req, res) => {
         return res.status(500).json({ error: 'Failed to generate PDF' });
     }
 };
+
+
+exports.getNotificationList = async (req, res) => {
+    try {
+        const user_id = req.user._id;
+        const { offset = 0, limit = 10 } = req.query;
+        const notifications = await Notification.find({ receiver_id: new mongoose.Types.ObjectId(user_id) }).populate('receiver_id').sort({ createdAt: -1 }).skip(offset).limit(limit);
+        const totalCount = await Notification.countDocuments({ receiver_id: new mongoose.Types.ObjectId(user_id) });
+        return res.status(200).json({ message: "Notification list fetched successfully", data: notifications, totalCount, code: 200 })
+    } catch (error) {
+        console.log(error)
+        utils.handleError(res, error)
+    }
+}
