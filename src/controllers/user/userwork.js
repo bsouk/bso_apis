@@ -7353,7 +7353,7 @@ exports.generateResumePDF = async (req, res) => {
 
         return res.status(200).json({
             message: 'PDF generated and uploaded successfully',
-            data: fileUrl
+            data: `resume/${savedFileName}`changes
         });
 
     } catch (error) {
