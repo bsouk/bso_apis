@@ -1144,6 +1144,8 @@ async function uploadFile(object) {
     });
 }
 
+
+
 exports.uploadMedia = async (req, res) => {
     try {
         if (!req.files.media || !req.body.path) {
@@ -7258,13 +7260,76 @@ exports.addBuyerDeliverytracking = async (req, res) => {
 }
 
 
+// exports.generateResumePDF = async (req, res) => {
+//     try {
+//         const { htmlContent } = req.body;
+//         const browser = await puppeteer.launch({
+//             headless: 'new',
+//             args: ['--no-sandbox', '--disable-setuid-sandbox']
+//         });
+//         const page = await browser.newPage();
+//         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+//         const pdfBuffer = await page.pdf({
+//             format: 'A4',
+//             printBackground: true,
+//             margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+//         });
+
+//         await browser.close();
+
+//         let media = await uploadFile({
+//             file: element,
+//             path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+//         });
+
+//         res.set({
+//             'Content-Type': 'application/pdf',
+//             'Content-Disposition': 'attachment; filename="resume.pdf"'
+//         });
+//         console.log("pdfBuffer : ", pdfBuffer)
+//         return res.send(pdfBuffer);
+//     } catch (error) {
+//         console.error('Error generating resume PDF:', error);
+//         return res.status(500).json({ error: 'Failed to generate PDF' });
+//     }
+// };
+
+
+async function uploadBufferToFile({ buffer, path: dirPath, filename }) {
+    return new Promise((resolve, reject) => {
+        const name = filename || Date.now() + '.pdf';
+        const filePath = path.join(dirPath, name);
+
+        // Ensure the directory exists
+        try {
+            fs.mkdirSync(dirPath, { recursive: true });
+        } catch (err) {
+            console.error('Failed to create directory:', err);
+            return reject(err);
+        }
+
+        // Write the buffer to disk
+        fs.writeFile(filePath, buffer, (err) => {
+            if (err) {
+                console.error('Failed to write buffer to file:', err);
+                return reject(err);
+            }
+            resolve(name); // or resolve({ name, filePath }) if you want full path
+        });
+    });
+}
+
+
 exports.generateResumePDF = async (req, res) => {
     try {
         const { htmlContent } = req.body;
+
         const browser = await puppeteer.launch({
             headless: 'new',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
+
         const page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
@@ -7276,12 +7341,21 @@ exports.generateResumePDF = async (req, res) => {
 
         await browser.close();
 
-        res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Disposition': 'attachment; filename="resume.pdf"'
+        const fileName = Date.now() + 'resume.pdf';
+
+        const savedFileName = await uploadBufferToFile({
+            buffer: pdfBuffer,
+            path: path.join(process.env.STORAGE_PATH, "resume"),
+            filename: fileName,
         });
-        console.log("pdfBuffer : ", pdfBuffer)
-        return res.send(pdfBuffer);
+
+        const fileUrl = `${process.env.BASE_URL}/resume/${savedFileName}`;
+
+        return res.status(200).json({
+            message: 'PDF generated and uploaded successfully',
+            data: fileUrl
+        });
+
     } catch (error) {
         console.error('Error generating resume PDF:', error);
         return res.status(500).json({ error: 'Failed to generate PDF' });
