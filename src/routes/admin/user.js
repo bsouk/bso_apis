@@ -339,4 +339,12 @@ router.patch(
   controller.editAdminQuote
 )
 
+
+router.post(
+  "/generateResumePDF",
+  requireAuth,
+  trimRequest.all,
+  controller.generateResumePDF
+)
+
 module.exports = router;
