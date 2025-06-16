@@ -7280,6 +7280,7 @@ exports.generateResumePDF = async (req, res) => {
             'Content-Type': 'application/pdf',
             'Content-Disposition': 'attachment; filename="resume.pdf"'
         });
+        console.log("pdfBuffer : ", pdfBuffer)
         return res.send(pdfBuffer);
     } catch (error) {
         console.error('Error generating resume PDF:', error);
