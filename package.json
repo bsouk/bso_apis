@@ -61,6 +61,7 @@
     "passport-jwt": "^4.0.1",
     "pdfkit": "^0.16.0",
     "pdfkit-table": "^0.1.99",
+    "puppeteer": "^24.10.1",
     "request-ip": "^3.3.0",
     "sharp": "^0.33.4",
     "socket.io": "^4.7.5",

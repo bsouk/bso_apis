@@ -571,4 +571,12 @@ router.patch(
     controller.addBuyerDeliverytracking
 )
 
+
+router.post(
+    "/generateResumePDF",
+    requireAuth,
+    trimRequest.all,
+    controller.generateResumePDF
+)
+
 module.exports = router;

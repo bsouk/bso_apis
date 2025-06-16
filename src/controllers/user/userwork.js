@@ -46,6 +46,7 @@ const tracking_order = require("../../models/tracking_order");
 const Notification = require("../../models/notification")
 const OTP = require("../../models/otp")
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const puppeteer = require('puppeteer');
 
 
 
@@ -7255,3 +7256,33 @@ exports.addBuyerDeliverytracking = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+
+exports.generateResumePDF = async (req, res) => {
+    try {
+        const { htmlContent } = req.body;
+        const browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '10mm', bottom: '10mm', left: '10mm', right: '10mm' }
+        });
+
+        await browser.close();
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="resume.pdf"'
+        });
+        return res.send(pdfBuffer);
+    } catch (error) {
+        console.error('Error generating resume PDF:', error);
+        return res.status(500).json({ error: 'Failed to generate PDF' });
+    }
+};
