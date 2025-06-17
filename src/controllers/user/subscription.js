@@ -694,7 +694,7 @@ exports.cancelSubscription = async (req, res) => {
 
         if (!recruiterSubscription) {
             console.log("Recruiter subscription not found");
-            return;
+            
         }
         // Determine source for sync
         let sourcePlan = null;
@@ -710,13 +710,12 @@ exports.cancelSubscription = async (req, res) => {
             recruiterSubscription.updatedAt = new Date();
             await recruiterSubscription.save();
             console.log("Recruiter plan terminated — no active supplier/logistics.");
-            return;
         }
         const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
 
         if (!sourcePlanDetails || !sourcePlanDetails.interval) {
           console.log("Source plan's interval not found from Plan collection.");
-          return;
+          
         }
         // Sync recruiter to source plan
         const recruiterPlanTemplate = await plan.findOne({
@@ -726,7 +725,7 @@ exports.cancelSubscription = async (req, res) => {
 
         if (!recruiterPlanTemplate) {
             console.log("Recruiter plan template not found for interval:", sourcePlan.interval);
-            return;
+        
         }
 
         recruiterSubscription.start_at = sourcePlan.start_at;
