@@ -42,11 +42,21 @@ exports.genrateClientScretKey = async (req, res) => {
     try {
         const userid = req.user._id;
         const { plan_id } = req.body;
-
+console.log('userid',userid)
         if (!plan_id) {
             return res.status(400).json({
                 message: "Plan ID is required",
                 code: 400
+            });
+        }
+        const activeplan = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), 
+            plan_id: plan_id, status: "active" })
+    
+
+        if (activeplan) {
+            return utils.handleError(res, {
+                message: "Already have an active Subscription",
+                code: 404,
             });
         }
 
@@ -243,6 +253,82 @@ exports.createAppClientScretKey = async (req, res) => {
         utils.handleError(res, error);
     }
 };
+
+
+
+exports.generateClientSecretKeymultiple = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { plan_ids } = req.body;
+
+        if (!Array.isArray(plan_ids) || plan_ids.length === 0) {
+            return res.status(400).json({ message: "plan_ids array required", code: 400 });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: "User not found", code: 404 });
+
+        let totalAmount = 0;
+        const plans = [];
+
+        for (const planId of plan_ids) {
+            const plandata = await plan.findOne({ plan_id: planId });
+            if (!plandata) continue;
+
+            // ❗️Check for existing subscription to this plan type
+            const existingSub = await Subscription.findOne({
+                user_id: userId,
+                type: plandata.type,
+                status: { $in: ['active', 'cancelled_scheduled'] }
+            });
+
+            if (existingSub) {
+                return res.status(400).json({
+                    message: `Already subscribed to a ${plandata.type} plan. Cancel existing subscription before purchasing a new one.`,
+                    code: 400
+                });
+            }
+
+            totalAmount += plandata.price * 100;
+            plans.push(plandata);
+        }
+
+        if (plans.length === 0) return res.status(404).json({ message: "No valid plans found", code: 404 });
+
+        let customer = await getCustomerByEmail(user.email);
+        if (!customer) customer = await createStripeCustomer(user);
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: totalAmount,
+            currency: 'usd',
+            customer: customer.id,
+            automatic_payment_methods: { enabled: true },
+            metadata: {
+                userId: userId.toString(),
+                planIds: plans.map(p => p.plan_id).join(','),
+                isBundle: "true"
+            }
+        });
+
+        return res.status(200).json({
+            message: "Client secret generated",
+            data: {
+                client_secret: paymentIntent.client_secret,
+                customer_id: customer.id
+            },
+            code: 200
+        });
+
+    } catch (err) {
+        console.error("PaymentIntent error:", err);
+        return res.status(500).json({ message: "Error creating client secret", error: err.message });
+    }
+};
+
+
+
+
+
 
 exports.createSubscription = async (req, res) => {
     try {
@@ -667,7 +753,7 @@ exports.cancelSubscription = async (req, res) => {
             subscription.status = 'terminated';
         }
         // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
-        
+
 
         // const plans = await Subscription.find({ user_id: new mongoose.Types.ObjectId(subscription.user_id),
         //     status: 'active'});
@@ -694,7 +780,7 @@ exports.cancelSubscription = async (req, res) => {
 
         if (!recruiterSubscription) {
             console.log("Recruiter subscription not found");
-            
+
         }
         // Determine source for sync
         let sourcePlan = null;
@@ -714,8 +800,8 @@ exports.cancelSubscription = async (req, res) => {
         const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
 
         if (!sourcePlanDetails || !sourcePlanDetails.interval) {
-          console.log("Source plan's interval not found from Plan collection.");
-          
+            console.log("Source plan's interval not found from Plan collection.");
+
         }
         // Sync recruiter to source plan
         const recruiterPlanTemplate = await plan.findOne({
@@ -725,7 +811,7 @@ exports.cancelSubscription = async (req, res) => {
 
         if (!recruiterPlanTemplate) {
             console.log("Recruiter plan template not found for interval:", sourcePlan.interval);
-        
+
         }
 
         recruiterSubscription.start_at = sourcePlan.start_at;
@@ -735,56 +821,56 @@ exports.cancelSubscription = async (req, res) => {
         await recruiterSubscription.save();
 
         console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
-        
+
         await subscription.save();
 
 
 
-    // admin notification
-    const admins = await Admin.findOne({ role: 'super_admin' });
-    console.log("admins : ", admins)
+        // admin notification
+        const admins = await Admin.findOne({ role: 'super_admin' });
+        console.log("admins : ", admins)
 
-    if (admins) {
-        const notificationMessage = {
-            title: 'Existing Subscription cancelled',
-            description: `${userdata.full_name} has cancelled an existing subscription . Plan ID : ${subscription.plan_id}`,
-            user_id: subscription.user_id
-        };
-
-        const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
-        console.log("adminFcmDevices : ", adminFcmDevices)
-
-        if (adminFcmDevices && adminFcmDevices.length > 0) {
-            adminFcmDevices.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
-            const adminNotificationData = {
-                title: notificationMessage.title,
-                body: notificationMessage.description,
-                // description: notificationMessage.description,
-                type: "canceled_subscription",
-                receiver_id: admins._id,
-                related_to: subscription.user_id,
-                related_to_type: "user",
-                user_type: plandata.type
+        if (admins) {
+            const notificationMessage = {
+                title: 'Existing Subscription cancelled',
+                description: `${userdata.full_name} has cancelled an existing subscription . Plan ID : ${subscription.plan_id}`,
+                user_id: subscription.user_id
             };
-            const newAdminNotification = new admin_received_notification(adminNotificationData);
-            console.log("newAdminNotification : ", newAdminNotification)
-            await newAdminNotification.save();
+
+            const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+            console.log("adminFcmDevices : ", adminFcmDevices)
+
+            if (adminFcmDevices && adminFcmDevices.length > 0) {
+                adminFcmDevices.forEach(async i => {
+                    const token = i.token
+                    console.log("token : ", token)
+                    await utils.sendNotification(token, notificationMessage);
+                })
+                const adminNotificationData = {
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    // description: notificationMessage.description,
+                    type: "canceled_subscription",
+                    receiver_id: admins._id,
+                    related_to: subscription.user_id,
+                    related_to_type: "user",
+                    user_type: plandata.type
+                };
+                const newAdminNotification = new admin_received_notification(adminNotificationData);
+                console.log("newAdminNotification : ", newAdminNotification)
+                await newAdminNotification.save();
+            }
         }
+
+        return res.status(200).json({
+            message: 'Subscription cancellation scheduled at period end.',
+            code: 200
+        });
+
+    } catch (error) {
+        console.error('Cancel subscription error:', error);
+        utils.handleError(res, error);
     }
-
-    return res.status(200).json({
-        message: 'Subscription cancellation scheduled at period end.',
-        code: 200
-    });
-
-} catch (error) {
-    console.error('Cancel subscription error:', error);
-    utils.handleError(res, error);
-}
 }
 
 

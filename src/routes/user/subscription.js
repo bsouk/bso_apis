@@ -27,7 +27,12 @@ router.post(
     requireAuth,
     controller.genrateClientScretKey
 )
-
+router.post(
+    "/generateClientSecretKeymultiple",
+    trimRequest.all,
+    requireAuth,
+    controller.generateClientSecretKeymultiple
+)
 
 router.post(
     "/createAppClientSecretKey",
