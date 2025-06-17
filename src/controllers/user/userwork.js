@@ -5115,41 +5115,42 @@ exports.getAllSupplierQuotes = async (req, res) => {
         const userId = req.user._id;
         const { id } = req.params
         console.log("id : ", id)
-        const plan = await Subscription.aggregate(
-            [
-                {
-                    $match: {
-                        user_id: new mongoose.Types.ObjectId(userId),
-                        status: "active",
-                        type: "buyer"
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "plans",
-                        localField: 'plan_id',
-                        foreignField: 'plan_id',
-                        as: 'plan'
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$plan",
-                        preserveNullAndEmptyArrays: true
-                    }
-                }
-            ]
-        )
-        console.log("plan : ", plan)
+        // const plan = await Subscription.aggregate(
+        //     [
+        //         {
+        //             $match: {
+        //                 user_id: new mongoose.Types.ObjectId(userId),
+        //                 status: "active",
+        //                 type: "buyer"
+        //             }
+        //         },
+        //         {
+        //             $lookup: {
+        //                 from: "plans",
+        //                 localField: 'plan_id',
+        //                 foreignField: 'plan_id',
+        //                 as: 'plan'
+        //             }
+        //         },
+        //         {
+        //             $unwind: {
+        //                 path: "$plan",
+        //                 preserveNullAndEmptyArrays: true
+        //             }
+        //         }
+        //     ]
+        // )
+        // console.log("plan : ", plan)
 
-        let data = {}
-        if (plan.length === 0) {
-            return res.status(200).json({
-                message: "No active subscription found",
-                code: 200
-            })
-        }
-        if (plan[0]?.plan?.plan_step === "direct") {
+        // let data = {}
+        // if (plan.length === 0) {
+        //     return res.status(200).json({
+        //         message: "No active subscription found",
+        //         code: 200
+        //     })
+        // }
+        // if (plan[0]?.plan?.plan_step === "direct") {
+        if (enquirydata?.buyer_plan_step === "direct") {
             data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('payment_terms').populate('admin_payment_terms').populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address").populate({ path: 'enquiry_id', select: '-enquiry_items' })
         } else {
             data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id), is_admin_approved: true }).populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address").populate({ path: 'enquiry_id', select: '-enquiry_items' })
@@ -5742,39 +5743,39 @@ exports.selectLogisticsQuote = async (req, res) => {
         const { quote_id } = req.body
         console.log("data : ", req.body)
 
-        const activeSubscription = await Subscription.aggregate(
-            [
-                {
-                    $match: {
-                        user_id: new mongoose.Types.ObjectId(userId),
-                        status: "active",
-                        type: "buyer"
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "plans",
-                        localField: 'plan_id',
-                        foreignField: 'plan_id',
-                        as: 'plan'
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$plan",
-                        preserveNullAndEmptyArrays: true
-                    }
-                }
-            ]
-        )
-        console.log("activeSubscription : ", activeSubscription)
+        // const activeSubscription = await Subscription.aggregate(
+        //     [
+        //         {
+        //             $match: {
+        //                 user_id: new mongoose.Types.ObjectId(userId),
+        //                 status: "active",
+        //                 type: "buyer"
+        //             }
+        //         },
+        //         {
+        //             $lookup: {
+        //                 from: "plans",
+        //                 localField: 'plan_id',
+        //                 foreignField: 'plan_id',
+        //                 as: 'plan'
+        //             }
+        //         },
+        //         {
+        //             $unwind: {
+        //                 path: "$plan",
+        //                 preserveNullAndEmptyArrays: true
+        //             }
+        //         }
+        //     ]
+        // )
+        // console.log("activeSubscription : ", activeSubscription)
 
-        if (activeSubscription.length === 0) {
-            return utils.handleError(res, {
-                message: "No buyer subscription found",
-                code: 400,
-            });
-        }
+        // if (activeSubscription.length === 0) {
+        //     return utils.handleError(res, {
+        //         message: "No buyer subscription found",
+        //         code: 400,
+        //     });
+        // }
 
         const quotedata = await logistics_quotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) }).populate('user_id enquiry_id')
         console.log("quotedata : ", quotedata)
@@ -5942,7 +5943,7 @@ exports.getLogisticsQuotes = async (req, res) => {
         console.log("enquirydata : ", enquirydata)
 
         // if (plan[0]?.plan?.plan_step === "direct") {
-            if (enquirydata?.buyer_plan_step === "direct") {
+        if (enquirydata?.buyer_plan_step === "direct") {
             data = await logistics_quotes.find({ enquiry_id: id })
                 .populate({
                     path: 'enquiry_id',
