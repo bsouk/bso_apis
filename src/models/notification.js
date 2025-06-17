@@ -78,6 +78,8 @@ const notificationSchema = new mongoose.Schema(
                 "logistics_quote_added",
                 "logistics_accepted_by_buyer",
                 "supplier_accepted_by_buyer",
+                "bso_enquiry_update",
+                "new_enquiry"
             ],
             required: true
         },

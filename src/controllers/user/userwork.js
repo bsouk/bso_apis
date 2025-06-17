@@ -2721,7 +2721,7 @@ exports.createEnquiry = async (req, res) => {
         }
         const suppliers = await User.find({
             user_type: { $in: ["supplier"] },
-            _id: { $ne: currentUserId },
+            _id: { $ne: id },
         });
 
         if (suppliers && suppliers.length > 0) {
@@ -7275,7 +7275,7 @@ exports.selectLogisticsChoice = async (req, res) => {
                             type: "bso_enquiry_update",
                             receiver_id: logisticsUser._id,
                             related_to: data._id,
-                            related_to_type: "logistics_update",
+                            related_to_type: "enquiry",
                         });
 
                         await logNotification.save();
