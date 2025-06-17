@@ -5150,6 +5150,7 @@ exports.getAllSupplierQuotes = async (req, res) => {
         //     })
         // }
         // if (plan[0]?.plan?.plan_step === "direct") {
+        const enquirydata = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(id) })
         if (enquirydata?.buyer_plan_step === "direct") {
             data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('payment_terms').populate('admin_payment_terms').populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address").populate({ path: 'enquiry_id', select: '-enquiry_items' })
         } else {

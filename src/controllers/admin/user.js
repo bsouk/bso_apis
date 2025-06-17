@@ -441,8 +441,8 @@ exports.editCustomer = async (req, res) => {
     if (data.company_data) {
       if (data.company_data.name && data.company_data.registration_number && data.company_data.vat_number && data.company_data.incorporation_date) {
         // userData.user_type = "company"
-        userData['$push'] = { user_type: "company" }
-        userData.current_user_type = "company"
+        // userData['$push'] = { user_type: "company" }
+        // userData.current_user_type = "company"
       } else {
         // userData.user_type = "buyer"
         userData['$push'] = { user_type: "buyer" }
