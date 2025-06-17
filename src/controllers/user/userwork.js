@@ -7250,7 +7250,7 @@ exports.selectLogisticsChoice = async (req, res) => {
             // Get all logistics users excluding the current user
             const logisticsUsers = await User.find({
                 user_type: 'logistics',
-                _id: { $ne: userId }, // Replace with req.user._id or actual sender's ID
+                _id: { $ne: req.user._id }, // Replace with req.user._id or actual sender's ID
             });
 
             if (logisticsUsers && logisticsUsers.length > 0) {
