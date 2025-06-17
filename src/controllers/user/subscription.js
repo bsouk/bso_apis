@@ -392,26 +392,51 @@ exports.createSubscription = async (req, res) => {
 
 
         if (plandata.type === 'supplier' || plandata.type === 'logistics') {
-            const recruiterPlan = await plan.findOne({
-                type: 'recruiter',
-                interval: plandata.interval // 'monthly' or 'yearly'
-            });
-        
-            if (!recruiterPlan) {
-                console.log("Recruiter plan with same interval not found");
-                // Optionally return or throw
-                return;
-            }
-        
-            // Check if any existing recruiter subscription
+            // Step 1: Check if recruiter already exists
             const existingRecruiterSub = await Subscription.findOne({
                 user_id: userdata._id,
                 type: 'recruiter',
                 status: 'active'
             });
         
+            let recruiterInterval;
+        
             if (existingRecruiterSub) {
-                // If it's a Stripe subscription, cancel it on Stripe
+                // Use the current recruiter's plan interval (no downgrade)
+                const existingPlan = await plan.findOne({ plan_id: existingRecruiterSub.plan_id });
+                recruiterInterval = existingPlan?.interval || 'monthly';
+            } else {
+                // Step 2: Check ALL supplier/logistics plans, current and past
+                const pastPlans = await Subscription.find({
+                    user_id: userdata._id,
+                    type: { $in: ['supplier', 'logistics'] }
+                });
+        
+                let hasYearly = false;
+                for (const sub of pastPlans) {
+                    const subPlan = await plan.findOne({ plan_id: sub.plan_id });
+                    if (subPlan?.interval === 'yearly') {
+                        hasYearly = true;
+                        break;
+                    }
+                }
+        
+                recruiterInterval = hasYearly ? 'yearly' : 'monthly';
+            }
+        
+            // Step 3: Find matching recruiter plan
+            const recruiterPlan = await plan.findOne({
+                type: 'recruiter',
+                interval: recruiterInterval
+            });
+        
+            if (!recruiterPlan) {
+                console.log("Recruiter plan with interval", recruiterInterval, "not found");
+                return;
+            }
+        
+            // Step 4: Cancel existing recruiter sub if needed
+            if (existingRecruiterSub) {
                 if (existingRecruiterSub.stripe_subscription_id) {
                     try {
                         await stripe.subscriptions.update(existingRecruiterSub.stripe_subscription_id, {
@@ -423,16 +448,15 @@ exports.createSubscription = async (req, res) => {
                     }
                 }
         
-                // Update the subscription in DB
                 existingRecruiterSub.status = 'cancelled_scheduled';
                 await existingRecruiterSub.save();
             }
         
-            // Create new manual recruiter subscription
+            // Step 5: Create new recruiter subscription
             let recruiterEnd = new Date(start);
-            if (recruiterPlan.interval === "monthly") {
+            if (recruiterInterval === "monthly") {
                 recruiterEnd.setMonth(start.getMonth() + 1);
-            } else if (recruiterPlan.interval === "yearly") {
+            } else {
                 recruiterEnd.setFullYear(start.getFullYear() + 1);
             }
         
@@ -450,8 +474,9 @@ exports.createSubscription = async (req, res) => {
                 payment_method_type: 'manual',
             });
         
-            console.log("Created new manual recruiter subscription:", recruiterSubscription);
+            console.log("Created new recruiter subscription (", recruiterInterval, "):", recruiterSubscription);
         }
+        
         // admin notification
         const admins = await Admin.findOne({ role: 'super_admin' });
         console.log("admins : ", admins)
@@ -620,7 +645,7 @@ exports.cancelSubscription = async (req, res) => {
         console.log("data : ", req.body)
 
         const subscription = await Subscription.findOne({ _id: new mongoose.Types.ObjectId(subscription_id) });
-
+console.log("subscription=========",subscription)
         if (!subscription) {
             return utils.handleError(res, {
                 message: "Subscription not found",
@@ -632,7 +657,7 @@ exports.cancelSubscription = async (req, res) => {
 
         const plandata = await plan.findOne({ plan_id: subscription.plan_id });
 
-        if (subscription.subscription_type === "paid") {
+        if (subscription.subscription_type === "paid" && subscription.stripe_subscription_id !== null) {
             const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
                 cancel_at_period_end: true
             });
