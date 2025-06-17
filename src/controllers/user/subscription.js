@@ -391,6 +391,67 @@ exports.createSubscription = async (req, res) => {
         console.log("paymentdata : ", paymentrecord)
 
 
+        if (plandata.type === 'supplier' || plandata.type === 'logistics') {
+            const recruiterPlan = await plan.findOne({
+                type: 'recruiter',
+                interval: plandata.interval // 'monthly' or 'yearly'
+            });
+        
+            if (!recruiterPlan) {
+                console.log("Recruiter plan with same interval not found");
+                // Optionally return or throw
+                return;
+            }
+        
+            // Check if any existing recruiter subscription
+            const existingRecruiterSub = await Subscription.findOne({
+                user_id: userdata._id,
+                type: 'recruiter',
+                status: 'active'
+            });
+        
+            if (existingRecruiterSub) {
+                // If it's a Stripe subscription, cancel it on Stripe
+                if (existingRecruiterSub.stripe_subscription_id) {
+                    try {
+                        await stripe.subscriptions.update(existingRecruiterSub.stripe_subscription_id, {
+                            cancel_at_period_end: true
+                        });
+                        console.log("Stripe recruiter subscription marked for cancellation");
+                    } catch (err) {
+                        console.error("Stripe recruiter cancellation error:", err.message);
+                    }
+                }
+        
+                // Update the subscription in DB
+                existingRecruiterSub.status = 'cancelled_scheduled';
+                await existingRecruiterSub.save();
+            }
+        
+            // Create new manual recruiter subscription
+            let recruiterEnd = new Date(start);
+            if (recruiterPlan.interval === "monthly") {
+                recruiterEnd.setMonth(start.getMonth() + 1);
+            } else if (recruiterPlan.interval === "yearly") {
+                recruiterEnd.setFullYear(start.getFullYear() + 1);
+            }
+        
+            const recruiterSubscription = await Subscription.create({
+                user_id: userdata._id,
+                subscription_id: await genrateSubscriptionId(),
+                plan_id: recruiterPlan.plan_id,
+                stripe_subscription_id: null,
+                stripe_payment_method_id: null,
+                stripe_customer_id: customer.id,
+                start_at: start,
+                end_at: recruiterEnd,
+                status: 'active',
+                type: 'recruiter',
+                payment_method_type: 'manual',
+            });
+        
+            console.log("Created new manual recruiter subscription:", recruiterSubscription);
+        }
         // admin notification
         const admins = await Admin.findOne({ role: 'super_admin' });
         console.log("admins : ", admins)
