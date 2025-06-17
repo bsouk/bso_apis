@@ -346,5 +346,11 @@ router.post(
   trimRequest.all,
   controller.generateResumePDF
 )
+router.get(
+  "/ratingandreview/:id",
+  requireAuth,
+  trimRequest.all,
+  controller.ratingandreview
+)
 
 module.exports = router;

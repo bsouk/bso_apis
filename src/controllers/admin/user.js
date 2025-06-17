@@ -14,6 +14,7 @@ const subscription = require("../../models/subscription");
 const logistics_quotes = require("../../models/logistics_quotes");
 const fcm_devices = require("../../models/fcm_devices");
 const BusinessCategory = require("../../models/business_category");
+const Rating = require("../../models/rating");
 const payment = require("../../models/payment");
 const puppeteer = require('puppeteer');
 const fs = require('fs');
@@ -3347,6 +3348,98 @@ exports.generateResumePDF = async (req, res) => {
   } catch (error) {
     console.error('Error generating resume PDF:', error);
     return res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+};
+
+
+exports.ratingandreview = async (req, res) => {
+  try {
+    const user_id = req.params.id;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = parseInt(req.query.offset) || 0;
+
+    // 1️⃣ Paginated review data
+    const data = await Rating.aggregate([
+      {
+        $match: {
+          user_id: new mongoose.Types.ObjectId(user_id),
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'company_id',
+          foreignField: '_id',
+          as: 'company_details',
+        },
+      },
+      {
+        $unwind: {
+          path: '$company_details',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          count: 1,
+          comment: 1,
+          createdAt: 1,
+          company_id: 1,
+          user_id: 1,
+          company_details: {
+            _id: '$company_details._id',
+            full_name: '$company_details.full_name',
+            email: '$company_details.email',
+            profile_image: '$company_details.profile_image',
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      { $skip: offset },
+      { $limit: limit },
+    ]);
+
+    // 2️⃣ Stats based on `count` field
+    const stats = await Rating.aggregate([
+      {
+        $match: {
+          user_id: new mongoose.Types.ObjectId(user_id),
+        },
+      },
+      {
+        $group: {
+          _id: '$count', // 👈 use 'count' as rating value
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const ratingBreakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let totalRatings = 0;
+    let ratingSum = 0;
+
+    stats.forEach((stat) => {
+      const rate = Math.round(stat._id); // rating value
+      if (rate >= 1 && rate <= 5) {
+        ratingBreakdown[rate] = stat.count;
+        totalRatings += stat.count;
+        ratingSum += rate * stat.count;
+      }
+    });
+
+    const averageRating = totalRatings ? (ratingSum / totalRatings).toFixed(2) : 0;
+
+    // ✅ Response
+    res.json({
+      data,
+      averageRating: Number(averageRating),
+      totalRatings,
+      ratingBreakdown,
+
+      code: 200,
+    });
+  } catch (error) {
+    utils.handleError(res, error);
   }
 };
 
