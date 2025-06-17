@@ -667,7 +667,7 @@ exports.cancelSubscription = async (req, res) => {
             subscription.status = 'terminated';
         }
         // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
-        await subscription.save();
+        
 
         // const plans = await Subscription.find({ user_id: new mongoose.Types.ObjectId(subscription.user_id),
         //     status: 'active'});
@@ -735,7 +735,8 @@ exports.cancelSubscription = async (req, res) => {
         await recruiterSubscription.save();
 
         console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
-    
+        
+        await subscription.save();
 
 
 
