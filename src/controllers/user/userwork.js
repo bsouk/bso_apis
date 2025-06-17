@@ -7256,7 +7256,7 @@ exports.selectLogisticsChoice = async (req, res) => {
             if (logisticsUsers && logisticsUsers.length > 0) {
                 const notificationMessage = {
                     title: 'Logistics Update: BSO Required',
-                    description:  `Enquiry ID ${oldData.enquiry_unique_id} has been updated to require BSO logistics.`,
+                    description:  `Enquiry ID ${data.enquiry_id} has been updated to require BSO logistics.`,
                     enquiry_id: data._id,
                 };
 
@@ -7274,7 +7274,7 @@ exports.selectLogisticsChoice = async (req, res) => {
                             body: notificationMessage.description,
                             type: "bso_enquiry_update",
                             receiver_id: logisticsUser._id,
-                            related_to: data._id,
+                            related_to: data.enquiry_id,
                             related_to_type: "enquiry",
                         });
 
