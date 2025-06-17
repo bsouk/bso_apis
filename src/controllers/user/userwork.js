@@ -2606,7 +2606,8 @@ exports.createEnquiry = async (req, res) => {
             {
                 $match: {
                     user_id: new mongoose.Types.ObjectId(id),
-                    status: "active"
+                    status: "active",
+                    type: "buyer"
                 }
             },
             {
@@ -2688,7 +2689,6 @@ exports.createEnquiry = async (req, res) => {
         // admin notification
         const admins = await Admin.findOne({ role: 'super_admin' });
         console.log("admins : ", admins)
-
         if (admins) {
             const notificationMessage = {
                 title: 'New Enquiry created',
@@ -2717,6 +2717,43 @@ exports.createEnquiry = async (req, res) => {
                 const newAdminNotification = new admin_received_notification(adminNotificationData);
                 console.log("newAdminNotification : ", newAdminNotification)
                 await newAdminNotification.save();
+            }
+        }
+        const suppliers = await User.find({
+            user_type: { $in: ["supplier"] },
+            _id: { $ne: currentUserId },
+        });
+
+        if (suppliers && suppliers.length > 0) {
+            const notificationMessage = {
+                title: 'New Enquiry created',
+                description: `${req.user.full_name} has created a new enquiry. Enquiry ID: ${newquery.enquiry_unique_id}`,
+                enquiry_id: newquery._id,
+            };
+
+            for (const supplier of suppliers) {
+                const supplierDevices = await fcm_devices.find({ user_id: supplier._id });
+
+                if (supplierDevices && supplierDevices.length > 0) {
+                    for (const device of supplierDevices) {
+                        const token = device.token;
+                        console.log("Sending to token:", token);
+                        await utils.sendNotification(token, notificationMessage);
+                    }
+
+                    // Create a notification record for this supplier
+                    const supplierNotification = new Notification({
+                        title: notificationMessage.title,
+                        body: notificationMessage.description,
+                        type: "new_enquiry",
+                        receiver_id: supplier._id,
+                        related_to: newquery._id,
+                        related_to_type: "enquiry",
+                    });
+
+                    console.log("Saving notification for:", supplier.full_name);
+                    await supplierNotification.save();
+                }
             }
         }
 
@@ -7209,8 +7246,45 @@ exports.selectLogisticsChoice = async (req, res) => {
         const quotresult = await EnquiryQuotes.findOneAndUpdate({ _id: enquiry_data?.selected_supplier?.quote_id?._id }, {
             $set: data
         }, { new: true })
-        return res.json({ code: 200, message: "Logistics choice selected successfully", data: result, code: 200 });
+        if (data.logistics_selection_data?.name === 'bso') {
+            // Get all logistics users excluding the current user
+            const logisticsUsers = await User.find({
+                user_type: 'logistics',
+                _id: { $ne: currentUserId }, // Replace with req.user._id or actual sender's ID
+            });
 
+            if (logisticsUsers && logisticsUsers.length > 0) {
+                const notificationMessage = {
+                    title: 'Logistics Update: BSO Required',
+                    description:  `Enquiry ID ${oldData.enquiry_unique_id} has been updated to require BSO logistics.`,
+                    enquiry_id: data._id,
+                };
+
+                for (const logisticsUser of logisticsUsers) {
+                    const devices = await fcm_devices.find({ user_id: logisticsUser._id });
+
+                    if (devices && devices.length > 0) {
+                        for (const device of devices) {
+                            const token = device.token;
+                            await utils.sendNotification(token, notificationMessage);
+                        }
+
+                        const logNotification = new admin_received_notification({
+                            title: notificationMessage.title,
+                            body: notificationMessage.description,
+                            type: "bso_enquiry_update",
+                            receiver_id: logisticsUser._id,
+                            related_to: data._id,
+                            related_to_type: "logistics_update",
+                        });
+
+                        await logNotification.save();
+                    }
+                }
+            }
+        }
+        return res.json({ code: 200, message: "Logistics choice selected successfully", data: result, code: 200 });
+       
     } catch (error) {
         utils.handleError(res, error);
     }
