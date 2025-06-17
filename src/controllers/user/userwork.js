@@ -5903,45 +5903,46 @@ exports.getLogisticsQuotes = async (req, res) => {
         const userId = req.user._id;
         const { id } = req.params
         console.log("id : ", id)
-        const plan = await Subscription.aggregate(
-            [
-                {
-                    $match: {
-                        user_id: new mongoose.Types.ObjectId(userId),
-                        status: "active",
-                        type: "buyer"
-                    }
-                },
-                {
-                    $lookup: {
-                        from: "plans",
-                        localField: 'plan_id',
-                        foreignField: 'plan_id',
-                        as: 'plan'
-                    }
-                },
-                {
-                    $unwind: {
-                        path: "$plan",
-                        preserveNullAndEmptyArrays: true
-                    }
-                }
-            ]
-        )
-        console.log("plan : ", plan)
+        // const plan = await Subscription.aggregate(
+        //     [
+        //         {
+        //             $match: {
+        //                 user_id: new mongoose.Types.ObjectId(userId),
+        //                 status: "active",
+        //                 type: "buyer"
+        //             }
+        //         },
+        //         {
+        //             $lookup: {
+        //                 from: "plans",
+        //                 localField: 'plan_id',
+        //                 foreignField: 'plan_id',
+        //                 as: 'plan'
+        //             }
+        //         },
+        //         {
+        //             $unwind: {
+        //                 path: "$plan",
+        //                 preserveNullAndEmptyArrays: true
+        //             }
+        //         }
+        //     ]
+        // )
+        // console.log("plan : ", plan)
 
-        let data = {}
-        if (plan.length === 0) {
-            return res.status(200).json({
-                message: "No active subscription found",
-                code: 200
-            })
-        }
+        // let data = {}
+        // if (plan.length === 0) {
+        //     return res.status(200).json({
+        //         message: "No active subscription found",
+        //         code: 200
+        //     })
+        // }
 
         const enquirydata = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(id) })
         console.log("enquirydata : ", enquirydata)
 
-        if (plan[0]?.plan?.plan_step === "direct") {
+        // if (plan[0]?.plan?.plan_step === "direct") {
+            if (enquirydata?.buyer_plan_step === "direct") {
             data = await logistics_quotes.find({ enquiry_id: id })
                 .populate({
                     path: 'enquiry_id',
