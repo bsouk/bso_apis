@@ -49,17 +49,6 @@ console.log('userid',userid)
                 code: 400
             });
         }
-        const activeplan = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), 
-            plan_id: plan_id, status: "active" })
-    
-
-        if (activeplan) {
-            return utils.handleError(res, {
-                message: "Already have an active Subscription",
-                code: 404,
-            });
-        }
-
         const [user, plandata] = await Promise.all([
             User.findById(userid),
             plan.findOne({ plan_id })
@@ -103,12 +92,12 @@ console.log('userid',userid)
         console.log("result : ", result)
 
         if (result.length !== 0) {
-            if (result[0]?.plan?.interval === "lifetime") {
+            // if (result[0]?.plan?.interval === "lifetime") {
                 return res.status(404).json({
                     message: "Already have a lifetime access",
                     code: 404
                 });
-            }
+            // }
         }
         let customer = await getCustomerByEmail(user.email);
         if (!customer) {
@@ -273,13 +262,13 @@ exports.generateClientSecretKeymultiple = async (req, res) => {
 
         for (const planId of plan_ids) {
             const plandata = await plan.findOne({ plan_id: planId });
-            if (!plandata) continue;
-
+            // if (!plandata) continue;
+            if (!plandata) return res.status(404).json({ message: "Plan not found", code: 404 });
             // ❗️Check for existing subscription to this plan type
             const existingSub = await Subscription.findOne({
                 user_id: userId,
                 type: plandata.type,
-                status: { $in: ['active', 'cancelled_scheduled'] }
+                status: 'active'
             });
 
             if (existingSub) {
@@ -326,8 +315,132 @@ exports.generateClientSecretKeymultiple = async (req, res) => {
 };
 
 
+exports.createMultipleSubscriptions = async (req, res) => {
+    try {
+        const userid = req.user._id;
+        const { plan_ids, payment_method_id } = req.body;
 
+        if (!Array.isArray(plan_ids) || plan_ids.length === 0 || !payment_method_id) {
+            return res.status(400).json({
+                message: "plan_ids and payment_method_id required",
+                code: 400
+            });
+        }
 
+        const userdata = await User.findById(userid);
+        if (!userdata) {
+            return res.status(404).json({ message: "User not found", code: 404 });
+        }
+
+        let customer = await getCustomerByEmail(userdata.email);
+        if (!customer) {
+            customer = await createStripeCustomer(userdata);
+        }
+
+        // Attach payment method
+        await stripe.paymentMethods.attach(payment_method_id, {
+            customer: customer.id,
+        });
+
+        const createdSubscriptions = [];
+
+        for (const pid of plan_ids) {
+            const plandata = await plan.findOne({ plan_id: pid });
+            if (!plandata) {
+                throw { message: `Plan not found for plan_id: ${pid}`, code: 404 };
+            }
+
+            const existing = await Subscription.findOne({
+                user_id: userid,
+                type: plandata.type,
+                status: "active"
+            });
+
+            if (existing) {
+                throw {
+                    message: `Already have an active subscription of type: ${plandata.type}. Cancel it first.`,
+                    code: 409
+                };
+            }
+
+            if (!plandata.stripe_price_id) {
+                throw {
+                    message: `Stripe price ID missing for plan_id: ${pid}`,
+                    code: 400
+                };
+            }
+
+            const stripeSub = await stripe.subscriptions.create({
+                customer: customer.id,
+                items: [{ price: plandata.stripe_price_id }],
+                default_payment_method: payment_method_id,
+                expand: ['latest_invoice.payment_intent'],
+                metadata: {
+                    userId: userid.toString(),
+                    planId: plandata._id.toString()
+                },
+            });
+
+            const paymentIntent = stripeSub.latest_invoice.payment_intent;
+            const requiresAction = ['requires_action', 'requires_confirmation'].includes(paymentIntent.status);
+            const clientSecret = requiresAction ? paymentIntent.client_secret : null;
+
+            const startDate = new Date();
+            const endDate = new Date(startDate);
+            if (plandata.interval === "monthly") {
+                endDate.setMonth(startDate.getMonth() + 1);
+            } else if (plandata.interval === "yearly") {
+                endDate.setFullYear(startDate.getFullYear() + 1);
+            }
+
+            const subscriptionDoc = await Subscription.create({
+                user_id: userid,
+                subscription_id: await genrateSubscriptionId(),
+                plan_id: pid,
+                stripe_subscription_id: stripeSub.id,
+                stripe_payment_method_id: payment_method_id,
+                stripe_customer_id: customer.id,
+                start_at: startDate,
+                end_at: endDate,
+                status: stripeSub.status,
+                type: plandata.type,
+                payment_method_type: paymentIntent.payment_method_types[0]
+            });
+
+            await Payment.create({
+                subscription_id: subscriptionDoc._id,
+                buyer_id: userid,
+                total_amount: paymentIntent.amount_received / 100,
+                currency: paymentIntent.currency,
+                payment_status: paymentIntent.status,
+                stripe_customer_id: customer.id,
+                stripe_subscription_id: stripeSub.id,
+                stripe_payment_method_id: payment_method_id,
+                receipt: paymentIntent?.charges?.data?.[0]?.receipt_url || null
+            });
+
+            createdSubscriptions.push({
+                subscription: subscriptionDoc,
+                requires_action: requiresAction,
+                client_secret: clientSecret,
+                payment_method_type: paymentIntent.payment_method_types[0]
+            });
+        }
+
+        return res.status(200).json({
+            message: "Subscriptions created successfully",
+            data: createdSubscriptions,
+            code: 200
+        });
+
+    } catch (error) {
+        const statusCode = error.code || 500;
+        return res.status(statusCode).json({
+            message: error.message || "Something went wrong",
+            code: statusCode
+        });
+    }
+};
 
 
 exports.createSubscription = async (req, res) => {
