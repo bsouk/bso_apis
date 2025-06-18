@@ -48,6 +48,12 @@ router.post(
     requireAuth,
     controller.createSubscription
 )
+router.post(
+    "/createMultipleSubscriptions",
+    trimRequest.all,
+    requireAuth,
+    controller.createMultipleSubscriptions
+)
 
 
 router.post(
