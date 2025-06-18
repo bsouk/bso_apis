@@ -42,7 +42,7 @@ exports.genrateClientScretKey = async (req, res) => {
     try {
         const userid = req.user._id;
         const { plan_id } = req.body;
-console.log('userid',userid)
+        console.log('userid', userid)
         if (!plan_id) {
             return res.status(400).json({
                 message: "Plan ID is required",
@@ -317,12 +317,23 @@ exports.generateClientSecretKeymultiple = async (req, res) => {
                 isBundle: "true"
             }
         });
+        const setupIntent = await stripe.setupIntents.create({
+            customer: customer.id,
+            payment_method_types: ['card', 'link', 'us_bank_account'],
+            metadata: {
+                userId: userId.toString(),
+                bundlePlanIds: plans.map(p => p._id.toString()).join(',')
+            }
+        });
 
         return res.status(200).json({
             message: "Client secret generated",
             data: {
                 client_secret: paymentIntent.client_secret,
-                customer_id: customer.id
+                setup_intent_secret: setupIntent.client_secret,
+                customer_id: customer.id,
+                plan_id: plan_ids,
+                requires_payment_method: true
             },
             code: 200
         });
@@ -890,70 +901,70 @@ exports.cancelSubscription = async (req, res) => {
         // const plans = await Subscription.find({ user_id: new mongoose.Types.ObjectId(subscription.user_id),
         //     status: 'active'});
         // console.log("plans : ", plans)
+        if (plandata.type !== 'recruiter') {
+            // Get active logistics and supplier plans
+            const [logisticsPlan, activeSupplierPlan, recruiterSubscription] = await Promise.all([
+                Subscription.findOne({
+                    user_id: subscription.user_id,
+                    type: 'logistics',
+                    status: 'active',
+                }),
+                Subscription.findOne({
+                    user_id: subscription.user_id,
+                    type: 'supplier',
+                    status: 'active',
+                }),
+                Subscription.findOne({
+                    user_id: subscription.user_id,
+                    type: 'recruiter',
+                    status: 'active',
+                }),
+            ]);
 
-        // Get active logistics and supplier plans
-        const [logisticsPlan, activeSupplierPlan, recruiterSubscription] = await Promise.all([
-            Subscription.findOne({
-                user_id: subscription.user_id,
-                type: 'logistics',
-                status: 'active',
-            }),
-            Subscription.findOne({
-                user_id: subscription.user_id,
-                type: 'supplier',
-                status: 'active',
-            }),
-            Subscription.findOne({
-                user_id: subscription.user_id,
+            if (!recruiterSubscription) {
+                console.log("Recruiter subscription not found");
+
+            }
+            // Determine source for sync
+            let sourcePlan = null;
+            if (logisticsPlan) {
+                sourcePlan = logisticsPlan;
+            } else if (activeSupplierPlan) {
+                sourcePlan = activeSupplierPlan;
+            }
+
+            if (!sourcePlan) {
+                // No active supplier or logistics — cancel recruiter
+                recruiterSubscription.status = 'terminated';
+                recruiterSubscription.updatedAt = new Date();
+                await recruiterSubscription.save();
+                console.log("Recruiter plan terminated — no active supplier/logistics.");
+            }
+            const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
+
+            if (!sourcePlanDetails || !sourcePlanDetails.interval) {
+                console.log("Source plan's interval not found from Plan collection.");
+
+            }
+            // Sync recruiter to source plan
+            const recruiterPlanTemplate = await plan.findOne({
                 type: 'recruiter',
-                status: 'active',
-            }),
-        ]);
+                interval: sourcePlanDetails.interval,
+            });
 
-        if (!recruiterSubscription) {
-            console.log("Recruiter subscription not found");
+            if (!recruiterPlanTemplate) {
+                console.log("Recruiter plan template not found for interval:", sourcePlan.interval);
 
-        }
-        // Determine source for sync
-        let sourcePlan = null;
-        if (logisticsPlan) {
-            sourcePlan = logisticsPlan;
-        } else if (activeSupplierPlan) {
-            sourcePlan = activeSupplierPlan;
-        }
+            }
 
-        if (!sourcePlan) {
-            // No active supplier or logistics — cancel recruiter
-            recruiterSubscription.status = 'terminated';
+            recruiterSubscription.start_at = sourcePlan.start_at;
+            recruiterSubscription.end_at = sourcePlan.end_at;
+            recruiterSubscription.plan_id = recruiterPlanTemplate.plan_id;
             recruiterSubscription.updatedAt = new Date();
             await recruiterSubscription.save();
-            console.log("Recruiter plan terminated — no active supplier/logistics.");
+
+            console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
         }
-        const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
-
-        if (!sourcePlanDetails || !sourcePlanDetails.interval) {
-            console.log("Source plan's interval not found from Plan collection.");
-
-        }
-        // Sync recruiter to source plan
-        const recruiterPlanTemplate = await plan.findOne({
-            type: 'recruiter',
-            interval: sourcePlanDetails.interval,
-        });
-
-        if (!recruiterPlanTemplate) {
-            console.log("Recruiter plan template not found for interval:", sourcePlan.interval);
-
-        }
-
-        recruiterSubscription.start_at = sourcePlan.start_at;
-        recruiterSubscription.end_at = sourcePlan.end_at;
-        recruiterSubscription.plan_id = recruiterPlanTemplate.plan_id;
-        recruiterSubscription.updatedAt = new Date();
-        await recruiterSubscription.save();
-
-        console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
-
         await subscription.save();
 
 
