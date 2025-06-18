@@ -2074,7 +2074,20 @@ exports.editLogisticsUser = async (req, res) => {
     }
 
     await User.findByIdAndUpdate(id, data);
-
+    if (data.switch_to) {
+      let types = user.user_type
+      if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
+        return utils.handleError(res, {
+          message: `You are already ${data.switch_to} user`,
+          code: 400,
+        });
+      }
+      if (!types.includes(data.switch_to.trim())) {
+        types.push(data.switch_to.trim())
+      }
+      data.user_type = types
+      data.current_user_type = data.switch_to
+    }
     if (
       data.phone_number_code ||
       data.phone_number ||
