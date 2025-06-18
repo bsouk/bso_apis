@@ -895,6 +895,7 @@ exports.cancelSubscription = async (req, res) => {
         } else {
             subscription.status = 'terminated';
         }
+        await subscription.save();
         // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
 
 
@@ -965,7 +966,7 @@ exports.cancelSubscription = async (req, res) => {
 
             console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
         }
-        await subscription.save();
+      
 
 
 
