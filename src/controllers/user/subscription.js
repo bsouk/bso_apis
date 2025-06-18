@@ -49,6 +49,25 @@ console.log('userid',userid)
                 code: 400
             });
         }
+
+        const plans = await plan.findOne({ plan_id: plan_id });
+        // if (!plandata) continue;
+        if (!plans) return res.status(404).json({ message: "Plan not found", code: 404 });
+        // ❗️Check for existing subscription to this plan type
+        const existingSub = await Subscription.findOne({
+            user_id: userid,
+            type: plans.type,
+            status: 'active'
+        });
+
+        if (existingSub) {
+            return res.status(400).json({
+                message: `Already subscribed to a ${plandata.type} plan. Cancel existing subscription before purchasing a new one.`,
+                code: 400
+            });
+        }
+
+
         const [user, plandata] = await Promise.all([
             User.findById(userid),
             plan.findOne({ plan_id })
@@ -92,12 +111,12 @@ console.log('userid',userid)
         console.log("result : ", result)
 
         if (result.length !== 0) {
-            // if (result[0]?.plan?.interval === "lifetime") {
+            if (result[0]?.plan?.interval === "lifetime") {
                 return res.status(404).json({
                     message: "Already have a lifetime access",
                     code: 404
                 });
-            // }
+            }
         }
         let customer = await getCustomerByEmail(user.email);
         if (!customer) {
