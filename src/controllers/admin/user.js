@@ -641,7 +641,7 @@ exports.getResourceList = async (req, res) => {
 
     const condition = {
       user_type: { $in: ["resource"] },
-      profile_completed: true,
+      // profile_completed: true,
       is_deleted: false,
     };
 
@@ -1655,7 +1655,20 @@ exports.editSupplier = async (req, res) => {
         await address.save();
       }
     }
-
+    if (data.switch_to) {
+      let types = updatedUser.user_type
+      if (types.includes(data.switch_to.trim()) && updatedUser.profile_completed === true) {
+        return utils.handleError(res, {
+          message: `You are already ${data.switch_to} user`,
+          code: 400,
+        });
+      }
+      if (!types.includes(data.switch_to.trim())) {
+        types.push(data.switch_to.trim())
+      }
+      data.user_type = types
+      data.current_user_type = data.switch_to
+    }
     const requiredFields = [
       'full_name',
       'profile_image',
@@ -1756,7 +1769,7 @@ exports.getSupplierList = async (req, res) => {
 
     const condition = {
       user_type: { $in: ["supplier"] },
-      profile_completed: true,
+      // profile_completed: true,
       is_deleted: false,
     };
 
@@ -2110,7 +2123,7 @@ exports.getLogisticsUserList = async (req, res) => {
 
     const condition = {
       user_type: { $in: ["logistics"] },
-      profile_completed: true,
+      // profile_completed: true,
       is_deleted: false,
     };
 
