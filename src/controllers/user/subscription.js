@@ -491,7 +491,7 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 //     existingRecruiter.end_at = new Date();
                 //     await existingRecruiter.save();
                 // }
-                if (existingRecruiter.stripe_subscription_id) {
+                if (existingRecruiter.stripe_subscription_id || existingRecruiter.stripe_subscription_id !== null) {
                     try {
                         await stripe.subscriptions.update(existingRecruiter.stripe_subscription_id, {
                             cancel_at_period_end: true
