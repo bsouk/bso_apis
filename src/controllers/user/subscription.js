@@ -62,7 +62,7 @@ console.log('userid',userid)
 
         if (existingSub) {
             return res.status(400).json({
-                message: `Already subscribed to a ${plandata.type} plan. Cancel existing subscription before purchasing a new one.`,
+                message: `Already subscribed to a ${plans.type} plan. Cancel existing subscription before purchasing a new one.`,
                 code: 400
             });
         }
