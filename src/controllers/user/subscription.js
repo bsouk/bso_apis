@@ -466,51 +466,55 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 type: 'recruiter',
                 status: 'active'
             });
-        
+            console.log("existingRecruiter", existingRecruiter)
             recruiterPlan = await plan.findOne({
                 type: 'recruiter',
                 interval: recruiterInterval
             });
-        
+
             if (!recruiterPlan) {
                 throw {
                     message: `Recruiter plan not found for interval: ${recruiterInterval}`,
                     code: 404
                 };
             }
-        
+
             const intervalRank = { monthly: 1, yearly: 2 };
             const newIntervalRank = intervalRank[recruiterInterval];
             const currentIntervalRank = existingRecruiter
                 ? intervalRank[(await plan.findOne({ plan_id: existingRecruiter.plan_id }))?.interval]
                 : 0;
-        
+
             if (!existingRecruiter || newIntervalRank > currentIntervalRank) {
                 // if (existingRecruiter) {
                 //     existingRecruiter.status = 'cancelled';
                 //     existingRecruiter.end_at = new Date();
                 //     await existingRecruiter.save();
                 // }
-                if (existingRecruiter.stripe_subscription_id || existingRecruiter.stripe_subscription_id !== null) {
-                    try {
-                        await stripe.subscriptions.update(existingRecruiter.stripe_subscription_id, {
-                            cancel_at_period_end: true
-                        });
-                        existingRecruiter.status = 'cancelled_schedule';
-                    } catch (stripeErr) {
-                        console.error("Failed to cancel recruiter's Stripe subscription:", stripeErr.message);
-                        throw {
-                            message: "Failed to cancel existing recruiter subscription on Stripe",
-                            code: 500
-                        };
+                if (existingRecruiter) {
+                    if (existingRecruiter.stripe_subscription_id) {
+                        try {
+                            await stripe.subscriptions.update(existingRecruiter.stripe_subscription_id, {
+                                cancel_at_period_end: true
+                            });
+                            existingRecruiter.status = 'cancelled_scheduled';
+
+                        } catch (stripeErr) {
+                            console.error("Failed to cancel recruiter's Stripe subscription:", stripeErr.message);
+                            throw {
+                                message: "Failed to cancel existing recruiter subscription on Stripe",
+                                code: 500
+                            };
+                        }
                     }
+                    // Cancel locally  
+                    existingRecruiter.status = 'terminate';
+                    existingRecruiter.end_at = new Date();
+                    await existingRecruiter.save();
                 }
-            
-                // Cancel locally
-                existingRecruiter.status = 'cancelled_scheduled';
-                existingRecruiter.end_at = new Date();
-                await existingRecruiter.save();
-        
+
+
+
                 const startDate = new Date();
                 const endDate = new Date(startDate);
                 if (recruiterInterval === "monthly") {
@@ -518,7 +522,7 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 } else {
                     endDate.setFullYear(startDate.getFullYear() + 1);
                 }
-        
+
                 const recruiterSubDoc = await Subscription.create({
                     user_id: userid,
                     subscription_id: await genrateSubscriptionId(),
@@ -532,7 +536,7 @@ exports.createMultipleSubscriptions = async (req, res) => {
                     type: 'recruiter',
                     payment_method_type: null
                 });
-        
+
                 createdSubscriptions.push({
                     subscription: recruiterSubDoc,
                     requires_action: false,
@@ -1026,35 +1030,35 @@ exports.cancelSubscription = async (req, res) => {
                 recruiterSubscription.updatedAt = new Date();
                 await recruiterSubscription.save();
                 console.log("Recruiter plan terminated — no active supplier/logistics.");
-            }else{
-            
-            const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
+            } else {
 
-            if (!sourcePlanDetails || !sourcePlanDetails.interval) {
-                console.log("Source plan's interval not found from Plan collection.");
+                const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
 
+                if (!sourcePlanDetails || !sourcePlanDetails.interval) {
+                    console.log("Source plan's interval not found from Plan collection.");
+
+                }
+                // Sync recruiter to source plan
+                const recruiterPlanTemplate = await plan.findOne({
+                    type: 'recruiter',
+                    interval: sourcePlanDetails.interval,
+                });
+
+                if (!recruiterPlanTemplate) {
+                    console.log("Recruiter plan template not found for interval:", sourcePlan.interval);
+
+                }
+
+                recruiterSubscription.start_at = sourcePlan.start_at;
+                recruiterSubscription.end_at = sourcePlan.end_at;
+                recruiterSubscription.plan_id = recruiterPlanTemplate.plan_id;
+                recruiterSubscription.updatedAt = new Date();
+                await recruiterSubscription.save();
+
+                console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
             }
-            // Sync recruiter to source plan
-            const recruiterPlanTemplate = await plan.findOne({
-                type: 'recruiter',
-                interval: sourcePlanDetails.interval,
-            });
-
-            if (!recruiterPlanTemplate) {
-                console.log("Recruiter plan template not found for interval:", sourcePlan.interval);
-
-            }
-
-            recruiterSubscription.start_at = sourcePlan.start_at;
-            recruiterSubscription.end_at = sourcePlan.end_at;
-            recruiterSubscription.plan_id = recruiterPlanTemplate.plan_id;
-            recruiterSubscription.updatedAt = new Date();
-            await recruiterSubscription.save();
-
-            console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
         }
-        }
-      
+
 
 
 
