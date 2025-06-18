@@ -1256,11 +1256,11 @@ exports.editJob = async (req, res) => {
 
             let notificationMessage = {
                 title: "Job data updated",
-                description: `${jobdata?.job_unique_id} has been updated by ${req?.user?.company_data?.name}`
+                description: `${jobdata?.job_title} has been updated by ${req?.user?.company_data?.name}`
             }
             let dbnotificationbody = {
                 title: "Job data updated",
-                description: `${jobdata?.job_unique_id} has been updated by ${req?.user?.company_data?.name}`,
+                description: `${jobdata?.job_title} has been updated by ${req?.user?.company_data?.name}`,
                 type: "job_updated",
                 receiver_id: i.canditate_id,
                 related_to: data.id,
