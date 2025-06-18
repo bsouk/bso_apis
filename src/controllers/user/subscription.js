@@ -1026,7 +1026,8 @@ exports.cancelSubscription = async (req, res) => {
                 recruiterSubscription.updatedAt = new Date();
                 await recruiterSubscription.save();
                 console.log("Recruiter plan terminated — no active supplier/logistics.");
-            }
+            }else{
+            
             const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
 
             if (!sourcePlanDetails || !sourcePlanDetails.interval) {
@@ -1051,6 +1052,7 @@ exports.cancelSubscription = async (req, res) => {
             await recruiterSubscription.save();
 
             console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
+        }
         }
       
 
