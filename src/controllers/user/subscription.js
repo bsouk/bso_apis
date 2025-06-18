@@ -373,13 +373,17 @@ exports.createMultipleSubscriptions = async (req, res) => {
         });
 
         const createdSubscriptions = [];
-
+        let recruiterInterval = null;
+        let recruiterPlan = null;
         for (const pid of plan_ids) {
             const plandata = await plan.findOne({ plan_id: pid });
             if (!plandata) {
                 throw { message: `Plan not found for plan_id: ${pid}`, code: 404 };
             }
-
+            if (['supplier', 'logistics'].includes(plandata.type)) {
+                hasSupplierOrLogistics = true;
+                recruiterInterval = plandata.interval; // capture the interval
+            }
             const existing = await Subscription.findOne({
                 user_id: userid,
                 type: plandata.type,
@@ -456,7 +460,89 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 payment_method_type: paymentIntent.payment_method_types[0]
             });
         }
-
+        if (hasSupplierOrLogistics && recruiterInterval) {
+            const existingRecruiter = await Subscription.findOne({
+                user_id: userid,
+                type: 'recruiter',
+                status: 'active'
+            });
+        
+            recruiterPlan = await plan.findOne({
+                type: 'recruiter',
+                interval: recruiterInterval
+            });
+        
+            if (!recruiterPlan) {
+                throw {
+                    message: `Recruiter plan not found for interval: ${recruiterInterval}`,
+                    code: 404
+                };
+            }
+        
+            const intervalRank = { monthly: 1, yearly: 2 };
+            const newIntervalRank = intervalRank[recruiterInterval];
+            const currentIntervalRank = existingRecruiter
+                ? intervalRank[(await plan.findOne({ plan_id: existingRecruiter.plan_id }))?.interval]
+                : 0;
+        
+            if (!existingRecruiter || newIntervalRank > currentIntervalRank) {
+                // if (existingRecruiter) {
+                //     existingRecruiter.status = 'cancelled';
+                //     existingRecruiter.end_at = new Date();
+                //     await existingRecruiter.save();
+                // }
+                if (existingRecruiter.stripe_subscription_id) {
+                    try {
+                        await stripe.subscriptions.update(existingRecruiter.stripe_subscription_id, {
+                            cancel_at_period_end: true
+                        });
+                        existingRecruiter.status = 'cancelled_schedule';
+                    } catch (stripeErr) {
+                        console.error("Failed to cancel recruiter's Stripe subscription:", stripeErr.message);
+                        throw {
+                            message: "Failed to cancel existing recruiter subscription on Stripe",
+                            code: 500
+                        };
+                    }
+                }
+            
+                // Cancel locally
+                existingRecruiter.status = 'cancelled_scheduled';
+                existingRecruiter.end_at = new Date();
+                await existingRecruiter.save();
+        
+                const startDate = new Date();
+                const endDate = new Date(startDate);
+                if (recruiterInterval === "monthly") {
+                    endDate.setMonth(startDate.getMonth() + 1);
+                } else {
+                    endDate.setFullYear(startDate.getFullYear() + 1);
+                }
+        
+                const recruiterSubDoc = await Subscription.create({
+                    user_id: userid,
+                    subscription_id: await genrateSubscriptionId(),
+                    plan_id: recruiterPlan.plan_id,
+                    stripe_subscription_id: null,
+                    stripe_payment_method_id: null,
+                    stripe_customer_id: customer.id,
+                    start_at: startDate,
+                    end_at: endDate,
+                    status: 'active',
+                    type: 'recruiter',
+                    payment_method_type: null
+                });
+        
+                createdSubscriptions.push({
+                    subscription: recruiterSubDoc,
+                    requires_action: false,
+                    client_secret: null,
+                    payment_method_type: null
+                });
+            } else {
+                console.log("Skipping recruiter creation to avoid downgrade");
+            }
+        }
         return res.status(200).json({
             message: "Subscriptions created successfully",
             data: createdSubscriptions,
