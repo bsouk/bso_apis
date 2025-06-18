@@ -2072,8 +2072,6 @@ exports.editLogisticsUser = async (req, res) => {
           code: 400,
         });
     }
-
-    await User.findByIdAndUpdate(id, data);
     if (data.switch_to) {
       let types = user.user_type
       if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
@@ -2088,6 +2086,8 @@ exports.editLogisticsUser = async (req, res) => {
       data.user_type = types
       data.current_user_type = data.switch_to
     }
+    await User.findByIdAndUpdate(id, data);
+ 
     if (
       data.phone_number_code ||
       data.phone_number ||
