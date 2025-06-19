@@ -1182,7 +1182,7 @@ exports.getAllJobHiredResources = async (req, res) => {
             },
             {
                 $unwind: {
-                    path: "$candidate_id",
+                    path: "$canditate_id",
                     preserveNullAndEmptyArrays: true
                 }
             },
