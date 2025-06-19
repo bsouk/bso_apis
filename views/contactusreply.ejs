@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reply from Blue Sky Organisation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 0;
+      color: #191b1f;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 40px;
+      border-collapse: collapse;
+    }
+
+    .footer {
+      background-color: #0000FF;
+      color: #fff;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 14px;
+    }
+
+    .header {
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .section {
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .label {
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <table class="container">
+    <tr>
+      <td>
+        <div class="header">Reply from Blue Sky Organisation</div>
+
+        <div class="section">
+          <p><b>Dear <%= name %>,</b></p>
+          <p>Thank you for reaching out to us. We have received your message and appreciate your interest.</p>
+        </div>
+
+        <div class="section">
+          <p><span class="label">Your Message:</span></p>
+          <p><%= message %></p>
+
+          <p><span class="label">Submitted on:</span> <%= contact_on %></p>
+        </div>
+
+        <div class="section">
+          <p><span class="label">Our Response:</span></p>
+          <p><%= reply %></p>
+        </div>
+
+        <div class="section">
+          <p>If you have any further questions or concerns, feel free to reply to this email. We are always here to help.</p>
+        </div>
+
+        <div class="section">
+          <p>Best regards,<br />
+            Blue Sky Team</p>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    © <%= new Date().getFullYear(); %> Blue Sky Organisation. All rights reserved.
+  </div>
+</body>
+
+</html>

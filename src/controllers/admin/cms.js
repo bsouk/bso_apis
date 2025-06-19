@@ -229,6 +229,18 @@ exports.queryReply = async (req, res) => {
     if (!data) return res.json({ message: "Query not found", code: 404 });
     await data.updateOne({ $set: { reply: req.body.reply, status: 'Replied' } });
     await data.save();
+     const mailOptions = {
+          to: data.email,
+          subject: "Reply from Blue Sky Organisation",
+          name:data.full_name,
+          reply: data.reply,
+          email: data.email,
+          message:data?.message,
+          contact_on:data?.createdAt
+        }
+    
+        emailer.sendEmail(null, mailOptions, "contactusreply");
+  console.log('data', data)
     return res.json({ code: 200, message: 'Your reply for query has been sent successfully' })
   } catch (error) {
     utils.handleError(res, error);

@@ -312,6 +312,28 @@ exports.getCompanyListing = async (req, res) => {
 }
 
 
+exports.getCompanyPostedJobs = async (req, res) => {
+    try {
+        const userId =req.params.id 
+        console.log('user id : ', userId)
+        const { offset = 0, limit = 10 } = req.query
+        
+        const jobs_data = await jobs.find({company_id:new mongoose.Types.ObjectId(userId)}).sort({createdAt:-1}).limit(limit).skip(offset)
+        console.log('jobs : ', jobs_data)
+      const count = await jobs.countDocuments({ company_id: new mongoose.Types.ObjectId(userId) });
+
+
+        return res.status(200).json({
+            message: "jobs fetched successfully",
+            data: jobs_data,
+            count,
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
 exports.deleteJobs = async (req, res) => {
     try {
         const { ids } = req.body

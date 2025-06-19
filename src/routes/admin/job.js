@@ -21,7 +21,12 @@ router.get(
     trimRequest.all,
     controller.getJobs
 )
-
+router.get(
+    '/getjobs/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getCompanyPostedJobs
+)
 router.get(
     '/getJobData/:id',
     trimRequest.all,
