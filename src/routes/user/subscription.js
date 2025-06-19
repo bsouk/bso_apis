@@ -40,6 +40,12 @@ router.post(
     requireAuth,
     controller.createAppClientScretKey
 )
+router.post(
+    "/multipleAppClientScretKey",
+    trimRequest.all,
+    requireAuth,
+    controller.createmultipleAppClientScretKey
+)
 
 
 router.post(

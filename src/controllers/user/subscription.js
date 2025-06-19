@@ -262,6 +262,71 @@ exports.createAppClientScretKey = async (req, res) => {
     }
 };
 
+exports.createmultipleAppClientScretKey = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { plan_ids } = req.body;
+
+        if (!Array.isArray(plan_ids) || plan_ids.length === 0) {
+            return res.status(400).json({ message: "plan_ids array required", code: 400 });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found", code: 404 });
+        }
+
+        // Fetch all requested plans in one query
+        const plans = await plan.find({ plan_id: { $in: plan_ids } });
+
+        if (plans.length !== plan_ids.length) {
+            return res.status(404).json({
+                message: "plans not found",
+                code: 404
+            });
+        }
+
+        const planTypes = plans.map(p => p.type);
+        const existingSubs = await Subscription.find({
+            user_id: userId,
+            type: { $in: planTypes },
+            status: 'active'
+        });
+
+        if (existingSubs.length > 0) {
+            const subscribedTypes = existingSubs.map(s => s.type).join(', ');
+            return res.status(400).json({
+                message: `You already have an active subscription for these plan types: ${subscribedTypes}. Cancel them before purchasing new ones.`,
+                code: 400
+            });
+        }
+
+        // Calculate total amount
+        const totalAmount = plans.reduce((sum, p) => sum + p.price, 0);
+        const currency = plans[0].currency || 'usd';
+        // Get/create Stripe customer
+        let customer = await getCustomerByEmail(user.email);
+        if (!customer) {
+            customer = await createStripeCustomer(user);
+        }
+
+        return res.status(200).json({
+            message: "payment Intent Created",
+            data: {
+                currency:currency,
+                customer_id: customer.id,
+                plan_ids: plan_ids,
+                amount: totalAmount,
+                requires_payment_method: true
+            },
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
 
 
 exports.generateClientSecretKeymultiple = async (req, res) => {
