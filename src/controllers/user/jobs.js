@@ -1169,7 +1169,7 @@ exports.getAllJobHiredResources = async (req, res) => {
                     from: 'users',
                     localField: 'canditate_id',
                     foreignField: '_id',
-                    as: 'candidate_id'
+                    as: 'canditate_id'
                 }
             },
             {

@@ -52,6 +52,10 @@ const EnquirySchema = new mongoose.Schema({
         type: [String],
         default: []
     },
+    documents_description:{
+        type:[String],
+        default:[]
+    },
     currency: {
         type: String
     },

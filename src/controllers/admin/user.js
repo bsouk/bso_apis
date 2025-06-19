@@ -701,6 +701,78 @@ exports.getResourceList = async (req, res) => {
     utils.handleError(res, error);
   }
 };
+exports.deleteRecruiter = async (req, res) => {
+    try {
+        const { ids } = req.body
+        console.log('ids : ', req.body)
+        const result = await User.deleteMany({ _id: { $in: ids } })
+        // const allja = await job_applications.deleteMany({job_id : { $in : ids } })
+   
+        console.log('deleted Recruiter : ', result, allja, allsj)
+        return res.status(200).json({
+            message: "Resource deleted successfully",
+            code: 200
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+exports.getRecruiterList = async (req, res) => {
+  try {
+    const { limit = 10, offset = 0, search = "" } = req.query;
+
+    const condition = {
+      user_type: { $in: ["recruiter"] },
+      // profile_completed: true,
+      is_deleted: false,
+    };
+
+    if (search) {
+      condition["$or"] = [
+        {
+          full_name: { $regex: search, $options: "i" },
+        },
+        {
+          email: { $regex: search, $options: "i" },
+        },
+        {
+          phone_number: { $regex: search, $options: "i" },
+        },
+      ];
+    }
+
+    const countPromise = User.countDocuments(condition);
+
+    const usersPromise = User.aggregate([
+      {
+        $match: condition,
+      },
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+      {
+        $skip: +offset,
+      },
+      {
+        $limit: +limit,
+      },
+
+      {
+        $project: {
+         company_data:1
+        },
+      },
+    ]);
+
+    const [count, users] = await Promise.all([countPromise, usersPromise]);
+
+    res.json({ data: users, count, code: 200 });
+  } catch (error) {
+    utils.handleError(res, error);
+  }
+};
 
 exports.getResource = async (req, res) => {
   try {

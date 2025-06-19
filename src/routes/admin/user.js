@@ -73,7 +73,12 @@ router.get(
   requireAuth,
   controller.getResourceList
 );
-
+router.get(
+  "/getRecruiterList",
+  trimRequest.all,
+  requireAuth,
+  controller.getRecruiterList
+);
 router.get(
   "/getResource/:id",
   trimRequest.all,
@@ -89,10 +94,10 @@ router.patch(
 );
 
 router.delete(
-  "/deleteResource/:id",
+  "/deleteRecruiter",
   trimRequest.all,
   requireAuth,
-  controller.deleteResource
+  controller.deleteRecruiter
 );
 
 router.delete(
