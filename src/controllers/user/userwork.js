@@ -7406,7 +7406,6 @@ exports.generateResumePDF = async (req, res) => {
         if (match) {
             htmlContent = match[0];
         } else {
-            console.log();
             return res.status(400).json({ error: "No HTML part found." });
         }
 
