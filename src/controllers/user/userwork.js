@@ -7256,7 +7256,7 @@ exports.selectLogisticsChoice = async (req, res) => {
             if (logisticsUsers && logisticsUsers.length > 0) {
                 const notificationMessage = {
                     title: 'Logistics Update: BSO Required',
-                    description:  `Enquiry ID ${data.enquiry_id} has been updated to require BSO logistics.`,
+                    description: `Enquiry ID ${data.enquiry_id} has been updated to require BSO logistics.`,
                     enquiry_id: data._id,
                 };
 
@@ -7284,7 +7284,7 @@ exports.selectLogisticsChoice = async (req, res) => {
             }
         }
         return res.json({ code: 200, message: "Logistics choice selected successfully", data: result, code: 200 });
-       
+
     } catch (error) {
         utils.handleError(res, error);
     }
@@ -7401,6 +7401,14 @@ async function uploadBufferToFile({ buffer, path: dirPath, filename }) {
 exports.generateResumePDF = async (req, res) => {
     try {
         const { htmlContent } = req.body;
+
+        let match = str.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
+        if (match) {
+            htmlContent = match[0];
+        } else {
+            console.log();
+            return res.status(400).json({ error: "No HTML part found." });
+        }
 
         const browser = await puppeteer.launch({
             headless: 'new',
