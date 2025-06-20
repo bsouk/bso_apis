@@ -7402,7 +7402,7 @@ exports.generateResumePDF = async (req, res) => {
     try {
         const { htmlContent } = req.body;
 
-        let match = str.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
+        let match = htmlContent.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
         if (match) {
             htmlContent = match[0];
         } else {
