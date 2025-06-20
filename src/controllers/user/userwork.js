@@ -7401,10 +7401,11 @@ async function uploadBufferToFile({ buffer, path: dirPath, filename }) {
 exports.generateResumePDF = async (req, res) => {
     try {
         const { htmlContent } = req.body;
+        let content = ""
 
         let match = htmlContent.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
         if (match) {
-            htmlContent = match[0];
+            content = match[0];
         } else {
             return res.status(400).json({ error: "No HTML part found." });
         }
@@ -7415,7 +7416,7 @@ exports.generateResumePDF = async (req, res) => {
         });
 
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        await page.setContent(content, { waitUntil: 'networkidle0' });
 
         const pdfBuffer = await page.pdf({
             format: 'A4',
