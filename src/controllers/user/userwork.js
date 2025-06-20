@@ -7401,9 +7401,10 @@ async function uploadBufferToFile({ buffer, path: dirPath, filename }) {
 exports.generateResumePDF = async (req, res) => {
     try {
         const { htmlContent } = req.body;
+        console.log(htmlContent);
         let content = ""
 
-        let match = htmlContent.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
+        let match = htmlContent?.match(/<!DOCTYPE html>[\s\S]*?<\/html>/i);
         if (match) {
             content = match[0];
         } else {
