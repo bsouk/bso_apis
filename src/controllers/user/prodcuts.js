@@ -3,7 +3,11 @@ const Product = require("../../models/product");
 const utils = require("../../utils/utils");
 const Team = require("../../models/team");
 const User = require("../../models/user");
+const BrandModel =require("../../models/brand")
+const CategoryModel = require("../../models/product_category");
+const SubCategoryModel=require("../../models/product_sub_category")
 
+const axios =require('axios')
 exports.addProduct = async (req, res) => {
   try {
     const user_id = req.user.id;
@@ -195,7 +199,7 @@ exports.getProductList = async (req, res) => {
 
     const filter = {
       is_deleted: { $ne: true },
-      is_admin_approved: "approved"
+      // is_admin_approved: "approved"
     };
 
     if (search) {
@@ -391,7 +395,7 @@ exports.getMyProductList = async (req, res) => {
 
     const filter = {
       is_deleted: { $ne: true },
-      is_admin_approved: "approved"
+      // is_admin_approved: "approved"
     };
 
     if (teamdata) {
@@ -685,7 +689,7 @@ exports.getProductNameList = async (req, res) => {
     console.log("filter is ", filter)
 
     const productlist = await Product.aggregate([
-      { $match: { ...filter, is_deleted: false, is_admin_approved: "approved" } },
+      { $match: { ...filter, is_deleted: false} },
       { $project: { _id: 1, name: 1, brand_id: 1, category_id: 1, sub_category_id: 1 } },
       { $sort: { createdAt: -1 } },
       { $skip: parseInt(offset) || 0 },
@@ -734,3 +738,240 @@ exports.addReview = async (req, res) => {
     utils.handleError(res, error);
   }
 }
+
+function parseSpecification(specStr) {
+  if (!specStr) return [];
+
+  return specStr.split(",").map((item) => {
+    const [key, value] = item.split(":").map(i => i.trim());
+    return {
+      specification_type: key,
+      value: value
+    };
+  });
+}
+
+async function findOrCreateByName(model, name, field = "name") {
+  if (!name) return null;
+  const existing = await model.findOne({ [field]: name.trim() });
+  if (existing) return existing._id;
+
+  const created = await model.create({ [field]: name.trim() });
+  return created._id;
+}
+
+
+
+async function checkDataIsNotEmptyAndConvertProduct(data, req, res) {
+  try {
+    const modifiedData = [];
+
+    for (let index = 0; index < data.length; index++) {
+      const row = data[index];
+      const rowNumber = index + 1;
+
+      const getValue = (key) => row[key]?.toString().trim() || "";
+
+      const product_name = getValue("Product Name");
+      if (!product_name) throw { message: `Missing 'Product Name' at row ${rowNumber}`, code: 400 };
+
+      const product_brand = getValue("Product Brand");
+      if (!product_brand) throw { message: `Missing 'Product Brand' at row ${rowNumber}`, code: 400 };
+
+      const product_categories = getValue("Product Categories");
+      if (!product_categories) throw { message: `Missing 'Product Categories' at row ${rowNumber}`, code: 400 };
+
+      const product_sub_categories = getValue("Product Sub Categories"); // optional
+
+      const sku = getValue("SKU");
+      if (!sku) throw { message: `Missing 'SKU' at row ${rowNumber}`, code: 400 };
+
+      const isExistedSku = await Product.findOne({ "variant.sku_id": sku });
+      if (isExistedSku) {
+  throw { message: `SKU '${sku}' already exists`, code: 400 };
+}
+
+      const part_no = getValue("Part No.");
+      if (!part_no) throw { message: `Missing 'Part No.' at row ${rowNumber}`, code: 400 };
+
+      const quantity = getValue("Inventory Quantity");
+      if (!quantity) throw { message: `Missing 'Inventory Quantity' at row ${rowNumber}`, code: 400 };
+      if (isNaN(Number(quantity))) throw { message: `'Inventory Quantity' must be a number at row ${rowNumber}`, code: 400 };
+
+      const specification = getValue("Specification");
+      const specifications = parseSpecification(specification);
+
+      // if (!specification) throw { message: `Missing 'Specification' at row ${rowNumber}`, code: 400 };
+
+      const tags = getValue("Tags");
+      if (!tags) throw { message: `Missing 'Tags' at row ${rowNumber}`, code: 400 };
+
+      const description = getValue("Discription"); // Keep the typo if Excel uses it
+      if (!description) throw { message: `Missing 'Discription' at row ${rowNumber}`, code: 400 };
+const brand_id = await findOrCreateByName(BrandModel, product_brand);
+const category_id = await findOrCreateByName(CategoryModel, product_categories);
+const sub_category_id = await findOrCreateByName(SubCategoryModel, product_sub_categories); // optional
+console.log('modifiedData', modifiedData)
+      // Add to final transformed data
+      modifiedData.push({
+        product_name,
+        brand_id,
+        category_id,
+        sub_category_id,
+        sku,
+        part_no,
+        quantity: Number(quantity),
+        specification:specifications,
+        tags,
+        description,
+      });
+    }
+
+    // Call GPT after validation
+    const gptResponse = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4',
+        temperature:0,
+        messages: [
+         {
+  role: 'system',
+  content: `You are a product quality reviewer. For each product, decide if it should be approved or rejected.
+
+For rejected products, give a clear reason why.
+
+Return *only* a valid JSON array in this format:
+[
+  {
+    "product": { ... }, 
+    "status": "approved" | "rejected", 
+    "reason": "optional reason if rejected"
+  }
+]
+
+No explanation. No markdown. Just raw JSON.`
+}
+,
+{
+  role: 'user',
+  content: JSON.stringify(modifiedData)
+}
+
+        ],
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.GPT_API_KEY}`
+        }
+      }
+    );
+
+const content = gptResponse?.data?.choices?.[0]?.message?.content?.trim();
+
+
+let parsed;
+
+try {
+  // Remove markdown code block wrappers if any
+  const jsonClean = content
+    .replace(/^```json/, "")
+    .replace(/^```/, "")
+    .replace(/```$/, "")
+    .trim();
+
+  parsed = JSON.parse(jsonClean);
+} catch (err) {
+  console.error("GPT Output (raw):", content);
+  throw { message: "Invalid GPT JSON format", code: 500 };
+}
+
+return parsed;
+
+
+  } catch (error) {
+    console.error("Validation or GPT Error:", error);
+    throw error;
+  }
+}
+
+async function convertAndSave(item, userId) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      console.log('item', item)
+      const productData = {
+        name: item.product.product_name,
+        brand_id: item.product.brand_id, 
+        category_id: [item.product.category_id],
+        sub_category_id: [item.product.sub_category_id],
+        variant: [{
+          sku_id: item.product.sku,
+          part_no: item.product.part_no,
+          description: item.product.description,
+          inventory_quantity: item.product.quantity,
+          specification: item.product.specification,
+          tag: item.product.tags,
+        }],
+        is_admin_approved: item.status === "approved" ? "approved" : "rejected",
+        rejected_reason: item.status === "rejected" ? item.reason : "",
+        user_id: userId
+      };
+
+      const product = new Product(productData);
+      await product.save();
+      resolve(true);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+exports.bulkUpload = async (req, res) => {
+  try {
+    const files = req.files;
+    const type = req.body.type;
+    const userId = req.user?._id;
+
+    if (!["excel", "csv"].includes(type))
+      return utils.handleError(res, { message: "Invalid type", code: 400 });
+
+    if (!files?.articles?.data)
+      return utils.handleError(res, { message: "No file uploaded", code: 400 });
+
+    const productFileData = files.articles.data;
+    const data = type === "excel"
+      ? utils.jsonConverterFromExcel(productFileData)
+      : await utils.jsonConverterFromCsv(productFileData);
+
+    const gptValidatedData = await checkDataIsNotEmptyAndConvertProduct(data);
+
+    const responseSummary = [];
+
+    for (const item of gptValidatedData) {
+      await convertAndSave(item, userId);
+      responseSummary.push({
+        sku: item.product?.sku,
+        status: item.status,
+        reason: item.reason || null
+      });
+    }
+
+    const rejectedCount = responseSummary.filter(i => i.status === "rejected").length;
+const allApproved = rejectedCount === 0;
+    return res.status(200).json({
+      message: rejectedCount === 0 ? "All products uploaded successfully." : "Some products were rejected.",
+      summary: responseSummary,
+      allApproved,
+      code: 200
+    });
+
+  } catch (error) {
+    console.error("Bulk Upload Error:", error);
+    return utils.handleError(res, {
+      code: error.code || 500,
+      message: error.message || "Something went wrong",
+    });
+  }
+};
+
