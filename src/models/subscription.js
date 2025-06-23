@@ -43,6 +43,10 @@ const subscriptionSchema = new mongoose.Schema(
             type: String,
             enum: ["unpaid", "paid"],
             default: "paid"
+        },
+        isPurchased: {
+            type: Boolean,
+            default: false
         }
     },
     {

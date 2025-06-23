@@ -503,7 +503,8 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 end_at: endDate,
                 status: stripeSub.status,
                 type: plandata.type,
-                payment_method_type: paymentIntent.payment_method_types[0]
+                payment_method_type: paymentIntent.payment_method_types[0],
+                isPurchased: true
             });
 
             await Payment.create({
@@ -599,7 +600,9 @@ exports.createMultipleSubscriptions = async (req, res) => {
                     end_at: endDate,
                     status: 'active',
                     type: 'recruiter',
-                    payment_method_type: null
+                    payment_method_type: null,
+                    isPurchased: true
+
                 });
 
                 createdSubscriptions.push({
@@ -751,7 +754,8 @@ exports.createSubscription = async (req, res) => {
             end_at: end,
             status: stripeSubscription.status,
             type: plandata.type,
-            payment_method_type: paymentIntent.payment_method_types[0]
+            payment_method_type: paymentIntent.payment_method_types[0],
+            isPurchased: true
         }
 
         console.log("newdata : ", newdata)
@@ -856,6 +860,7 @@ exports.createSubscription = async (req, res) => {
                 status: 'active',
                 type: 'recruiter',
                 payment_method_type: 'manual',
+                isPurchased: true
             });
 
             console.log("Created new recruiter subscription (", recruiterInterval, "):", recruiterSubscription);
@@ -1050,6 +1055,7 @@ exports.cancelSubscription = async (req, res) => {
         } else {
             subscription.status = 'terminated';
         }
+        subscription.isPurchased = false;
         await subscription.save();
         // subscription.end_at = new Date(stripeSub.current_period_end * 1000);
 
@@ -1204,7 +1210,7 @@ exports.getAllPlan = async (req, res) => {
         const plansWithPurchaseFlag = plandata.map(planItem => {
             return {
                 ...planItem.toObject(),
-                isPurchased: purchasedPlanIds.has(planItem.plan_id)  
+                isPurchased: purchasedPlanIds.has(planItem.plan_id)
             };
         });
 
