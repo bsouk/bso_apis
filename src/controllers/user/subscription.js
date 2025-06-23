@@ -853,7 +853,7 @@ exports.createSubscription = async (req, res) => {
                 subscription_id: await genrateSubscriptionId(), 
                 plan_id: recruiterPlan.plan_id,
                 stripe_subscription_id: null,
-                stripe_payment_method_id: null,
+                stripe_payment_method_id: null, 
                 stripe_customer_id: customer.id,
                 start_at: start,
                 end_at: recruiterEnd,
