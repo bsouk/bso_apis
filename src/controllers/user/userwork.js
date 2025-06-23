@@ -2422,10 +2422,19 @@ exports.getQuantitiesUnits = async (req, res) => {
                 $match: filter
             },
             {
-                $sort: {
-                    createdAt: -1
+                $addFields: {
+                    exactMatch: { $eq: [{ $toLower: "$unit" }, search?.toLowerCase()] }
                 }
             },
+            {
+                $sort: { exactMatch: -1 }
+            },
+            // {
+            //     $sort: {
+            //         createdAt: -1
+            //     }
+            // },
+
             {
                 $skip: parseInt(offset) || 0
             },

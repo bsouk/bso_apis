@@ -15,6 +15,12 @@ router.post(
     requireAuth,
     controller.addProduct
 )
+router.post(
+    '/addProductinbulk',
+    trimRequest.all,
+    requireAuth,
+    controller.bulkUpload
+)
 router.delete(
     '/deleteProduct/:id',
     trimRequest.all,
