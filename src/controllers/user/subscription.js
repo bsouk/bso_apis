@@ -1184,9 +1184,6 @@ exports.cancelSubscription = async (req, res) => {
 exports.getAllPlan = async (req, res) => {
     try {
         const { offset = 0, limit = 10, type } = req.query
-        const userId = req.user._id;
-        console.log(userId, "userId")
-
         let query = { selected: true, status: 'active' };
         if (type) {
             query.type = type;
@@ -1197,35 +1194,17 @@ exports.getAllPlan = async (req, res) => {
             .sort({ createdAt: -1 });
         // const plandata = await plan.find({ selected: true }).skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
         console.log("plandata : ", plandata)
-
-        const count = await plan.countDocuments(query)
-
-        const userSubscriptions = await Subscription.find({
-            user_id: userId,
-            status: 'active'
-        });
-
-        const purchasedPlanIds = new Set(userSubscriptions.map(sub => sub.plan_id));
-        console.log(purchasedPlanIds, "purchasePlanId")
-        const plansWithPurchaseFlag = plandata.map(planItem => {
-            return {
-                ...planItem.toObject(),
-                isPurchased: purchasedPlanIds.has(planItem.plan_id)
-            };
-        });
-
-        console.log("plansWithPurchaseFlag", plansWithPurchaseFlag);
-
+        const count = await plan.countDocuments()
         return res.status(200).json({
-            message: "Plan data fetched successfully",
-            data: plansWithPurchaseFlag,
-            count,
-            code: 200
-        });
+            message: "plan data fetched successfully", data: plandata, count, code: 200
+        })
     } catch (error) {
         utils.handleError(res, error);
     }
 }
+
+
+
 
 exports.getSinglePlan = async (req, res) => {
     try {
