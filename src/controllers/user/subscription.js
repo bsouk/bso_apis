@@ -850,7 +850,7 @@ exports.createSubscription = async (req, res) => {
 
             const recruiterSubscription = await Subscription.create({
                 user_id: userdata._id,
-                subscription_id: await genrateSubscriptionId(),
+                subscription_id: await genrateSubscriptionId(), 
                 plan_id: recruiterPlan.plan_id,
                 stripe_subscription_id: null,
                 stripe_payment_method_id: null,
