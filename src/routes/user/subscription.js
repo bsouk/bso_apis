@@ -72,6 +72,14 @@ router.post(
 
 
 router.post(
+    "/cancelMultipleSubscriptions",
+    trimRequest.all,
+    requireAuth,
+    controller.cancelMultipleSubscriptions
+)
+
+
+router.post(
     "/cancelSubscription",
     trimRequest.all,
     requireAuth,

@@ -23,6 +23,126 @@ async function intervalCount(interval) {
     }
 }
 
+// exports.createPlan = async (req, res) => {
+//     try {
+//         const data = req.body
+//         console.log("data : ", data)
+//         const planId = await genratePlanId()
+//         console.log("plan id : ", planId)
+
+//         // // const product = await stripe.products.create({
+//         // //     name: data.name,
+//         // //     description: data.description,
+//         // //     metadata: data.metadata || {},
+//         // // });
+
+//         // const interval_count = await intervalCount(data.interval)
+//         // console.log("interval_count : ", interval_count)
+//         // // const price = await stripe.prices.create({
+//         // //     unit_amount: data.price,
+//         // //     currency: "USD",
+//         // //     recurring: {
+//         // //         interval: data.interval,
+//         // //         interval_count,
+//         // //     },
+//         // //     product: product.id,
+//         // // });
+
+//         let product = {}
+//         let interval_count = 0
+//         if (data?.interval !== "lifetime") {
+//             product = await stripe.products.create({
+//                 name: data.plan_name,
+//                 description: data.plan_description || '',
+//                 metadata: data.metadata || {
+//                 },
+//             });
+
+//             interval_count = await intervalCount(data?.interval);
+//         }
+
+//         let newinterval = ''
+//         switch (data?.interval) {
+//             case 'monthly': newinterval = 'month'; break;
+//             case 'yearly': newinterval = 'year'; break;
+//             case 'weekly': newinterval = 'week'; break;
+//             case 'daily': newinterval = 'day'; break;
+//             default: newinterval = 'lifetime'; break;
+//         }
+//         console.log("newinterval : ", newinterval)
+//         let price = {}
+//         let per_user_price = {}
+//         // if (newinterval == "lifetime") {
+//         //     price = await stripe.prices.create({
+//         //         unit_amount: Math.round(data.price * 100),
+//         //         currency: data.currency || 'usd',
+//         //         product: product.id,
+//         //         metadata: {
+//         //             pricing_type: 'base',
+//         //             lifetime: 'true'
+//         //         }
+//         //     });
+
+//         //     if (data.price_per_person && data.price_per_person > 0) {
+//         //         per_user_price = await stripe.prices.create({
+//         //             unit_amount: Math.round(data.price_per_person * 100),
+//         //             currency: data.currency || 'usd',
+//         //             product: product.id,
+//         //             metadata: {
+//         //                 pricing_type: 'per_user',
+//         //                 lifetime: 'true'
+//         //             }
+//         //         });
+//         //         console.log("Created per-user price:", per_user_price?.id);
+//         //     }
+//         // }
+//         if (newinterval !== "lifetime") {
+//             price = await stripe.prices.create({
+//                 unit_amount: Math.round(data.price * 100),
+//                 currency: data.currency || 'usd',
+//                 recurring: {
+//                     interval: newinterval,
+//                     interval_count: interval_count,
+//                 },
+//                 product: product.id,
+//                 metadata: {
+//                     pricing_type: 'base'
+//                 }
+//             });
+
+//             if (data.price_per_person && data.price_per_person > 0) {
+//                 per_user_price = await stripe.prices.create({
+//                     unit_amount: Math.round(data.price_per_person * 100),
+//                     currency: data.currency || 'usd',
+//                     // recurring: {
+//                     //     interval: newinterval,
+//                     //     interval_count: interval_count,
+//                     // },
+//                     product: product.id,
+//                     metadata: {
+//                         pricing_type: 'per_user',
+//                         payment_type: 'one_time'
+//                     }
+//                 });
+//                 console.log("Created per-user price:", per_user_price?.id);
+//             }
+//         }
+
+//         console.log("product : ", product, " price : ", price, " per_user_price : ", per_user_price);
+
+//         data.plan_id = planId
+//         data.interval_count = interval_count ? interval_count : 0
+//         data.stripe_product_id = product.id || ""
+//         data.stripe_price_id = price.id || ""
+//         data.stripe_per_user_price_id = per_user_price?.id || ""
+//         const newplan = await plan.create(data);
+//         console.log("newplan : ", newplan)
+//         return res.status(201).json({ message: "plan created successfully", data: newplan, code: 200 });
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }
+
 exports.createPlan = async (req, res) => {
     try {
         const data = req.body
@@ -30,32 +150,25 @@ exports.createPlan = async (req, res) => {
         const planId = await genratePlanId()
         console.log("plan id : ", planId)
 
-        // // const product = await stripe.products.create({
-        // //     name: data.name,
-        // //     description: data.description,
-        // //     metadata: data.metadata || {},
-        // // });
+        if (data.type === 'buyer') {
+            // Skip Stripe creation, just save the plan data
+            data.plan_id = planId
+            data.stripe_product_id = ""
+            data.stripe_price_id = ""
+            data.stripe_per_user_price_id = ""
+            const newplan = await plan.create(data);
+            console.log("newplan : ", newplan)
+            return res.status(201).json({ message: "Plan created successfully (buyer type)", data: newplan, code: 200 });
+        }
 
-        // const interval_count = await intervalCount(data.interval)
-        // console.log("interval_count : ", interval_count)
-        // // const price = await stripe.prices.create({
-        // //     unit_amount: data.price,
-        // //     currency: "USD",
-        // //     recurring: {
-        // //         interval: data.interval,
-        // //         interval_count,
-        // //     },
-        // //     product: product.id,
-        // // });
-
+        // Existing Stripe logic
         let product = {}
         let interval_count = 0
         if (data?.interval !== "lifetime") {
             product = await stripe.products.create({
                 name: data.plan_name,
                 description: data.plan_description || '',
-                metadata: data.metadata || {
-                },
+                metadata: data.metadata || {},
             });
 
             interval_count = await intervalCount(data?.interval);
@@ -72,30 +185,7 @@ exports.createPlan = async (req, res) => {
         console.log("newinterval : ", newinterval)
         let price = {}
         let per_user_price = {}
-        // if (newinterval == "lifetime") {
-        //     price = await stripe.prices.create({
-        //         unit_amount: Math.round(data.price * 100),
-        //         currency: data.currency || 'usd',
-        //         product: product.id,
-        //         metadata: {
-        //             pricing_type: 'base',
-        //             lifetime: 'true'
-        //         }
-        //     });
 
-        //     if (data.price_per_person && data.price_per_person > 0) {
-        //         per_user_price = await stripe.prices.create({
-        //             unit_amount: Math.round(data.price_per_person * 100),
-        //             currency: data.currency || 'usd',
-        //             product: product.id,
-        //             metadata: {
-        //                 pricing_type: 'per_user',
-        //                 lifetime: 'true'
-        //             }
-        //         });
-        //         console.log("Created per-user price:", per_user_price?.id);
-        //     }
-        // }
         if (newinterval !== "lifetime") {
             price = await stripe.prices.create({
                 unit_amount: Math.round(data.price * 100),
@@ -114,10 +204,6 @@ exports.createPlan = async (req, res) => {
                 per_user_price = await stripe.prices.create({
                     unit_amount: Math.round(data.price_per_person * 100),
                     currency: data.currency || 'usd',
-                    // recurring: {
-                    //     interval: newinterval,
-                    //     interval_count: interval_count,
-                    // },
                     product: product.id,
                     metadata: {
                         pricing_type: 'per_user',
@@ -143,21 +229,117 @@ exports.createPlan = async (req, res) => {
     }
 }
 
+// exports.editPlan = async (req, res) => {
+//     try {
+//         const { id } = req.params
+//         const plandata = await plan.findOne({ _id: id })
+//         console.log("plandata : ", plandata)
+//         if (!plandata) {
+//             return utils.handleError(res, {
+//                 message: "Plan not found",
+//                 code: 404,
+//             });
+//         }
+//         const data = req.body
+//         console.log("data : ", data)
+
+//         if (data.name || data.description) {
+//             await stripe.products.update(plandata.stripe_product_id, {
+//                 name: data.name || plandata.name,
+//                 description: data.description || plandata.description,
+//                 ...(data.metadata ? { metadata: data.metadata } : plandata.metadata)
+//             });
+//         }
+
+//         if (data.price || data.interval || data.currency) {
+//             const interval_count = await intervalCount(data.interval);
+//             let newinterval = ''
+//             switch (data.interval) {
+//                 case 'monthly': newinterval = 'month'; break;
+//                 case 'yearly': newinterval = 'year'; break;
+//                 case 'weekly': newinterval = 'week'; break;
+//                 case 'daily': newinterval = 'day'; break;
+//                 default: newinterval = 'month'; break;
+//             }
+//             console.log("newinterval : ", newinterval)
+
+//             const newPrice = await stripe.prices.create({
+//                 unit_amount: (data.price || plandata.price) * 100,
+//                 currency: data.currency || plandata.currency || 'usd',
+//                 recurring: {
+//                     interval: newinterval,
+//                     interval_count: interval_count,
+//                 },
+//                 product: plandata.stripe_product_id,
+//             });
+
+//             let per_user_price = {}
+//             if (data.price_per_person && data.price_per_person > 0) {
+//                 per_user_price = await stripe.prices.create({
+//                     unit_amount: data.price_per_person * 100,
+//                     currency: data.currency || 'usd',
+//                     recurring: {
+//                         interval: newinterval,
+//                         interval_count: interval_count,
+//                     },
+//                     product: plandata.stripe_product_id,
+//                     metadata: {
+//                         pricing_type: 'per_user'
+//                     }
+//                 });
+//                 console.log("Created per-user price:", per_user_price?.id);
+//                 data.stripe_per_user_price_id = per_user_price?.id || ""
+//             }
+
+//             data.stripe_price_id = newPrice.id;
+//             data.interval_count = interval_count;
+//         }
+
+//         const response = await plan.findOneAndUpdate(
+//             { _id: id },
+//             { $set: data },
+//             { new: true }
+//         )
+//         console.log("response : ", response)
+//         return res.status(200).json({
+//             message: "Plan updated successfully",
+//             data: response,
+//             code: 200
+//         })
+//     } catch (error) {
+//         utils.handleError(res, error);
+//     }
+// }
 
 exports.editPlan = async (req, res) => {
     try {
-        const { id } = req.params
-        const plandata = await plan.findOne({ _id: id })
-        console.log("plandata : ", plandata)
+        const { id } = req.params;
+        const plandata = await plan.findOne({ _id: id });
+        console.log("plandata : ", plandata);
         if (!plandata) {
             return utils.handleError(res, {
                 message: "Plan not found",
                 code: 404,
             });
         }
-        const data = req.body
-        console.log("data : ", data)
+        const data = req.body;
+        console.log("data : ", data);
 
+        if (data.type === 'buyer') {
+            const response = await plan.findOneAndUpdate(
+                { _id: id },
+                { $set: data },
+                { new: true }
+            );
+            console.log("response : ", response);
+            return res.status(200).json({
+                message: "Plan updated successfully (buyer type, no Stripe changes)",
+                data: response,
+                code: 200
+            });
+        }
+
+        // Existing Stripe update logic
         if (data.name || data.description) {
             await stripe.products.update(plandata.stripe_product_id, {
                 name: data.name || plandata.name,
@@ -168,7 +350,7 @@ exports.editPlan = async (req, res) => {
 
         if (data.price || data.interval || data.currency) {
             const interval_count = await intervalCount(data.interval);
-            let newinterval = ''
+            let newinterval = '';
             switch (data.interval) {
                 case 'monthly': newinterval = 'month'; break;
                 case 'yearly': newinterval = 'year'; break;
@@ -176,7 +358,7 @@ exports.editPlan = async (req, res) => {
                 case 'daily': newinterval = 'day'; break;
                 default: newinterval = 'month'; break;
             }
-            console.log("newinterval : ", newinterval)
+            console.log("newinterval : ", newinterval);
 
             const newPrice = await stripe.prices.create({
                 unit_amount: (data.price || plandata.price) * 100,
@@ -188,7 +370,7 @@ exports.editPlan = async (req, res) => {
                 product: plandata.stripe_product_id,
             });
 
-            let per_user_price = {}
+            let per_user_price = {};
             if (data.price_per_person && data.price_per_person > 0) {
                 per_user_price = await stripe.prices.create({
                     unit_amount: data.price_per_person * 100,
@@ -203,7 +385,7 @@ exports.editPlan = async (req, res) => {
                     }
                 });
                 console.log("Created per-user price:", per_user_price?.id);
-                data.stripe_per_user_price_id = per_user_price?.id || ""
+                data.stripe_per_user_price_id = per_user_price?.id || "";
             }
 
             data.stripe_price_id = newPrice.id;
@@ -214,18 +396,17 @@ exports.editPlan = async (req, res) => {
             { _id: id },
             { $set: data },
             { new: true }
-        )
-        console.log("response : ", response)
+        );
+        console.log("response : ", response);
         return res.status(200).json({
             message: "Plan updated successfully",
             data: response,
             code: 200
-        })
+        });
     } catch (error) {
         utils.handleError(res, error);
     }
 }
-
 
 exports.getAllPlan = async (req, res) => {
     try {
@@ -259,7 +440,6 @@ exports.getSinglePlan = async (req, res) => {
         message: "plan data fetched successfully", data: plandata, code: 200
     })
 }
-
 
 exports.deletePlan = async (req, res) => {
     const { id } = req.params
@@ -298,7 +478,6 @@ exports.deletePlan = async (req, res) => {
         message: "plan data deleted successfully", data: plandata, code: 200
     })
 }
-
 
 exports.getAllSubscription = async (req, res) => {
     try {
@@ -628,7 +807,6 @@ exports.exportSubscription = async (req, res) => {
         utils.handleError(res, error);
     }
 }
-
 
 exports.getTeamMember = async (req, res) => {
     try {
