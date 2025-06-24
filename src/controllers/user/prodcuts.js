@@ -3,11 +3,11 @@ const Product = require("../../models/product");
 const utils = require("../../utils/utils");
 const Team = require("../../models/team");
 const User = require("../../models/user");
-const BrandModel =require("../../models/brand")
+const BrandModel = require("../../models/brand")
 const CategoryModel = require("../../models/product_category");
-const SubCategoryModel=require("../../models/product_sub_category")
+const SubCategoryModel = require("../../models/product_sub_category")
 
-const axios =require('axios')
+const axios = require('axios')
 exports.addProduct = async (req, res) => {
   try {
     const user_id = req.user.id;
@@ -635,8 +635,14 @@ exports.editProduct = async (req, res) => {
     if (req.body.brand_id) {
       data_to_edit.brand_id = req.body.brand_id
     }
-    if (req.body.variant) {
-      for (const newVariant of req.body.variant) {
+    const incomingVariants = req.body.variant || req.body.sku_data;
+
+    if (incomingVariants) {
+      if (!Array.isArray(product.variant)) {
+        product.variant = [];
+      }
+
+      for (const newVariant of incomingVariants) {
         const existingVariantIndex = product.variant.findIndex(
           (v) => v.sku_id === newVariant.sku_id
         );
@@ -650,8 +656,10 @@ exports.editProduct = async (req, res) => {
           });
         }
       }
+
       data_to_edit.variant = product.variant;
     }
+
 
     await Product.findByIdAndUpdate(productId, data_to_edit, { new: true });
 
@@ -662,6 +670,7 @@ exports.editProduct = async (req, res) => {
       message: "Product has been updated",
       code: 200
     });
+
   } catch (error) {
     utils.handleError(res, error);
   }
@@ -689,7 +698,7 @@ exports.getProductNameList = async (req, res) => {
     console.log("filter is ", filter)
 
     const productlist = await Product.aggregate([
-      { $match: { ...filter, is_deleted: false} },
+      { $match: { ...filter, is_deleted: false } },
       { $project: { _id: 1, name: 1, brand_id: 1, category_id: 1, sub_category_id: 1 } },
       { $sort: { createdAt: -1 } },
       { $skip: parseInt(offset) || 0 },
@@ -788,8 +797,8 @@ async function checkDataIsNotEmptyAndConvertProduct(data, req, res) {
 
       const isExistedSku = await Product.findOne({ "variant.sku_id": sku });
       if (isExistedSku) {
-  throw { message: `SKU '${sku}' already exists`, code: 400 };
-}
+        throw { message: `SKU '${sku}' already exists`, code: 400 };
+      }
 
       const part_no = getValue("Part No.");
       if (!part_no) throw { message: `Missing 'Part No.' at row ${rowNumber}`, code: 400 };
@@ -808,10 +817,10 @@ async function checkDataIsNotEmptyAndConvertProduct(data, req, res) {
 
       const description = getValue("Discription"); // Keep the typo if Excel uses it
       if (!description) throw { message: `Missing 'Discription' at row ${rowNumber}`, code: 400 };
-const brand_id = await findOrCreateByName(BrandModel, product_brand);
-const category_id = await findOrCreateByName(CategoryModel, product_categories);
-const sub_category_id = await findOrCreateByName(SubCategoryModel, product_sub_categories); // optional
-console.log('modifiedData', modifiedData)
+      const brand_id = await findOrCreateByName(BrandModel, product_brand);
+      const category_id = await findOrCreateByName(CategoryModel, product_categories);
+      const sub_category_id = await findOrCreateByName(SubCategoryModel, product_sub_categories); // optional
+      console.log('modifiedData', modifiedData)
       // Add to final transformed data
       modifiedData.push({
         product_name,
@@ -821,7 +830,7 @@ console.log('modifiedData', modifiedData)
         sku,
         part_no,
         quantity: Number(quantity),
-        specification:specifications,
+        specification: specifications,
         tags,
         description,
       });
@@ -832,11 +841,11 @@ console.log('modifiedData', modifiedData)
       'https://api.openai.com/v1/chat/completions',
       {
         model: 'gpt-4',
-        temperature:0,
+        temperature: 0,
         messages: [
-         {
-  role: 'system',
-  content: `You are a product quality reviewer. For each product, decide if it should be approved or rejected.
+          {
+            role: 'system',
+            content: `You are a product quality reviewer. For each product, decide if it should be approved or rejected.
 
 For rejected products, give a clear reason why.
 
@@ -850,12 +859,12 @@ Return *only* a valid JSON array in this format:
 ]
 
 No explanation. No markdown. Just raw JSON.`
-}
-,
-{
-  role: 'user',
-  content: JSON.stringify(modifiedData)
-}
+          }
+          ,
+          {
+            role: 'user',
+            content: JSON.stringify(modifiedData)
+          }
 
         ],
         temperature: 0.7,
@@ -868,26 +877,26 @@ No explanation. No markdown. Just raw JSON.`
       }
     );
 
-const content = gptResponse?.data?.choices?.[0]?.message?.content?.trim();
+    const content = gptResponse?.data?.choices?.[0]?.message?.content?.trim();
 
 
-let parsed;
+    let parsed;
 
-try {
-  // Remove markdown code block wrappers if any
-  const jsonClean = content
-    .replace(/^```json/, "")
-    .replace(/^```/, "")
-    .replace(/```$/, "")
-    .trim();
+    try {
+      // Remove markdown code block wrappers if any
+      const jsonClean = content
+        .replace(/^```json/, "")
+        .replace(/^```/, "")
+        .replace(/```$/, "")
+        .trim();
 
-  parsed = JSON.parse(jsonClean);
-} catch (err) {
-  console.error("GPT Output (raw):", content);
-  throw { message: "Invalid GPT JSON format", code: 500 };
-}
+      parsed = JSON.parse(jsonClean);
+    } catch (err) {
+      console.error("GPT Output (raw):", content);
+      throw { message: "Invalid GPT JSON format", code: 500 };
+    }
 
-return parsed;
+    return parsed;
 
 
   } catch (error) {
@@ -902,7 +911,7 @@ async function convertAndSave(item, userId) {
       console.log('item', item)
       const productData = {
         name: item.product.product_name,
-        brand_id: item.product.brand_id, 
+        brand_id: item.product.brand_id,
         category_id: [item.product.category_id],
         sub_category_id: [item.product.sub_category_id],
         variant: [{
@@ -958,7 +967,7 @@ exports.bulkUpload = async (req, res) => {
     }
 
     const rejectedCount = responseSummary.filter(i => i.status === "rejected").length;
-const allApproved = rejectedCount === 0;
+    const allApproved = rejectedCount === 0;
     return res.status(200).json({
       message: rejectedCount === 0 ? "All products uploaded successfully." : "Some products were rejected.",
       summary: responseSummary,
