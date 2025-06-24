@@ -594,85 +594,119 @@ exports.getMyProductList = async (req, res) => {
     utils.handleError(res, error);
   }
 };
-
 exports.editProduct = async (req, res) => {
   try {
-    const productId = req.params.id
-    console.log("req.body is ", req.body)
+    const productId = req.params.id;
+    console.log("⚙️ Incoming req.body:", req.body);
 
     const product = await Product.findById(productId);
+    if (!product || product.is_deleted) {
+      return utils.handleError(res, { message: "Product not found", code: 404 });
+    }
 
-    if (!product || product.is_deleted === true)
-      return utils.handleError(res, {
-        message: "Product not found",
-        code: 404,
-      });
+    const data_to_edit = {};
+    ['category_id', 'sub_category_id', 'sub_sub_category_id'].forEach(f => {
+      if (req.body[f]) data_to_edit[f] = [...req.body[f]];
+    });
+    if (req.body.name) data_to_edit.name = req.body.name;
+    if (req.body.brand_id) data_to_edit.brand_id = req.body.brand_id;
 
-    let data_to_edit = {}
-    // if (req.body.variant) {
-    //     const isExisted = await Product.find({ 'variant.sku_id': { $in: req.body.variant.sku_id } })
-    //     console.log("isExisted ", isExisted)
-    //     if (!isExisted) {
-    //         return utils.handleError(res, {
-    //             message: "sku_id not existed",
-    //             code: 404,
-    //         });
-    //     }
-    //     data_to_edit.variant = [...req.body.variant]
-    // }
-    if (req.body.category_id) {
-      data_to_edit.category_id = [...req.body.category_id]
-    }
-    if (req.body.sub_category_id) {
-      data_to_edit.sub_category_id = [...req.body.sub_category_id]
-    }
-    if (req.body.sub_sub_category_id) {
-      data_to_edit.sub_sub_category_id = [...req.body.sub_sub_category_id]
-    }
-    if (req.body.name) {
-      data_to_edit.name = req.body.name
-    }
-    if (req.body.brand_id) {
-      data_to_edit.brand_id = req.body.brand_id
-    }
     const incomingVariants = req.body.variant || req.body.sku_data;
-
     if (incomingVariants) {
-      if (!Array.isArray(product.variant)) {
-        product.variant = [];
-      }
-
-      for (const newVariant of incomingVariants) {
-        const existingVariantIndex = product.variant.findIndex(
-          (v) => v.sku_id === newVariant.sku_id
-        );
-
-        if (existingVariantIndex !== -1) {
-          Object.assign(product.variant[existingVariantIndex], newVariant);
-        } else {
-          return utils.handleError(res, {
-            message: `Variant with sku_id ${newVariant.sku_id} not found`,
-            code: 404,
-          });
+      product.variant = Array.isArray(product.variant) ? product.variant : [];
+      for (const newV of incomingVariants) {
+        const idx = product.variant.findIndex(v => v.sku_id === newV.sku_id);
+        if (idx === -1) {
+          return utils.handleError(res, { message: `Variant ${newV.sku_id} not found`, code: 404 });
         }
+        Object.assign(product.variant[idx], newV);
       }
-
       data_to_edit.variant = product.variant;
     }
 
+    // 🚨 Debug: view data before GPT
+    console.log("🔍 Data to validate:", data_to_edit);
 
-    await Product.findByIdAndUpdate(productId, data_to_edit, { new: true });
+    const gptPrompt = `
+You are a strict validator for product data.
 
-    const updatedproduct = await Product.findById(productId);
+You will be given a product JSON. Validate it based on the rules below and respond with ONLY valid JSON (no markdown, no explanation, no extra text).
 
-    res.json({
-      data: updatedproduct,
-      message: "Product has been updated",
-      code: 200
+Here is the product JSON:
+${JSON.stringify(data_to_edit)}
+
+Validation rules:
+- name: Must be meaningful (not gibberish or repeated characters)
+- brand_id: Must be a non-empty string
+- category_id and sub_category_id: Must be non-empty arrays
+- Each variant must have:
+  - sku_id: non-empty
+  - part_no: non-empty
+  - description: clear and meaningful
+  - inventory_quantity:Required
+
+If valid:
+{"status": "valid"}
+
+If invalid:
+{"status": "error", "errors": "name is not meaningful, description does not clearly describe the product"}
+
+⚠️ Respond with clean JSON only. Do not include backticks, markdown, explanations, or comments.
+`;
+
+
+
+    const gptResp = await axios.post('https://api.openai.com/v1/chat/completions', {
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: 'You are a strict product validator.' },
+        { role: 'user', content: gptPrompt }
+      ],
+      temperature: 0
+    }, {
+      headers: { Authorization: `Bearer ${process.env.GPT_API_KEY}` }
     });
 
-  } catch (error) {
-    utils.handleError(res, error);
+    const content = gptResp.data.choices[0].message.content.trim();
+    let gptResult;
+    console.log('content', content)
+    try {
+      // Match only the JSON part of the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON found in GPT response");
+
+      gptResult = JSON.parse(jsonMatch[0]);
+    } catch (ex) {
+      return res.status(500).json({
+        message: "Invalid GPT response",
+        gpt_raw: content,
+        error: ex.message,
+        code: 500
+      });
+    }
+
+    if (gptResult.status !== 'valid') {
+      console.log("🔻 Validation failed:", gptResult.issues);
+      // await Product.findByIdAndUpdate(productId, { is_admin_approved: 'rejected' });
+
+      return res.status(400).json({
+        message: gptResult?.errors,
+        errors: gptResult,
+        code: 400
+      });
+    }
+
+    data_to_edit.is_admin_approved = 'approved';
+    console.log("✅ Updating product (approved):", data_to_edit);
+
+    await Product.findByIdAndUpdate(productId, data_to_edit);
+    const updated = await Product.findById(productId);
+
+    res.json({ data: updated, message: "Updated & approved", code: 200 });
+
+  } catch (err) {
+    console.error("🔴 editProduct error:", err);
+    utils.handleError(res, err);
   }
 };
 
