@@ -59,7 +59,8 @@ const planSchema = new mongoose.Schema(
         },
         access_level: {
             type: String,
-            enum: ["partial", "fully"]
+            enum: ["partial", "fully"], 
+            default: "fully"
         },
         status: {
             type: String,

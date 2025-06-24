@@ -447,7 +447,7 @@ exports.createMultipleSubscriptions = async (req, res) => {
             }
             if (['supplier', 'logistics'].includes(plandata.type)) {
                 hasSupplierOrLogistics = true;
-                recruiterInterval = plandata.interval; // capture the interval
+                recruiterInterval = plandata.interval;
             }
             const existing = await Subscription.findOne({
                 user_id: userid,
@@ -1181,6 +1181,153 @@ exports.cancelSubscription = async (req, res) => {
 }
 
 
+exports.cancelMultipleSubscriptions = async (req, res) => {
+    try {
+        const { subscription_ids } = req.body;
+
+        if (!Array.isArray(subscription_ids) || subscription_ids.length === 0) {
+            return utils.handleError(res, {
+                message: "Please provide an array of subscription IDs.",
+                code: 400,
+            });
+        }
+
+        const results = [];
+
+        for (const id of subscription_ids) {
+            try {
+                console.log("Processing subscription ID:", id);
+
+                const subscription = await Subscription.findById(id);
+                console.log("subscription=========", subscription);
+
+                if (!subscription) {
+                    results.push({ id, status: 'not_found' });
+                    continue;
+                }
+
+                const userdata = await User.findById(subscription.user_id);
+                const plandata = await plan.findOne({ plan_id: subscription.plan_id });
+
+                // Cancel Stripe subscription if needed
+                if (subscription.subscription_type === "paid" && subscription.stripe_subscription_id !== null) {
+                    const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+                        cancel_at_period_end: true
+                    });
+                    console.log("stripeSub : ", stripeSub);
+                    subscription.status = 'cancelled_scheduled';
+                    // Optionally store end_at: subscription.end_at = new Date(stripeSub.current_period_end * 1000);
+                } else {
+                    subscription.status = 'terminated';
+                }
+
+                subscription.isPurchased = false;
+                await subscription.save();
+
+                // Recruiter Plan Syncing
+                if (plandata.type !== 'recruiter') {
+                    const [logisticsPlan, supplierPlan, recruiterSubscription] = await Promise.all([
+                        Subscription.findOne({ user_id: subscription.user_id, type: 'logistics', status: 'active' }),
+                        Subscription.findOne({ user_id: subscription.user_id, type: 'supplier', status: 'active' }),
+                        Subscription.findOne({ user_id: subscription.user_id, type: 'recruiter', status: 'active' }),
+                    ]);
+
+                    if (!recruiterSubscription) {
+                        console.log("Recruiter subscription not found");
+                    } else {
+                        let sourcePlan = logisticsPlan || supplierPlan;
+
+                        if (!sourcePlan) {
+                            recruiterSubscription.status = 'terminated';
+                            recruiterSubscription.updatedAt = new Date();
+                            await recruiterSubscription.save();
+                            console.log("Recruiter plan terminated — no active supplier/logistics.");
+                        } else {
+                            const sourcePlanDetails = await plan.findOne({ plan_id: sourcePlan.plan_id });
+
+                            if (!sourcePlanDetails || !sourcePlanDetails.interval) {
+                                console.log("Source plan's interval not found from Plan collection.");
+                            } else {
+                                const recruiterTemplate = await plan.findOne({
+                                    type: 'recruiter',
+                                    interval: sourcePlanDetails.interval,
+                                });
+
+                                if (!recruiterTemplate) {
+                                    console.log("Recruiter plan template not found for interval:", sourcePlanDetails.interval);
+                                } else {
+                                    recruiterSubscription.start_at = sourcePlan.start_at;
+                                    recruiterSubscription.end_at = sourcePlan.end_at;
+                                    recruiterSubscription.plan_id = recruiterTemplate.plan_id;
+                                    recruiterSubscription.updatedAt = new Date();
+                                    await recruiterSubscription.save();
+                                    console.log(`Recruiter plan synced with ${sourcePlan.type} plan.`);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Admin notification
+                const admins = await Admin.findOne({ role: 'super_admin' });
+                console.log("admins : ", admins);
+
+                if (admins) {
+                    const notificationMessage = {
+                        title: 'Existing Subscription cancelled',
+                        description: `${userdata.full_name} has cancelled an existing subscription . Plan ID : ${subscription.plan_id}`,
+                        user_id: subscription.user_id
+                    };
+
+                    const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
+                    console.log("adminFcmDevices : ", adminFcmDevices);
+
+                    if (adminFcmDevices?.length > 0) {
+                        for (const device of adminFcmDevices) {
+                            const token = device.token;
+                            console.log("token : ", token);
+                            await utils.sendNotification(token, notificationMessage);
+                        }
+
+                        const adminNotificationData = {
+                            title: notificationMessage.title,
+                            body: notificationMessage.description,
+                            type: "canceled_subscription",
+                            receiver_id: admins._id,
+                            related_to: subscription.user_id,
+                            related_to_type: "user",
+                            user_type: plandata.type
+                        };
+
+                        const newAdminNotification = new admin_received_notification(adminNotificationData);
+                        console.log("newAdminNotification : ", newAdminNotification);
+                        await newAdminNotification.save();
+                    }
+                }
+
+                results.push({ id, status: subscription.status });
+
+            } catch (err) {
+                console.error(`Error cancelling subscription ${id}:`, err);
+                results.push({ id, status: 'error', error: err.message });
+            }
+        }
+
+        return res.status(200).json({
+            message: 'Processed subscription cancellations.',
+            results,
+            code: 200
+        });
+
+    } catch (error) {
+        console.error('cancelMultipleSubscriptions error:', error);
+        utils.handleError(res, error);
+    }
+};
+
+
+
+
 exports.getAllPlan = async (req, res) => {
 
     try {
@@ -1205,7 +1352,7 @@ exports.getAllPlan = async (req, res) => {
         //     status: 'active'
         // });
 
-               let purchasedPlanIds = new Set();
+        let purchasedPlanIds = new Set();
         if (user_id) {
             const userSubscriptions = await Subscription.find({
                 user_id,
