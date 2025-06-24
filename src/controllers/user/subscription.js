@@ -850,10 +850,10 @@ exports.createSubscription = async (req, res) => {
 
             const recruiterSubscription = await Subscription.create({
                 user_id: userdata._id,
-                subscription_id: await genrateSubscriptionId(), 
+                subscription_id: await genrateSubscriptionId(),
                 plan_id: recruiterPlan.plan_id,
                 stripe_subscription_id: null,
-                stripe_payment_method_id: null, 
+                stripe_payment_method_id: null,
                 stripe_customer_id: customer.id,
                 start_at: start,
                 end_at: recruiterEnd,
@@ -1182,26 +1182,56 @@ exports.cancelSubscription = async (req, res) => {
 
 
 exports.getAllPlan = async (req, res) => {
+
     try {
-        const { offset = 0, limit = 10, type } = req.query
+        const { offset = 0, limit = 10, type, user_id } = req.query;
+
         let query = { selected: true, status: 'active' };
         if (type) {
             query.type = type;
         }
+
+        // Fetch plans
         const plandata = await plan.find(query)
             .skip(Number(offset))
             .limit(Number(limit))
             .sort({ createdAt: -1 });
-        // const plandata = await plan.find({ selected: true }).skip(Number(offset)).limit(Number(limit)).sort({ createdAt: -1 });
-        console.log("plandata : ", plandata)
-        const count = await plan.countDocuments()
+
+        const count = await plan.countDocuments(query);
+
+        // // Fetch user's active subscriptions
+        // const userSubscriptions = await Subscription.find({
+        //     user_id: req.user._id,
+        //     status: 'active'
+        // });
+
+               let purchasedPlanIds = new Set();
+        if (user_id) {
+            const userSubscriptions = await Subscription.find({
+                user_id,
+                status: 'active'
+            });
+            purchasedPlanIds = new Set(userSubscriptions.map(sub => sub.plan_id));
+        }
+
+        const plansWithPurchaseFlag = plandata.map(planItem => {
+            return {
+                ...planItem.toObject(),
+                isPurchased: purchasedPlanIds.has(planItem.plan_id)
+            };
+        });
+
         return res.status(200).json({
-            message: "plan data fetched successfully", data: plandata, count, code: 200
-        })
+            message: "Plan data fetched successfully",
+            data: plansWithPurchaseFlag,
+            count,
+            code: 200
+        });
+
     } catch (error) {
         utils.handleError(res, error);
     }
-}
+};
 
 
 

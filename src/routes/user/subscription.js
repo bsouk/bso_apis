@@ -12,6 +12,7 @@ const trimRequest = require('trim-request');
 router.get(
     "/getAllPlan",
     trimRequest.all,
+    requireAuth,
     controller.getAllPlan
 )
 
