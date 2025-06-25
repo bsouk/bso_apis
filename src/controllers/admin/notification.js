@@ -162,8 +162,18 @@ exports.getNotificationList = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
     try {
-        const { offset = 0, limit = 10 } = req.query;
-        const users = await User.find().skip(Number(offset)).limit(Number(limit)).select('_id full_name first_name last_name email');
+        const { offset = 0, limit = 10,search } = req.query;
+          const searchFilter = search
+      ? {
+          $or: [
+            { full_name: { $regex: search, $options: 'i' } },
+            { first_name: { $regex: search, $options: 'i' } },
+            { last_name: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+          ],
+        }
+      : {};
+        const users = await User.find(searchFilter).skip(Number(offset)).limit(Number(limit)).select('_id full_name first_name last_name email');
         console.log("users : ", users)
         return res.json({ users, code: 200 })
     } catch (error) {
