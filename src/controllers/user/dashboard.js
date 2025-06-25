@@ -80,7 +80,7 @@ exports.getDashboardData = async (req, res) => {
                         },
                         {
                             $group: {
-                                _id: "$status",
+                                _id: "$application_status",
                                 total: { $sum: 1 }
                             }
                         }
