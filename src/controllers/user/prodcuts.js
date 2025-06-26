@@ -199,7 +199,7 @@ exports.getProductList = async (req, res) => {
 
     const filter = {
       is_deleted: { $ne: true },
-      // is_admin_approved: "approved"
+      is_admin_approved: "approved"
     };
 
     if (search) {
