@@ -624,79 +624,23 @@ exports.editProduct = async (req, res) => {
       data_to_edit.variant = product.variant;
     }
 
-    // 🚨 Debug: view data before GPT
-    console.log("🔍 Data to validate:", data_to_edit);
+    // 🚫 Skipping GPT validation
+    // const gptPrompt = `...`;
+    // const gptResp = await axios.post(...);
+    // const content = gptResp.data.choices[0].message.content.trim();
+    // let gptResult;
+    // try {
+    //   ...
+    // } catch (ex) {
+    //   return res.status(500).json(...);
+    // }
 
-    const gptPrompt = `
-You are a strict validator for product data.
+    // if (gptResult.status !== 'valid') {
+    //   return res.status(400).json(...);
+    // }
 
-You will be given a product JSON. Validate it based on the rules below and respond with ONLY valid JSON (no markdown, no explanation, no extra text).
-
-Here is the product JSON:
-${JSON.stringify(data_to_edit)}
-
-Validation rules:
-- name: Must be meaningful (not gibberish or repeated characters)
-- brand_id: Must be a non-empty string
-- category_id and sub_category_id: Must be non-empty arrays
-- Each variant must have:
-  - sku_id: non-empty
-  - part_no: non-empty
-  - description: clear and meaningful
-  - inventory_quantity:Required
-
-If valid:
-{"status": "valid"}
-
-If invalid:
-{"status": "error", "errors": "name is not meaningful, description does not clearly describe the product"}
-
-⚠️ Respond with clean JSON only. Do not include backticks, markdown, explanations, or comments.
-`;
-
-
-
-    const gptResp = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: 'You are a strict product validator.' },
-        { role: 'user', content: gptPrompt }
-      ],
-      temperature: 0
-    }, {
-      headers: { Authorization: `Bearer ${process.env.GPT_API_KEY}` }
-    });
-
-    const content = gptResp.data.choices[0].message.content.trim();
-    let gptResult;
-    console.log('content', content)
-    try {
-      // Match only the JSON part of the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found in GPT response");
-
-      gptResult = JSON.parse(jsonMatch[0]);
-    } catch (ex) {
-      return res.status(500).json({
-        message: "Invalid GPT response",
-        gpt_raw: content,
-        error: ex.message,
-        code: 500
-      });
-    }
-
-    if (gptResult.status !== 'valid') {
-      console.log("🔻 Validation failed:", gptResult.issues);
-      // await Product.findByIdAndUpdate(productId, { is_admin_approved: 'rejected' });
-
-      return res.status(400).json({
-        message: gptResult?.errors,
-        errors: gptResult,
-        code: 400
-      });
-    }
-
-    data_to_edit.is_admin_approved = 'approved';
+    // ✅ Manual approval
+    // data_to_edit.is_admin_approved = 'approved';
     console.log("✅ Updating product (approved):", data_to_edit);
 
     await Product.findByIdAndUpdate(productId, data_to_edit);
@@ -709,6 +653,7 @@ If invalid:
     utils.handleError(res, err);
   }
 };
+
 
 exports.getProductNameList = async (req, res) => {
   try {
@@ -871,66 +816,66 @@ async function checkDataIsNotEmptyAndConvertProduct(data, req, res) {
     }
 
     // Call GPT after validation
-    const gptResponse = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4',
-        temperature: 0,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a product quality reviewer. For each product, decide if it should be approved or rejected.
+//     const gptResponse = await axios.post(
+//       'https://api.openai.com/v1/chat/completions',
+//       {
+//         model: 'gpt-4',
+//         temperature: 0,
+//         messages: [
+//           {
+//             role: 'system',
+//             content: `You are a product quality reviewer. For each product, decide if it should be approved or rejected.
 
-For rejected products, give a clear reason why.
+// For rejected products, give a clear reason why.
 
-Return *only* a valid JSON array in this format:
-[
-  {
-    "product": { ... }, 
-    "status": "approved" | "rejected", 
-    "reason": "optional reason if rejected"
-  }
-]
+// Return *only* a valid JSON array in this format:
+// [
+//   {
+//     "product": { ... }, 
+//     "status": "approved" | "rejected", 
+//     "reason": "optional reason if rejected"
+//   }
+// ]
 
-No explanation. No markdown. Just raw JSON.`
-          }
-          ,
-          {
-            role: 'user',
-            content: JSON.stringify(modifiedData)
-          }
+// No explanation. No markdown. Just raw JSON.`
+//           }
+//           ,
+//           {
+//             role: 'user',
+//             content: JSON.stringify(modifiedData)
+//           }
 
-        ],
-        temperature: 0.7,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.GPT_API_KEY}`
-        }
-      }
-    );
+//         ],
+//         temperature: 0.7,
+//       },
+//       {
+//         headers: {
+//           'Content-Type': 'application/json',
+//           Authorization: `Bearer ${process.env.GPT_API_KEY}`
+//         }
+//       }
+//     );
 
-    const content = gptResponse?.data?.choices?.[0]?.message?.content?.trim();
+    // const content = gptResponse?.data?.choices?.[0]?.message?.content?.trim();
 
 
-    let parsed;
+    // let parsed;
 
-    try {
-      // Remove markdown code block wrappers if any
-      const jsonClean = content
-        .replace(/^```json/, "")
-        .replace(/^```/, "")
-        .replace(/```$/, "")
-        .trim();
+    // try {
+    //   // Remove markdown code block wrappers if any
+    //   const jsonClean = content
+    //     .replace(/^```json/, "")
+    //     .replace(/^```/, "")
+    //     .replace(/```$/, "")
+    //     .trim();
 
-      parsed = JSON.parse(jsonClean);
-    } catch (err) {
-      console.error("GPT Output (raw):", content);
-      throw { message: "Invalid GPT JSON format", code: 500 };
-    }
+    //   parsed = JSON.parse(jsonClean);
+    // } catch (err) {
+    //   console.error("GPT Output (raw):", content);
+    //   throw { message: "Invalid GPT JSON format", code: 500 };
+    // }
 
-    return parsed;
+    return modifiedData;
 
 
   } catch (error) {
