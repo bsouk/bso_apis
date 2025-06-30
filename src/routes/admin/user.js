@@ -16,7 +16,8 @@ router.post(
   "/uploadMedia",
   trimRequest.all,
   requireAuth,
-  controller.uploadMedia
+  // controller.uploadMedia
+  controller.uploadMediaToBucket
 );
 router.post(
   "/addCustomer",

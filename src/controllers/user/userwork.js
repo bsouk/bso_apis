@@ -1203,7 +1203,7 @@ exports.uploadMedia = async (req, res) => {
                     });
                     mediaArray.push(`${req.body.path}/${media}`);
                 } else if (supportedOtherTypes.includes(element.mimetype)) {
-                    let media = await uploadFile({
+                    let media = await utils.uploadFile({
                         file: element,
                         path: `${process.env.STORAGE_PATH}/${req.body.path}`,
                     });
@@ -1236,7 +1236,103 @@ exports.uploadMedia = async (req, res) => {
                     data: isArray === "true" ? [url] : url,
                 });
             } else if (supportedOtherTypes.includes(element.mimetype)) {
-                let media = await uploadFile({
+                let media = await utils.uploadFile({
+                    file: element,
+                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                });
+                const url = `${req.body.path}/${media}`;
+                return res.status(200).json({
+                    code: 200,
+                    data: isArray === "true" ? [url] : url,
+                });
+            } else {
+                return utils.handleError(res, {
+                    message: `Unsupported file type: ${element.mimetype}`,
+                    code: 400,
+                });
+            }
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        utils.handleError(res, error);
+    }
+};
+
+exports.uploadMediaToBucket = async (req, res) => {
+    try {
+        if (!req.files.media || !req.body.path) {
+            return utils.handleError(res, {
+                message: "MEDIA OR PATH MISSING",
+                code: 400,
+            });
+        }
+
+        let isArray = req.body.isArray;
+        let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif", "image/webp", "image/svg", "image/bmp"];
+        let supportedOtherTypes = [
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/pdf",
+            "audio/mpeg",
+            "audio/wav",
+            "audio/mp3",
+            "audio/ogg",
+            "video/mp4",
+            "video/quicktime",
+            "video/x-m4v",
+            "video/webm",
+            "video/mov"
+        ];
+
+        if (Array.isArray(req.files.media)) {
+            let mediaArray = [];
+
+            for (let index = 0; index < req.files.media.length; index++) {
+                const element = req.files.media[index];
+                console.log("element:", element);
+                console.log("type:", element.mimetype);
+
+                if (supportedImageTypes.includes(element.mimetype)) {
+                    let media = await utils.uploadImageToBucket({
+                        file: element,
+                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                    });
+                    mediaArray.push(`${req.body.path}/${media}`);
+                } else if (supportedOtherTypes.includes(element.mimetype)) {
+                    let media = await utils.uploadFileToS3Bucket({
+                        file: element,
+                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                    });
+                    mediaArray.push(`${req.body.path}/${media}`);
+                } else {
+                    return utils.handleError(res, {
+                        message: `Unsupported file type: ${element.mimetype}`,
+                        code: 400,
+                    });
+                }
+            }
+
+            return res.status(200).json({
+                code: 200,
+                data: mediaArray,
+            });
+        } else {
+            const element = req.files.media;
+            console.log("element:", element);
+            console.log("type:", element.mimetype);
+
+            if (supportedImageTypes.includes(element.mimetype)) {
+                let media = await utils.uploadImageToBucket({
+                    file: element,
+                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+                });
+                const url = `${req.body.path}/${media}`;
+                return res.status(200).json({
+                    code: 200,
+                    data: isArray === "true" ? [url] : url,
+                });
+            } else if (supportedOtherTypes.includes(element.mimetype)) {
+                let media = await utils.uploadFileToS3Bucket({
                     file: element,
                     path: `${process.env.STORAGE_PATH}/${req.body.path}`,
                 });
@@ -7380,7 +7476,7 @@ exports.addBuyerDeliverytracking = async (req, res) => {
 
 //         await browser.close();
 
-//         let media = await uploadFile({
+//         let media = await utils.uploadFile({
 //             file: element,
 //             path: `${process.env.STORAGE_PATH}/${req.body.path}`,
 //         });

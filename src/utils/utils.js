@@ -43,7 +43,17 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
 
 const client = new twilio(accountSid, authToken);
+const AWS = require("aws-sdk");
+const ACCESS_KEY = process.env.ACCESS_KEY;
+const SECRET_KEY = process.env.SECRET_KEY;
+const Bucket = process.env.Bucket;
+const REGION = process.env.REGION;
 
+var bucket = new AWS.S3({
+  accessKeyId: ACCESS_KEY,
+  secretAccessKey: SECRET_KEY,
+  region: REGION,
+});
 
 
 /**
@@ -435,8 +445,51 @@ function changeNameToWebpExtention(name) {
 //   });
 // }
 
+async function uploadFileToS3Bucket(object) {
+  return new Promise(async (resolve, reject) => {
+    var file = object.file;
+    var filename = Date.now() + file.name;
+    const params = {
+      Bucket: Bucket,
+      Key: object.path + "/" + filename,
+      Body: file.data,
+      ContentType: file.mimetype,
+    };
+    return bucket.upload(params, function (err, data) {
+      if (err) {
+        console.log("----err----", err);
+        reject({ message: err.message, code: 400 });
+      }
+      console.log("data", data);
+      resolve(filename);
+    });
+  });
+}
 
-async function uploadFile(object) {
+exports.uploadFileToS3Bucket = uploadFileToS3Bucket;
+
+exports.uploadFileToS3Bucket = async (object) => {
+  return new Promise(async (resolve, reject) => {
+    var file = object.file;
+    var filename = Date.now() + file.name;
+    const params = {
+      Bucket: Bucket,
+      Key: object.path + "/" + filename,
+      Body: file.data,
+      ContentType: file.mimetype,
+    };
+    return bucket.upload(params, function (err, data) {
+      if (err) {
+        console.log("----err----", err);
+        reject({ message: err.message, code: 400 });
+      }
+      console.log("data", data);
+      resolve(filename);
+    });
+  });
+}
+
+exports.uploadFile = async (object) => {
   return new Promise((resolve, reject) => {
     var obj = object.file;
     var name = Date.now() + obj.name;
@@ -463,6 +516,27 @@ exports.uploadImage = async (object) => {
       object.file.name = nameWithWebpExtention;
       object.file.data = webpBuffer;
       const name = await uploadFile(object);
+      resolve(name);
+    } catch (conversionError) {
+      console.error("Error converting image to WebP:", conversionError);
+      reject(conversionError);
+    }
+  });
+}
+
+exports.uploadImageToBucket = async (object) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      var obj = object.file;
+      const nameWithWebpExtention = changeNameToWebpExtention(obj.name);
+      const imageDataBuffer = obj.data;
+      const webpBuffer = await sharp(imageDataBuffer)
+        .toFormat("webp", { lossless: false })
+        .toBuffer();
+
+      object.file.name = nameWithWebpExtention;
+      object.file.data = webpBuffer;
+      const name = await uploadFileToS3Bucket(object);
       resolve(name);
     } catch (conversionError) {
       console.error("Error converting image to WebP:", conversionError);
