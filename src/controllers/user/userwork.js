@@ -239,6 +239,20 @@ exports.editProfile = async (req, res) => {
                 });
         }
 
+        function deepMerge(target, source) {
+            for (const key in source) {
+                if (
+                    source[key] instanceof Object &&
+                    !(source[key] instanceof Array)
+                ) {
+                    target[key] = deepMerge({ ...(target[key] || {}) }, source[key]);
+                } else {
+                    target[key] = source[key];
+                }
+            }
+            return target;
+        }
+
         if (data.switch_to) {
             let types = user.user_type
             if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
@@ -252,9 +266,10 @@ exports.editProfile = async (req, res) => {
             }
             data.user_type = types
             data.current_user_type = data.switch_to
-        }
+        };
+
         console.log("data : ", data)
-        const updatedUser = await User.findByIdAndUpdate(id, data);
+        const updatedUser = await User.findByIdAndUpdate(id, deepMerge(user.toObject(), data));
         console.log("updated user is ", updatedUser);
 
         // if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
@@ -479,6 +494,7 @@ exports.editProfile = async (req, res) => {
 
                 await updatedUser.save();
             }
+            break;
             default: {
                 updatedUser.profile_completed = false
                 await updatedUser.save()
