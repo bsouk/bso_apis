@@ -451,18 +451,18 @@ exports.editProfile = async (req, res) => {
             case "recruiter": {
                 const requiredFields = [
                     'company_data.name',
-                    'company_data.business_category',
-                    'company_data.phone_number',
-                    'company_data.name',
+                    // 'company_data.business_category',
+                    // 'company_data.phone_number',
+                    // 'company_data.name',
                     'company_data.registration_number',
                     'company_data.incorporation_date',
                     'company_data.vat_number',
-                    'company_data.email',
-                    'company_data.address.line1',
-                    'company_data.address.city',
-                    'company_data.address.state',
-                    'company_data.address.zip_code',
-                    'company_data.address.country',
+                    // 'company_data.email',
+                    // 'company_data.address.line1',
+                    // 'company_data.address.city',
+                    // 'company_data.address.state',
+                    // 'company_data.address.zip_code',
+                    // 'company_data.address.country',
                 ];
 
                 console.log("supplier check fields is ", requiredFields)
