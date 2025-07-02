@@ -15,6 +15,12 @@ router.get(
     controller.getBrand
 );
 
+router.get(
+    "/getFeaturedBrand",
+    trimRequest.all,
+    controller.getFeaturedBrand
+);
+
 router.post(
     "/addBrand",
     trimRequest.all,

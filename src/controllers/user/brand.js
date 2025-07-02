@@ -50,6 +50,50 @@ exports.getBrand = async (req, res) => {
     }
 };
 
+exports.getFeaturedBrand = async (req, res) => {
+    try {
+        const { limit = 10, offset = 0, search } = req.query;
+        const condition = { is_featured: true };
+
+        if (search) {
+            condition["$or"] = [
+                { name: { $regex: search, $options: "i" } }
+            ];
+        }
+
+        const count = await Brand.aggregate([
+            {
+                $match: condition,
+            },
+            {
+                $group: {
+                    _id: null,
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const data = await Brand.aggregate([
+            {
+                $match: condition,
+            },
+            {
+                $sort: { createdAt: -1 },
+            },
+            {
+                $skip: +offset,
+            },
+            {
+                $limit: +limit,
+            },
+        ]);
+
+        res.json({ data: data, count: count?.[0]?.count ?? 0, code: 200 });
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+};
+
 
 
 exports.addBrand = async (req, res) => {
