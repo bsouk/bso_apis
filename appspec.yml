@@ -3,17 +3,17 @@ os: linux
 
 files:
   - source: /
-    destination: /home/bsoservices/ci-cd/api
+    destination: /var/www/mongo/bso_apis
     overwrite: true
 
 permissions:
-  - object: /home/bsoservices/ci-cd
+  - object: /var/www/mongo
     pattern: "**"
     owner: bsoservices
     group: bsoservices
     type:
       - file
-  - object: /home/bsoservices/ci-cd
+  - object: /var/www/mongo
     pattern: "**"
     owner: bsoservices
     group: bsoservices
