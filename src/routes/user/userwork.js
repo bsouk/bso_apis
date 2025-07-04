@@ -288,7 +288,7 @@ router.get(
 router.get(
     "/homepageenquiry",
     trimRequest.all,
-    controller.getDashboardStats
+    controller.homepageenquiry
 )
 router.get(
     "/homepagestats",
