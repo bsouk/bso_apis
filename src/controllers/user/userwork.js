@@ -1,3 +1,7 @@
+// 'use strict';
+// added use strict because found undeclared variable uses
+// adding this will prevent it for further happening so.
+
 const User = require("../../models/user");
 const Address = require("../../models/address");
 const Supplier = require("../../models/supplier")

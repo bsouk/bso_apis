@@ -410,7 +410,7 @@ exports.forgetPassword = async (req, res) => {
     const user = await User.findOne(filter);
     if (!user)
       return utils.handleError(res, {
-        message: "No account found with the provided email",
+        message: "No account found with the provided credential",
         code: 400,
       });
 
