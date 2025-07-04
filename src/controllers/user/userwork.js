@@ -4230,6 +4230,29 @@ exports.homepageenquiry = async (req, res) => {
     }
 }
 
+exports.getDashboardStats = async (req, res) => {
+    try {
+        const [enquiryCount, categoryCount, resourceCount] = await Promise.all([
+            Enquiry.countDocuments(),
+            Category.countDocuments(),
+            User.countDocuments({ user_type: 'resource' })
+        ]);
+
+        res.status(200).json({
+            data: {
+                enquiries: enquiryCount,
+                productCategories: categoryCount,
+                resources: resourceCount
+            }
+        });
+    } catch (err) {
+        return utils.handleError(res, {
+            message: "Server error while fetching dashboard statistics",
+            code: 500
+        });
+    }
+};
+
 async function genTeamId() {
     const token = Math.floor(Math.random() * 1000000)
     return `Team-${token}`

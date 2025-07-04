@@ -288,7 +288,12 @@ router.get(
 router.get(
     "/homepageenquiry",
     trimRequest.all,
-    controller.homepageenquiry
+    controller.getDashboardStats
+)
+router.get(
+    "/homepagestats",
+    trimRequest.all,
+    controller.getDashboardStats
 )
 router.post(
     "/addTeamMember",
