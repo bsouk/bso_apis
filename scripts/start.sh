@@ -11,7 +11,7 @@ export NVM_DIR="$HOME/.nvm"
 echo "Node Version: $(node -v)"
 echo "Running as: $(whoami)"
 echo "Changing Directory..."
-cd /home/bsoservices/ci-cd || { echo "Error: Directory not found"; exit 1; }
+cd /home/bsoservices/ci-cd/api || { echo "Error: Directory not found"; exit 1; }
 echo "Current Directory: $(pwd)"
 echo "Running NPM Build..."
 #npm run build || { echo "Error: NPM Build failed"; exit 1; }
