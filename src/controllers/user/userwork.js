@@ -4101,7 +4101,6 @@ exports.getCountry = async (req, res) => {
     }
 }
 
-
 exports.getStates = async (req, res) => {
     try {
         const { country } = req.params;
@@ -4118,7 +4117,6 @@ exports.getStates = async (req, res) => {
         utils.handleError(res, error);
     }
 }
-
 
 exports.getCities = async (req, res) => {
     try {
@@ -5312,6 +5310,7 @@ exports.getAllSupplierQuotes = async (req, res) => {
         //     })
         // }
         // if (plan[0]?.plan?.plan_step === "direct") {
+        let data = {};
         const enquirydata = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(id) })
         if (enquirydata?.buyer_plan_step === "direct") {
             data = await EnquiryQuotes.find({ enquiry_id: new mongoose.Types.ObjectId(id) }).populate('payment_terms').populate('admin_payment_terms').populate('user_id', 'full_name email user_type current_user_type').populate('enquiry_items.quantity.unit').populate("pickup_address").populate({ path: 'enquiry_id', select: '-enquiry_items' })
@@ -5337,7 +5336,14 @@ exports.selectSupplierQuote = async (req, res) => {
     try {
         const user_id = req.user._id
         const { quote_id, shipment_type, selected_payment_terms, delivery_selection_data } = req.body
-        console.log("data : ", req.body)
+        console.log("data : ", req.body);
+
+        if (!quote_id) {
+            return utils.handleError(res, {
+                message: "Please send to quote to be selected.",
+                code: 400
+            })
+        }
 
         const pterm_data = await payment_terms.findOne({ _id: new mongoose.Types.ObjectId(selected_payment_terms) })
         console.log("pterm_data : ", pterm_data)
@@ -5905,6 +5911,13 @@ exports.selectLogisticsQuote = async (req, res) => {
         console.log("userId : ", userId)
         const { quote_id } = req.body
         console.log("data : ", req.body)
+
+        if (!quote_id) {
+            return utils.handleError(res, {
+                message: "Please send to quote to be selected.",
+                code: 400
+            })
+        }
 
         // const activeSubscription = await Subscription.aggregate(
         //     [
