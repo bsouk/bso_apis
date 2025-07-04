@@ -1,4 +1,4 @@
-// 'use strict';
+'use strict';
 // added use strict because found undeclared variable uses
 // adding this will prevent it for further happening so.
 
@@ -498,7 +498,7 @@ exports.editProfile = async (req, res) => {
 
                 await updatedUser.save();
             }
-            break;
+                break;
             default: {
                 updatedUser.profile_completed = false
                 await updatedUser.save()
@@ -6102,6 +6102,7 @@ exports.getLogisticsQuotes = async (req, res) => {
         //     })
         // }
 
+        let data = {}
         const enquirydata = await Enquiry.findOne({ _id: new mongoose.Types.ObjectId(id) })
         console.log("enquirydata : ", enquirydata)
 
