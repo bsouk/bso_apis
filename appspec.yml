@@ -1,0 +1,31 @@
+version: 0.0
+os: linux
+
+files:
+  - source: /
+    destination: /home/bsoservices/ci-cd
+    overwrite: true
+
+permissions:
+  - object: /home/bsoservices/ci-cd
+    pattern: "**"
+    owner: bsoservices
+    group: bsoservices
+    type:
+      - file
+  - object: /home/bsoservices/ci-cd
+    pattern: "**"
+    owner: bsoservices
+    group: bsoservices
+    type:
+      - directory            
+      
+hooks:
+  AfterInstall:
+    - location: scripts/install.sh
+      timeout: 300
+      runas: bsoservices
+  ApplicationStart:
+    - location: scripts/start.sh
+      timeout: 300
+      runas: bsoservices
