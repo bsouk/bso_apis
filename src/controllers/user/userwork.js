@@ -2463,7 +2463,7 @@ exports.deleteEnquiry = async (req, res) => {
             });
         }
 
-        const result = await Query.deleteOne({ _id: id })
+        const result = await Enquiry.deleteOne({ _id: id })
         console.log(result)
 
         return res.status(200).json({
