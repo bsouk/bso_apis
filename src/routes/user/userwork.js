@@ -180,7 +180,12 @@ router.delete(
     requireAuth,
     controller.deleteQuery
 );
-
+router.delete(
+    "/deleteEnquiry/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteEnquiry
+);
 //add supplier quote
 router.post(
     '/addSupplierQuote',
