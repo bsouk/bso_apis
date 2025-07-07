@@ -2451,7 +2451,30 @@ exports.deleteQuery = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+exports.deleteEnquiry = async (req, res) => {
+    try {
+        const { id } = req.params
+        const queryData = await Enquiry.findById({ _id: id })
 
+        if (!queryData) {
+            return utils.handleError(res, {
+                message: "Query not found",
+                code: 400,
+            });
+        }
+
+        const result = await Query.deleteOne({ _id: id })
+        console.log(result)
+
+        return res.status(200).json({
+            message: "Query deleted successfully",
+            code: 200
+        })
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
 exports.addSupplierQuote = async (req, res) => {
     try {
         const { query_id, _id, supplier_quote } = req.body
