@@ -439,7 +439,9 @@ exports.forgetPassword = async (req, res) => {
 
     const mailOptions = {
       to: user.email,
-      subject: "Your OTP for Password Reset",
+      subject: "Reset Password OTP",
+      app_url: process.env.APP_URL,
+      storage_url: process.env.STORAGE_BASE_URL,
       otp: otp,
       name: user.full_name,
     };
