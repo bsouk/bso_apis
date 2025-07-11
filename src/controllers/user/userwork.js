@@ -2905,6 +2905,17 @@ exports.createEnquiry = async (req, res) => {
             }
         }
 
+        const mailOptions = {
+            to: req.user?.email,
+            subject: `Enquiry Submitted Successfully – Ref: ${newquery.enquiry_unique_id}`,
+            app_name: process.env.APP_NAME,
+            name: req.user?.full_name,
+            app_url: process.env.APP_URL,
+            storage_url: process.env.STORAGE_BASE_URL,
+            enquiry: newquery,
+        };
+        emailer.sendEmail(null, mailOptions, "EnquirySubmission");
+
         return res.status(200).json({
             message: "Enquiry created successfully",
             data: newquery,
