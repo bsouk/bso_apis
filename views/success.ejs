@@ -2,118 +2,72 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.7.2/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="/path/to/your/styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <style>
-        body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f8f9fa;
-        }
-
-        .loginWrapPage {
-            display: flex;
-            align-items: center;
-            /* justify-content: center; */
-            flex-direction: column;
-            width: 100%;
-            max-width: 900px;
-            margin: auto;
-        }
-
-        .signPatternWrap img {
-            width: 100%;
-            height: auto;
-            object-fit: cover;
-        }
-
-        .loginCardWrap {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .signInLogo img {
-            margin-bottom: 1rem;
-            width: 100px;
-            height: 100px;
-        }
-
-        .signinCard {
-            background: #fff;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 500px;
-        }
-
-        .signinCard .card-title {
-            margin-bottom: 1rem;
-            font-size: 1.5rem;
-        }
-
-        .signinCard .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .inpIcon {
-            position: absolute;
-            top: 50%;
-            right: 10px;
-            transform: translateY(-50%);
-            cursor: pointer;
-        }
-
-        .themeBtn {
-            background-color: #007bff;
-            border-color: #007bff;
-            color: #fff;
-        }
-
-        .themeBtn:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Blue Sky</title>
 </head>
 
-<body>
-    <div class="loginWrapPage">
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f9; padding: 30px 0;">
+    <tr>
+      <td align="center">
+        <table width="700" cellpadding="0" cellspacing="0" border="0"
+          style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
 
-        <div class="loginCardWrap">
-            <div class="signInLogo">
-				<img src="https://betazone.promaticstechnologies.com/heii_rest_apis/public/logo/logo.svg" alt="Hei Logo" />
-            </div>
-            <div class="card signinCard">
-                <div class="card-body">
-                    <h2 class="card-title">Your password has been successfully reset</h2>
-                    <p class="mb-4">Please log in app to access your account</p>
-                    <div class="signform">
-                        <form id="resetPasswordForm">
-                            <button type="button" class="btn themeBtn w-100 mt-3" id="submitBtn">
-                                Submit
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+          <!-- Header with Logo -->
+          <tr>
+            <td align="center" bgcolor="#055a90" style="padding: 20px;">
+              <img src="<%= app_url %>Logo.png" alt="Blue Sky Logo" style="display: block; max-height: 50px;" />
+            </td>
+          </tr>
 
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+              <p><strong>Hello <%= name %>,</strong></p>
 
+              <p>Welcome to <strong><%= app_name %></strong>! We're thrilled to have you join us.</p>
+
+              <p>Your <strong><%= account_type %></strong> account has been successfully created. Here are your login details:</p>
+
+              <!-- Account Info Box -->
+              <table width="100%" cellpadding="15" cellspacing="0"
+                style="background-color: #eef6fb; border-left: 4px solid #055a90; border-radius: 4px; margin: 20px 0;">
+                <tr>
+                  <td style="font-size: 15px;">
+                    <strong>Email:</strong> <%= email %><br />
+                    <strong>Password:</strong> <%= password %>
+                  </td>
+                </tr>
+              </table>
+
+              <p>You can now log in and start exploring our platform.</p>
+
+              <!-- Button -->
+              <p>
+                <a href="<%= app_url %>login"
+                  style="display: inline-block; padding: 12px 24px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                  Login to Your Account
+                </a>
+              </p>
+
+              <p style="margin-top: 30px;">If you have any questions or need help getting started, just reply to this email.</p>
+
+              <p>Best regards,<br /><strong>Blue Sky Team</strong></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+              &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 
 </html>

@@ -1,112 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Account Deletion Request - Blue Sky</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f6f9;
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-    .email-container {
-      max-width: 700px;
-      margin: 30px auto;
-      background-color: #ffffff;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-    }
-    .header {
-      background-color: #ffc107;
-      color: #fff;
-      text-align: center;
-      padding: 30px 20px;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 26px;
-    }
-    .content {
-      padding: 30px 40px;
-      font-size: 16px;
-      line-height: 1.7;
-    }
-    .content h2 {
-      color: #dc3545;
-      margin-top: 0;
-    }
-    .quote-box {
-      background-color: #fff3cd;
-      padding: 15px;
-      margin: 20px 0;
-      border-left: 4px solid #ffc107;
-      border-radius: 4px;
-    }
-    .footer {
-      text-align: center;
-      padding: 20px;
-      font-size: 14px;
-      background-color: #ffc107;
-      color: #fff;
-    }
-    .btn {
-      display: inline-block;
-      margin-top: 15px;
-      padding: 10px 20px;
-      background-color: #ffc107;
-      color: #333;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: bold;
-    }
-  </style>
 </head>
-<body>
-  <div class="email-container">
-    <div class="header">
-      <h1>Blue Sky</h1>
-    </div>
-    <div class="content">
-      <p><strong>Hello <%= user_name %>,</strong></p>
 
-      <% if (status === 'accepted') { %>
-        <p>We have reviewed your request for account deletion and are writing to inform you that your request has been <strong>approved</strong>.</p>
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
 
-        <div class="quote-box">
-          <strong>Request Status:</strong> Approved<br/>
-          <strong>Submitted On:</strong> <%= request_date %><br/>
-        </div>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f9; padding: 30px 0;">
+    <tr>
+      <td align="center">
+        <table width="700" cellpadding="0" cellspacing="0" border="0"
+          style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
 
-        <p>Your account and all associated data will be deleted as per our data policy. If this was done by mistake or you wish to retain your account, please contact our support team immediately.</p>
+          <!-- Header with Logo -->
+          <tr>
+            <td align="center" bgcolor="#055a90" style="padding: 20px;">
+              <img src="<%= app_url %>Logo.png" alt="Blue Sky Logo" style="display: block; max-height: 50px;" />
+            </td>
+          </tr>
 
-        <a href="<%= support_url %>" class="btn">Contact Support</a>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+              <p><strong>Hello <%= user_name %>,</strong></p>
 
-        <p style="margin-top: 30px;">Thank you for being with Blue Sky.</p>
+              <% if (status==='accepted' ) { %>
+                <p>We have reviewed your request for account deletion and are writing to inform you that your request
+                  has been <strong>approved</strong>.</p>
 
-      <% } else { %>
-        <p>We have reviewed your recent request for account deletion. After careful consideration, we regret to inform you that your request has been <strong>rejected</strong> by our team.</p>
+                <table width="100%" cellpadding="15" cellspacing="0"
+                  style="background-color: #eaf8f5; border-left: 4px solid #28a745; border-radius: 4px; margin: 20px 0;">
+                  <tr>
+                    <td style="font-size: 15px;">
+                      <strong>Request Status:</strong> Approved<br />
+                      <strong>Submitted On:</strong>
+                      <%= request_date %>
+                    </td>
+                  </tr>
+                </table>
 
-        <div class="quote-box">
-          <strong>Request Status:</strong> Rejected<br/>
-          <strong>Submitted On:</strong> <%= request_date %><br/>
-        </div>
+                <p>Your account and all associated data will be permanently deleted in accordance with our data
+                  retention policy.</p>
 
-        <p>If you believe this was done in error or have further concerns, feel free to contact our support team.</p>
+                <p>If this action was made in error or you'd like to reverse it, please contact our support team
+                  immediately.</p>
 
-        <a href="<%= support_url %>" class="btn">Contact Support</a>
+                <p>
+                  <a href="<%= support_url %>"
+                    style="display: inline-block; padding: 12px 24px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                    Contact Support
+                  </a>
+                </p>
 
-        <p style="margin-top: 30px;">We appreciate your understanding.</p>
-      <% } %>
+                <p style="margin-top: 30px;">Thank you for being with Blue Sky.</p>
 
-      <p>Best regards,<br><strong>Blue Sky Support Team</strong></p>
-    </div>
-    <div class="footer">
-      &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
-    </div>
-  </div>
+                <% } else { %>
+                  <p>We have reviewed your recent request for account deletion. After careful evaluation, we regret to
+                    inform you that your request has been <strong>rejected</strong>.</p>
+
+                  <table width="100%" cellpadding="15" cellspacing="0"
+                    style="background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 20px 0;">
+                    <tr>
+                      <td style="font-size: 15px;">
+                        <strong>Request Status:</strong> Rejected<br />
+                        <strong>Submitted On:</strong>
+                        <%= request_date %>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p>If you believe this decision was made in error or wish to discuss further, please reach out to our
+                    support team.</p>
+
+                  <p>
+                    <a href="<%= support_url %>"
+                      style="display: inline-block; padding: 12px 24px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                      Contact Support
+                    </a>
+                  </p>
+
+                  <p style="margin-top: 30px;">We appreciate your patience and understanding.</p>
+                  <% } %>
+
+                    <p>Best regards,<br><strong>Blue Sky Support Team</strong></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+              &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
 </body>
+
 </html>

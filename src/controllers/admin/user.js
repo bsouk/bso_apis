@@ -205,99 +205,99 @@ exports.uploadMedia = async (req, res) => {
 };
 
 exports.uploadMediaToBucket = async (req, res) => {
-    try {
-        if (!req.files.media || !req.body.path) {
-            return utils.handleError(res, {
-                message: "MEDIA OR PATH MISSING",
-                code: 400,
-            });
-        }
-
-        let isArray = req.body.isArray;
-        let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif", "image/webp", "image/svg", "image/bmp"];
-        let supportedOtherTypes = [
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/pdf",
-            "audio/mpeg",
-            "audio/wav",
-            "audio/mp3",
-            "audio/ogg",
-            "video/mp4",
-            "video/quicktime",
-            "video/x-m4v",
-            "video/webm",
-            "video/mov"
-        ];
-
-        if (Array.isArray(req.files.media)) {
-            let mediaArray = [];
-
-            for (let index = 0; index < req.files.media.length; index++) {
-                const element = req.files.media[index];
-                console.log("element:", element);
-                console.log("type:", element.mimetype);
-
-                if (supportedImageTypes.includes(element.mimetype)) {
-                    let media = await utils.uploadImageToBucket({
-                        file: element,
-                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                    });
-                    mediaArray.push(`${req.body.path}/${media}`);
-                } else if (supportedOtherTypes.includes(element.mimetype)) {
-                    let media = await utils.uploadFileToS3Bucket({
-                        file: element,
-                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                    });
-                    mediaArray.push(`${req.body.path}/${media}`);
-                } else {
-                    return utils.handleError(res, {
-                        message: `Unsupported file type: ${element.mimetype}`,
-                        code: 400,
-                    });
-                }
-            }
-
-            return res.status(200).json({
-                code: 200,
-                data: mediaArray,
-            });
-        } else {
-            const element = req.files.media;
-            console.log("element:", element);
-            console.log("type:", element.mimetype);
-
-            if (supportedImageTypes.includes(element.mimetype)) {
-                let media = await utils.uploadImageToBucket({
-                    file: element,
-                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                });
-                const url = `${req.body.path}/${media}`;
-                return res.status(200).json({
-                    code: 200,
-                    data: isArray === "true" ? [url] : url,
-                });
-            } else if (supportedOtherTypes.includes(element.mimetype)) {
-                let media = await utils.uploadFileToS3Bucket({
-                    file: element,
-                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                });
-                const url = `${req.body.path}/${media}`;
-                return res.status(200).json({
-                    code: 200,
-                    data: isArray === "true" ? [url] : url,
-                });
-            } else {
-                return utils.handleError(res, {
-                    message: `Unsupported file type: ${element.mimetype}`,
-                    code: 400,
-                });
-            }
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        utils.handleError(res, error);
+  try {
+    if (!req.files.media || !req.body.path) {
+      return utils.handleError(res, {
+        message: "MEDIA OR PATH MISSING",
+        code: 400,
+      });
     }
+
+    let isArray = req.body.isArray;
+    let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif", "image/webp", "image/svg", "image/bmp"];
+    let supportedOtherTypes = [
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/pdf",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/mp3",
+      "audio/ogg",
+      "video/mp4",
+      "video/quicktime",
+      "video/x-m4v",
+      "video/webm",
+      "video/mov"
+    ];
+
+    if (Array.isArray(req.files.media)) {
+      let mediaArray = [];
+
+      for (let index = 0; index < req.files.media.length; index++) {
+        const element = req.files.media[index];
+        console.log("element:", element);
+        console.log("type:", element.mimetype);
+
+        if (supportedImageTypes.includes(element.mimetype)) {
+          let media = await utils.uploadImageToBucket({
+            file: element,
+            path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+          });
+          mediaArray.push(`${req.body.path}/${media}`);
+        } else if (supportedOtherTypes.includes(element.mimetype)) {
+          let media = await utils.uploadFileToS3Bucket({
+            file: element,
+            path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+          });
+          mediaArray.push(`${req.body.path}/${media}`);
+        } else {
+          return utils.handleError(res, {
+            message: `Unsupported file type: ${element.mimetype}`,
+            code: 400,
+          });
+        }
+      }
+
+      return res.status(200).json({
+        code: 200,
+        data: mediaArray,
+      });
+    } else {
+      const element = req.files.media;
+      console.log("element:", element);
+      console.log("type:", element.mimetype);
+
+      if (supportedImageTypes.includes(element.mimetype)) {
+        let media = await utils.uploadImageToBucket({
+          file: element,
+          path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+        });
+        const url = `${req.body.path}/${media}`;
+        return res.status(200).json({
+          code: 200,
+          data: isArray === "true" ? [url] : url,
+        });
+      } else if (supportedOtherTypes.includes(element.mimetype)) {
+        let media = await utils.uploadFileToS3Bucket({
+          file: element,
+          path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+        });
+        const url = `${req.body.path}/${media}`;
+        return res.status(200).json({
+          code: 200,
+          data: isArray === "true" ? [url] : url,
+        });
+      } else {
+        return utils.handleError(res, {
+          message: `Unsupported file type: ${element.mimetype}`,
+          code: 400,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    utils.handleError(res, error);
+  }
 };
 
 
@@ -798,20 +798,20 @@ exports.getResourceList = async (req, res) => {
   }
 };
 exports.deleteRecruiter = async (req, res) => {
-    try {
-        const { ids } = req.body
-        console.log('ids : ', req.body)
-        const result = await User.deleteMany({ _id: { $in: ids } })
-        // const allja = await job_applications.deleteMany({job_id : { $in : ids } })
-   
-        console.log('deleted Recruiter : ', result, allja, allsj)
-        return res.status(200).json({
-            message: "Resource deleted successfully",
-            code: 200
-        })
-    } catch (error) {
-        utils.handleError(res, error);
-    }
+  try {
+    const { ids } = req.body
+    console.log('ids : ', req.body)
+    const result = await User.deleteMany({ _id: { $in: ids } })
+    // const allja = await job_applications.deleteMany({job_id : { $in : ids } })
+
+    console.log('deleted Recruiter : ', result, allja, allsj)
+    return res.status(200).json({
+      message: "Resource deleted successfully",
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
 }
 exports.getRecruiterList = async (req, res) => {
   try {
@@ -857,7 +857,7 @@ exports.getRecruiterList = async (req, res) => {
 
       {
         $project: {
-         company_data:1
+          company_data: 1
         },
       },
     ]);
@@ -2255,7 +2255,7 @@ exports.editLogisticsUser = async (req, res) => {
       data.current_user_type = data.switch_to
     }
     await User.findByIdAndUpdate(id, data);
- 
+
     if (
       data.phone_number_code ||
       data.phone_number ||
@@ -2575,6 +2575,8 @@ exports.sendProfileReply = async (req, res) => {
       to: Userdata.email,
       subject: "Profile Review Request",
       user_name: Userdata.full_name,
+      app_url: process.env.APP_URL,
+      storage_url: process.env.STORAGE_BASE_URL,
       message: reply
     }
 

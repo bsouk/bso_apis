@@ -5623,6 +5623,8 @@ exports.selectSupplierQuote = async (req, res) => {
             enquiry_id: selected.enquiry_unique_id,
             buyer_name: selected.user_id.full_name,
             portal_url: "",
+            app_url: process.env.APP_URL,
+            storage_url: process.env.STORAGE_BASE_URL,
             detail: `
              <div class="quote-box">
                <p><strong>Quote ID:</strong>${quotedata?.quote_unique_id}</p>
@@ -6080,6 +6082,8 @@ exports.selectLogisticsQuote = async (req, res) => {
             supplier_name: quotedata.user_id.full_name,
             enquiry_id: enquiry.enquiry_unique_id,
             buyer_name: enquiry.user_id.full_name,
+            app_url: process.env.APP_URL,
+            storage_url: process.env.STORAGE_BASE_URL,
             portal_url: "",
             detail: `
              <div class="quote-box">
@@ -6325,6 +6329,8 @@ exports.sendOtpForEnquiry = async (req, res) => {
             to: email,
             subject: "Verify Your OTP",
             app_name: process.env.APP_NAME,
+            app_url: process.env.APP_URL,
+            storage_url: process.env.STORAGE_BASE_URL,
             otp: otp,
         };
 
@@ -6384,6 +6390,8 @@ exports.sendOtpForQuote = async (req, res) => {
             to: email,
             subject: "Verify Your OTP",
             app_name: process.env.APP_NAME,
+            app_url: process.env.APP_URL,
+            storage_url: process.env.STORAGE_BASE_URL,
             otp: otp,
         };
 
@@ -7354,6 +7362,8 @@ exports.sendOtpForCompany = async (req, res) => {
             to: email,
             subject: "Verify Your OTP",
             app_name: process.env.APP_NAME,
+            app_url: process.env.APP_URL,
+            storage_url: process.env.STORAGE_BASE_URL,
             otp: otp,
         };
 
