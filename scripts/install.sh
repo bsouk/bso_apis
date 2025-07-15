@@ -8,7 +8,7 @@ export NVM_DIR="$HOME/.nvm"
 echo "Node Version: $(node -v)"
 echo "Running as: $(whoami)"
 echo "Changing Directory..."
-cd /var/www/mongo/bso_apis || { echo "Error: Directory not found"; exit 1; }
+cd /home/bsoservices/ci-cd/bso_apis || { echo "Error: Directory not found"; exit 1; }
 echo "Current Directory: $(pwd)"
 echo "Installing NPM Packages..."
 npm i || { echo "Error: NPM installation failed"; exit 1; }
