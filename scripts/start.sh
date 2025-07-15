@@ -6,7 +6,7 @@ export NVM_DIR="$HOME/.nvm"
 echo "Node Version: $(node -v)"
 echo "Running as: $(whoami)"
 echo "Changing Directory..."
-cd /var/www/mongo/bso_apis
+cd /home/bsoservices/ci-cd/bso_apis
 echo "Current Directory: $(pwd)"
 echo "Starting APIs"
 pm2 restart server.js
