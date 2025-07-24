@@ -6292,23 +6292,22 @@ exports.getMyOwnLogisticsQuotes = async (req, res) => {
 exports.sendOtpForEnquiry = async (req, res) => {
     try {
         const { enquiry_id, quote_id } = req.body;
-        const enquiry = await Enquiry.findOne({ _id: enquiry_id })
-        const user = await User.findOne({ _id: enquiry.user_id })
+        const enquiry = await Enquiry.findOne({ _id: enquiry_id });
+        const user = await User.findOne({ _id: enquiry.user_id });
         const user_id = user._id;
+
         if (!user || !user.email || !user.phone_number) {
-            return res.status(400).json({ code: 400, message: "User not found or missing email and phone number" });
+            return res.status(400).json({
+                code: 400,
+                message: "User not found or missing email and phone number"
+            });
         }
 
         const email = user.email;
         const otp = Math.floor(100000 + Math.random() * 900000);
 
-        const existingOtp = await EnquiryOtp.findOne({
-            user_id,
-            enquiry_id,
-            quote_id,
-        });
-
-        const data = {
+        const existingOtp = await EnquiryOtp.findOne({ user_id, enquiry_id, quote_id });
+        const otpData = {
             user_id,
             enquiry_id,
             quote_id,
@@ -6319,37 +6318,85 @@ exports.sendOtpForEnquiry = async (req, res) => {
         };
 
         if (existingOtp) {
-            await EnquiryOtp.findByIdAndUpdate(existingOtp._id, data);
+            await EnquiryOtp.findByIdAndUpdate(existingOtp._id, otpData);
         } else {
-            const newOtp = new EnquiryOtp(data);
+            const newOtp = new EnquiryOtp(otpData);
             await newOtp.save();
         }
 
-        const mailOptions = {
-            to: email,
-            subject: "Verify Your OTP",
-            app_name: process.env.APP_NAME,
-            app_url: process.env.APP_URL,
-            storage_url: process.env.STORAGE_BASE_URL,
-            otp: otp,
-        };
+        // Send Email
+        let emailSent = false;
+        try {
+            const mailOptions = {
+                to: email,
+                subject: "Verify Your OTP",
+                app_name: process.env.APP_NAME,
+                app_url: process.env.APP_URL,
+                storage_url: process.env.STORAGE_BASE_URL,
+                otp: otp,
+            };
 
-        emailer.sendEmail(null, mailOptions, "verifyOTP");
-
-        let phoneCode = user.phone_number_code.trim();
-        if (!phoneCode.startsWith("+")) {
-            phoneCode = "+" + phoneCode;
+            await emailer.sendEmail(null, mailOptions, "verifyOTP");
+            emailSent = true;
+        } catch (err) {
+            console.error("Failed to send email OTP:", err);
         }
 
-        const fullPhoneNumber = `${phoneCode}${user.phone_number.trim()}`;
-        const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
-        console.log("result : ", result);
+        // Send SMS
+        let smsSent = false;
+        let phoneError = null;
+        try {
+            let phoneCode = user.phone_number_code.trim();
+            if (!phoneCode.startsWith("+")) phoneCode = "+" + phoneCode;
+            const fullPhoneNumber = `${phoneCode}${user.phone_number.trim()}`;
 
-        res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop(), enquiry_id, quote_id }); // Remove `otp` if you don't want to expose it
+            await utils.sendSMS(fullPhoneNumber, `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`);
+            smsSent = true;
+        } catch (err) {
+            console.error("Failed to send SMS OTP:", err);
+            phoneError = err.message || "Failed to send OTP to phone";
+        }
+
+        // Response handling
+        if (emailSent && smsSent) {
+            return res.status(200).json({
+                code: 200,
+                message: "OTP sent successfully to both email and phone",
+                email: maskEmail(email),
+                enquiry_id,
+                quote_id,
+            });
+        }
+
+        if (emailSent && !smsSent) {
+            return res.status(207).json({
+                code: 207,
+                message: "OTP sent to email, but failed to send to phone",
+                email: maskEmail(email),
+                phone_error: phoneError,
+                enquiry_id,
+                quote_id,
+            });
+        }
+
+        // Both failed
+        return res.status(500).json({
+            code: 500,
+            message: "Failed to send OTP to both email and phone",
+            enquiry_id,
+            quote_id,
+        });
+
     } catch (error) {
         utils.handleError(res, error);
     }
 };
+
+function maskEmail(email) {
+    const [user, domain] = email.split("@");
+    return user.slice(0, 2) + "****@" + domain;
+}
+
 exports.sendOtpForQuote = async (req, res) => {
     try {
         const { enquiry_id, quote_id } = req.body;
@@ -6403,7 +6450,7 @@ exports.sendOtpForQuote = async (req, res) => {
         }
 
         const fullPhoneNumber = `${phoneCode}${user.phone_number.trim()}`;
-        const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+        const result = await utils.sendSMS(fullPhoneNumber, `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
         console.log("result : ", result);
 
         res.json({ code: 200, message: "OTP sent successfully", email: email.slice(0, 2) + '****' + email.split('@').pop(), enquiry_id, quote_id }); // Remove `otp` if you don't want to expose it
@@ -7373,7 +7420,7 @@ exports.sendOtpForCompany = async (req, res) => {
 
         if (req.body.phone_number) {
             fullPhoneNumber = `${phone_number_code}${phone_number}`;
-            const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
+            const result = await utils.sendSMS(fullPhoneNumber, `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
             console.log("result : ", result);
         }
 
