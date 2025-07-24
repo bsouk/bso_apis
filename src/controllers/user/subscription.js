@@ -139,7 +139,10 @@ exports.genrateClientScretKey = async (req, res) => {
 
         const setupIntent = await stripe.setupIntents.create({
             customer: customer.id,
-            payment_method_types: ['card', 'link', 'us_bank_account'],
+            // payment_method_types: ['card', 'link', 'us_bank_account'],
+            automatic_payment_methods: {
+                enabled: true,
+            },
             metadata: {
                 userId: userid.toString(),
                 planId: plandata._id.toString()
@@ -384,7 +387,10 @@ exports.generateClientSecretKeymultiple = async (req, res) => {
         });
         const setupIntent = await stripe.setupIntents.create({
             customer: customer.id,
-            payment_method_types: ['card', 'link', 'us_bank_account'],
+            // payment_method_types: ['card', 'link', 'us_bank_account'],
+            automatic_payment_methods: {
+                enabled: true,
+            },
             metadata: {
                 userId: userId.toString(),
                 bundlePlanIds: plans.map(p => p._id.toString()).join(',')
