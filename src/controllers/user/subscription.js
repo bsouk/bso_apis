@@ -479,6 +479,7 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 customer: customer.id,
                 items: [{ price: plandata.stripe_price_id }],
                 default_payment_method: payment_method_id,
+                payment_behavior: "error_if_incomplete",
                 expand: ['latest_invoice.payment_intent'],
                 metadata: {
                     userId: userid.toString(),
