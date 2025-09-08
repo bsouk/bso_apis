@@ -650,7 +650,6 @@ exports.createSubscription = async (req, res) => {
             });
         }
         const userdata = await User.findOne({ _id: userid })
-        console.log("userdata : ", userdata)
         if (!userdata) {
             return utils.handleError(res, {
                 message: "user not found",
@@ -668,7 +667,6 @@ exports.createSubscription = async (req, res) => {
         }
 
         const result = await Subscription.findOne({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type, status: "active" })
-        console.log("result : ", result)
 
         if (result) {
             return utils.handleError(res, {
@@ -722,6 +720,7 @@ exports.createSubscription = async (req, res) => {
             //     save_default_payment_method: 'on_subscription' // Let Stripe handle retention
             // },
             default_payment_method: payment_method_id,
+            payment_behavior: "error_if_incomplete",
             expand: ['latest_invoice.payment_intent'],
             metadata: {
                 userId: userid.toString(),
@@ -764,7 +763,6 @@ exports.createSubscription = async (req, res) => {
             isPurchased: true
         }
 
-        console.log("newdata : ", newdata)
         // const result = await Subscription.updateMany({ user_id: new mongoose.Types.ObjectId(userid), type: plandata.type }, { status: 'terminated' }, { new: true })
         // console.log("result : ", result)
         const newsubscription = await Subscription.create(newdata);
@@ -868,13 +866,10 @@ exports.createSubscription = async (req, res) => {
                 payment_method_type: 'manual',
                 isPurchased: true
             });
-
-            console.log("Created new recruiter subscription (", recruiterInterval, "):", recruiterSubscription);
         }
 
         // admin notification
         const admins = await Admin.findOne({ role: 'super_admin' });
-        console.log("admins : ", admins)
 
         if (admins) {
             const notificationMessage = {
@@ -884,12 +879,10 @@ exports.createSubscription = async (req, res) => {
             };
 
             const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
-            console.log("adminFcmDevices : ", adminFcmDevices)
 
             if (adminFcmDevices && adminFcmDevices.length > 0) {
                 adminFcmDevices.forEach(async i => {
                     const token = i.token
-                    console.log("token : ", token)
                     await utils.sendNotification(token, notificationMessage);
                 })
                 const adminNotificationData = {
@@ -903,7 +896,7 @@ exports.createSubscription = async (req, res) => {
                     user_type: plandata.type
                 };
                 const newAdminNotification = new admin_received_notification(adminNotificationData);
-                console.log("newAdminNotification : ", newAdminNotification)
+
                 await newAdminNotification.save();
             }
         }

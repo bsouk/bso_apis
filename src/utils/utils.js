@@ -237,10 +237,8 @@ exports.sendNotification = async (token, notificationData) => {
   try {
     // Ensure that the token is valid and not empty
     if (!token) {
-      console.error("Invalid token provided.");
       return;
     }
-    console.log('notificationData', notificationData)
     const message = {
       notification: {
         title: notificationData.title,
@@ -248,7 +246,6 @@ exports.sendNotification = async (token, notificationData) => {
       },
       token: token  // This should be the user's FCM token
     };
-    console.log("message : ", message)
     // Send the notification using Firebase Admin SDK
     await admin.messaging().send(message);
     console.log("Notification sent successfully to the user.");
