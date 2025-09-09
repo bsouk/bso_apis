@@ -14,12 +14,15 @@ const fcm_devices = require("../../models/fcm_devices");
 const admin_notification = require("../../models/admin_notification");
 const admin_received_notification = require("../../models/admin_received_notification");
 
+
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
 exports.handleStripeWebhook = async (req, res) => {
+    let event = req.body;
     const sig = req.headers['stripe-signature'];
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    let event;
+    console.log("endpointSecret", endpointSecret)
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+        event = stripe.webhooks.constructEvent(event, sig, endpointSecret);
     } catch (err) {
         console.log(`⚠️  Webhook signature verification failed.`, err);
         return res.status(400).send(`Webhook Error: ${err.message}`);
