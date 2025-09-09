@@ -721,7 +721,7 @@ exports.createSubscription = async (req, res) => {
             //     save_default_payment_method: 'on_subscription' // Let Stripe handle retention
             // },
             default_payment_method: payment_method_id,
-            payment_behavior: "error_if_incomplete",
+            // payment_behavior: "error_if_incomplete",
             expand: ['latest_invoice.payment_intent'],
             metadata: {
                 userId: userid.toString(),
@@ -901,17 +901,31 @@ exports.createSubscription = async (req, res) => {
                 await newAdminNotification.save();
             }
         }
+        // return res.status(200).json({
+        //     message: "Subscription created successfully",
+        //     data: {
+        //         subscription: newsubscription,
+        //         requires_action: requiresAction,
+        //         client_secret: clientSecret,
+        //         payment_method_type: paymentIntent.payment_method_types[0]
+        //     },
+        //     code: 200
+        // })
+
         return res.status(200).json({
-            message: "Subscription created successfully",
+            message: requiresAction ? "Payment requires additional authentication" : "Subscription created successfully",
+            requires_action: requiresAction,
             data: {
                 subscription: newsubscription,
                 requires_action: requiresAction,
                 client_secret: clientSecret,
-                payment_method_type: paymentIntent.payment_method_types[0]
+                payment_intent_status: paymentIntent.status,
+                subscription_status: stripeSubscription.status
             },
             code: 200
-        })
+        });
     } catch (error) {
+        console.log('error :>> ', error);
         if (error.type === 'StripeInvalidRequestError') {
             return res.status(400).json({
                 message: error.message,

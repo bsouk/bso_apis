@@ -24,6 +24,8 @@ exports.handleStripeWebhook = async (req, res) => {
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    console.log('event in webhooks :>> ', event);
+
     switch (event.type) {
         case 'invoice.payment_succeeded':
             const invoice = event.data.object;
