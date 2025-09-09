@@ -18,17 +18,16 @@ const admin_received_notification = require("../../models/admin_received_notific
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 exports.handleStripeWebhook = async (req, res) => {
-    let event = req.body;
-    const sig = req.headers['stripe-signature'];
-    console.log("endpointSecret", endpointSecret)
+    const sig = req.headers["stripe-signature"];
+    let event;
     try {
-        event = stripe.webhooks.constructEvent(event, sig, endpointSecret);
+        // :zap: use req.body (Buffer) directly
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
     } catch (err) {
-        console.log(`⚠️  Webhook signature verification failed.`, err);
+        console.log(":warning:  Webhook signature verification failed.", err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
-
-    console.log('event in webhooks :>> ', event);
+    console.log("event in webhooks :>> ", event);
 
     switch (event.type) {
         case 'invoice.payment_succeeded':
