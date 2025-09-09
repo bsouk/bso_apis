@@ -13,7 +13,7 @@ const trimRequest = require('trim-request');
 router.post(
     "/webhook",
     express.raw({type: 'application/json'}),
-    trimRequest.all,
+    // trimRequest.all,
     controller.handleStripeWebhook
 )
 
