@@ -14,7 +14,7 @@ app.post(
   "/webhook",
   express.raw({ type: 'application/json' }),
   // trimRequest.all,
-  controller.handleStripeWebhook
+  handleStripeWebhook
 )
 
 // Middleware
