@@ -10,7 +10,7 @@ const initMongo = require("./src/config/mongo");
 const app = express();
 const { handleStripeWebhook } = require("./src/controllers/user/webhook")
 
-router.post(
+app.post(
   "/webhook",
   express.raw({ type: 'application/json' }),
   // trimRequest.all,
