@@ -11,7 +11,7 @@ const app = express();
 const { handleStripeWebhook } = require("./src/controllers/user/webhook")
 
 app.post(
-  "/webhook",
+  "/user/webhook",
   express.raw({ type: 'application/json' }),
   // trimRequest.all,
   handleStripeWebhook
