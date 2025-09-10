@@ -22,6 +22,13 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 // ✅ Log file path
 const LOG_FILE = path.join(__dirname, '../../logs/stripe_webhook_logs.txt');
 
+
+// create log directory if not exist
+const logDir = path.dirname(LOG_FILE);
+if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+}
+
 // ✅ Logging function
 function logStripeEvent(event) {
     const timestamp = new Date().toISOString();
