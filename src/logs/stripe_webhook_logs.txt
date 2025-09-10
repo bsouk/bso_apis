@@ -1,0 +1,601 @@
+[2025-09-10T05:07:25.027Z] product.created
+{
+  "object": {
+    "id": "prod_T1jjfk5hQcu7ot",
+    "object": "product",
+    "active": true,
+    "attributes": [],
+    "created": 1757480844,
+    "default_price": null,
+    "description": "Do not purchase for testing only",
+    "images": [],
+    "livemode": false,
+    "marketing_features": [],
+    "metadata": {},
+    "name": "Trial Plan",
+    "package_dimensions": null,
+    "shippable": null,
+    "statement_descriptor": null,
+    "tax_code": null,
+    "type": "service",
+    "unit_label": null,
+    "updated": 1757480844,
+    "url": null
+  }
+}
+
+[2025-09-10T05:07:25.325Z] plan.created
+{
+  "object": {
+    "id": "price_1S5gFcHoaFEMsOSKyagA7mjo",
+    "object": "plan",
+    "active": true,
+    "amount": 100,
+    "amount_decimal": "100",
+    "billing_scheme": "per_unit",
+    "created": 1757480844,
+    "currency": "usd",
+    "interval": "month",
+    "interval_count": 1,
+    "livemode": false,
+    "metadata": {
+      "pricing_type": "base"
+    },
+    "meter": null,
+    "nickname": null,
+    "product": "prod_T1jjfk5hQcu7ot",
+    "tiers_mode": null,
+    "transform_usage": null,
+    "trial_period_days": null,
+    "usage_type": "licensed"
+  }
+}
+
+[2025-09-10T05:07:25.333Z] price.created
+{
+  "object": {
+    "id": "price_1S5gFcHoaFEMsOSKyagA7mjo",
+    "object": "price",
+    "active": true,
+    "billing_scheme": "per_unit",
+    "created": 1757480844,
+    "currency": "usd",
+    "custom_unit_amount": null,
+    "livemode": false,
+    "lookup_key": null,
+    "metadata": {
+      "pricing_type": "base"
+    },
+    "nickname": null,
+    "product": "prod_T1jjfk5hQcu7ot",
+    "recurring": {
+      "interval": "month",
+      "interval_count": 1,
+      "meter": null,
+      "trial_period_days": null,
+      "usage_type": "licensed"
+    },
+    "tax_behavior": "unspecified",
+    "tiers_mode": null,
+    "transform_quantity": null,
+    "type": "recurring",
+    "unit_amount": 100,
+    "unit_amount_decimal": "100"
+  }
+}
+
+[2025-09-10T05:07:25.534Z] price.created
+{
+  "object": {
+    "id": "price_1S5gFcHoaFEMsOSK99hRWp5Q",
+    "object": "price",
+    "active": true,
+    "billing_scheme": "per_unit",
+    "created": 1757480844,
+    "currency": "usd",
+    "custom_unit_amount": null,
+    "livemode": false,
+    "lookup_key": null,
+    "metadata": {
+      "pricing_type": "per_user",
+      "payment_type": "one_time"
+    },
+    "nickname": null,
+    "product": "prod_T1jjfk5hQcu7ot",
+    "recurring": null,
+    "tax_behavior": "unspecified",
+    "tiers_mode": null,
+    "transform_quantity": null,
+    "type": "one_time",
+    "unit_amount": 100,
+    "unit_amount_decimal": "100"
+  }
+}
+
+[2025-09-10T05:13:23.647Z] customer.created
+{
+  "object": {
+    "id": "cus_T1jpsg05S05YIG",
+    "object": "customer",
+    "address": null,
+    "balance": 0,
+    "created": 1757481203,
+    "currency": null,
+    "default_source": null,
+    "delinquent": false,
+    "description": null,
+    "discount": null,
+    "email": "yash@mailinator.com",
+    "invoice_prefix": "QN3TRA81",
+    "invoice_settings": {
+      "custom_fields": null,
+      "default_payment_method": null,
+      "footer": null,
+      "rendering_options": null
+    },
+    "livemode": false,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef"
+    },
+    "name": "Yash Kapoor",
+    "phone": null,
+    "preferred_locales": [],
+    "shipping": null,
+    "tax_exempt": "none",
+    "test_clock": null
+  }
+}
+
+[2025-09-10T05:13:23.974Z] customer.created
+{
+  "object": {
+    "id": "cus_T1jp2uenn53Uos",
+    "object": "customer",
+    "address": null,
+    "balance": 0,
+    "created": 1757481203,
+    "currency": null,
+    "default_source": null,
+    "delinquent": false,
+    "description": null,
+    "discount": null,
+    "email": "yash@mailinator.com",
+    "invoice_prefix": "YRFDTCXJ",
+    "invoice_settings": {
+      "custom_fields": null,
+      "default_payment_method": null,
+      "footer": null,
+      "rendering_options": null
+    },
+    "livemode": false,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef"
+    },
+    "name": "Yash Kapoor",
+    "phone": null,
+    "preferred_locales": [],
+    "shipping": null,
+    "tax_exempt": "none",
+    "test_clock": null
+  }
+}
+
+[2025-09-10T05:13:24.013Z] payment_intent.created
+{
+  "object": {
+    "id": "pi_3S5gLPHoaFEMsOSK0OUnvWLP",
+    "object": "payment_intent",
+    "amount": 100,
+    "amount_capturable": 0,
+    "amount_details": {
+      "tip": {}
+    },
+    "amount_received": 0,
+    "application": null,
+    "application_fee_amount": null,
+    "automatic_payment_methods": {
+      "allow_redirects": "always",
+      "enabled": true
+    },
+    "canceled_at": null,
+    "cancellation_reason": null,
+    "capture_method": "automatic_async",
+    "client_secret": "pi_3S5gLPHoaFEMsOSK0OUnvWLP_secret_Mg28cfja8liq7YPn6fP8Ov5lP",
+    "confirmation_method": "automatic",
+    "created": 1757481203,
+    "currency": "usd",
+    "customer": "cus_T1jpsg05S05YIG",
+    "description": null,
+    "excluded_payment_method_types": null,
+    "last_payment_error": null,
+    "latest_charge": null,
+    "livemode": false,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef",
+      "planId": "68c1078d2a92e797bc49c3fb"
+    },
+    "next_action": null,
+    "on_behalf_of": null,
+    "payment_method": null,
+    "payment_method_configuration_details": {
+      "id": "pmc_1RBYhQHoaFEMsOSKWMvEp3Be",
+      "parent": null
+    },
+    "payment_method_options": {
+      "card": {
+        "installments": null,
+        "mandate_options": null,
+        "network": null,
+        "request_three_d_secure": "automatic"
+      },
+      "link": {
+        "persistent_token": null
+      }
+    },
+    "payment_method_types": [
+      "card",
+      "link"
+    ],
+    "processing": null,
+    "receipt_email": null,
+    "review": null,
+    "setup_future_usage": null,
+    "shipping": null,
+    "source": null,
+    "statement_descriptor": null,
+    "statement_descriptor_suffix": null,
+    "status": "requires_payment_method",
+    "transfer_data": null,
+    "transfer_group": null
+  }
+}
+
+[2025-09-10T05:13:24.571Z] setup_intent.created
+{
+  "object": {
+    "id": "seti_1S5gLQHoaFEMsOSKTcxlmmew",
+    "object": "setup_intent",
+    "application": null,
+    "automatic_payment_methods": {
+      "allow_redirects": "always",
+      "enabled": true
+    },
+    "cancellation_reason": null,
+    "client_secret": "seti_1S5gLQHoaFEMsOSKTcxlmmew_secret_T1jpBk1eG7TCnd7TzEhHOZETAVDVlIw",
+    "created": 1757481204,
+    "customer": "cus_T1jpsg05S05YIG",
+    "description": null,
+    "flow_directions": null,
+    "last_setup_error": null,
+    "latest_attempt": null,
+    "livemode": false,
+    "mandate": null,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef",
+      "planId": "68c1078d2a92e797bc49c3fb"
+    },
+    "next_action": null,
+    "on_behalf_of": null,
+    "payment_method": null,
+    "payment_method_configuration_details": {
+      "id": "pmc_1RBYhQHoaFEMsOSKWMvEp3Be",
+      "parent": null
+    },
+    "payment_method_options": {
+      "card": {
+        "mandate_options": null,
+        "network": null,
+        "request_three_d_secure": "automatic"
+      }
+    },
+    "payment_method_types": [
+      "card",
+      "bancontact",
+      "klarna",
+      "link",
+      "revolut_pay"
+    ],
+    "single_use_mandate": null,
+    "status": "requires_payment_method",
+    "usage": "off_session"
+  }
+}
+
+[2025-09-10T05:13:24.647Z] payment_intent.created
+{
+  "object": {
+    "id": "pi_3S5gLPHoaFEMsOSK16CdSQ46",
+    "object": "payment_intent",
+    "amount": 100,
+    "amount_capturable": 0,
+    "amount_details": {
+      "tip": {}
+    },
+    "amount_received": 0,
+    "application": null,
+    "application_fee_amount": null,
+    "automatic_payment_methods": {
+      "allow_redirects": "always",
+      "enabled": true
+    },
+    "canceled_at": null,
+    "cancellation_reason": null,
+    "capture_method": "automatic_async",
+    "client_secret": "pi_3S5gLPHoaFEMsOSK16CdSQ46_secret_EHLfgBk0jLYrbAcgT7NnAVlfh",
+    "confirmation_method": "automatic",
+    "created": 1757481203,
+    "currency": "usd",
+    "customer": "cus_T1jp2uenn53Uos",
+    "description": null,
+    "excluded_payment_method_types": null,
+    "last_payment_error": null,
+    "latest_charge": null,
+    "livemode": false,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef",
+      "planId": "68c1078d2a92e797bc49c3fb"
+    },
+    "next_action": null,
+    "on_behalf_of": null,
+    "payment_method": null,
+    "payment_method_configuration_details": {
+      "id": "pmc_1RBYhQHoaFEMsOSKWMvEp3Be",
+      "parent": null
+    },
+    "payment_method_options": {
+      "card": {
+        "installments": null,
+        "mandate_options": null,
+        "network": null,
+        "request_three_d_secure": "automatic"
+      },
+      "link": {
+        "persistent_token": null
+      }
+    },
+    "payment_method_types": [
+      "card",
+      "link"
+    ],
+    "processing": null,
+    "receipt_email": null,
+    "review": null,
+    "setup_future_usage": null,
+    "shipping": null,
+    "source": null,
+    "statement_descriptor": null,
+    "statement_descriptor_suffix": null,
+    "status": "requires_payment_method",
+    "transfer_data": null,
+    "transfer_group": null
+  }
+}
+
+[2025-09-10T05:13:24.821Z] setup_intent.created
+{
+  "object": {
+    "id": "seti_1S5gLQHoaFEMsOSKHRqYqAok",
+    "object": "setup_intent",
+    "application": null,
+    "automatic_payment_methods": {
+      "allow_redirects": "always",
+      "enabled": true
+    },
+    "cancellation_reason": null,
+    "client_secret": "seti_1S5gLQHoaFEMsOSKHRqYqAok_secret_T1jpv0HV2CVBZAkHbXpTWEKUlwHVtrs",
+    "created": 1757481204,
+    "customer": "cus_T1jp2uenn53Uos",
+    "description": null,
+    "flow_directions": null,
+    "last_setup_error": null,
+    "latest_attempt": null,
+    "livemode": false,
+    "mandate": null,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef",
+      "planId": "68c1078d2a92e797bc49c3fb"
+    },
+    "next_action": null,
+    "on_behalf_of": null,
+    "payment_method": null,
+    "payment_method_configuration_details": {
+      "id": "pmc_1RBYhQHoaFEMsOSKWMvEp3Be",
+      "parent": null
+    },
+    "payment_method_options": {
+      "card": {
+        "mandate_options": null,
+        "network": null,
+        "request_three_d_secure": "automatic"
+      }
+    },
+    "payment_method_types": [
+      "card",
+      "bancontact",
+      "klarna",
+      "link",
+      "revolut_pay"
+    ],
+    "single_use_mandate": null,
+    "status": "requires_payment_method",
+    "usage": "off_session"
+  }
+}
+
+[2025-09-10T05:15:36.303Z] setup_intent.requires_action
+{
+  "object": {
+    "id": "seti_1S5gLQHoaFEMsOSKTcxlmmew",
+    "object": "setup_intent",
+    "application": null,
+    "automatic_payment_methods": {
+      "allow_redirects": "always",
+      "enabled": true
+    },
+    "cancellation_reason": null,
+    "client_secret": "seti_1S5gLQHoaFEMsOSKTcxlmmew_secret_T1jpBk1eG7TCnd7TzEhHOZETAVDVlIw",
+    "created": 1757481204,
+    "customer": "cus_T1jpsg05S05YIG",
+    "description": null,
+    "flow_directions": null,
+    "last_setup_error": null,
+    "latest_attempt": "setatt_1S5gNXHoaFEMsOSKQi36uxWg",
+    "livemode": false,
+    "mandate": null,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef",
+      "planId": "68c1078d2a92e797bc49c3fb"
+    },
+    "next_action": {
+      "type": "use_stripe_sdk",
+      "use_stripe_sdk": {
+        "type": "stripe_3ds2_fingerprint",
+        "merchant": "acct_1RBYgoHoaFEMsOSK",
+        "three_d_secure_2_source": "setatt_1S5gNXHoaFEMsOSKQi36uxWg",
+        "directory_server_name": "visa",
+        "server_transaction_id": "1779f3fa-87da-46ca-8666-7491351341e1",
+        "three_ds_method_url": "",
+        "three_ds_optimizations": "kf",
+        "directory_server_encryption": {
+          "directory_server_id": "A000000003",
+          "algorithm": "RSA",
+          "certificate": "-----BEGIN CERTIFICATE-----\nMIIGAzCCA+ugAwIBAgIQNyg9v/wemJMz4m18kdvt6zANBgkqhkiG9w0BAQsFADB2\nMQswCQYDVQQGEwJVUzENMAsGA1UECgwEVklTQTEvMC0GA1UECwwmVmlzYSBJbnRl\ncm5hdGlvbmFsIFNlcnZpY2UgQXNzb2NpYXRpb24xJzAlBgNVBAMMHlZpc2EgZUNv\nbW1lcmNlIElzc3VpbmcgQ0EgLSBHMjAeFw0yNDAyMjcyMjQ0MDNaFw0yNzAyMjYy\nMjQ0MDJaMIGhMRgwFgYDVQQHDA9IaWdobGFuZHMgUmFuY2gxETAPBgNVBAgMCENv\nbG9yYWRvMQswCQYDVQQGEwJVUzENMAsGA1UECgwEVklTQTEvMC0GA1UECwwmVmlz\nYSBJbnRlcm5hdGlvbmFsIFNlcnZpY2UgQXNzb2NpYXRpb24xJTAjBgNVBAMMHDNk\nczIucnNhLmVuY3J5cHRpb24udmlzYS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IB\nDwAwggEKAoIBAQCSABLI5aAnf8Cypn/sKETE+U3e3YruYzUkqNpEMH0sPMpCAW1V\n33xiklm5R0S3ZFOEzzlmL22tRyjXaB6/WJUa66ajRz2DiY8+7x5CcMJNVlwqS6OG\nTlmvXGOxPXIVz6hxCsAb7mKS7cnpGpkjVD/Oe4u8ZmeUrcPWKdeH+e5BfeWp2Iel\nh89pU4tpJ84PlPTlLjZ3TLa2OutFLsMBExcr4ipWnEcbpkzvAPBRABBVZbkWTA9i\nVM9v5MXIJGzXDsQVJEOgxm/kyQXeO3JtNytYOaQ6sQi+z9gF32plP3hsrUQ2jJ3H\nCnZmOyrHl8tQWxhAIMZ/WHogpvEGufi14eyBAgMBAAGjggFfMIIBWzAMBgNVHRMB\nAf8EAjAAMB8GA1UdIwQYMBaAFL0nYyikrlS3yCO3wTVCF+nGeF+FMGcGCCsGAQUF\nBwEBBFswWTAwBggrBgEFBQcwAoYkaHR0cDovL2Vucm9sbC52aXNhY2EuY29tL2VD\nb21tRzIuY3J0MCUGCCsGAQUFBzABhhlodHRwOi8vb2NzcC52aXNhLmNvbS9vY3Nw\nMEYGA1UdIAQ/MD0wMQYIKwYBBQUHAgEwJTAjBggrBgEFBQcCARYXaHR0cDovL3d3\ndy52aXNhLmNvbS9wa2kwCAYGZ4EDAQEBMBMGA1UdJQQMMAoGCCsGAQUFBwMCMDUG\nA1UdHwQuMCwwKqAooCaGJGh0dHA6Ly9lbnJvbGwudmlzYWNhLmNvbS9lQ29tbUcy\nLmNybDAdBgNVHQ4EFgQU6gD/Z5m2gw4n676qt4jXOWr8ynowDgYDVR0PAQH/BAQD\nAgSwMA0GCSqGSIb3DQEBCwUAA4ICAQBumWXGS/uaaajte2gI3xCpsuewmihQKvKq\nOhaOc+wgdfwIkEAXdJIc33n2j/iaT5Lusi09ezZpBB80C6KQVr5Fs10SX0hlBCvT\n9MGYFwFtYUgi5OenqYsXc8BdmiE0bFiSXZ7XfxWuvYjis4LOubMr48yVyyEynWWb\nSGr7rTJztraOFjsykK16x946YXi/LswEP9RtDiOBNJ9cBVcOP+u8Q+dEzA5A63Ay\nA2Z/5m/pyCIWMSYGMtM0RANUp9gp7cEXaMpwKWfrW6ZanF60IoGlmRHilGU4rvm7\ntd4yJTfwxtkmh4w/IPiqI/OaXj5iG8hCo8a9FTnGahIcij8c1UWzQ3/A7o99AUwy\n1Xi9JnNiXYVM1bfQalK0DKsLqRiS6rzPfwMUxj2+ALnhcrnSdPnZgVxiQB7kvfi3\nHFXHoGhmMHHj8tlURqUQzpJcCz1QOy5c9SCc/M8Xu+eRsCnJrtvvDxriLWfDDM9M\n8/8JsiBP+DF6omCb6J4ryEulcVPnVAAZNlNtaUadPYnCJfB0p67jWkHa5NvQdZGW\naT1tvo9DqjI7zLf9Km0qqkK51gwYDnsy14pYvfeEwL9O9aepFa7x08bM3272xqNK\neGHXFK/zUVxYY5uxukcqYAdhAvx7f6d0J6Nr8jPxo6UNXKiFH9leGPPzx9oNugts\nz6qck4YdAQ==\n-----END CERTIFICATE-----\n",
+          "root_certificate_authorities": [
+            "-----BEGIN CERTIFICATE-----\nMIIFqTCCA5GgAwIBAgIPUT6WAAAA20Qn7qzgvuFIMA0GCSqGSIb3DQEBCwUAMG8x\nCzAJBgNVBAYTAlVTMQ0wCwYDVQQKDARWSVNBMS8wLQYDVQQLDCZWaXNhIEludGVy\nbmF0aW9uYWwgU2VydmljZSBBc3NvY2lhdGlvbjEgMB4GA1UEAwwXVmlzYSBQdWJs\naWMgUlNBIFJvb3QgQ0EwHhcNMjEwMzE2MDAwMDAwWhcNNDEwMzE1MDAwMDAwWjBv\nMQswCQYDVQQGEwJVUzENMAsGA1UECgwEVklTQTEvMC0GA1UECwwmVmlzYSBJbnRl\ncm5hdGlvbmFsIFNlcnZpY2UgQXNzb2NpYXRpb24xIDAeBgNVBAMMF1Zpc2EgUHVi\nbGljIFJTQSBSb290IENBMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA\n2WEbXLS3gI6LOY93bP7Kz6EO9L1QXlr8l+fTkJWZldJ6QuwZ1cv4369tfjeJ8O5w\nSJiDcVw7eNdOP73LfAtwHlTnUnb0e9ILTTipc5bkNnAevocrJACsrpiQ8jBI9ttp\ncqKUeJgzW4Ie25ypirKroVD42b4E0iICK2cZ5QfD4BSzUnftp4Bqh8AfpGvG1lre\nCaD53qrsy5SUadY/NaeUGOkqdPvDSNoDIdrbExwnZaSFUmjQT1svKwMqGo2GFrgJ\n4cULEp4NNj5rga8YTTZ7Xo5MblHrLpSPOmJev30KWi/BcbvtCNYNWBTg7UMzP3cK\nMQ1pGLvG2PgvFTZSRvH3QzngJRgrDYYOJ6kj9ave+6yOOFqj80ZCuH0Nugt2mMS3\nc3+Nksaw+6H3cQPsE/Gv5zjfsKleRhEFtE1gyrdUg1DMgu8o/YhKM7FAqkXUn74z\nwoRFgx3Mi5OaGTQbg+NlwJgR4sVHXCV4s9b8PjneLhzWMn353SFARF9dnO7LDBqq\ntT6WltJu1z9x2Ze0UVNZvxKGcyCkLody29O8j9/MGZ8SOSUu4U6NHrebKuuf9Fht\nn6PqQ4ppkhy6sReXeV5NVGfVpDYY5ZAKEWqTYgMULWpQ2Py4BGpFzBe07jXkyulR\npoKvz14iXeA0oq16c94DrFYX0jmrWLeU4a/TCZQLFIsCAwEAAaNCMEAwHQYDVR0O\nBBYEFEtNpg77oBHorQvi8PMKAC+sixb7MA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0P\nAQH/BAQDAgEGMA0GCSqGSIb3DQEBCwUAA4ICAQC5BU9qQSZYPcgCp2x0Juq59kMm\nXuBly094DaEnPqvtCgwwAirkv8x8/QSOxiWWiu+nveyuR+j6Gz/fJaV4u+J5QEDy\ncfk605Mw3HIcJOeZvDgk1eyOmQwUP6Z/BdQTNJmZ92Z8dcG5yWCxLBrqPH7ro3Ss\njhYq9duIJU7jfizCJCN4W8tp0D2pWBe1/CYNswP4GMs5jQ5+ZQKN/L5JFdwVTu7X\nPt8b5zfgbmmQpVmUn0oFwm3OI++Z6gEpNmW5bd/2oUIZoG96Qff2fauVMAYiWQvN\nnL3y1gkRguTOSMVUCCiGfdvwu5ygowillvV2nHb7+YibQ9N5Z2spP0o9Zlfzoat2\n7WFpyK47TiUdu/4toarLKGZP+hbA/F4xlnM/8EfZkE1DeTTI0lhN3O8yEsHrtRl1\nOuQZ/IexHO8UGU6jvn4TWo10HYeXzrGckL7oIXfGTrjPzfY62T5HDW/BAEZS+9Tk\nijz25YM0fPPz7IdlEG+k4q4YwZ82j73Y9kDEM5423mrWorq/Bq7I5Y8v0LTY9GWH\nYrpElYf0WdOXAbsfwQiT6qnRio+p82VyqlY8Jt6VVA6CDy/iHKwcj1ELEnDQfVv9\nhedoxmnQ6xe/nK8czclu9hQJRv5Lh9gk9Q8DKK2nmgzZ8SSQ+lr3mSSeY8JOMRlE\n+RKdOQIChWthTJKh7w==\n-----END CERTIFICATE-----\n"
+          ]
+        },
+        "one_click_authn": null
+      }
+    },
+    "on_behalf_of": null,
+    "payment_method": "pm_1S5gNXHoaFEMsOSKQESo560X",
+    "payment_method_configuration_details": {
+      "id": "pmc_1RBYhQHoaFEMsOSKWMvEp3Be",
+      "parent": null
+    },
+    "payment_method_options": {
+      "card": {
+        "mandate_options": null,
+        "network": null,
+        "request_three_d_secure": "automatic"
+      }
+    },
+    "payment_method_types": [
+      "card",
+      "bancontact",
+      "klarna",
+      "link",
+      "revolut_pay"
+    ],
+    "single_use_mandate": null,
+    "status": "requires_action",
+    "usage": "off_session"
+  }
+}
+
+[2025-09-10T05:15:47.289Z] payment_method.attached
+{
+  "object": {
+    "id": "pm_1S5gNXHoaFEMsOSKQESo560X",
+    "object": "payment_method",
+    "allow_redisplay": "unspecified",
+    "billing_details": {
+      "address": {
+        "city": null,
+        "country": "IN",
+        "line1": null,
+        "line2": null,
+        "postal_code": null,
+        "state": null
+      },
+      "email": null,
+      "name": null,
+      "phone": null,
+      "tax_id": null
+    },
+    "card": {
+      "brand": "visa",
+      "checks": {
+        "address_line1_check": null,
+        "address_postal_code_check": null,
+        "cvc_check": "pass"
+      },
+      "country": "DE",
+      "display_brand": "visa",
+      "exp_month": 2,
+      "exp_year": 2028,
+      "fingerprint": "VOE3p285SVDPSehX",
+      "funding": "credit",
+      "generated_from": null,
+      "last4": "3184",
+      "networks": {
+        "available": [
+          "visa"
+        ],
+        "preferred": null
+      },
+      "regulated_status": "unregulated",
+      "three_d_secure_usage": {
+        "supported": true
+      },
+      "wallet": null
+    },
+    "created": 1757481335,
+    "customer": "cus_T1jpsg05S05YIG",
+    "livemode": false,
+    "metadata": {},
+    "type": "card"
+  }
+}
+
+[2025-09-10T05:15:47.559Z] setup_intent.succeeded
+{
+  "object": {
+    "id": "seti_1S5gLQHoaFEMsOSKTcxlmmew",
+    "object": "setup_intent",
+    "application": null,
+    "automatic_payment_methods": {
+      "allow_redirects": "always",
+      "enabled": true
+    },
+    "cancellation_reason": null,
+    "client_secret": "seti_1S5gLQHoaFEMsOSKTcxlmmew_secret_T1jpBk1eG7TCnd7TzEhHOZETAVDVlIw",
+    "created": 1757481204,
+    "customer": "cus_T1jpsg05S05YIG",
+    "description": null,
+    "flow_directions": null,
+    "last_setup_error": null,
+    "latest_attempt": "setatt_1S5gNXHoaFEMsOSKQi36uxWg",
+    "livemode": false,
+    "mandate": null,
+    "metadata": {
+      "userId": "686661d257415a3f7a0a98ef",
+      "planId": "68c1078d2a92e797bc49c3fb"
+    },
+    "next_action": null,
+    "on_behalf_of": null,
+    "payment_method": "pm_1S5gNXHoaFEMsOSKQESo560X",
+    "payment_method_configuration_details": {
+      "id": "pmc_1RBYhQHoaFEMsOSKWMvEp3Be",
+      "parent": null
+    },
+    "payment_method_options": {
+      "card": {
+        "mandate_options": null,
+        "network": null,
+        "request_three_d_secure": "automatic"
+      }
+    },
+    "payment_method_types": [
+      "card",
+      "bancontact",
+      "klarna",
+      "link",
+      "revolut_pay"
+    ],
+    "single_use_mandate": null,
+    "status": "succeeded",
+    "usage": "off_session"
+  }
+}
+
