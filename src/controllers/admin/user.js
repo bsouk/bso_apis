@@ -921,6 +921,7 @@ exports.getRecruiterList = async (req, res) => {
           profile_image: 1,
           company_data: 1,
           status: 1,
+          recruiter_status: 1, // Include role-specific status
           createdAt: 1,
           updatedAt: 1,
           user_type: 1,
@@ -1929,6 +1930,7 @@ exports.getSupplierList = async (req, res) => {
           phone_number_code: 1,
           phone_number: 1,
           status: 1,
+          supplier_status: 1, // Include role-specific status
           joining_date: 1,
           createdAt: 1,
           address: 1,
@@ -2244,6 +2246,7 @@ exports.getLogisticsUserList = async (req, res) => {
           phone_number_code: 1,
           phone_number: 1,
           status: 1,
+          logistics_status: 1, // Include role-specific status
           joining_date: 1,
           createdAt: 1,
           address: 1,
@@ -2461,7 +2464,7 @@ exports.sendProfileReply = async (req, res) => {
   }
 }
 
-//change Profile status
+//change Profile status (Legacy - affects global status)
 exports.changeStatus = async (req, res) => {
   try {
     const userId = req.params.id
@@ -2493,6 +2496,136 @@ exports.changeStatus = async (req, res) => {
     utils.handleError(res, err);
   }
 }
+
+// Role-based status toggle functions
+exports.changeSupplierStatus = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log("Changing supplier status for user:", userId);
+
+    const userData = await User.findById(userId);
+    if (!userData) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    // Check if user has supplier role
+    if (!userData.user_type.includes('supplier')) {
+      return utils.handleError(res, {
+        message: "User is not a supplier",
+        code: 400,
+      });
+    }
+
+    // Toggle supplier-specific status
+    if (userData.supplier_status === "active") {
+      userData.supplier_status = "inactive";
+    } else {
+      userData.supplier_status = "active";
+    }
+
+    await userData.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Supplier Status Changed Successfully",
+      code: 200,
+      data: {
+        supplier_status: userData.supplier_status
+      }
+    });
+  } catch (err) {
+    utils.handleError(res, err);
+  }
+};
+
+exports.changeLogisticsStatus = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log("Changing logistics status for user:", userId);
+
+    const userData = await User.findById(userId);
+    if (!userData) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    // Check if user has logistics role
+    if (!userData.user_type.includes('logistics')) {
+      return utils.handleError(res, {
+        message: "User is not a logistics user",
+        code: 400,
+      });
+    }
+
+    // Toggle logistics-specific status
+    if (userData.logistics_status === "active") {
+      userData.logistics_status = "inactive";
+    } else {
+      userData.logistics_status = "active";
+    }
+
+    await userData.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Logistics Status Changed Successfully",
+      code: 200,
+      data: {
+        logistics_status: userData.logistics_status
+      }
+    });
+  } catch (err) {
+    utils.handleError(res, err);
+  }
+};
+
+exports.changeRecruiterStatus = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    console.log("Changing recruiter status for user:", userId);
+
+    const userData = await User.findById(userId);
+    if (!userData) {
+      return utils.handleError(res, {
+        message: "User Not Found",
+        code: 400,
+      });
+    }
+
+    // Check if user has recruiter role
+    if (!userData.user_type.includes('recruiter')) {
+      return utils.handleError(res, {
+        message: "User is not a recruiter",
+        code: 400,
+      });
+    }
+
+    // Toggle recruiter-specific status
+    if (userData.recruiter_status === "active") {
+      userData.recruiter_status = "inactive";
+    } else {
+      userData.recruiter_status = "active";
+    }
+
+    await userData.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Recruiter Status Changed Successfully",
+      code: 200,
+      data: {
+        recruiter_status: userData.recruiter_status
+      }
+    });
+  } catch (err) {
+    utils.handleError(res, err);
+  }
+};
 
 
 //change Profile availability status
