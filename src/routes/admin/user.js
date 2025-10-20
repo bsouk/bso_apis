@@ -405,6 +405,13 @@ router.patch(
   controller.restoreSupplier
 );
 
+router.delete(
+  "/deleteSupplierPermanently/:supplierId",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteSupplierPermanently
+);
+
 router.get(
   "/getTrashedSupplierList",
   trimRequest.all,
@@ -464,6 +471,41 @@ router.get(
   controller.getTrashedLogisticsList
 );
 
+router.delete(
+  "/deleteLogisticsPermanently/:logisticsId",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteLogisticsPermanently
+);
+
+router.patch(
+  "/switchLogisticsToCustomer/:logisticsId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchLogisticsToCustomer
+);
+
+router.patch(
+  "/switchLogisticsToSupplier/:logisticsId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchLogisticsToSupplier
+);
+
+router.patch(
+  "/switchLogisticsToRecruiter/:logisticsId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchLogisticsToRecruiter
+);
+
+router.patch(
+  "/listLogisticsProfile/:logisticsId",
+  trimRequest.all,
+  requireAuth,
+  controller.listLogisticsProfile
+);
+
 // ================================
 // RESOURCE TRASH ROUTES
 // ================================
@@ -510,6 +552,41 @@ router.get(
   trimRequest.all,
   requireAuth,
   controller.getTrashedRecruiterList
+);
+
+router.delete(
+  "/deleteRecruiterPermanently/:recruiterId",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteRecruiterPermanently
+);
+
+router.patch(
+  "/switchRecruiterToCustomer/:recruiterId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchRecruiterToCustomer
+);
+
+router.patch(
+  "/switchRecruiterToSupplier/:recruiterId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchRecruiterToSupplier
+);
+
+router.patch(
+  "/switchRecruiterToLogistic/:recruiterId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchRecruiterToLogistic
+);
+
+router.patch(
+  "/listRecruiterProfile/:recruiterId",
+  trimRequest.all,
+  requireAuth,
+  controller.listRecruiterProfile
 );
 
 // ================================
