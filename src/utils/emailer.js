@@ -23,10 +23,10 @@ const {
 } = require("./utils");
 
 mailer.extend(app, {
-  from: '"Support" <nodeteamemail@gmail.com>',
-  host: "smtp.gmail.com",
-  secureConnection: true,
-  port: 465,
+  from: process.env.EMAIL_FROM || `"Support" <${process.env.EMAIL}>`,
+  host: process.env.EMAIL_HOST || "smtp.gmail.com",
+  secureConnection: process.env.EMAIL_PORT === "465",
+  port: parseInt(process.env.EMAIL_PORT) || 465,
   transportMethod: "SMTP",
   auth: {
     user: process.env.EMAIL,

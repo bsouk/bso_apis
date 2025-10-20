@@ -4,6 +4,53 @@ const bcrypt = require("bcrypt");
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
+
+// Test email function
+exports.testEmail = async (req, res) => {
+  try {
+    console.log("🧪 Testing email functionality...");
+    
+    const mailOptions = {
+      to: "bsouk.ltd@gmail.com", // Test email
+      subject: `Email Test - ${process.env.APP_NAME || 'BSO Services'}`,
+      app_name: process.env.APP_NAME || 'BSO Services',
+      email: "bsouk.ltd@gmail.com",
+      name: "Test User",
+      login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/sign-in',
+    };
+
+    console.log("📧 Sending test email...");
+    
+    // Test with a simple email first
+    const testMailOptions = {
+      to: "bsouk.ltd@gmail.com",
+      subject: "BSO Email Test",
+      app_name: "BSO Services",
+      email: "bsouk.ltd@gmail.com",
+      name: "Test User",
+      login_url: "https://bsoservices.com/sign-in",
+    };
+
+    await emailer.sendEmail(null, testMailOptions, "passwordUpdated");
+    
+    res.json({
+      message: "✅ Test email sent successfully!",
+      code: 200,
+      data: {
+        sent_to: "bsouk.ltd@gmail.com",
+        template: "passwordUpdated"
+      }
+    });
+    
+  } catch (error) {
+    console.error("❌ Email test failed:", error);
+    res.status(500).json({
+      message: "❌ Email test failed",
+      code: 500,
+      error: error.message
+    });
+  }
+};
 const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
 const { generateUniqueUserId } = require("../../utils/userIdGenerator");
@@ -578,11 +625,17 @@ exports.editCustomer = async (req, res) => {
       ...data
     }
 
+    // Track if password was updated for email notification
+    let passwordUpdated = false;
+    let newPassword = null;
+
     // Handle password hashing if password is provided
     if (data.password) {
       const hashedPassword = await bcrypt.hash(data.password, 10);
       userData.password = hashedPassword;
       userData.decoded_password = data.password;
+      passwordUpdated = true;
+      newPassword = data.password;
     }
 
     if (data.company_data) {
@@ -600,6 +653,28 @@ exports.editCustomer = async (req, res) => {
     console.log("userData is ", userData)
 
     await User.findByIdAndUpdate(id, userData);
+
+    // Send email notification if password was updated (non-blocking)
+    if (passwordUpdated) {
+      const mailOptions = {
+        to: user.email,
+        subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: user.email,
+        password: newPassword,
+        name: user.full_name || `${user.first_name} ${user.last_name}`,
+        login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/sign-in',
+      };
+
+      // Send email asynchronously without blocking the response
+      emailer.sendEmail(null, mailOptions, "passwordUpdated")
+        .then(() => {
+          console.log(`✅ Password update email sent to ${user.email}`);
+        })
+        .catch((emailError) => {
+          console.error(`❌ Error sending password update email to ${user.email}:`, emailError.message);
+        });
+    }
 
     if (
       data.phone_number_code ||
