@@ -693,89 +693,18 @@ exports.deleteSelectedCustomer = async (req, res) => {
 
 exports.addResource = async (req, res) => {
   try {
-    const data = req.body;
-
-    const doesEmailExists = await emailer.emailExists(data.email);
-    if (doesEmailExists)
-      return utils.handleError(res, {
-        message: "This email address is already registered",
-        code: 400,
+    const { createResource } = require('../../utils/createUserWithRole');
+    const result = await createResource(req.body, res);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        code: result.code,
+        data: result.user
       });
-
-    if (data.phone_number) {
-      const doesPhoneNumberExist = await emailer.checkMobileExists(
-        data.phone_number
-      );
-      if (doesPhoneNumberExist)
-        return utils.handleError(res, {
-          message: "This phone number is already registered",
-          code: 400,
-        });
     }
-
-    const password = createNewPassword();
-    const userData = {
-      ...data,
-      unique_user_id: await getUniqueId(),
-      password,
-      decoded_password: password,
-      user_type: ["resource"],
-      current_user_type: "resource",
-      profile_completed: true,
-      //is_user_approved_by_admin: true,
-    };
-
-    const user = new User(userData);
-    const requiredFields = [
-      "full_name",
-      "email",
-      "phone_number",
-      "profile_image",
-      "profile_title",
-      "profile_description",
-      "specialisations",
-      "rate_per_hour",
-      "project_pricing_model",
-      "resource_availability"
-    ]
-
-    console.log("resource check fields is ", requiredFields)
-
-    const isProfileComplete = requiredFields.map(field => isFieldPopulated(user, field));
-
-    const hasRequiredArrays =
-      Array.isArray(user.work_exprience) && user.work_exprience.length > 0 &&
-      Array.isArray(user.education) && user.education.length > 0 &&
-      Array.isArray(user.portfolio) && user.portfolio.length > 0 &&
-      Array.isArray(user.skills) && user.skills.length > 0 &&
-      Array.isArray(user.certifications) && user.certifications.length > 0 &&
-      Array.isArray(user.languages) && user.languages.length > 0 &&
-      Array.isArray(user.testimonials) && user.testimonials.length > 0 &&
-      Array.isArray(user.employement_history) && user.employement_history.length > 0;
-
-    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
-
-    if (isProfileComplete && hasRequiredArrays) {
-      user.profile_completed = true;
-    } else {
-      user.profile_completed = false;
-    }
-
-    await user.save();
-
-    const mailOptions = {
-      to: user.email,
-      subject: `Welcome to ${process.env.APP_NAME}! Your Resource Account Has Been Created`,
-      app_name: process.env.APP_NAME,
-      email: user.email,
-      password: password,
-      name: user.full_name,
-      account_type: "resource",
-    };
-
-    emailer.sendEmail(null, mailOptions, "accountCreated");
-    res.json({ message: "Resource added successfully", code: 200 });
   } catch (error) {
+    console.error('Error adding resource:', error);
     utils.handleError(res, error);
   }
 };
@@ -788,6 +717,7 @@ exports.getResourceList = async (req, res) => {
       user_type: { $in: ["resource"] },
       // profile_completed: true,
       is_deleted: false,
+      is_trashed: { $ne: true },
     };
 
     if (search) {
@@ -870,6 +800,7 @@ exports.getRecruiterList = async (req, res) => {
       user_type: { $in: ["recruiter"] },
       // profile_completed: true,
       is_deleted: false,
+      is_trashed: { $ne: true },
     };
 
     if (search) {
@@ -906,7 +837,22 @@ exports.getRecruiterList = async (req, res) => {
 
       {
         $project: {
-          company_data: 1
+          _id: 1,
+          unique_user_id: 1,
+          full_name: 1,
+          email: 1,
+          phone_number: 1,
+          profile_image: 1,
+          company_data: 1,
+          status: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          user_type: 1,
+          current_user_type: 1,
+          profile_completed: 1,
+          is_user_approved_by_admin: 1,
+          recruiter_company_details: 1,
+          recruiter_specializations: 1,
         },
       },
     ]);
@@ -1622,171 +1568,18 @@ const isFieldPopulated = (obj, path) => {
 
 exports.addSupplier = async (req, res) => {
   try {
-    const data = req.body;
-
-    console.log("userdata ------->", data);
-
-    const doesEmailExists = await emailer.emailExists(data.email);
-
-    if (doesEmailExists)
-      return utils.handleError(res, {
-        message: "This email address is already registered",
-        code: 400,
+    const { createSupplier } = require('../../utils/createUserWithRole');
+    const result = await createSupplier(req.body, res);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        code: result.code,
+        data: result.user
       });
-
-    if (data.phone_number) {
-      const doesPhoneNumberExist = await emailer.checkMobileExists(
-        data.phone_number
-      );
-      if (doesPhoneNumberExist)
-        return utils.handleError(res, {
-          message: "This phone number is already registered",
-          code: 400,
-        });
     }
-
-    const password = createNewPassword();
-
-    // console.log("userData ---->",data)
-    const userData = {
-      ...data,
-      unique_user_id: await getUniqueId(),
-      password,
-      decoded_password: password,
-      user_type: ["supplier"],
-      current_user_type: "supplier",
-      profile_completed: true,
-      // is_user_approved_by_admin: true,
-    };
-
-    const user = new User(userData);
-
-    //complete profile if necessary fields are present
-    const requiredFields = [
-      'full_name',
-      'profile_image',
-      'email',
-      'phone_number',
-      'bank_details.account_holder_name',
-      'bank_details.account_number',
-      'bank_details.bank_name',
-      'bank_details.swift_code',
-      'bank_details.iban_number',
-      'bank_details.address.line1',
-      'bank_details.address.line2',
-      'bank_details.address.city',
-      'bank_details.address.state',
-      'bank_details.address.zip_code',
-      'bank_details.address.country',
-      'company_data.company_logo',
-      'company_data.name',
-      'company_data.business_category',
-      'company_data.phone_number',
-      'company_data.name',
-      'company_data.registration_number',
-      'company_data.incorporation_date',
-      'company_data.vat_number',
-      'company_data.business_category',
-      'company_data.phone_number',
-      'company_data.email',
-      'company_data.address.line1',
-      'company_data.address.line2',
-      'company_data.address.city',
-      'company_data.address.state',
-      'company_data.address.zip_code',
-      'company_data.address.country',
-      'beneficiary_address.line1',
-      'beneficiary_address.line2',
-      'beneficiary_address.city',
-      'beneficiary_address.state',
-      'beneficiary_address.zip_code',
-      'beneficiary_address.country',
-      'additional_notes',
-    ];
-
-    console.log("supplier check fields is ", requiredFields)
-
-    const isProfileComplete = requiredFields.map(field => isFieldPopulated(user, field));
-
-    const hasRequiredArrays =
-      Array.isArray(user.sample_products) && user.sample_products.length > 0 &&
-      Array.isArray(user.business_certificates) && user.business_certificates.length > 0 &&
-      Array.isArray(user.licenses) && user.licenses.length > 0;
-
-    console.log("isProfileComplete is ", isProfileComplete, " hasRequiredArrays is ", hasRequiredArrays)
-
-    if (isProfileComplete && hasRequiredArrays) {
-      user.profile_completed = true;
-    } else {
-      user.profile_completed = false;
-    }
-
-    await user.save();
-
-    const addressData = {
-      user_id: user._id,
-      address: data.address,
-      location: data.location,
-      phone_number_code: data.phone_number_code,
-      phone_number: data.phone_number,
-      is_primary: true,
-      default_address: true,
-
-      //supplier
-      // address:data.address,
-      // categories_id:data.categories_id,
-      // sub_categories_id:data.categories_id,
-      // bank_details:data.bank_details,
-      // certification:data.certification,
-      // quality_procedures:data.quality_procedures,
-      // health_and_saftey_procedures:data.health_and_saftey_procedures,
-      // anti_correcuptin_procedures:data.anti_correcuptin_procedures,
-      // categories_id : {
-      //   type : mongoose.Schema.Types.ObjectId
-      // },
-      // sub_categories_id:{
-      //   type : mongoose.Schema.Types.ObjectId
-
-      // },
-
-      // bank_details:{
-      //   type:string
-      // },
-      // certification:{
-      //   type:string
-      // },
-      // health_and_saftey_procedures:{
-      //   type:string
-      // },
-      // quality_procedures:{
-      //   type:string
-      // },
-      // anti_correcuptin_procedures:{
-      //   type:string
-      // },
-      // business_document:{
-      //   type:string
-      // }
-    };
-
-    const address = new Address(addressData);
-    await user.save();
-    await address.save();
-
-    const mailOptions = {
-      to: user.email,
-      subject: `Welcome to ${process.env.APP_NAME}! Your Supplier Account Has Been Created`,
-      app_name: process.env.APP_NAME,
-      email: user.email,
-      password: password,
-      name: user.full_name,
-      account_type: "supplier",
-      user_id: user.unique_user_id,
-    };
-
-    emailer.sendEmail(null, mailOptions, "accountCreated");
-    res.json({ message: "Supplier added successfully", code: 200 });
   } catch (error) {
+    console.error('Error adding supplier:', error);
     utils.handleError(res, error);
   }
 };
@@ -2182,71 +1975,18 @@ exports.deleteSelectedSupplier = async (req, res) => {
 
 exports.addLogisticsUser = async (req, res) => {
   try {
-    const data = req.body;
-
-    console.log("userdata ------->", data);
-
-    const doesEmailExists = await emailer.emailExists(data.email);
-    if (doesEmailExists)
-      return utils.handleError(res, {
-        message: "This email address is already registered",
-        code: 400,
+    const { createLogisticsUser } = require('../../utils/createUserWithRole');
+    const result = await createLogisticsUser(req.body, res);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        code: result.code,
+        data: result.user
       });
-
-    if (data.phone_number) {
-      const doesPhoneNumberExist = await emailer.checkMobileExists(
-        data.phone_number
-      );
-      if (doesPhoneNumberExist)
-        return utils.handleError(res, {
-          message: "This phone number is already registered",
-          code: 400,
-        });
     }
-
-    const password = createNewPassword();
-
-    // console.log("userData ---->",data)
-    const userData = {
-      ...data,
-      unique_user_id: await getUniqueId(),
-      password,
-      decoded_password: password,
-      user_type: ["logistics"],
-      current_user_type: "logistics",
-      profile_completed: true,
-      // is_user_approved_by_admin: true,
-    };
-
-    const user = new User(userData);
-
-    const addressData = {
-      user_id: user._id,
-      address: data.address,
-      location: data.location,
-      phone_number_code: data.phone_number_code,
-      phone_number: data.phone_number,
-      is_primary: true,
-      default_address: true,
-    };
-
-    const address = new Address(addressData);
-    await user.save();
-    await address.save();
-
-    const mailOptions = {
-      to: user.email,
-      subject: `Welcome to ${process.env.APP_NAME}! Your Customer Account Has Been Created`,
-      app_name: process.env.APP_NAME,
-      email: user.email,
-      password: password,
-      name: user.full_name,
-      account_type: "customer",
-    };
-
-    emailer.sendEmail(null, mailOptions, "accountCreated");
-    res.json({ message: "User added successfully", code: 200 });
   } catch (error) {
+    console.error('Error adding logistics user:', error);
     utils.handleError(res, error);
   }
 };
@@ -2360,6 +2100,7 @@ exports.getLogisticsUserList = async (req, res) => {
       user_type: { $in: ["logistics"] },
       // profile_completed: true,
       is_deleted: false,
+      is_trashed: { $ne: true },
     };
 
     if (search) {
@@ -3896,47 +3637,27 @@ exports.getTrashedCustomerList = async (req, res) => {
 // SUPPLIER TRASH FUNCTIONALITY
 // ================================
 
-// Trash supplier (soft delete)
+// Trash supplier (role-based soft delete)
 exports.trashSupplier = async (req, res) => {
   try {
     const { supplierId } = req.params;
     const adminId = req.user._id;
 
-    // Find the supplier
-    const supplier = await User.findById(supplierId);
-    if (!supplier) {
-      return res.status(404).json({
-        message: "Supplier not found",
-        code: 404
+    const { trashUserRole } = require('../../utils/roleBasedDeletion');
+    const result = await trashUserRole(supplierId, 'supplier', adminId);
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        code: result.code,
+        data: result.data
+      });
+    } else {
+      res.status(result.code).json({
+        message: result.message,
+        code: result.code
       });
     }
-
-    // Check if supplier has supplier role
-    if (!supplier.user_type.includes('supplier')) {
-      return res.status(400).json({
-        message: "User is not a supplier",
-        code: 400
-      });
-    }
-
-    if (supplier.is_trashed) {
-      return res.status(400).json({
-        message: "Supplier is already trashed",
-        code: 400
-      });
-    }
-
-    // Update supplier to trashed status
-    await User.findByIdAndUpdate(supplierId, {
-      is_trashed: true,
-      trashed_at: new Date(),
-      trashed_by: adminId,
-    });
-
-    res.json({
-      message: "Supplier moved to trash successfully",
-      code: 200
-    });
 
   } catch (error) {
     console.error('Error trashing supplier:', error);
@@ -3944,40 +3665,56 @@ exports.trashSupplier = async (req, res) => {
   }
 };
 
-// Restore supplier from trash
+// Restore supplier from trash (role-based restoration)
 exports.restoreSupplier = async (req, res) => {
   try {
     const { supplierId } = req.params;
 
-    const supplier = await User.findById(supplierId);
-    if (!supplier) {
-      return res.status(404).json({
-        message: "Supplier not found",
-        code: 404
-      });
-    }
-
-    if (!supplier.is_trashed) {
-      return res.status(400).json({
-        message: "Supplier is not trashed",
-        code: 400
-      });
-    }
-
-    // Restore supplier
-    await User.findByIdAndUpdate(supplierId, {
-      is_trashed: false,
-      trashed_at: null,
-      trashed_by: null,
-    });
-
+    const { restoreUserRole } = require('../../utils/roleBasedDeletion');
+    const result = await restoreUserRole(supplierId, 'supplier');
+    
+    if (result.success) {
     res.json({
-      message: "Supplier restored successfully",
-      code: 200
-    });
+        message: result.message,
+        code: result.code,
+        data: result.data
+      });
+    } else {
+      res.status(result.code).json({
+        message: result.message,
+        code: result.code
+      });
+    }
 
   } catch (error) {
     console.error('Error restoring supplier:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Delete supplier permanently (role-based deletion)
+exports.deleteSupplierPermanently = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+
+    const { deleteUserRolePermanently } = require('../../utils/roleBasedDeletion');
+    const result = await deleteUserRolePermanently(supplierId, 'supplier');
+    
+    if (result.success) {
+    res.json({
+        message: result.message,
+        code: result.code,
+        data: result.data
+      });
+    } else {
+      res.status(result.code).json({
+        message: result.message,
+        code: result.code
+      });
+    }
+
+  } catch (error) {
+    console.error('Error deleting supplier permanently:', error);
     utils.handleError(res, error);
   }
 };
@@ -4057,6 +3794,24 @@ exports.switchSupplierToCustomer = async (req, res) => {
       updated_at: new Date()
     });
 
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: supplier.email,
+        subject: `Role Updated - You now have Customer access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: supplier.email,
+        name: supplier.full_name,
+        new_role: 'Customer',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${supplier.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${supplier.email}:`, emailError.message);
+    }
+
     res.json({
       message: "Customer role added successfully. User now has both supplier and customer roles.",
       code: 200,
@@ -4105,6 +3860,24 @@ exports.switchSupplierToLogistic = async (req, res) => {
       user_type: updatedUserType,
       updated_at: new Date()
     });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: supplier.email,
+        subject: `Role Updated - You now have Logistics access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: supplier.email,
+        name: supplier.full_name,
+        new_role: 'Logistics',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${supplier.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${supplier.email}:`, emailError.message);
+    }
 
     res.json({
       message: "Logistic role added successfully. User now has both supplier and logistic roles.",
@@ -4155,6 +3928,24 @@ exports.switchSupplierToRecruiter = async (req, res) => {
       updated_at: new Date()
     });
 
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: supplier.email,
+        subject: `Role Updated - You now have Recruiter access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: supplier.email,
+        name: supplier.full_name,
+        new_role: 'Recruiter',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${supplier.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${supplier.email}:`, emailError.message);
+    }
+
     res.json({
       message: "Recruiter role added successfully. User now has both supplier and recruiter roles.",
       code: 200,
@@ -4203,6 +3994,24 @@ exports.switchSupplierToResource = async (req, res) => {
       user_type: updatedUserType,
       updated_at: new Date()
     });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: supplier.email,
+        subject: `Role Updated - You now have Resource access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: supplier.email,
+        name: supplier.full_name,
+        new_role: 'Resource',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${supplier.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${supplier.email}:`, emailError.message);
+    }
 
     res.json({
       message: "Resource role added successfully. User now has both supplier and resource roles.",
@@ -4306,6 +4115,33 @@ exports.restoreLogistics = async (req, res) => {
   }
 };
 
+// Delete logistics permanently (role-based deletion)
+exports.deleteLogisticsPermanently = async (req, res) => {
+  try {
+    const { logisticsId } = req.params;
+
+    const { deleteUserRolePermanently } = require('../../utils/roleBasedDeletion');
+    const result = await deleteUserRolePermanently(logisticsId, 'logistics');
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        code: result.code,
+        data: result.data
+      });
+    } else {
+      res.status(result.code).json({
+        message: result.message,
+        code: result.code
+      });
+    }
+
+  } catch (error) {
+    console.error('Error deleting logistics permanently:', error);
+    utils.handleError(res, error);
+  }
+};
+
 // Get trashed logistics users list
 exports.getTrashedLogisticsList = async (req, res) => {
   try {
@@ -4325,9 +4161,6 @@ exports.getTrashedLogisticsList = async (req, res) => {
     }
 
     const logistics = await User.find(query)
-      .populate('address.city')
-      .populate('address.state')
-      .populate('address.country')
       .populate('trashed_by', 'full_name email')
       .sort({ trashed_at: -1 })
       .limit(parseInt(limit))
@@ -4345,6 +4178,229 @@ exports.getTrashedLogisticsList = async (req, res) => {
 
   } catch (error) {
     console.error('Error getting trashed logistics users:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch logistics to customer (add customer role while keeping logistics role)
+exports.switchLogisticsToCustomer = async (req, res) => {
+  try {
+    const { logisticsId } = req.params;
+
+    const logistics = await User.findById(logisticsId);
+    if (!logistics) {
+      return res.status(404).json({
+        message: "Logistics user not found",
+        code: 404
+      });
+    }
+
+    if (!logistics.user_type.includes('logistics')) {
+      return res.status(400).json({
+        message: "User is not a logistics user",
+        code: 400
+      });
+    }
+
+    // Add customer role while keeping logistics role
+    const updatedUserType = [...logistics.user_type];
+    if (!updatedUserType.includes('buyer')) {
+      updatedUserType.push('buyer');
+    }
+
+    await User.findByIdAndUpdate(logisticsId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: logistics.email,
+        subject: `Role Updated - You now have Customer access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: logistics.email,
+        name: logistics.full_name,
+        new_role: 'Customer',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${logistics.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${logistics.email}:`, emailError.message);
+    }
+
+    res.json({
+      message: "Customer role added successfully. User now has both logistics and customer roles.",
+      code: 200,
+      data: {
+        user_id: logistics.unique_user_id,
+        email: logistics.email,
+        user_type: updatedUserType,
+        current_user_type: logistics.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding customer role to logistics:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch logistics to supplier (add supplier role while keeping logistics role)
+exports.switchLogisticsToSupplier = async (req, res) => {
+  try {
+    const { logisticsId } = req.params;
+
+    const logistics = await User.findById(logisticsId);
+    if (!logistics) {
+      return res.status(404).json({
+        message: "Logistics user not found",
+        code: 404
+      });
+    }
+
+    if (!logistics.user_type.includes('logistics')) {
+      return res.status(400).json({
+        message: "User is not a logistics user",
+        code: 400
+      });
+    }
+
+    // Add supplier role while keeping logistics role
+    const updatedUserType = [...logistics.user_type];
+    if (!updatedUserType.includes('supplier')) {
+      updatedUserType.push('supplier');
+    }
+
+    await User.findByIdAndUpdate(logisticsId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: logistics.email,
+        subject: `Role Updated - You now have Supplier access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: logistics.email,
+        name: logistics.full_name,
+        new_role: 'Supplier',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${logistics.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${logistics.email}:`, emailError.message);
+    }
+
+    res.json({
+      message: "Supplier role added successfully. User now has both logistics and supplier roles.",
+      code: 200,
+      data: {
+        user_id: logistics.unique_user_id,
+        email: logistics.email,
+        user_type: updatedUserType,
+        current_user_type: logistics.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding supplier role to logistics:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch logistics to recruiter (add recruiter role while keeping logistics role)
+exports.switchLogisticsToRecruiter = async (req, res) => {
+  try {
+    const { logisticsId } = req.params;
+
+    const logistics = await User.findById(logisticsId);
+    if (!logistics) {
+      return res.status(404).json({
+        message: "Logistics user not found",
+        code: 404
+      });
+    }
+
+    if (!logistics.user_type.includes('logistics')) {
+      return res.status(400).json({
+        message: "User is not a logistics user",
+        code: 400
+      });
+    }
+
+    // Add recruiter role while keeping logistics role
+    const updatedUserType = [...logistics.user_type];
+    if (!updatedUserType.includes('recruiter')) {
+      updatedUserType.push('recruiter');
+    }
+
+    await User.findByIdAndUpdate(logisticsId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: logistics.email,
+        subject: `Role Updated - You now have Recruiter access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: logistics.email,
+        name: logistics.full_name,
+        new_role: 'Recruiter',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${logistics.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${logistics.email}:`, emailError.message);
+    }
+
+    res.json({
+      message: "Recruiter role added successfully. User now has both logistics and recruiter roles.",
+      code: 200,
+      data: {
+        user_id: logistics.unique_user_id,
+        email: logistics.email,
+        user_type: updatedUserType,
+        current_user_type: logistics.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding recruiter role to logistics:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// List logistics profile
+exports.listLogisticsProfile = async (req, res) => {
+  try {
+    const { logisticsId } = req.params;
+
+    const logistics = await User.findById(logisticsId);
+    if (!logistics) {
+      return res.status(404).json({
+        message: "Logistics user not found",
+        code: 404
+      });
+    }
+
+    await User.findByIdAndUpdate(logisticsId, {
+      profile_listed: true,
+      updated_at: new Date()
+    });
+
+    res.json({
+      message: "Logistics profile listed successfully",
+      code: 200
+    });
+  } catch (error) {
+    console.error('Error listing logistics profile:', error);
     utils.handleError(res, error);
   }
 };
@@ -4583,9 +4639,6 @@ exports.getTrashedRecruiterList = async (req, res) => {
     }
 
     const recruiters = await User.find(query)
-      .populate('address.city')
-      .populate('address.state')
-      .populate('address.country')
       .populate('trashed_by', 'full_name email')
       .sort({ trashed_at: -1 })
       .limit(parseInt(limit))
@@ -4607,68 +4660,273 @@ exports.getTrashedRecruiterList = async (req, res) => {
   }
 };
 
+// Delete recruiter permanently (role-based deletion)
+exports.deleteRecruiterPermanently = async (req, res) => {
+  try {
+    const { recruiterId } = req.params;
+
+    const { deleteUserRolePermanently } = require('../../utils/roleBasedDeletion');
+    const result = await deleteUserRolePermanently(recruiterId, 'recruiter');
+    
+    if (result.success) {
+      res.json({
+        message: result.message,
+        code: result.code,
+        data: result.data
+      });
+    } else {
+      res.status(result.code).json({
+        message: result.message,
+        code: result.code
+      });
+    }
+
+  } catch (error) {
+    console.error('Error deleting recruiter permanently:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch recruiter to customer (add customer role while keeping recruiter role)
+exports.switchRecruiterToCustomer = async (req, res) => {
+  try {
+    const { recruiterId } = req.params;
+
+    const recruiter = await User.findById(recruiterId);
+    if (!recruiter) {
+      return res.status(404).json({
+        message: "Recruiter user not found",
+        code: 404
+      });
+    }
+
+    if (!recruiter.user_type.includes('recruiter')) {
+      return res.status(400).json({
+        message: "User is not a recruiter user",
+        code: 400
+      });
+    }
+
+    // Add customer role while keeping recruiter role
+    const updatedUserType = [...recruiter.user_type];
+    if (!updatedUserType.includes('buyer')) {
+      updatedUserType.push('buyer');
+    }
+
+    await User.findByIdAndUpdate(recruiterId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: recruiter.email,
+        subject: `Role Updated - You now have Customer access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: recruiter.email,
+        name: recruiter.full_name,
+        new_role: 'Customer',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${recruiter.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${recruiter.email}:`, emailError.message);
+    }
+
+    res.json({
+      message: "Customer role added successfully. User now has both recruiter and customer roles.",
+      code: 200,
+      data: {
+        user_id: recruiter.unique_user_id,
+        email: recruiter.email,
+        user_type: updatedUserType,
+        current_user_type: recruiter.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding customer role to recruiter:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch recruiter to supplier (add supplier role while keeping recruiter role)
+exports.switchRecruiterToSupplier = async (req, res) => {
+  try {
+    const { recruiterId } = req.params;
+
+    const recruiter = await User.findById(recruiterId);
+    if (!recruiter) {
+      return res.status(404).json({
+        message: "Recruiter user not found",
+        code: 404
+      });
+    }
+
+    if (!recruiter.user_type.includes('recruiter')) {
+      return res.status(400).json({
+        message: "User is not a recruiter user",
+        code: 400
+      });
+    }
+
+    // Add supplier role while keeping recruiter role
+    const updatedUserType = [...recruiter.user_type];
+    if (!updatedUserType.includes('supplier')) {
+      updatedUserType.push('supplier');
+    }
+
+    await User.findByIdAndUpdate(recruiterId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+      const mailOptions = {
+        to: recruiter.email,
+        subject: `Role Updated - You now have Supplier access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: recruiter.email,
+        name: recruiter.full_name,
+        new_role: 'Supplier',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${recruiter.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${recruiter.email}:`, emailError.message);
+    }
+
+    res.json({
+      message: "Supplier role added successfully. User now has both recruiter and supplier roles.",
+      code: 200,
+      data: {
+        user_id: recruiter.unique_user_id,
+        email: recruiter.email,
+        user_type: updatedUserType,
+        current_user_type: recruiter.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding supplier role to recruiter:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch recruiter to logistic (add logistic role while keeping recruiter role)
+exports.switchRecruiterToLogistic = async (req, res) => {
+  try {
+    const { recruiterId } = req.params;
+
+    const recruiter = await User.findById(recruiterId);
+    if (!recruiter) {
+      return res.status(404).json({
+        message: "Recruiter user not found",
+        code: 404
+      });
+    }
+
+    if (!recruiter.user_type.includes('recruiter')) {
+      return res.status(400).json({
+        message: "User is not a recruiter user",
+        code: 400
+      });
+    }
+
+    // Add logistic role while keeping recruiter role
+    const updatedUserType = [...recruiter.user_type];
+    if (!updatedUserType.includes('logistics')) {
+      updatedUserType.push('logistics');
+    }
+
+    await User.findByIdAndUpdate(recruiterId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    // Send role update email notification
+    try {
+      const emailer = require('../../utils/emailer');
+    const mailOptions = {
+        to: recruiter.email,
+        subject: `Role Updated - You now have Logistics access on ${process.env.APP_NAME || 'BSO Services'}`,
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: recruiter.email,
+        name: recruiter.full_name,
+        new_role: 'Logistics',
+      };
+
+      await emailer.sendEmail(null, mailOptions, "roleUpdated");
+      console.log(`✅ Role update email sent to ${recruiter.email}`);
+    } catch (emailError) {
+      console.error(`❌ Error sending role update email to ${recruiter.email}:`, emailError.message);
+    }
+
+    res.json({
+      message: "Logistic role added successfully. User now has both recruiter and logistic roles.",
+      code: 200,
+      data: {
+        user_id: recruiter.unique_user_id,
+        email: recruiter.email,
+        user_type: updatedUserType,
+        current_user_type: recruiter.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding logistic role to recruiter:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// List recruiter profile
+exports.listRecruiterProfile = async (req, res) => {
+  try {
+    const { recruiterId } = req.params;
+
+    const recruiter = await User.findById(recruiterId);
+    if (!recruiter) {
+      return res.status(404).json({
+        message: "Recruiter user not found",
+        code: 404
+      });
+    }
+
+    await User.findByIdAndUpdate(recruiterId, {
+      profile_listed: true,
+      updated_at: new Date()
+    });
+
+    res.json({
+      message: "Recruiter profile listed successfully",
+      code: 200
+    });
+  } catch (error) {
+    console.error('Error listing recruiter profile:', error);
+    utils.handleError(res, error);
+  }
+};
+
 // ================================
 // ADD RECRUITER FUNCTIONALITY
 // ================================
 
-// Add new recruiter
+// Add new recruiter using the new unified approach
 exports.addRecruiter = async (req, res) => {
   try {
-    const data = req.body;
+    const { createRecruiter } = require('../../utils/createUserWithRole');
+    const result = await createRecruiter(req.body, res);
     
-    // Check if email already exists
-    const existingEmail = await User.findOne({ email: data.email });
-    if (existingEmail) {
-      return res.status(400).json({
-        message: "Email already exists",
-        code: 400
+    if (result.success) {
+      res.json({
+        message: result.message,
+        code: result.code,
+        data: result.user
       });
     }
-
-    // Check if phone number already exists
-    const existingPhone = await User.findOne({ phone_number: data.phone_number });
-    if (existingPhone) {
-      return res.status(400).json({
-        message: "Phone number already exists",
-        code: 400
-      });
-    }
-
-    const password = createNewPassword();
-    const userData = {
-      ...data,
-      unique_user_id: await getUniqueId(),
-      password,
-      decoded_password: password,
-      user_type: ["recruiter"],
-      current_user_type: "recruiter",
-      profile_completed: true,
-    };
-
-    const user = new User(userData);
-    
-    // Check if profile is completed
-    if (!user.profile_completed) {
-      return res.status(400).json({
-        message: "Profile not completed",
-        code: 400
-      });
-    }
-
-    await user.save();
-
-    // Send email with credentials
-    const mailOptions = {
-      to: data.email,
-      subject: "Account Created - BSO Services",
-      name: data.full_name,
-      password: password,
-    };
-
-    emailer.sendEmail(null, mailOptions, "accountCreated");
-
-    res.json({ message: "Recruiter added successfully", code: 200 });
-
   } catch (error) {
     console.error('Error adding recruiter:', error);
     utils.handleError(res, error);

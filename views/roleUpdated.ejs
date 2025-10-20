@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="description" content="Role Update Notification - Blue Sky Services">
+	<meta name="author" content="Blue Sky Team">
+	<title>Role Updated - Blue Sky Services</title>
+	<!-- Favicon -->
+	<link rel="icon" href="assets/img/brand/favicon.png" type="image/png">
+	<!-- Fonts -->
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700">
+	<!-- Icons -->
+	<link rel="stylesheet" href="assets/vendor/nucleo/css/nucleo.css" type="text/css">
+	<link rel="stylesheet" href="assets/vendor/@fortawesome/fontawesome-free/css/all.min.css" type="text/css">
+	<!-- Page plugins -->
+	<!-- Argon CSS -->
+	<link rel="stylesheet" href="assets/css/argon.css?v=1.2.0" type="text/css">
+</head>
+
+<body style="width:100%; font-family: Arial; height:100%; background:#F0F0F0; color: #191b1f;">
+	<table cellspacing="0" cellpadding="0" width="800"
+		style="background-color: #fff;padding: 0;border-collapse:collapse;margin: 0 auto; " border="0">
+		<tbody>
+			<tr>
+				<td height="30"></td>
+			</tr>
+			<tr>
+				<td class="theme_logo" style="text-align: center;padding: 0 40px;">
+					<!-- Logo placeholder -->
+				</td>
+			</tr>
+			<tr>
+				<td height="20"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;text-align: center;line-height: 25px; "><b> Dear <%= name%>
+					</b>
+				</td>
+			</tr>
+			<tr>
+				<td height="20"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					Great news! Your account role has been successfully updated on <%= app_name %>.
+				</td>
+			</tr>
+			<tr>
+				<td height="10"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					<strong>Your New Role:</strong> <%= new_role %>
+				</td>
+			</tr>
+			<tr>
+				<td height="10"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					With your updated <%= new_role %> role, you now have access to additional features and capabilities on our platform. You can explore new functionalities and take advantage of the enhanced services available to <%= new_role %> users.
+				</td>
+			</tr>
+			<tr>
+				<td height="10"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					<strong>What's Next?</strong><br>
+					• Access your enhanced dashboard with new features<br>
+					• Explore <%= new_role %>-specific tools and services<br>
+					• Connect with other <%= new_role %> users in our community<br>
+					• Take advantage of exclusive <%= new_role %> benefits and resources
+				</td>
+			</tr>
+			<tr>
+				<td height="10"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					<strong>Login Information:</strong><br>
+					Email: <%= email %><br>
+					You can access your account using your existing login credentials.
+				</td>
+			</tr>
+			<tr>
+				<td height="10"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					<strong>Login to Your Account:</strong><br>
+					<a href="https://bsoservices.com/sign-in" style="color: #0000FF; text-decoration: underline; font-weight: bold;">https://bsoservices.com/sign-in</a>
+				</td>
+			</tr>
+			<tr>
+				<td height="10"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					If you have any questions about your new role or need assistance accessing the new features, please don't hesitate to contact our support team. We're here to help you make the most of your <%= new_role %> account.
+				</td>
+			</tr>
+			<tr>
+				<td height="10"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
+					Thank you for being a valued member of our community!
+				</td>
+			</tr>
+			<tr>
+				<td height="20"></td>
+			</tr>
+			<tr>
+				<td style="padding: 0px 40px;font-size: 17px;line-height: 25px; ">Best regards,<br>Blue Sky Team
+				</td>
+			</tr>
+			<tr>
+				<td height="20"></td>
+			</tr>
+			<tr>
+				<td height="15" style="background-color:#0000FF;"></td>
+			</tr>
+			<tr>
+				<td style="text-align: center;color: #fff;font-size: 14px;background-color:#0000FF;">Copyright © <%= new
+						Date().getFullYear();%>, Blue Sky All Rights Reserved. </td>
+			</tr>
+			<tr>
+				<td height="15" style="background-color:#0000FF;"></td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+
+</html>

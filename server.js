@@ -7,6 +7,7 @@ const morgan = require("morgan");
 const passport = require("passport");
 var fileUpload = require("express-fileupload");
 const initMongo = require("./src/config/mongo");
+const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds");
 const app = express();
 const { handleStripeWebhook } = require("./src/controllers/user/webhook")
 
@@ -69,7 +70,7 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: err.message || "Internal Server Error" });
 });
 
-app.listen(process.env.PORT || 5000, () => {
+app.listen(process.env.PORT || 5000, async () => {
   console.log("****************************");
   console.log(
     `*    Starting ${process.env.ENV === "local" ? "HTTP" : "HTTPS"} Server`
@@ -78,6 +79,15 @@ app.listen(process.env.PORT || 5000, () => {
   console.log(`*    NODE_ENV: ${process.env.NODE_ENV}`);
   console.log(`*    Database: MongoDB`);
   console.log(`*    DB Connection: OK\n****************************\n`);
+  
+  // Generate missing user IDs after MongoDB connection is established
+  try {
+    console.log('🔄 Running startup tasks...');
+    await generateMissingUserIds();
+    console.log('✅ Startup tasks completed successfully');
+  } catch (error) {
+    console.error('❌ Error during startup tasks:', error.message);
+  }
 });
 
 initMongo();
