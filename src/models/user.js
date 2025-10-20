@@ -87,6 +87,14 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    trashed: {
+      type: Boolean,
+      default: false,
+    },
+    trashed_at: {
+      type: Date,
+      default: null
+    },
     last_login: {
       type: Date,
       default: null
@@ -499,6 +507,20 @@ const UserSchema = new mongoose.Schema(
     },
     resume: {
       type: String
+    },
+    // Trash functionality - soft delete
+    is_trashed: {
+      type: Boolean,
+      default: false
+    },
+    trashed_at: {
+      type: Date,
+      default: null
+    },
+    trashed_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'admins',
+      default: null
     }
   },
   {

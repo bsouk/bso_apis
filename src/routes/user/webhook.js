@@ -10,10 +10,11 @@ const controller = require('../../controllers/user/webhook')
 const trimRequest = require('trim-request');
 
 
-router.post(
-    "/webhook",
-    trimRequest.all,
-    controller.handleStripeWebhook
-)
+// router.post(
+//     "/webhook",
+//     express.raw({type: 'application/json'}),
+//     // trimRequest.all,
+//     controller.handleStripeWebhook
+// )
 
 module.exports = router;

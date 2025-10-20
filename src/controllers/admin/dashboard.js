@@ -24,7 +24,7 @@ const appurl = process.env.APP_URL
 cron.schedule("30 3 * * * ", async () => {
     try {
         const one_day = moment().add(1, "days").endOf("day").format("dddd, MMMM D, YYYY h:mm A");
-        console.log("one_day : ", one_day)
+        // console.log("one_day : ", one_day)
         const data = await Enquiry.aggregate(
             [
                 {
@@ -135,7 +135,7 @@ cron.schedule("30 3 * * * ", async () => {
 
             //user notification
             const userFcmDevices = await fcm_devices.find({ user_id: i.user_id });
-            console.log("userFcmDevices : ", userFcmDevices)
+            // console.log("userFcmDevices : ", userFcmDevices)
             let notificationbody = {
                 title: 'Plan Change Request',
                 description: `As we can see on your enquiry number ${data?.enquiry_unique_id}, no supplier has quoted yet. We request you to change your current plan to BSO Admin.`
@@ -143,7 +143,7 @@ cron.schedule("30 3 * * * ", async () => {
             if (userFcmDevices && userFcmDevices.length > 0) {
                 userFcmDevices.forEach(async i => {
                     const token = i.token
-                    console.log("token : ", token)
+                    // console.log("token : ", token)
                     await utils.sendNotification(token, notificationbody);
                 })
                 let dbnotificationbody = {
@@ -155,11 +155,12 @@ cron.schedule("30 3 * * * ", async () => {
                     related_to_type: "user",
                 }
                 const newuserNotification = new Notification(dbnotificationbody);
-                console.log("newuserNotification : ", newuserNotification)
+                // console.log("newuserNotification : ", newuserNotification)
                 await newuserNotification.save();
-            } else {
-                console.log(`No active FCM tokens found for user ${trail.user_id}.`);
-            }
+            } 
+            // else {
+            //     console.log(`No active FCM tokens found for user ${trail.user_id}.`);
+            // }
         }
     } catch (error) {
         console.log("error", error)
@@ -171,7 +172,7 @@ cron.schedule("30 3 * * * ", async () => {
 cron.schedule("0 10 * * *", async () => {
     try {
         const today = moment().startOf("day");
-        console.log("today : ", today)
+        // console.log("today : ", today)
 
         const enquiries = await Enquiry.aggregate([
             {
@@ -226,7 +227,7 @@ cron.schedule("0 10 * * *", async () => {
             },
             { $unwind: "$user" }
         ]);
-        console.log("enquiries : ", enquiries)
+        // console.log("enquiries : ", enquiries)
 
         // for (let i = 0; i < enquiries.length; i++) {
         //     const enquiry = enquiries[i];
@@ -318,7 +319,7 @@ cron.schedule("0 10 * * *", async () => {
                 await new Notification(dbNotification).save();
             }
         }
-        console.log(`✅ Payment reminders sent for ${enquiries.length} enquiries on ${today.format("YYYY-MM-DD")}`);
+        // console.log(`✅ Payment reminders sent for ${enquiries.length} enquiries on ${today.format("YYYY-MM-DD")}`);
     } catch (err) {
         console.error("❌ Error in payment reminder cron:", err);
     }
@@ -358,7 +359,7 @@ cron.schedule("0 11 * * *", async () => {
             }
         ]);
 
-        console.log("enquiries : ", enquiries)
+        // console.log("enquiries : ", enquiries)
 
         for (const enquiry of enquiries) {
             const schedules = enquiry.payment_terms.schedule || [];
@@ -420,7 +421,7 @@ cron.schedule("0 11 * * *", async () => {
             }
         }
 
-        console.log("✅ Payment reminders sent successfully.");
+        // console.log("✅ Payment reminders sent successfully.");
     } catch (err) {
         console.error("❌ Error in payment reminder cron:", err);
     }
@@ -429,7 +430,7 @@ cron.schedule("0 11 * * *", async () => {
 cron.schedule("0 12 * * *", async () => {
     try {
         const today = moment().startOf("day");
-        console.log("today : ", today.format("YYYY-MM-DD"));
+        // console.log("today : ", today.format("YYYY-MM-DD"));
 
         const quotations = await EnquiryQuotes.aggregate([
             {
@@ -586,7 +587,7 @@ cron.schedule("0 12 * * *", async () => {
             { $unwind: "$user" },
         ]);
 
-        console.log("quotations : ", quotations.length);
+        // console.log("quotations : ", quotations.length);
 
         for (const q of quotations) {
             const deliveryDate = moment(q.expected_delivery_date).format("dddd, MMMM D, YYYY");
@@ -650,7 +651,7 @@ cron.schedule("0 12 * * *", async () => {
             }).save();
         }
 
-        console.log(`✅ Delivery reminders sent for ${quotations.length} quotations on ${today.format("YYYY-MM-DD")}`);
+        // console.log(`✅ Delivery reminders sent for ${quotations.length} quotations on ${today.format("YYYY-MM-DD")}`);
     } catch (error) {
         console.error("❌ Error in delivery reminder cron:", error);
     }
@@ -738,7 +739,7 @@ exports.getRevenueChartData = async (req, res) => {
             endOfPeriod.setHours(23, 59, 59, 999);
         }
 
-        console.log("Date range:", startOfPeriod, "to", endOfPeriod);
+        // console.log("Date range:", startOfPeriod, "to", endOfPeriod);
 
         let filter = {
             createdAt: { $gte: startOfPeriod, $lte: endOfPeriod },
@@ -765,7 +766,7 @@ exports.getRevenueChartData = async (req, res) => {
                 },
                 { $sort: { _id: 1 } }
             ]);
-            console.log("dailyData:", dailyData);
+            // console.log("dailyData:", dailyData);
 
             data = Array.from({ length: 24 }, (_, i) => ({
                 hour: i,
@@ -844,14 +845,14 @@ exports.getRevenueChartData = async (req, res) => {
                 currentDate.getMonth() + 1,
                 0
             ).getDate();
-            console.log("daysInMonth : ", daysInMonth)
+            // console.log("daysInMonth : ", daysInMonth)
             const monthlyData = await Payment.aggregate([
                 { $match: filter },
                 { $project: { day: { $dayOfMonth: "$createdAt" }, total_amount: 1 } },
                 { $group: { _id: "$day", total: { $sum: "$total_amount" } } },
                 { $sort: { _id: 1 } }
             ]);
-            console.log("monthlyData : ", monthlyData)
+            // console.log("monthlyData : ", monthlyData)
 
             data = Array.from({ length: daysInMonth }, (_, i) => ({
                 day: i + 1,

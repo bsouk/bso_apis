@@ -180,7 +180,12 @@ router.delete(
     requireAuth,
     controller.deleteQuery
 );
-
+router.delete(
+    "/deleteEnquiry/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteEnquiry
+);
 //add supplier quote
 router.post(
     '/addSupplierQuote',
@@ -289,6 +294,11 @@ router.get(
     "/homepageenquiry",
     trimRequest.all,
     controller.homepageenquiry
+)
+router.get(
+    "/homepagestats",
+    trimRequest.all,
+    controller.getDashboardStats
 )
 router.post(
     "/addTeamMember",

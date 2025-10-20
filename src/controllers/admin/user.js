@@ -1,10 +1,12 @@
 const User = require("../../models/user");
 const Address = require("../../models/address");
+const bcrypt = require("bcrypt");
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require("generate-password");
+const { generateUniqueUserId } = require("../../utils/userIdGenerator");
 const product = require("../../models/product");
 const commision = require("../../models/commision");
 const EnquiryQuotes = require("../../models/EnquiryQuotes")
@@ -205,99 +207,99 @@ exports.uploadMedia = async (req, res) => {
 };
 
 exports.uploadMediaToBucket = async (req, res) => {
-    try {
-        if (!req.files.media || !req.body.path) {
-            return utils.handleError(res, {
-                message: "MEDIA OR PATH MISSING",
-                code: 400,
-            });
-        }
-
-        let isArray = req.body.isArray;
-        let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif", "image/webp", "image/svg", "image/bmp"];
-        let supportedOtherTypes = [
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/pdf",
-            "audio/mpeg",
-            "audio/wav",
-            "audio/mp3",
-            "audio/ogg",
-            "video/mp4",
-            "video/quicktime",
-            "video/x-m4v",
-            "video/webm",
-            "video/mov"
-        ];
-
-        if (Array.isArray(req.files.media)) {
-            let mediaArray = [];
-
-            for (let index = 0; index < req.files.media.length; index++) {
-                const element = req.files.media[index];
-                console.log("element:", element);
-                console.log("type:", element.mimetype);
-
-                if (supportedImageTypes.includes(element.mimetype)) {
-                    let media = await utils.uploadImageToBucket({
-                        file: element,
-                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                    });
-                    mediaArray.push(`${req.body.path}/${media}`);
-                } else if (supportedOtherTypes.includes(element.mimetype)) {
-                    let media = await utils.uploadFileToS3Bucket({
-                        file: element,
-                        path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                    });
-                    mediaArray.push(`${req.body.path}/${media}`);
-                } else {
-                    return utils.handleError(res, {
-                        message: `Unsupported file type: ${element.mimetype}`,
-                        code: 400,
-                    });
-                }
-            }
-
-            return res.status(200).json({
-                code: 200,
-                data: mediaArray,
-            });
-        } else {
-            const element = req.files.media;
-            console.log("element:", element);
-            console.log("type:", element.mimetype);
-
-            if (supportedImageTypes.includes(element.mimetype)) {
-                let media = await utils.uploadImageToBucket({
-                    file: element,
-                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                });
-                const url = `${req.body.path}/${media}`;
-                return res.status(200).json({
-                    code: 200,
-                    data: isArray === "true" ? [url] : url,
-                });
-            } else if (supportedOtherTypes.includes(element.mimetype)) {
-                let media = await utils.uploadFileToS3Bucket({
-                    file: element,
-                    path: `${process.env.STORAGE_PATH}/${req.body.path}`,
-                });
-                const url = `${req.body.path}/${media}`;
-                return res.status(200).json({
-                    code: 200,
-                    data: isArray === "true" ? [url] : url,
-                });
-            } else {
-                return utils.handleError(res, {
-                    message: `Unsupported file type: ${element.mimetype}`,
-                    code: 400,
-                });
-            }
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        utils.handleError(res, error);
+  try {
+    if (!req.files.media || !req.body.path) {
+      return utils.handleError(res, {
+        message: "MEDIA OR PATH MISSING",
+        code: 400,
+      });
     }
+
+    let isArray = req.body.isArray;
+    let supportedImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/avif", "image/webp", "image/svg", "image/bmp"];
+    let supportedOtherTypes = [
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/pdf",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/mp3",
+      "audio/ogg",
+      "video/mp4",
+      "video/quicktime",
+      "video/x-m4v",
+      "video/webm",
+      "video/mov"
+    ];
+
+    if (Array.isArray(req.files.media)) {
+      let mediaArray = [];
+
+      for (let index = 0; index < req.files.media.length; index++) {
+        const element = req.files.media[index];
+        console.log("element:", element);
+        console.log("type:", element.mimetype);
+
+        if (supportedImageTypes.includes(element.mimetype)) {
+          let media = await utils.uploadImageToBucket({
+            file: element,
+            path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+          });
+          mediaArray.push(`${req.body.path}/${media}`);
+        } else if (supportedOtherTypes.includes(element.mimetype)) {
+          let media = await utils.uploadFileToS3Bucket({
+            file: element,
+            path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+          });
+          mediaArray.push(`${req.body.path}/${media}`);
+        } else {
+          return utils.handleError(res, {
+            message: `Unsupported file type: ${element.mimetype}`,
+            code: 400,
+          });
+        }
+      }
+
+      return res.status(200).json({
+        code: 200,
+        data: mediaArray,
+      });
+    } else {
+      const element = req.files.media;
+      console.log("element:", element);
+      console.log("type:", element.mimetype);
+
+      if (supportedImageTypes.includes(element.mimetype)) {
+        let media = await utils.uploadImageToBucket({
+          file: element,
+          path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+        });
+        const url = `${req.body.path}/${media}`;
+        return res.status(200).json({
+          code: 200,
+          data: isArray === "true" ? [url] : url,
+        });
+      } else if (supportedOtherTypes.includes(element.mimetype)) {
+        let media = await utils.uploadFileToS3Bucket({
+          file: element,
+          path: `${process.env.STORAGE_PATH}/${req.body.path}`,
+        });
+        const url = `${req.body.path}/${media}`;
+        return res.status(200).json({
+          code: 200,
+          data: isArray === "true" ? [url] : url,
+        });
+      } else {
+        return utils.handleError(res, {
+          message: `Unsupported file type: ${element.mimetype}`,
+          code: 400,
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    utils.handleError(res, error);
+  }
 };
 
 
@@ -305,60 +307,72 @@ exports.addCustomer = async (req, res) => {
   try {
     const data = req.body;
 
+    // Validate required fields
+    if (!data.email || !data.first_name || !data.last_name) {
+      return utils.handleError(res, {
+        message: "Email, first name, and last name are required",
+        code: 400,
+      });
+    }
+
+    // Check if email already exists
     const doesEmailExists = await emailer.emailExists(data.email);
-    if (doesEmailExists)
+    if (doesEmailExists) {
       return utils.handleError(res, {
         message: "This email address is already registered",
         code: 400,
       });
+    }
 
+    // Check if phone number already exists
     if (data.phone_number) {
-      const doesPhoneNumberExist = await emailer.checkMobileExists(
-        data.phone_number
-      );
-      if (doesPhoneNumberExist)
+      const doesPhoneNumberExist = await emailer.checkMobileExists(data.phone_number);
+      if (doesPhoneNumberExist) {
         return utils.handleError(res, {
           message: "This phone number is already registered",
           code: 400,
         });
-    }
-
-    const password = createNewPassword();
-    const userData = {
-      ...data,
-      unique_user_id: await getUniqueId(),
-      password,
-      decoded_password: password,
-      // user_type: "buyer",
-      profile_completed: true,
-      // is_user_approved_by_admin: true,
-    };
-
-    if (data.company_data) {
-      if (data.company_data.name && data.company_data.registration_number && data.company_data.vat_number && data.company_data.incorporation_date) {
-        userData.user_type = ["company"]
-        userData.current_user_type = "company"
-      } else {
-        userData.user_type = ["buyer"]
-        userData.current_user_type = "buyer"
       }
     }
+
+    // Generate unique user ID with new pattern
+    const uniqueUserId = await generateUniqueUserId(
+      data.first_name,
+      data.last_name,
+      data.email,
+      data.phone_number
+    );
+
+    // Generate password
+    const password = createNewPassword();
+
+    // Prepare user data
+    const userData = {
+      ...data,
+      unique_user_id: uniqueUserId,
+      password,
+      decoded_password: password,
+      profile_completed: true,
+      status: data.status || 'active', // Default to active if not provided
+      is_user_approved_by_admin: true, // Auto-approve admin-created users
+    };
+
+    // Set user type based on company data
+    // Only set as company if ALL required company fields are provided
+    if (data.company_data && data.company_data.name && data.company_data.registration_number && 
+        data.company_data.vat_number && data.company_data.incorporation_date) {
+      userData.user_type = ["company"];
+      userData.current_user_type = "company";
+    } else {
+      // Default to buyer for customer management
+      userData.user_type = ["buyer"];
+      userData.current_user_type = "buyer";
+    }
+
     const user = new User(userData);
-
-    // const addressData = {
-    //   user_id: user._id,
-    //   address: data.address,
-    //   location: data.location,
-    //   phone_number_code: data.phone_number_code,
-    //   phone_number: data.phone_number,
-    //   is_primary: true,
-    //   default_address: true,
-    // };
-
-    // const address = new Address(addressData);
-    // await address.save();
     await user.save();
 
+    // Send welcome email
     const mailOptions = {
       to: user.email,
       subject: `Welcome to ${process.env.APP_NAME}! Your Customer Account Has Been Created`,
@@ -367,11 +381,22 @@ exports.addCustomer = async (req, res) => {
       password: password,
       name: user.full_name,
       account_type: "customer",
+      user_id: uniqueUserId,
     };
 
     emailer.sendEmail(null, mailOptions, "accountCreated");
-    res.json({ message: "User added successfully", code: 200 });
+    
+    res.json({ 
+      message: "User added successfully", 
+      code: 200,
+      data: {
+        user_id: uniqueUserId,
+        email: user.email,
+        status: user.status
+      }
+    });
   } catch (error) {
+    console.error('Error adding customer:', error);
     utils.handleError(res, error);
   }
 };
@@ -381,24 +406,41 @@ exports.getCustomerList = async (req, res) => {
     const { limit = 10, offset = 0, search = "" } = req.query;
 
     const condition = {
-      // $or: [{ user_type: "buyer" }, { user_type: "company" }],
-      user_type: { $in: ["buyer"] },
-      // profile_completed: true,
+      user_type: { $in: ["buyer", "company"] },
       is_deleted: false,
+      $and: [
+        {
+          $or: [
+            { is_trashed: false },
+            { is_trashed: { $exists: false } } // Include users where is_trashed field doesn't exist
+          ]
+        }
+      ]
     };
 
     if (search) {
-      condition["$or"] = [
-        {
-          full_name: { $regex: search, $options: "i" },
-        },
-        {
-          email: { $regex: search, $options: "i" },
-        },
-        {
-          phone_number: { $regex: search, $options: "i" },
-        },
-      ];
+      condition.$and.push({
+        $or: [
+          {
+            full_name: { $regex: search, $options: "i" },
+          },
+          {
+            email: { $regex: search, $options: "i" },
+          },
+          {
+            phone_number: { $regex: search, $options: "i" },
+          },
+          {
+            unique_user_id: { $regex: search, $options: "i" }, // Search by user ID
+          },
+          {
+            first_name: { $regex: search, $options: "i" },
+          },
+          {
+            last_name: { $regex: search, $options: "i" },
+          },
+        ]
+      });
     }
 
     const countPromise = User.countDocuments(condition);
@@ -533,6 +575,13 @@ exports.editCustomer = async (req, res) => {
 
     let userData = {
       ...data
+    }
+
+    // Handle password hashing if password is provided
+    if (data.password) {
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+      userData.password = hashedPassword;
+      userData.decoded_password = data.password;
     }
 
     if (data.company_data) {
@@ -798,20 +847,20 @@ exports.getResourceList = async (req, res) => {
   }
 };
 exports.deleteRecruiter = async (req, res) => {
-    try {
-        const { ids } = req.body
-        console.log('ids : ', req.body)
-        const result = await User.deleteMany({ _id: { $in: ids } })
-        // const allja = await job_applications.deleteMany({job_id : { $in : ids } })
-   
-        console.log('deleted Recruiter : ', result, allja, allsj)
-        return res.status(200).json({
-            message: "Resource deleted successfully",
-            code: 200
-        })
-    } catch (error) {
-        utils.handleError(res, error);
-    }
+  try {
+    const { ids } = req.body
+    console.log('ids : ', req.body)
+    const result = await User.deleteMany({ _id: { $in: ids } })
+    // const allja = await job_applications.deleteMany({job_id : { $in : ids } })
+
+    console.log('deleted Recruiter : ', result, allja, allsj)
+    return res.status(200).json({
+      message: "Resource deleted successfully",
+      code: 200
+    })
+  } catch (error) {
+    utils.handleError(res, error);
+  }
 }
 exports.getRecruiterList = async (req, res) => {
   try {
@@ -857,7 +906,7 @@ exports.getRecruiterList = async (req, res) => {
 
       {
         $project: {
-         company_data:1
+          company_data: 1
         },
       },
     ]);
@@ -1726,16 +1775,17 @@ exports.addSupplier = async (req, res) => {
 
     const mailOptions = {
       to: user.email,
-      subject: `Welcome to ${process.env.APP_NAME}! Your Customer Account Has Been Created`,
+      subject: `Welcome to ${process.env.APP_NAME}! Your Supplier Account Has Been Created`,
       app_name: process.env.APP_NAME,
       email: user.email,
       password: password,
       name: user.full_name,
-      account_type: "customer",
+      account_type: "supplier",
+      user_id: user.unique_user_id,
     };
 
     emailer.sendEmail(null, mailOptions, "accountCreated");
-    res.json({ message: "User added successfully", code: 200 });
+    res.json({ message: "Supplier added successfully", code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
@@ -1939,6 +1989,7 @@ exports.getSupplierList = async (req, res) => {
       user_type: { $in: ["supplier"] },
       // profile_completed: true,
       is_deleted: false,
+      is_trashed: { $ne: true }, // Exclude trashed suppliers
     };
 
     if (search) {
@@ -1951,6 +2002,9 @@ exports.getSupplierList = async (req, res) => {
         },
         {
           phone_number: { $regex: search, $options: "i" },
+        },
+        {
+          unique_user_id: { $regex: search, $options: "i" },
         },
       ];
     }
@@ -2255,7 +2309,7 @@ exports.editLogisticsUser = async (req, res) => {
       data.current_user_type = data.switch_to
     }
     await User.findByIdAndUpdate(id, data);
- 
+
     if (
       data.phone_number_code ||
       data.phone_number ||
@@ -2575,6 +2629,8 @@ exports.sendProfileReply = async (req, res) => {
       to: Userdata.email,
       subject: "Profile Review Request",
       user_name: Userdata.full_name,
+      app_url: process.env.APP_URL,
+      storage_url: process.env.STORAGE_BASE_URL,
       message: reply
     }
 
@@ -2683,7 +2739,7 @@ exports.supplierListForm = async (req, res) => {
       }
 
       data = await User.aggregate([
-        { $match: { user_type: { $in: ['supplier'] }, _id: new mongoose.Types.ObjectId(productData?.user_id), is_deleted: false } },
+        { $match: { user_type: { $in: ['supplier'] }, _id: new mongoose.Types.ObjectId(productData?.user_id), is_deleted: false, is_trashed: { $ne: true } } },
         {
           $project: {
             _id: 1,
@@ -2696,7 +2752,7 @@ exports.supplierListForm = async (req, res) => {
       console.log("data is ", data)
     } else {
       data = await User.aggregate([
-        { $match: { user_type: { $in: ['supplier'] }, is_deleted: false } },
+        { $match: { user_type: { $in: ['supplier'] }, is_deleted: false, is_trashed: { $ne: true } } },
         {
           $project: {
             _id: 1,
@@ -3633,6 +3689,988 @@ exports.ratingandreview = async (req, res) => {
       code: 200,
     });
   } catch (error) {
+    utils.handleError(res, error);
+  }
+};
+
+// ===============================
+// TRASH FUNCTIONALITY - SOFT DELETE
+// ===============================
+
+// Trash customer (soft delete)
+exports.trashCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user._id;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return utils.handleError(res, {
+        message: "User not found",
+        code: 404,
+      });
+    }
+
+    if (user.is_trashed) {
+      return utils.handleError(res, {
+        message: "User is already trashed",
+        code: 400,
+      });
+    }
+
+    // Update user to trashed status
+    await User.findByIdAndUpdate(id, {
+      is_trashed: true,
+      trashed_at: new Date(),
+      trashed_by: adminId,
+      status: 'inactive'
+    });
+
+    res.json({
+      message: "User moved to trash successfully",
+      code: 200,
+    });
+  } catch (error) {
+    console.error('Error trashing customer:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Restore customer from trash
+exports.restoreCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return utils.handleError(res, {
+        message: "User not found",
+        code: 404,
+      });
+    }
+
+    if (!user.is_trashed) {
+      return utils.handleError(res, {
+        message: "User is not trashed",
+        code: 400,
+      });
+    }
+
+    // Restore user
+    await User.findByIdAndUpdate(id, {
+      is_trashed: false,
+      trashed_at: null,
+      trashed_by: null,
+      status: 'active'
+    });
+
+    res.json({
+      message: "User restored successfully",
+      code: 200,
+    });
+  } catch (error) {
+    console.error('Error restoring customer:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Permanently delete customer from trash
+exports.deleteCustomerPermanently = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return utils.handleError(res, {
+        message: "User not found",
+        code: 404,
+      });
+    }
+
+    if (!user.is_trashed) {
+      return utils.handleError(res, {
+        message: "User is not trashed",
+        code: 400,
+      });
+    }
+
+    // Permanently delete user from database
+    await User.findByIdAndDelete(id);
+
+    res.json({ 
+      message: "Customer permanently deleted successfully", 
+      code: 200
+    });
+  } catch (error) {
+    console.error('Error permanently deleting customer:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Get trashed customers list
+exports.getTrashedCustomerList = async (req, res) => {
+  try {
+    const { limit = 10, offset = 0, search = "" } = req.query;
+
+    const condition = {
+      user_type: { $in: ["buyer", "company"] },
+      is_deleted: false,
+      is_trashed: true, // Only trashed users
+    };
+
+    if (search) {
+      condition["$or"] = [
+        {
+          full_name: { $regex: search, $options: "i" },
+        },
+        {
+          email: { $regex: search, $options: "i" },
+        },
+        {
+          phone_number: { $regex: search, $options: "i" },
+        },
+        {
+          unique_user_id: { $regex: search, $options: "i" },
+        },
+        {
+          first_name: { $regex: search, $options: "i" },
+        },
+        {
+          last_name: { $regex: search, $options: "i" },
+        },
+      ];
+    }
+
+    const countPromise = User.countDocuments(condition);
+
+    const usersPromise = User.aggregate([
+      {
+        $match: condition,
+      },
+      {
+        $sort: {
+          trashed_at: -1,
+        },
+      },
+      {
+        $skip: +offset,
+      },
+      {
+        $limit: +limit,
+      },
+      {
+        $project: {
+          full_name: 1,
+          profile_image: 1,
+          email: 1,
+          phone_number_code: 1,
+          phone_number: 1,
+          status: 1,
+          unique_user_id: 1,
+          createdAt: 1,
+          last_login: 1,
+          trashed_at: 1,
+          trashed_by: 1,
+          user_type: 1,
+          current_user_type: 1,
+          company_data: 1,
+        },
+      },
+    ]);
+
+    const [count, users] = await Promise.all([countPromise, usersPromise]);
+
+    res.json({
+      message: "Trashed customers retrieved successfully",
+      code: 200,
+      data: users,
+      count: count,
+    });
+  } catch (error) {
+    console.error('Error getting trashed customers:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// ================================
+// SUPPLIER TRASH FUNCTIONALITY
+// ================================
+
+// Trash supplier (soft delete)
+exports.trashSupplier = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+    const adminId = req.user._id;
+
+    // Find the supplier
+    const supplier = await User.findById(supplierId);
+    if (!supplier) {
+      return res.status(404).json({
+        message: "Supplier not found",
+        code: 404
+      });
+    }
+
+    // Check if supplier has supplier role
+    if (!supplier.user_type.includes('supplier')) {
+      return res.status(400).json({
+        message: "User is not a supplier",
+        code: 400
+      });
+    }
+
+    if (supplier.is_trashed) {
+      return res.status(400).json({
+        message: "Supplier is already trashed",
+        code: 400
+      });
+    }
+
+    // Update supplier to trashed status
+    await User.findByIdAndUpdate(supplierId, {
+      is_trashed: true,
+      trashed_at: new Date(),
+      trashed_by: adminId,
+    });
+
+    res.json({
+      message: "Supplier moved to trash successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error trashing supplier:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Restore supplier from trash
+exports.restoreSupplier = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+
+    const supplier = await User.findById(supplierId);
+    if (!supplier) {
+      return res.status(404).json({
+        message: "Supplier not found",
+        code: 404
+      });
+    }
+
+    if (!supplier.is_trashed) {
+      return res.status(400).json({
+        message: "Supplier is not trashed",
+        code: 400
+      });
+    }
+
+    // Restore supplier
+    await User.findByIdAndUpdate(supplierId, {
+      is_trashed: false,
+      trashed_at: null,
+      trashed_by: null,
+    });
+
+    res.json({
+      message: "Supplier restored successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error restoring supplier:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Get trashed suppliers list
+exports.getTrashedSupplierList = async (req, res) => {
+  try {
+    const { search = '', limit = 10, offset = 0 } = req.query;
+
+    const query = {
+      user_type: { $in: ['supplier'] },
+      is_trashed: true, // Only trashed users
+    };
+
+    if (search) {
+      query.$or = [
+        { full_name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { unique_user_id: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const suppliers = await User.find(query)
+      .populate('trashed_by', 'full_name email')
+      .sort({
+        trashed_at: -1,
+      })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .select('full_name email phone_number unique_user_id status createdAt last_login profile_image company_data trashed_at trashed_by');
+
+    const totalCount = await User.countDocuments(query);
+
+    res.json({
+      data: suppliers,
+      count: totalCount,
+      message: "Trashed suppliers retrieved successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error getting trashed suppliers:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch supplier to customer (add customer role while keeping supplier role)
+exports.switchSupplierToCustomer = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+
+    const supplier = await User.findById(supplierId);
+    if (!supplier) {
+      return res.status(404).json({
+        message: "Supplier not found",
+        code: 404
+      });
+    }
+
+    // Check if supplier has supplier role
+    if (!supplier.user_type.includes('supplier')) {
+      return res.status(400).json({
+        message: "User is not a supplier",
+        code: 400
+      });
+    }
+
+    // Add customer role while keeping supplier role
+    const updatedUserType = [...supplier.user_type]; // Keep existing roles
+    if (!updatedUserType.includes('buyer')) {
+      updatedUserType.push('buyer'); // Add buyer role (customer)
+    }
+
+    // Update user type (keep current_user_type as supplier)
+    await User.findByIdAndUpdate(supplierId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    res.json({
+      message: "Customer role added successfully. User now has both supplier and customer roles.",
+      code: 200,
+      data: {
+        user_id: supplier.unique_user_id,
+        email: supplier.email,
+        user_type: updatedUserType,
+        current_user_type: supplier.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding customer role to supplier:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch supplier to logistic (add logistic role while keeping supplier role)
+exports.switchSupplierToLogistic = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+
+    const supplier = await User.findById(supplierId);
+    if (!supplier) {
+      return res.status(404).json({
+        message: "Supplier not found",
+        code: 404
+      });
+    }
+
+    // Check if supplier has supplier role
+    if (!supplier.user_type.includes('supplier')) {
+      return res.status(400).json({
+        message: "User is not a supplier",
+        code: 400
+      });
+    }
+
+    // Add logistic role while keeping supplier role
+    const updatedUserType = [...supplier.user_type]; // Keep existing roles
+    if (!updatedUserType.includes('logistics')) {
+      updatedUserType.push('logistics'); // Add logistics role
+    }
+
+    // Update user type (keep current_user_type as supplier)
+    await User.findByIdAndUpdate(supplierId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    res.json({
+      message: "Logistic role added successfully. User now has both supplier and logistic roles.",
+      code: 200,
+      data: {
+        user_id: supplier.unique_user_id,
+        email: supplier.email,
+        user_type: updatedUserType,
+        current_user_type: supplier.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding logistic role to supplier:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch supplier to recruiter (add recruiter role while keeping supplier role)
+exports.switchSupplierToRecruiter = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+
+    const supplier = await User.findById(supplierId);
+    if (!supplier) {
+      return res.status(404).json({
+        message: "Supplier not found",
+        code: 404
+      });
+    }
+
+    // Check if supplier has supplier role
+    if (!supplier.user_type.includes('supplier')) {
+      return res.status(400).json({
+        message: "User is not a supplier",
+        code: 400
+      });
+    }
+
+    // Add recruiter role while keeping supplier role
+    const updatedUserType = [...supplier.user_type]; // Keep existing roles
+    if (!updatedUserType.includes('recruiter')) {
+      updatedUserType.push('recruiter'); // Add recruiter role
+    }
+
+    // Update user type (keep current_user_type as supplier)
+    await User.findByIdAndUpdate(supplierId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    res.json({
+      message: "Recruiter role added successfully. User now has both supplier and recruiter roles.",
+      code: 200,
+      data: {
+        user_id: supplier.unique_user_id,
+        email: supplier.email,
+        user_type: updatedUserType,
+        current_user_type: supplier.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding recruiter role to supplier:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Switch supplier to resource (add resource role while keeping supplier role)
+exports.switchSupplierToResource = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+
+    const supplier = await User.findById(supplierId);
+    if (!supplier) {
+      return res.status(404).json({
+        message: "Supplier not found",
+        code: 404
+      });
+    }
+
+    // Check if supplier has supplier role
+    if (!supplier.user_type.includes('supplier')) {
+      return res.status(400).json({
+        message: "User is not a supplier",
+        code: 400
+      });
+    }
+
+    // Add resource role while keeping supplier role
+    const updatedUserType = [...supplier.user_type]; // Keep existing roles
+    if (!updatedUserType.includes('resource')) {
+      updatedUserType.push('resource'); // Add resource role
+    }
+
+    // Update user type (keep current_user_type as supplier)
+    await User.findByIdAndUpdate(supplierId, {
+      user_type: updatedUserType,
+      updated_at: new Date()
+    });
+
+    res.json({
+      message: "Resource role added successfully. User now has both supplier and resource roles.",
+      code: 200,
+      data: {
+        user_id: supplier.unique_user_id,
+        email: supplier.email,
+        user_type: updatedUserType,
+        current_user_type: supplier.current_user_type
+      }
+    });
+  } catch (error) {
+    console.error('Error adding resource role to supplier:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// ================================
+// LOGISTICS TRASH FUNCTIONALITY
+// ================================
+
+// Trash logistics user (soft delete)
+exports.trashLogistics = async (req, res) => {
+  try {
+    const { logisticsId } = req.params;
+    const adminId = req.user._id;
+
+    const logistics = await User.findById(logisticsId);
+    if (!logistics) {
+      return res.status(404).json({
+        message: "Logistics user not found",
+        code: 404
+      });
+    }
+
+    if (!logistics.user_type.includes('logistics')) {
+      return res.status(400).json({
+        message: "User is not a logistics user",
+        code: 400
+      });
+    }
+
+    if (logistics.is_trashed) {
+      return res.status(400).json({
+        message: "Logistics user is already trashed",
+        code: 400
+      });
+    }
+
+    await User.findByIdAndUpdate(logisticsId, {
+      is_trashed: true,
+      trashed_at: new Date(),
+      trashed_by: adminId,
+    });
+
+    res.json({
+      message: "Logistics user moved to trash successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error trashing logistics user:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Restore logistics user from trash
+exports.restoreLogistics = async (req, res) => {
+  try {
+    const { logisticsId } = req.params;
+
+    const logistics = await User.findById(logisticsId);
+    if (!logistics) {
+      return res.status(404).json({
+        message: "Logistics user not found",
+        code: 404
+      });
+    }
+
+    if (!logistics.is_trashed) {
+      return res.status(400).json({
+        message: "Logistics user is not trashed",
+        code: 400
+      });
+    }
+
+    await User.findByIdAndUpdate(logisticsId, {
+      is_trashed: false,
+      trashed_at: null,
+      trashed_by: null,
+    });
+
+    res.json({
+      message: "Logistics user restored successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error restoring logistics user:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Get trashed logistics users list
+exports.getTrashedLogisticsList = async (req, res) => {
+  try {
+    const { search = '', limit = 10, offset = 0 } = req.query;
+
+    const query = {
+      user_type: { $in: ['logistics'] },
+      is_trashed: true,
+    };
+
+    if (search) {
+      query.$or = [
+        { full_name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { unique_user_id: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const logistics = await User.find(query)
+      .populate('address.city')
+      .populate('address.state')
+      .populate('address.country')
+      .populate('trashed_by', 'full_name email')
+      .sort({ trashed_at: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .select('full_name email phone_number unique_user_id status createdAt last_login profile_image company_data address trashed_at trashed_by');
+
+    const totalCount = await User.countDocuments(query);
+
+    res.json({
+      data: logistics,
+      count: totalCount,
+      message: "Trashed logistics users retrieved successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error getting trashed logistics users:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// ================================
+// RESOURCE TRASH FUNCTIONALITY
+// ================================
+
+// Trash resource user (soft delete)
+exports.trashResource = async (req, res) => {
+  try {
+    const { resourceId } = req.params;
+    const adminId = req.user._id;
+
+    const resource = await User.findById(resourceId);
+    if (!resource) {
+      return res.status(404).json({
+        message: "Resource user not found",
+        code: 404
+      });
+    }
+
+    if (!resource.user_type.includes('resource')) {
+      return res.status(400).json({
+        message: "User is not a resource user",
+        code: 400
+      });
+    }
+
+    if (resource.is_trashed) {
+      return res.status(400).json({
+        message: "Resource user is already trashed",
+        code: 400
+      });
+    }
+
+    await User.findByIdAndUpdate(resourceId, {
+      is_trashed: true,
+      trashed_at: new Date(),
+      trashed_by: adminId,
+    });
+
+    res.json({
+      message: "Resource user moved to trash successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error trashing resource user:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Restore resource user from trash
+exports.restoreResource = async (req, res) => {
+  try {
+    const { resourceId } = req.params;
+
+    const resource = await User.findById(resourceId);
+    if (!resource) {
+      return res.status(404).json({
+        message: "Resource user not found",
+        code: 404
+      });
+    }
+
+    if (!resource.is_trashed) {
+      return res.status(400).json({
+        message: "Resource user is not trashed",
+        code: 400
+      });
+    }
+
+    await User.findByIdAndUpdate(resourceId, {
+      is_trashed: false,
+      trashed_at: null,
+      trashed_by: null,
+    });
+
+    res.json({
+      message: "Resource user restored successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error restoring resource user:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Get trashed resource users list
+exports.getTrashedResourceList = async (req, res) => {
+  try {
+    const { search = '', limit = 10, offset = 0 } = req.query;
+
+    const query = {
+      user_type: { $in: ['resource'] },
+      is_trashed: true,
+    };
+
+    if (search) {
+      query.$or = [
+        { full_name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { unique_user_id: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const resources = await User.find(query)
+      .populate('address.city')
+      .populate('address.state')
+      .populate('address.country')
+      .populate('trashed_by', 'full_name email')
+      .sort({ trashed_at: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .select('full_name email phone_number unique_user_id status createdAt last_login profile_image company_data address trashed_at trashed_by');
+
+    const totalCount = await User.countDocuments(query);
+
+    res.json({
+      data: resources,
+      count: totalCount,
+      message: "Trashed resource users retrieved successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error getting trashed resource users:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// ================================
+// RECRUITER TRASH FUNCTIONALITY
+// ================================
+
+// Trash recruiter user (soft delete)
+exports.trashRecruiter = async (req, res) => {
+  try {
+    const { recruiterId } = req.params;
+    const adminId = req.user._id;
+
+    const recruiter = await User.findById(recruiterId);
+    if (!recruiter) {
+      return res.status(404).json({
+        message: "Recruiter user not found",
+        code: 404
+      });
+    }
+
+    if (!recruiter.user_type.includes('recruiter')) {
+      return res.status(400).json({
+        message: "User is not a recruiter user",
+        code: 400
+      });
+    }
+
+    if (recruiter.is_trashed) {
+      return res.status(400).json({
+        message: "Recruiter user is already trashed",
+        code: 400
+      });
+    }
+
+    await User.findByIdAndUpdate(recruiterId, {
+      is_trashed: true,
+      trashed_at: new Date(),
+      trashed_by: adminId,
+    });
+
+    res.json({
+      message: "Recruiter user moved to trash successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error trashing recruiter user:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Restore recruiter user from trash
+exports.restoreRecruiter = async (req, res) => {
+  try {
+    const { recruiterId } = req.params;
+
+    const recruiter = await User.findById(recruiterId);
+    if (!recruiter) {
+      return res.status(404).json({
+        message: "Recruiter user not found",
+        code: 404
+      });
+    }
+
+    if (!recruiter.is_trashed) {
+      return res.status(400).json({
+        message: "Recruiter user is not trashed",
+        code: 400
+      });
+    }
+
+    await User.findByIdAndUpdate(recruiterId, {
+      is_trashed: false,
+      trashed_at: null,
+      trashed_by: null,
+    });
+
+    res.json({
+      message: "Recruiter user restored successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error restoring recruiter user:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Get trashed recruiter users list
+exports.getTrashedRecruiterList = async (req, res) => {
+  try {
+    const { search = '', limit = 10, offset = 0 } = req.query;
+
+    const query = {
+      user_type: { $in: ['recruiter'] },
+      is_trashed: true,
+    };
+
+    if (search) {
+      query.$or = [
+        { full_name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { unique_user_id: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const recruiters = await User.find(query)
+      .populate('address.city')
+      .populate('address.state')
+      .populate('address.country')
+      .populate('trashed_by', 'full_name email')
+      .sort({ trashed_at: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .select('full_name email phone_number unique_user_id status createdAt last_login profile_image company_data address trashed_at trashed_by');
+
+    const totalCount = await User.countDocuments(query);
+
+    res.json({
+      data: recruiters,
+      count: totalCount,
+      message: "Trashed recruiter users retrieved successfully",
+      code: 200
+    });
+
+  } catch (error) {
+    console.error('Error getting trashed recruiter users:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// ================================
+// ADD RECRUITER FUNCTIONALITY
+// ================================
+
+// Add new recruiter
+exports.addRecruiter = async (req, res) => {
+  try {
+    const data = req.body;
+    
+    // Check if email already exists
+    const existingEmail = await User.findOne({ email: data.email });
+    if (existingEmail) {
+      return res.status(400).json({
+        message: "Email already exists",
+        code: 400
+      });
+    }
+
+    // Check if phone number already exists
+    const existingPhone = await User.findOne({ phone_number: data.phone_number });
+    if (existingPhone) {
+      return res.status(400).json({
+        message: "Phone number already exists",
+        code: 400
+      });
+    }
+
+    const password = createNewPassword();
+    const userData = {
+      ...data,
+      unique_user_id: await getUniqueId(),
+      password,
+      decoded_password: password,
+      user_type: ["recruiter"],
+      current_user_type: "recruiter",
+      profile_completed: true,
+    };
+
+    const user = new User(userData);
+    
+    // Check if profile is completed
+    if (!user.profile_completed) {
+      return res.status(400).json({
+        message: "Profile not completed",
+        code: 400
+      });
+    }
+
+    await user.save();
+
+    // Send email with credentials
+    const mailOptions = {
+      to: data.email,
+      subject: "Account Created - BSO Services",
+      name: data.full_name,
+      password: password,
+    };
+
+    emailer.sendEmail(null, mailOptions, "accountCreated");
+
+    res.json({ message: "Recruiter added successfully", code: 200 });
+
+  } catch (error) {
+    console.error('Error adding recruiter:', error);
     utils.handleError(res, error);
   }
 };

@@ -8,6 +8,14 @@ const passport = require("passport");
 var fileUpload = require("express-fileupload");
 const initMongo = require("./src/config/mongo");
 const app = express();
+const { handleStripeWebhook } = require("./src/controllers/user/webhook")
+
+app.post(
+  "/user/webhook",
+  express.raw({ type: 'application/json' }),
+  // trimRequest.all,
+  handleStripeWebhook
+)
 
 // Middleware
 app.use(helmet());
@@ -19,6 +27,8 @@ const corsOptions = {
   optionsSuccessStatus: 204,
   allowedHeaders: "Content-Type, Authorization, X-Requested-With",
 };
+
+app.post
 
 app.use(cors(corsOptions));
 app.use(compression());

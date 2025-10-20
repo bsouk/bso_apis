@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enquiry Confirmation - Blue Sky</title>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f9; padding: 30px 0;">
+        <tr>
+            <td align="center">
+                <table width="700" cellpadding="0" cellspacing="0" border="0"
+                    style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+
+                    <!-- Header with Logo -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="padding: 20px;">
+                            <img src="<%= app_url %>Logo.png" alt="Blue Sky Logo"
+                                style="display: block; max-height: 50px;" />
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+                            <p><strong>Hello <%= name %>,</strong></p>
+
+                            <p>We’ve successfully received your enquiry <strong>
+                                    <%= enquiry.enquiry_unique_id %>
+                                </strong>. Here's a summary of your request:</p>
+
+                            <!-- Quote Box -->
+                            <table width="100%" cellpadding="15" cellspacing="0"
+                                style="background-color: #eef6fb; border-left: 4px solid #055a90; border-radius: 4px; margin: 20px 0;">
+                                <tr>
+                                    <td style="font-size: 15px;">
+                                        <strong>Priority:</strong>
+                                        <%= enquiry.priority %><br />
+                                            <strong>Submitted On:</strong>
+                                            <%= new Date(enquiry.createdAt).toDateString() %><br />
+                                                <strong>Expiry Date:</strong>
+                                                <%= new Date(enquiry.expiry_date).toDateString() %>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Items -->
+                            <% if (enquiry.enquiry_items && enquiry.enquiry_items.length> 0) { %>
+                                <h2
+                                    style="font-size: 18px; color: #055a90; border-bottom: 1px solid #e6e6e6; padding-bottom: 8px;">
+                                    Item Details</h2>
+                                <% enquiry.enquiry_items.forEach(function(item, index) { %>
+                                    <table width="100%" cellpadding="10" cellspacing="0"
+                                        style="border: 1px solid #e6e6e6; border-radius: 6px; background-color: #fdfdfd; margin-bottom: 20px;">
+                                        <tr>
+                                            <td><strong>Item #<%= index + 1 %></strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Brand:</strong>
+                                                <%= item.brand %>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Part No:</strong>
+                                                <%= item.part_no %>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Description:</strong>
+                                                <%= item.description %>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Notes:</strong>
+                                                <%= item.notes %>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Quantity:</strong>
+                                                <%= item.quantity.value %> units
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Condition:</strong>
+                                                <% if (item.condition.new) { %>New<% } else if
+                                                        (item.condition.reconditioned) { %>Reconditioned<% } else if
+                                                            (item.condition.used) { %>Used<% } %>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Manufacturer Type:</strong>
+                                                <% if (item.manufacturer.oem.selected) { %>OEM<% } else if
+                                                        (item.manufacturer.original.selected) { %>Original<% } else if
+                                                            (item.manufacturer.aftermarket.selected) { %>Aftermarket<% }
+                                                                %>
+                                            </td>
+                                        </tr>
+                                        <% if (item.attachment && item.attachment.length> 0) { %>
+                                            <tr>
+                                                <td><strong>Attachment:</strong> <a
+                                                        href="<%= storage_url %><%= item.attachment[0] %>"
+                                                        target="_blank" style="color: #055a90;">View Image</a></td>
+                                            </tr>
+                                            <% } %>
+                                    </table>
+                                    <% }); %>
+                                        <% } %>
+
+                                            <p>If you have any additional notes, questions, or want to modify your
+                                                enquiry, just reply to this email.</p>
+
+                                            <!-- Button -->
+                                            <p>
+                                                <a href="<%= app_url %>enquiry-review-page/<%= enquiry._id %>"
+                                                    style="display: inline-block; padding: 12px 24px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">View
+                                                    Your Enquiry</a>
+                                            </p>
+
+                                            <p style="margin-top: 30px;">Thank you for choosing Blue Sky. We're excited
+                                                to support your needs!</p>
+                                            <p>Best regards,<br /><strong>Blue Sky Customer Support Team</strong></p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+                            &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>
