@@ -274,21 +274,19 @@ module.exports = {
 
   async sendEmail(locale, mailOptions, template) {
     mailOptions.website_url = process.env.FRONTEND_PROD_URL;
-    console.log("mailOptions", mailOptions)
-    
-    locale = locale == null ? "" : `${locale}/`
 
-    app.mailer.send(
-      `${locale}${template}`,
-      mailOptions,
-      function (err, message) {
+    locale = locale == null ? "" : `${locale}/`;
+
+    return new Promise((resolve, reject) => {
+      app.mailer.send(`${locale}${template}`, mailOptions, function (err, message) {
         if (err) {
-          console.log("There was an error sending the email" + err);
+          console.error("There was an error sending the email", err);
+          reject(err);
         } else {
-          console.log("Mail sent");
+          resolve(message);
         }
-      }
-    );
+      });
+    });
   },
 
   /**

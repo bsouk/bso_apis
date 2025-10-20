@@ -61,6 +61,35 @@ router.delete(
   controller.deleteSelectedCustomer
 );
 
+// Trash functionality routes
+router.patch(
+  "/trashCustomer/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.trashCustomer
+);
+
+router.patch(
+  "/restoreCustomer/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.restoreCustomer
+);
+
+router.delete(
+  "/deleteCustomerPermanently/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteCustomerPermanently
+);
+
+router.get(
+  "/getTrashedCustomerList",
+  trimRequest.all,
+  requireAuth,
+  controller.getTrashedCustomerList
+);
+
 router.post(
   "/addResource",
   trimRequest.all,
@@ -358,5 +387,139 @@ router.get(
   trimRequest.all,
   controller.ratingandreview
 )
+
+// ================================
+// SUPPLIER TRASH ROUTES
+// ================================
+router.patch(
+  "/trashSupplier/:supplierId",
+  trimRequest.all,
+  requireAuth,
+  controller.trashSupplier
+);
+
+router.patch(
+  "/restoreSupplier/:supplierId",
+  trimRequest.all,
+  requireAuth,
+  controller.restoreSupplier
+);
+
+router.get(
+  "/getTrashedSupplierList",
+  trimRequest.all,
+  requireAuth,
+  controller.getTrashedSupplierList
+);
+
+router.patch(
+  "/switchSupplierToCustomer/:supplierId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchSupplierToCustomer
+);
+
+router.patch(
+  "/switchSupplierToLogistic/:supplierId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchSupplierToLogistic
+);
+
+router.patch(
+  "/switchSupplierToRecruiter/:supplierId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchSupplierToRecruiter
+);
+
+router.patch(
+  "/switchSupplierToResource/:supplierId",
+  trimRequest.all,
+  requireAuth,
+  controller.switchSupplierToResource
+);
+
+// ================================
+// LOGISTICS TRASH ROUTES
+// ================================
+router.patch(
+  "/trashLogistics/:logisticsId",
+  trimRequest.all,
+  requireAuth,
+  controller.trashLogistics
+);
+
+router.patch(
+  "/restoreLogistics/:logisticsId",
+  trimRequest.all,
+  requireAuth,
+  controller.restoreLogistics
+);
+
+router.get(
+  "/getTrashedLogisticsList",
+  trimRequest.all,
+  requireAuth,
+  controller.getTrashedLogisticsList
+);
+
+// ================================
+// RESOURCE TRASH ROUTES
+// ================================
+router.patch(
+  "/trashResource/:resourceId",
+  trimRequest.all,
+  requireAuth,
+  controller.trashResource
+);
+
+router.patch(
+  "/restoreResource/:resourceId",
+  trimRequest.all,
+  requireAuth,
+  controller.restoreResource
+);
+
+router.get(
+  "/getTrashedResourceList",
+  trimRequest.all,
+  requireAuth,
+  controller.getTrashedResourceList
+);
+
+// ================================
+// RECRUITER TRASH ROUTES
+// ================================
+router.patch(
+  "/trashRecruiter/:recruiterId",
+  trimRequest.all,
+  requireAuth,
+  controller.trashRecruiter
+);
+
+router.patch(
+  "/restoreRecruiter/:recruiterId",
+  trimRequest.all,
+  requireAuth,
+  controller.restoreRecruiter
+);
+
+router.get(
+  "/getTrashedRecruiterList",
+  trimRequest.all,
+  requireAuth,
+  controller.getTrashedRecruiterList
+);
+
+// ================================
+// ADD RECRUITER ROUTE
+// ================================
+router.post(
+  "/addRecruiter",
+  trimRequest.all,
+  requireAuth,
+  controller.addRecruiter
+);
 
 module.exports = router;
