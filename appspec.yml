@@ -3,7 +3,7 @@ os: linux
 
 files:
   - source: /
-    destination: /home/bsoservices/ci-cd
+    destination: /home/bsoservices/ci-cd/bso_apis
     overwrite: true
 
 permissions:
