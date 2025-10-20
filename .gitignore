@@ -26,7 +26,22 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-# .env*.local
+# ALL .env files and backups
+.env
+.env.*
+.env*.local
+.env.local
+.env.example
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup*
+.env.bak
+*.env.backup
+*.env.bak
+
+# Keep only the example file (remove from ignore)
+!.env.example
 
 # vercel
 .vercel
@@ -34,5 +49,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.env
