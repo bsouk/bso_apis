@@ -79,6 +79,22 @@ const UserSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
+    // Role-specific status fields
+    supplier_status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    logistics_status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    recruiter_status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
     profile_completed: {
       type: Boolean,
       default: false,

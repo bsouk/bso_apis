@@ -252,12 +252,34 @@ router.post(
   controller.sendProfileReply
 )
 
-//change Profile status
+//change Profile status (Legacy)
 router.post(
   "/changeProfileStatus/:id",
   trimRequest.all,
   requireAuth,
   controller.changeStatus
+);
+
+// Role-based status change endpoints
+router.post(
+  "/changeSupplierStatus/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.changeSupplierStatus
+);
+
+router.post(
+  "/changeLogisticsStatus/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.changeLogisticsStatus
+);
+
+router.post(
+  "/changeRecruiterStatus/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.changeRecruiterStatus
 );
 
 //change profile availability status
