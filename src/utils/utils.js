@@ -34,6 +34,89 @@ const xlsx = require("xlsx")
 const csv = require("csvtojson");
 
 const { stringify } = require('csv-stringify');
+
+// User ID Generation Utility
+const generateUniqueUserId = async (firstName, lastName, email, phoneNumber) => {
+  const User = require("../models/user");
+  
+  // Step 1: Determine identifier based on available data
+  let identifier = '';
+  
+  if (firstName && lastName) {
+    identifier = `${sanitizeText(firstName)}-${sanitizeText(lastName)}`;
+  } else if (firstName) {
+    identifier = sanitizeText(firstName);
+  } else if (lastName) {
+    identifier = sanitizeText(lastName);
+  } else if (email) {
+    const emailPrefix = email.split('@')[0];
+    identifier = sanitizeText(emailPrefix);
+  } else if (phoneNumber) {
+    // Extract last 10 digits from phone number
+    const phoneDigits = phoneNumber.replace(/\D/g, '').slice(-10);
+    identifier = phoneDigits;
+  } else {
+    identifier = 'user'; // fallback
+  }
+  
+  // Step 2: Truncate if too long (max 30 characters)
+  if (identifier.length > 30) {
+    identifier = identifier.substring(0, 30);
+  }
+  
+  // Step 3: Generate unique suffix (6 characters)
+  const generateSuffix = () => {
+    // Method: timestamp(base36) + random(3-chars) = 6 chars total
+    const timestamp = Date.now().toString(36).slice(-3); // 3 chars from timestamp
+    const random = Math.random().toString(36).slice(2, 5); // 3 random chars
+    return timestamp + random; // 6 chars total
+  };
+  
+  // Step 4: Combine and check uniqueness
+  let userId = '';
+  let suffix = generateSuffix();
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  do {
+    userId = `user-${identifier}-${suffix}`;
+    attempts++;
+    
+    // Check if user ID already exists
+    const existingUser = await User.findOne({ unique_user_id: userId });
+    if (!existingUser) {
+      break; // Found unique ID
+    }
+    
+    // Generate new suffix for retry
+    suffix = generateSuffix();
+  } while (attempts < maxAttempts);
+  
+  // If max attempts reached, add timestamp to ensure uniqueness
+  if (attempts >= maxAttempts) {
+    const emergencySuffix = Date.now().toString(36);
+    userId = `user-${identifier}-${emergencySuffix}`;
+  }
+  
+  return userId;
+};
+
+// Sanitize text for user ID
+const sanitizeText = (text) => {
+  if (!text) return '';
+  
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')                    // Decompose accents
+    .replace(/[\u0300-\u036f]/g, '')    // Remove accents
+    .replace(/[^a-z0-9]/g, '')          // Keep only alphanumeric
+    .trim();
+};
+
+// Export the function
+module.exports.generateUniqueUserId = generateUniqueUserId;
+module.exports.sanitizeText = sanitizeText;
 // const PDFDocument = require('pdfkit');
 const PDFDocument = require('pdfkit-table');
 const XLSX = require('xlsx');
@@ -42,7 +125,11 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
 
-const client = new twilio(accountSid, authToken);
+// Initialize Twilio client only if valid credentials are provided
+let client = null;
+if (accountSid && accountSid.startsWith('AC') && authToken) {
+  client = new twilio(accountSid, authToken);
+}
 const AWS = require("aws-sdk");
 const ACCESS_KEY = process.env.ACCESS_KEY;
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -683,6 +770,10 @@ exports.generatePDF = async (headers, data, res) => {
 
 exports.sendSMS = async (to, message) => {
   try {
+    if (!client) {
+      console.log("Twilio not configured. SMS not sent to:", to, "Message:", message);
+      return null;
+    }
     const response = await client.messages.create({
       body: message,
       from: twilioPhone,
