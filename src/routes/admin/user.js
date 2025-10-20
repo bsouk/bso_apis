@@ -12,6 +12,9 @@ const trimRequest = require("trim-request");
 const validation = require("../../middleware/adminValidation");
 const validator = require("../../middleware/validator");
 
+// Test email endpoint
+router.get("/test-email", requireAuth, controller.testEmail);
+
 router.post(
   "/uploadMedia",
   trimRequest.all,
