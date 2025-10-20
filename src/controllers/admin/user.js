@@ -353,9 +353,11 @@ exports.uploadMediaToBucket = async (req, res) => {
 exports.addCustomer = async (req, res) => {
   try {
     const data = req.body;
+    console.log(`📝 Starting addCustomer for email: ${data.email}`);
 
     // Validate required fields
     if (!data.email || !data.first_name || !data.last_name) {
+      console.log(`❌ Missing required fields for ${data.email}`);
       return utils.handleError(res, {
         message: "Email, first name, and last name are required",
         code: 400,
@@ -363,13 +365,16 @@ exports.addCustomer = async (req, res) => {
     }
 
     // Check if email already exists
+    console.log(`🔍 Checking if email exists: ${data.email}`);
     const doesEmailExists = await emailer.emailExists(data.email);
     if (doesEmailExists) {
+      console.log(`❌ Email already exists: ${data.email}`);
       return utils.handleError(res, {
         message: "This email address is already registered",
         code: 400,
       });
     }
+    console.log(`✅ Email is available: ${data.email}`);
 
     // Check if phone number already exists
     if (data.phone_number) {
@@ -417,22 +422,65 @@ exports.addCustomer = async (req, res) => {
       userData.current_user_type = "buyer";
     }
 
+    console.log(`💾 Saving user data for: ${data.email}`);
     const user = new User(userData);
     await user.save();
+    console.log(`✅ User saved successfully: ${user.email}`);
 
-    // Send welcome email
-    const mailOptions = {
-      to: user.email,
-      subject: `Welcome to ${process.env.APP_NAME}! Your Customer Account Has Been Created`,
-      app_name: process.env.APP_NAME,
+    // Send welcome email using direct nodemailer (working method)
+    console.log(`📧 Starting email sending process for ${user.email}...`);
+    try {
+      const nodemailer = require('nodemailer');
+      const ejs = require('ejs');
+      const path = require('path');
+
+      // Create transporter
+      const transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: {
+          user: process.env.EMAIL,
+          pass: process.env.PASS,
+        },
+      });
+
+      console.log(`📧 Transporter created for ${user.email}`);
+
+      // Render email template
+      const templatePath = path.join(__dirname, '../../views/accountCreated.ejs');
+      console.log(`📁 Template path: ${templatePath}`);
+      
+      const emailHtml = await ejs.renderFile(templatePath, {
+        app_name: process.env.APP_NAME || 'BSO Services',
       email: user.email,
       password: password,
       name: user.full_name,
       account_type: "customer",
       user_id: uniqueUserId,
-    };
+        website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
+      });
 
-    emailer.sendEmail(null, mailOptions, "accountCreated");
+      console.log(`📧 Template rendered for ${user.email}`);
+
+      // Send email (non-blocking)
+      transporter.sendMail({
+        from: `"${process.env.APP_NAME || 'BSO Services'}" <${process.env.EMAIL}>`,
+        to: user.email,
+        subject: `Welcome to ${process.env.APP_NAME || 'BSO Services'}! Your Customer Account Has Been Created`,
+        html: emailHtml,
+      })
+        .then(() => {
+          console.log(`✅ Welcome email sent successfully to ${user.email}`);
+        })
+        .catch((emailError) => {
+          console.error(`❌ Error sending welcome email to ${user.email}:`, emailError.message);
+          console.error(`❌ Full error:`, emailError);
+        });
+    } catch (emailError) {
+      console.error(`❌ Error preparing welcome email for ${user.email}:`, emailError.message);
+      console.error(`❌ Full error:`, emailError);
+    }
     
     res.json({ 
       message: "User added successfully", 
@@ -656,24 +704,49 @@ exports.editCustomer = async (req, res) => {
 
     // Send email notification if password was updated (non-blocking)
     if (passwordUpdated) {
-      const mailOptions = {
-        to: user.email,
-        subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
-        app_name: process.env.APP_NAME || 'BSO Services',
-        email: user.email,
-        password: newPassword,
-        name: user.full_name || `${user.first_name} ${user.last_name}`,
-        login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/sign-in',
-      };
+      try {
+        const nodemailer = require('nodemailer');
+        const ejs = require('ejs');
+        const path = require('path');
 
-      // Send email asynchronously without blocking the response
-      emailer.sendEmail(null, mailOptions, "passwordUpdated")
-        .then(() => {
-          console.log(`✅ Password update email sent to ${user.email}`);
-        })
-        .catch((emailError) => {
-          console.error(`❌ Error sending password update email to ${user.email}:`, emailError.message);
+        // Create transporter
+        const transporter = nodemailer.createTransport({
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: {
+            user: process.env.EMAIL,
+            pass: process.env.PASS,
+          },
         });
+
+        // Render email template
+        const templatePath = path.join(__dirname, '../../views/passwordUpdated.ejs');
+        const emailHtml = await ejs.renderFile(templatePath, {
+          app_name: process.env.APP_NAME || 'BSO Services',
+          email: user.email,
+          password: newPassword,
+          name: user.full_name || `${user.first_name} ${user.last_name}`,
+          login_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
+          website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
+        });
+
+        // Send email (non-blocking)
+        transporter.sendMail({
+          from: `"${process.env.APP_NAME || 'BSO Services'}" <${process.env.EMAIL}>`,
+          to: user.email,
+          subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
+          html: emailHtml,
+        })
+          .then(() => {
+            console.log(`✅ Password update email sent to ${user.email}`);
+          })
+          .catch((emailError) => {
+            console.error(`❌ Error sending password update email to ${user.email}:`, emailError.message);
+          });
+      } catch (emailError) {
+        console.error(`❌ Error preparing password update email for ${user.email}:`, emailError.message);
+      }
     }
 
     if (
