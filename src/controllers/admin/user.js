@@ -343,8 +343,9 @@ exports.addCustomer = async (req, res) => {
       data.phone_number
     );
 
-    // Generate password
-    const password = createNewPassword();
+    // Password logic: use provided password, otherwise generate new one
+    const password = data.password || createNewPassword();
+    console.log(`🔐 Customer password: ${data.password ? 'Using provided password' : 'Auto-generated password'}`);
 
     // Prepare user data
     const userData = {
