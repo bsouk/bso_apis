@@ -1540,6 +1540,30 @@ exports.addQuery = async (req, res) => {
         const userId = req.user._id;
         console.log("userid is ", userId);
 
+        // Process enquiry_items to handle temporary units (string unit names)
+        if (data.enquiry_items && Array.isArray(data.enquiry_items)) {
+            for (let item of data.enquiry_items) {
+                if (item.quantity && item.quantity.unit) {
+                    const unitValue = item.quantity.unit;
+                    
+                    // Check if unit is a string (temporary unit) instead of ObjectId
+                    if (typeof unitValue === 'string' && !mongoose.Types.ObjectId.isValid(unitValue)) {
+                        // This is a temporary unit name, create it in database
+                        let existingUnit = await quantity_units.findOne({ unit: unitValue });
+                        
+                        if (!existingUnit) {
+                            // Create new unit in database
+                            existingUnit = await quantity_units.create({ unit: unitValue });
+                            console.log("Created new unit:", existingUnit);
+                        }
+                        
+                        // Replace string with ObjectId
+                        item.quantity.unit = existingUnit._id;
+                    }
+                }
+            }
+        }
+
         let queryid = await generateQueryNumber()
         const newQueryData = {
             query_unique_id: queryid.toString(),
