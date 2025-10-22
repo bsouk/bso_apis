@@ -624,4 +624,64 @@ router.post(
   controller.addRecruiter
 );
 
+// ================================
+// UNITS MANAGEMENT ROUTES
+// ================================
+
+// Get all units with pagination and search
+router.get(
+  "/getUnits",
+  trimRequest.all,
+  requireAuth,
+  controller.getUnits
+);
+
+// Get single unit by ID
+router.get(
+  "/getUnit/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.getUnitById
+);
+
+// Add new unit
+router.post(
+  "/addUnit",
+  trimRequest.all,
+  requireAuth,
+  controller.addUnit
+);
+
+// Update unit
+router.patch(
+  "/updateUnit/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.updateUnit
+);
+
+// Delete single unit
+router.delete(
+  "/deleteUnit/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteUnit
+);
+
+// Delete multiple units
+router.post(
+  "/deleteMultipleUnits",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteMultipleUnits
+);
+
+// Toggle unit status (better semantic route)
+router.patch(
+  "/unit/status/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.toggleUnitStatus
+);
+
 module.exports = router;
