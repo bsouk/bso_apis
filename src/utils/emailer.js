@@ -23,15 +23,18 @@ const {
 } = require("./utils");
 
 mailer.extend(app, {
-  from: process.env.EMAIL_FROM || `"Support" <${process.env.EMAIL}>`,
-  host: process.env.EMAIL_HOST || "smtp.gmail.com",
-  secureConnection: process.env.EMAIL_PORT === "465",
+  from: process.env.EMAIL_FROM || `"BSO Services" <${process.env.SUPPORT_EMAIL}>`,
+  host: process.env.EMAIL_HOST || "mail.bsoservices.com",
+  secureConnection: true,
   port: parseInt(process.env.EMAIL_PORT) || 465,
   transportMethod: "SMTP",
   auth: {
     user: process.env.EMAIL,
     pass: process.env.PASS,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 /**
@@ -277,12 +280,15 @@ module.exports = {
 
     locale = locale == null ? "" : `${locale}/`;
 
+    console.log("📧 Sending email to:", mailOptions.to);
+
     return new Promise((resolve, reject) => {
       app.mailer.send(`${locale}${template}`, mailOptions, function (err, message) {
         if (err) {
-          console.error("There was an error sending the email", err);
+          console.error("❌ Email sending failed:", err);
           reject(err);
         } else {
+          console.log("✅ Email sent successfully:", message);
           resolve(message);
         }
       });

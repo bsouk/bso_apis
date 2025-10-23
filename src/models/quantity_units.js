@@ -5,7 +5,12 @@ const mongoosePaginate = require("mongoose-paginate-v2");
 const quantityUnitSchema = new mongoose.Schema(
     {
         unit: {
-            type: String
+            type: String,
+            required: true
+        },
+        isActive: {
+            type: Boolean,
+            default: true
         }
     },
     { timestamps: true }
