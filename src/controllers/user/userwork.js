@@ -2588,7 +2588,9 @@ exports.addQuantityUnit = async (req, res) => {
 exports.getQuantitiesUnits = async (req, res) => {
     try {
         const { search, offset = 0, limit = 10 } = req.query
-        let filter = {}
+        let filter = {
+            isActive: true  // Only fetch active units for frontend
+        }
         if (search) {
             filter.unit = { $regex: search, $options: "i" }
         }
