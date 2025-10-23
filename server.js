@@ -8,7 +8,6 @@ const passport = require("passport");
 var fileUpload = require("express-fileupload");
 const initMongo = require("./src/config/mongo");
 const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds");
-const { deleteAllUnits, getUnitStats } = require("./src/utils/cleanupUnits");
 const app = express();
 const { handleStripeWebhook } = require("./src/controllers/user/webhook")
 
@@ -81,19 +80,11 @@ app.listen(process.env.PORT || 5000, async () => {
   console.log(`*    Database: MongoDB`);
   console.log(`*    DB Connection: OK\n****************************\n`);
   
-  // Run startup tasks after MongoDB connection is established
+  // Generate missing user IDs after MongoDB connection is established
   try {
     console.log('🔄 Running startup tasks...');
-    
-    // Generate missing user IDs
     await generateMissingUserIds();
-    
-    // Cleanup units - DELETE ALL UNITS on startup
-    console.log('🧹 Cleaning up units...');
-    const cleanupResult = await deleteAllUnits();
-    console.log(`✅ Deleted ${cleanupResult.deleted} units from database`);
-    
-    console.log('✅ All startup tasks completed successfully');
+    console.log('✅ Startup tasks completed successfully');
   } catch (error) {
     console.error('❌ Error during startup tasks:', error.message);
   }
