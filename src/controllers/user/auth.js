@@ -98,7 +98,14 @@ exports.sendOtpForSignup = async (req, res) => {
         app_name: process.env.APP_NAME,
         otp: otp,
       };
-      emailer.sendEmail(null, mailOptions, "verifyEmail");
+      
+      try {
+        await emailer.sendEmail(null, mailOptions, "verifyEmail");
+        console.log("✅ Email OTP sent successfully to:", email);
+      } catch (emailError) {
+        console.error("❌ Email OTP sending failed:", emailError);
+      }
+      
       res.json({ code: 200, message: "OTP sent successfully" });
     } else {
       const otpData = await EmailOrPhoneVerifiedStatus.findOne({

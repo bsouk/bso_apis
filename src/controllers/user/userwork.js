@@ -1533,6 +1533,9 @@ async function generateQueryNumber() {
 
 // add querry
 exports.addQuery = async (req, res) => {
+    const startTime = Date.now();
+    console.log(`[PERF] addQuery started at ${new Date().toISOString()}`);
+    
     try {
         const data = req.body
         console.log("data is ", data)
@@ -1540,6 +1543,34 @@ exports.addQuery = async (req, res) => {
         const userId = req.user._id;
         console.log("userid is ", userId);
 
+        // Process enquiry_items to handle temporary units (string unit names)
+        const unitProcessingStart = Date.now();
+        if (data.enquiry_items && Array.isArray(data.enquiry_items)) {
+            for (let item of data.enquiry_items) {
+                if (item.quantity && item.quantity.unit) {
+                    const unitValue = item.quantity.unit;
+                    
+                    // Check if unit is a string (temporary unit) instead of ObjectId
+                    if (typeof unitValue === 'string' && !mongoose.Types.ObjectId.isValid(unitValue)) {
+                        // This is a temporary unit name, create it in database
+                        let existingUnit = await quantity_units.findOne({ unit: unitValue });
+                        
+                        if (!existingUnit) {
+                            // Create new unit in database
+                            existingUnit = await quantity_units.create({ unit: unitValue });
+                            console.log("Created new unit:", existingUnit);
+                        }
+                        
+                        // Replace string with ObjectId
+                        item.quantity.unit = existingUnit._id;
+                    }
+                }
+            }
+        }
+        const unitProcessingTime = Date.now() - unitProcessingStart;
+        console.log(`[PERF] Unit processing took ${unitProcessingTime}ms`);
+
+        const queryCreationStart = Date.now();
         let queryid = await generateQueryNumber()
         const newQueryData = {
             query_unique_id: queryid.toString(),
@@ -1548,7 +1579,12 @@ exports.addQuery = async (req, res) => {
         }
 
         const result = await Query.create(newQueryData)
+        const queryCreationTime = Date.now() - queryCreationStart;
         console.log("result is ", result);
+        console.log(`[PERF] Query creation took ${queryCreationTime}ms`);
+
+        const totalTime = Date.now() - startTime;
+        console.log(`[PERF] Total addQuery time: ${totalTime}ms`);
 
         return res.status(200).json({
             message: "Query created successfully",

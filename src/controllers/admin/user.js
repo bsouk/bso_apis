@@ -11,10 +11,10 @@ exports.testEmail = async (req, res) => {
     console.log("🧪 Testing email functionality...");
     
     const mailOptions = {
-      to: "bsouk.ltd@gmail.com", // Test email
+      to: "support@bsoservices.com", // Test email
       subject: `Email Test - ${process.env.APP_NAME || 'BSO Services'}`,
       app_name: process.env.APP_NAME || 'BSO Services',
-      email: "bsouk.ltd@gmail.com",
+      email: "support@bsoservices.com",
       name: "Test User",
       login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/sign-in',
     };
@@ -23,10 +23,10 @@ exports.testEmail = async (req, res) => {
     
     // Test with a simple email first
     const testMailOptions = {
-      to: "bsouk.ltd@gmail.com",
+      to: "support@bsoservices.com",
       subject: "BSO Email Test",
       app_name: "BSO Services",
-      email: "bsouk.ltd@gmail.com",
+      email: "support@bsoservices.com",
       name: "Test User",
       login_url: "https://bsoservices.com/sign-in",
     };
@@ -37,7 +37,7 @@ exports.testEmail = async (req, res) => {
       message: "✅ Test email sent successfully!",
       code: 200,
       data: {
-        sent_to: "bsouk.ltd@gmail.com",
+        sent_to: "support@bsoservices.com",
         template: "passwordUpdated"
       }
     });
@@ -427,58 +427,30 @@ exports.addCustomer = async (req, res) => {
     await user.save();
     console.log(`✅ User saved successfully: ${user.email}`);
 
-    // Send welcome email using direct nodemailer (working method)
+    // Send welcome email using the same method as frontend registration
     console.log(`📧 Starting email sending process for ${user.email}...`);
+    
     try {
-      const nodemailer = require('nodemailer');
-      const ejs = require('ejs');
-      const path = require('path');
-
-      // Create transporter
-      const transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: {
-          user: process.env.EMAIL,
-          pass: process.env.PASS,
-        },
-      });
-
-      console.log(`📧 Transporter created for ${user.email}`);
-
-      // Render email template
-      const templatePath = path.join(__dirname, '../../views/accountCreated.ejs');
-      console.log(`📁 Template path: ${templatePath}`);
-      
-      const emailHtml = await ejs.renderFile(templatePath, {
-        app_name: process.env.APP_NAME || 'BSO Services',
-      email: user.email,
-      password: password,
-      name: user.full_name,
-      account_type: "customer",
-      user_id: uniqueUserId,
-        website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
-      });
-
-      console.log(`📧 Template rendered for ${user.email}`);
-
-      // Send email (non-blocking)
-      transporter.sendMail({
-        from: `"${process.env.APP_NAME || 'BSO Services'}" <${process.env.EMAIL}>`,
+      const mailOptions = {
         to: user.email,
         subject: `Welcome to ${process.env.APP_NAME || 'BSO Services'}! Your Customer Account Has Been Created`,
-        html: emailHtml,
-      })
-        .then(() => {
-          console.log(`✅ Welcome email sent successfully to ${user.email}`);
-        })
-        .catch((emailError) => {
-          console.error(`❌ Error sending welcome email to ${user.email}:`, emailError.message);
-          console.error(`❌ Full error:`, emailError);
-        });
+        app_name: process.env.APP_NAME || 'BSO Services',
+        email: user.email,
+        password: password,
+        name: user.full_name,
+        account_type: "customer",
+        user_id: uniqueUserId,
+        website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
+      };
+      
+      console.log(`📧 Sending welcome email to ${user.email} using main emailer...`);
+      
+      // Use the same emailer.sendEmail method that works for frontend registration
+      await emailer.sendEmail(null, mailOptions, "accountCreated");
+      console.log(`✅ Welcome email sent successfully to ${user.email}`);
+      
     } catch (emailError) {
-      console.error(`❌ Error preparing welcome email for ${user.email}:`, emailError.message);
+      console.error(`❌ Error sending welcome email to ${user.email}:`, emailError.message);
       console.error(`❌ Full error:`, emailError);
     }
     
@@ -705,47 +677,26 @@ exports.editCustomer = async (req, res) => {
     // Send email notification if password was updated (non-blocking)
     if (passwordUpdated) {
       try {
-        const nodemailer = require('nodemailer');
-        const ejs = require('ejs');
-        const path = require('path');
-
-        // Create transporter
-        const transporter = nodemailer.createTransport({
-          host: 'smtp.gmail.com',
-          port: 465,
-          secure: true,
-          auth: {
-            user: process.env.EMAIL,
-            pass: process.env.PASS,
-          },
-        });
-
-        // Render email template
-        const templatePath = path.join(__dirname, '../../views/passwordUpdated.ejs');
-        const emailHtml = await ejs.renderFile(templatePath, {
+        const mailOptions = {
+          to: user.email,
+          subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
           app_name: process.env.APP_NAME || 'BSO Services',
           email: user.email,
           password: newPassword,
           name: user.full_name || `${user.first_name} ${user.last_name}`,
           login_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
           website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
-        });
-
-        // Send email (non-blocking)
-        transporter.sendMail({
-          from: `"${process.env.APP_NAME || 'BSO Services'}" <${process.env.EMAIL}>`,
-          to: user.email,
-          subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
-          html: emailHtml,
-        })
-          .then(() => {
-            console.log(`✅ Password update email sent to ${user.email}`);
-          })
-          .catch((emailError) => {
-            console.error(`❌ Error sending password update email to ${user.email}:`, emailError.message);
-          });
+        };
+        
+        console.log(`📧 Sending password update email to ${user.email} using main emailer...`);
+        
+        // Use the same emailer.sendEmail method that works for other emails
+        await emailer.sendEmail(null, mailOptions, "passwordUpdated");
+        console.log(`✅ Password update email sent to ${user.email}`);
+        
       } catch (emailError) {
-        console.error(`❌ Error preparing password update email for ${user.email}:`, emailError.message);
+        console.error(`❌ Error sending password update email to ${user.email}:`, emailError.message);
+        console.error(`❌ Full error:`, emailError);
       }
     }
 
@@ -5211,6 +5162,308 @@ exports.addRecruiter = async (req, res) => {
     }
   } catch (error) {
     console.error('Error adding recruiter:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// ================================
+// UNITS MANAGEMENT FUNCTIONALITY
+// ================================
+
+const quantity_units = require("../../models/quantity_units");
+
+// Get all units with pagination and search
+exports.getUnits = async (req, res) => {
+  try {
+    const { search, limit = 10, offset = 0 } = req.query;
+    const filter = {};
+    
+    if (search) {
+      filter.unit = { $regex: search, $options: "i" };
+    }
+    
+    const data = await quantity_units.find(filter)
+      .limit(parseInt(limit))
+      .skip(parseInt(offset))
+      .sort({ createdAt: -1 });
+      
+    const count = await quantity_units.countDocuments(filter);
+    
+    return res.status(200).json({
+      code: 200,
+      message: "Units fetched successfully",
+      data,
+      count
+    });
+  } catch (error) {
+    console.error('Error fetching units:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Get single unit by ID
+exports.getUnitById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        message: "Invalid unit ID"
+      });
+    }
+    
+    const data = await quantity_units.findById(id);
+    
+    if (!data) {
+      return res.status(404).json({
+        code: 404,
+        message: "Unit not found"
+      });
+    }
+    
+    return res.status(200).json({
+      code: 200,
+      message: "Unit fetched successfully",
+      data
+    });
+  } catch (error) {
+    console.error('Error fetching unit:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Add new unit
+exports.addUnit = async (req, res) => {
+  try {
+    const { unit, isActive } = req.body;
+    
+    if (!unit || !unit.trim()) {
+      return res.status(400).json({
+        code: 400,
+        message: "Unit name is required"
+      });
+    }
+    
+    // Check if unit already exists (case-insensitive)
+    const existing = await quantity_units.findOne({ 
+      unit: { $regex: new RegExp(`^${unit.trim()}$`, 'i') }
+    });
+    
+    if (existing) {
+      return res.status(400).json({
+        code: 400,
+        message: "Unit already exists"
+      });
+    }
+    
+    const payload = { unit: unit.trim() };
+    if (typeof isActive === 'boolean') payload.isActive = isActive;
+    const data = await quantity_units.create(payload);
+    
+    return res.status(200).json({
+      code: 200,
+      message: "Unit created successfully",
+      data
+    });
+  } catch (error) {
+    console.error('Error creating unit:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Update unit
+exports.updateUnit = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { unit, isActive } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        message: "Invalid unit ID"
+      });
+    }
+    
+    if (!unit || !unit.trim()) {
+      return res.status(400).json({
+        code: 400,
+        message: "Unit name is required"
+      });
+    }
+    
+    // Check if new unit name already exists (excluding current unit)
+    const existing = await quantity_units.findOne({ 
+      unit: { $regex: new RegExp(`^${unit.trim()}$`, 'i') },
+      _id: { $ne: id } 
+    });
+    
+    if (existing) {
+      return res.status(400).json({
+        code: 400,
+        message: "Unit already exists"
+      });
+    }
+    
+    const update = { unit: unit.trim() };
+    if (typeof isActive === 'boolean') update.isActive = isActive;
+    const data = await quantity_units.findByIdAndUpdate(id, update, { new: true });
+    
+    if (!data) {
+      return res.status(404).json({
+        code: 404,
+        message: "Unit not found"
+      });
+    }
+    
+    return res.status(200).json({
+      code: 200,
+      message: "Unit updated successfully",
+      data
+    });
+  } catch (error) {
+    console.error('Error updating unit:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Delete single unit
+exports.deleteUnit = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        code: 400,
+        message: "Invalid unit ID"
+      });
+    }
+    
+    // Check if unit is being used in any enquiry
+    const inUse = await Enquiry.findOne({ 
+      "enquiry_items.quantity.unit": id 
+    });
+    
+    if (inUse) {
+      return res.status(400).json({
+        code: 400,
+        message: "Cannot delete unit. It is being used in enquiries."
+      });
+    }
+    
+    const data = await quantity_units.findByIdAndDelete(id);
+    
+    if (!data) {
+      return res.status(404).json({
+        code: 404,
+        message: "Unit not found"
+      });
+    }
+    
+    return res.status(200).json({
+      code: 200,
+      message: "Unit deleted successfully"
+    });
+  } catch (error) {
+    console.error('Error deleting unit:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Delete multiple units
+exports.deleteMultipleUnits = async (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        code: 400,
+        message: "Unit IDs array is required"
+      });
+    }
+    
+    // Validate all IDs
+    const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        code: 400,
+        message: "Invalid unit IDs provided"
+      });
+    }
+    
+    // Check if any unit is being used in enquiries
+    const unitsInUse = await Enquiry.find({ 
+      "enquiry_items.quantity.unit": { $in: ids }
+    }).distinct("enquiry_items.quantity.unit");
+    
+    if (unitsInUse.length > 0) {
+      const unitsInUseNames = await quantity_units.find({
+        _id: { $in: unitsInUse }
+      }).select('unit');
+      
+      return res.status(400).json({
+        code: 400,
+        message: `Cannot delete units: ${unitsInUseNames.map(u => u.unit).join(', ')}. They are being used in enquiries.`,
+        unitsInUse: unitsInUseNames
+      });
+    }
+    
+    const result = await quantity_units.deleteMany({ _id: { $in: ids } });
+    
+    return res.status(200).json({
+      code: 200,
+      message: `${result.deletedCount} unit(s) deleted successfully`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error deleting multiple units:', error);
+    utils.handleError(res, error);
+  }
+};
+
+// Toggle unit status (active/inactive)
+exports.toggleUnitStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!id) {
+      return res.status(400).json({
+        code: 400,
+        message: "Unit ID is required"
+      });
+    }
+    
+    if (typeof status !== 'boolean') {
+      return res.status(400).json({
+        code: 400,
+        message: "Status must be a boolean value (true/false)"
+      });
+    }
+    
+    const unit = await quantity_units.findById(id);
+    if (!unit) {
+      return res.status(404).json({
+        code: 404,
+        message: "Unit not found"
+      });
+    }
+    
+    unit.isActive = status;
+    await unit.save();
+    
+    return res.status(200).json({
+      code: 200,
+      message: `Unit ${status ? 'activated' : 'deactivated'} successfully`,
+      data: {
+        _id: unit._id,
+        unit: unit.unit,
+        isActive: unit.isActive,
+        updatedAt: unit.updatedAt
+      }
+    });
+  } catch (error) {
+    console.error('Error toggling unit status:', error);
     utils.handleError(res, error);
   }
 };
