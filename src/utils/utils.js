@@ -233,12 +233,27 @@ exports.validationResult = (req, res, next) => {
 
 /**
  * Builds success object
- * @param {string} message - success text
+ * @param {number|string} codeOrMessage - status code (if 3 params) or message (if 1 param)
+ * @param {string} message - success text (optional, only with 3 params)
+ * @param {any} data - response data (optional, only with 3 params)
  */
-exports.buildSuccObject = message => {
-  return {
-    msg: message
+exports.buildSuccObject = (codeOrMessage, message = null, data = null) => {
+  // Backward compatibility: if only one parameter, treat it as message
+  if (message === null && data === null) {
+    return {
+      msg: codeOrMessage
+    };
   }
+  
+  // New format: code, message, data
+  const response = {
+    code: codeOrMessage,
+    message
+  };
+  if (data !== null) {
+    response.data = data;
+  }
+  return response;
 }
 
 /**
