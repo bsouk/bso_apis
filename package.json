@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "generate-user-ids": "node scripts/generateUserIds.js",
-    "seed-seo": "node scripts/seedDefaultSEO.js"
+    "seed-seo": "node scripts/seedDefaultSEO.js",
+    "seed-seo-production": "node scripts/seedSEOProduction.js"
   },
   "keywords": [],
   "author": "",
