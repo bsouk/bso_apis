@@ -80,17 +80,10 @@ app.listen(process.env.PORT || 5000, async () => {
   console.log(`*    Database: MongoDB`);
   console.log(`*    DB Connection: OK\n****************************\n`);
   
-  // Run startup tasks after MongoDB connection is established
+  // Generate missing user IDs after MongoDB connection is established
   try {
     console.log('🔄 Running startup tasks...');
-    
-    // Generate missing user IDs
     await generateMissingUserIds();
-    
-    // Seed default meta scripts (Google Analytics, Tag Manager, etc.)
-    const { seedDefaultMetaScripts } = require('./src/utils/seedMetaScriptsOnStartup');
-    await seedDefaultMetaScripts();
-    
     console.log('✅ Startup tasks completed successfully');
   } catch (error) {
     console.error('❌ Error during startup tasks:', error.message);
