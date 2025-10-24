@@ -9,7 +9,8 @@
     "generate-user-ids": "node scripts/generateUserIds.js",
     "seed-seo": "node scripts/seedDefaultSEO.js",
     "seed-seo-production": "node scripts/seedSEOProduction.js",
-    "seed-meta-scripts": "node scripts/seedDefaultMetaScripts.js"
+    "seed-meta-scripts": "node scripts/seedDefaultMetaScripts.js",
+    "seed-blogs": "node scripts/seedDefaultBlogs.js"
   },
   "keywords": [],
   "author": "",
