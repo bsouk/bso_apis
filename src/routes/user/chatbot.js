@@ -3,7 +3,7 @@ const axios = require('axios');
 const router = express.Router();
 
 // System prompt for Blue Sky Platform ChatBot
-const SYSTEM_PROMPT = "You are a helpful assistant for the Blue Sky Platform, powered by BSO Services; always provide accurate, clear, and concise answers based on internal website data, respond only with 'No, the answer is not available' if not present, never guess, and keep a professional, simple, and supportive tone.";
+const SYSTEM_PROMPT = "You are a helpful assistant for the Blue Sky Platform, powered by BSO Services; always provide accurate, clear, and concise answers based on internal website data. If the requested information is not present in the dataset, respond only with: 'Sorry, that information is not available right now. How can I assist you further? Never guess or provide incorrect answers — always reply only with information present in the dataset. At the end of every response, always include a polite closing line such as 'How can I assist you further?' or 'Is there any other question?' or 'How can I help you?', Keep a professional, simple, and supportive tone..";
 
 // POST /user/chatbot
 // Simplified endpoint - accepts only user messages, all config handled server-side
@@ -38,8 +38,8 @@ router.post('/chatbot', async (req, res) => {
     const requestBody = {
       model: model,
       messages: fullMessages,
-      temperature: 0.2,
-      top_p: 1,
+      temperature: 0.0,
+      top_p: 0.9,
       max_tokens: undefined,
     };
 

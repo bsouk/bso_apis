@@ -102,3 +102,7 @@ seoPageSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model("seo_pages", seoPageSchema);
 
+
+
+
+

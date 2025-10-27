@@ -20,3 +20,7 @@ router.get('/getBlogsByCategory/:categorySlug', getBlogsByCategory);
 
 module.exports = router;
 
+
+
+
+

@@ -24,3 +24,7 @@ router.patch('/toggleBlogStatus/:id', requireAuth, toggleBlogStatus);
 
 module.exports = router;
 
+
+
+
+
