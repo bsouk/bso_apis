@@ -371,24 +371,25 @@ exports.verifyIAPSubscription = async (req, res) => {
         // STEP 10: RECORD PAYMENT TRANSACTION
         // ═══════════════════════════════════════════════════
         const paymentRecord = await Payment.create({
-            user_id: userid,
-            payment_id: await generatePaymentId(),
-            subscription_id: newSubscription.subscription_id,
-            amount: plandata.price,
+            subscription_id: newSubscription._id, // MongoDB ObjectId reference
+            buyer_id: userid,
+            total_amount: plandata.price,
             currency: plandata.currency || 'USD',
-            payment_method: platform.toLowerCase() === 'ios' ? 'apple_iap' : 'google_iap',
-            transaction_id: parsedReceipt.transactionId,
-            receipt_data: platform.toLowerCase() === 'ios' ? receipt_data : purchase_token,
-            status: 'completed',
-            payment_date: startDate,
-            metadata: {
-                product_id: parsedReceipt.productId,
-                platform: platform.toLowerCase(),
-                environment: parsedReceipt.environment || 'production'
-            }
+            payment_status: 'completed',
+            payment_method_type: platform.toLowerCase() === 'ios' ? 'apple_iap' : 'google_iap',
+            // Store IAP transaction details in payment_stage for compatibility
+            payment_stage: [{
+                payment_method: platform.toLowerCase() === 'ios' ? 'apple_iap' : 'google_iap',
+                txn_id: parsedReceipt.transactionId,
+                amount: plandata.price,
+                currency: plandata.currency || 'USD',
+                status: 'completed',
+                schedule_status: 'completed',
+                receipt_image: platform.toLowerCase() === 'ios' ? receipt_data : purchase_token
+            }]
         });
 
-        console.log('✅ Payment recorded:', paymentRecord.payment_id);
+        console.log('✅ Payment recorded:', paymentRecord._id);
 
         // ═══════════════════════════════════════════════════
         // STEP 11: AUTO-CREATE RECRUITER PLAN
@@ -473,7 +474,7 @@ exports.verifyIAPSubscription = async (req, res) => {
                     payment_method: newSubscription.payment_method_type
                 },
                 payment: {
-                    payment_id: paymentRecord.payment_id,
+                    payment_id: paymentRecord._id.toString(),
                     transaction_id: parsedReceipt.transactionId,
                     amount: plandata.price,
                     currency: plandata.currency || 'USD',
