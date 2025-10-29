@@ -1,6 +1,10 @@
 /**
  * IAP (In-App Purchase) Controller
  * Handles subscription verification and creation from mobile app purchases
+ * 
+ * ⚠️ BYPASS MODE ENABLED - Payment verification is currently disabled
+ * This is for testing/development purposes only
+ * See: IAP_BYPASS_MODE.md for details
  */
 
 const User = require("../../models/user");
@@ -22,6 +26,19 @@ const {
     validateProductPlanMapping,
     calculateEndDate
 } = require("../../utils/iapVerification");
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🚨 BYPASS MODE CONFIGURATION
+// ═══════════════════════════════════════════════════════════════════════
+// Set to TRUE to bypass payment verification (for testing/development)
+// Set to FALSE to enable full Apple/Google payment verification (production)
+const IAP_BYPASS_MODE = true;
+
+// ⚠️ WARNING: When BYPASS_MODE is TRUE, all IAP subscriptions will be 
+// automatically approved without verifying with Apple/Google servers.
+// This should ONLY be used for development/testing purposes.
+// For production, set IAP_BYPASS_MODE = false
+// ═══════════════════════════════════════════════════════════════════════
 
 /**
  * Generate unique subscription ID
@@ -86,18 +103,23 @@ exports.verifyIAPSubscription = async (req, res) => {
             });
         }
 
-        if (platform.toLowerCase() === 'ios' && !receipt_data) {
-            return res.status(400).json({
-                message: "receipt_data is required for iOS",
-                code: 400
-            });
-        }
+        // Only require receipt/token in production mode
+        if (!IAP_BYPASS_MODE) {
+            if (platform.toLowerCase() === 'ios' && !receipt_data) {
+                return res.status(400).json({
+                    message: "receipt_data is required for iOS",
+                    code: 400
+                });
+            }
 
-        if (platform.toLowerCase() === 'android' && !purchase_token) {
-            return res.status(400).json({
-                message: "purchase_token is required for Android",
-                code: 400
-            });
+            if (platform.toLowerCase() === 'android' && !purchase_token) {
+                return res.status(400).json({
+                    message: "purchase_token is required for Android",
+                    code: 400
+                });
+            }
+        } else {
+            console.log('🚨 BYPASS MODE - Skipping receipt/token validation');
         }
 
         // ═══════════════════════════════════════════════════
@@ -201,77 +223,110 @@ exports.verifyIAPSubscription = async (req, res) => {
         let verificationResult;
         let parsedReceipt;
 
-        try {
-            if (platform.toLowerCase() === 'ios') {
-                // Verify with Apple
-                console.log('🍎 Verifying Apple receipt...');
-                const appleResponse = await verifyAppleReceipt(receipt_data);
-                parsedReceipt = parseAppleReceipt(appleResponse);
+        // ✅✅✅ BYPASS MODE - SKIP VERIFICATION ✅✅✅
+        if (IAP_BYPASS_MODE) {
+            console.log('🚨 BYPASS MODE ENABLED - Skipping payment verification');
+            console.log('⚠️ Assuming payment is successful for testing purposes');
+            
+            // Create mock receipt data
+            const mockTransactionId = `mock_${platform}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+            const startDate = new Date();
+            let endDate = calculateEndDate(startDate, plandata.interval);
+            
+            parsedReceipt = {
+                isValid: true,
+                transactionId: mockTransactionId,
+                productId: product_id,
+                purchaseDate: startDate,
+                expiryDate: endDate,
+                isTrialPeriod: false,
+                cancellationDate: null,
+                environment: 'bypass_mode',
+                originalResponse: null
+            };
 
-                if (!parsedReceipt.isValid) {
-                    return res.status(400).json({
-                        message: "Invalid Apple receipt",
-                        code: 400,
-                        apple_status: appleResponse.status,
-                        apple_message: getAppleStatusMessage(appleResponse.status)
-                    });
-                }
-
-            } else if (platform.toLowerCase() === 'android') {
-                // Verify with Google
-                console.log('🤖 Verifying Google Play receipt...');
-                const packageName = process.env.GOOGLE_PACKAGE_NAME || 'com.bso.app';
-                const googleResponse = await verifyGoogleReceipt(packageName, product_id, purchase_token);
-                parsedReceipt = parseGoogleReceipt(googleResponse);
-
-                if (!parsedReceipt.isValid) {
-                    return res.status(400).json({
-                        message: "Invalid Google Play receipt",
-                        code: 400,
-                        google_purchase_state: googleResponse.purchaseState
-                    });
-                }
-            }
-
-            console.log('✅ Receipt verified successfully:', {
+            console.log('✅ Bypass mode - Mock receipt created:', {
                 transaction_id: parsedReceipt.transactionId,
                 product_id: parsedReceipt.productId,
                 purchase_date: parsedReceipt.purchaseDate,
-                expiry_date: parsedReceipt.expiryDate
+                expiry_date: parsedReceipt.expiryDate,
+                mode: 'BYPASS'
             });
+        } 
+        // ❌❌❌ PRODUCTION MODE - FULL VERIFICATION ❌❌❌
+        else {
+            try {
+                if (platform.toLowerCase() === 'ios') {
+                    // Verify with Apple
+                    console.log('🍎 Verifying Apple receipt...');
+                    const appleResponse = await verifyAppleReceipt(receipt_data);
+                    parsedReceipt = parseAppleReceipt(appleResponse);
 
-        } catch (error) {
-            console.error('❌ Receipt verification failed:', error);
-            return res.status(400).json({
-                message: "Receipt verification failed",
-                code: 400,
-                error: error.message
-            });
-        }
+                    if (!parsedReceipt.isValid) {
+                        return res.status(400).json({
+                            message: "Invalid Apple receipt",
+                            code: 400,
+                            apple_status: appleResponse.status,
+                            apple_message: getAppleStatusMessage(appleResponse.status)
+                        });
+                    }
 
-        // ═══════════════════════════════════════════════════
-        // STEP 6: VALIDATE PRODUCT ID MATCHES PLAN
-        // ═══════════════════════════════════════════════════
-        if (parsedReceipt.productId !== product_id) {
-            return res.status(400).json({
-                message: "Product ID mismatch between request and receipt",
-                code: 400
-            });
-        }
+                } else if (platform.toLowerCase() === 'android') {
+                    // Verify with Google
+                    console.log('🤖 Verifying Google Play receipt...');
+                    const packageName = process.env.GOOGLE_PACKAGE_NAME || 'com.bso.app';
+                    const googleResponse = await verifyGoogleReceipt(packageName, product_id, purchase_token);
+                    parsedReceipt = parseGoogleReceipt(googleResponse);
 
-        // ═══════════════════════════════════════════════════
-        // STEP 7: CHECK FOR DUPLICATE TRANSACTION
-        // ═══════════════════════════════════════════════════
-        const existingTransaction = await Payment.findOne({
-            transaction_id: parsedReceipt.transactionId
-        });
+                    if (!parsedReceipt.isValid) {
+                        return res.status(400).json({
+                            message: "Invalid Google Play receipt",
+                            code: 400,
+                            google_purchase_state: googleResponse.purchaseState
+                        });
+                    }
+                }
 
-        if (existingTransaction) {
-            return res.status(400).json({
-                message: "Transaction already processed",
-                code: 400,
+                console.log('✅ Receipt verified successfully:', {
+                    transaction_id: parsedReceipt.transactionId,
+                    product_id: parsedReceipt.productId,
+                    purchase_date: parsedReceipt.purchaseDate,
+                    expiry_date: parsedReceipt.expiryDate
+                });
+
+            } catch (error) {
+                console.error('❌ Receipt verification failed:', error);
+                return res.status(400).json({
+                    message: "Receipt verification failed",
+                    code: 400,
+                    error: error.message
+                });
+            }
+
+            // ═══════════════════════════════════════════════════
+            // STEP 6: VALIDATE PRODUCT ID MATCHES PLAN
+            // ═══════════════════════════════════════════════════
+            if (parsedReceipt.productId !== product_id) {
+                return res.status(400).json({
+                    message: "Product ID mismatch between request and receipt",
+                    code: 400
+                });
+            }
+
+            // ═══════════════════════════════════════════════════
+            // STEP 7: CHECK FOR DUPLICATE TRANSACTION
+            // ═══════════════════════════════════════════════════
+            const existingTransaction = await Payment.findOne({
                 transaction_id: parsedReceipt.transactionId
             });
+
+            if (existingTransaction) {
+                return res.status(400).json({
+                    message: "Transaction already processed",
+                    code: 400,
+                    transaction_id: parsedReceipt.transactionId
+                });
+            }
         }
 
         // ═══════════════════════════════════════════════════
@@ -288,7 +343,8 @@ exports.verifyIAPSubscription = async (req, res) => {
         console.log('📅 Subscription dates:', {
             start: startDate,
             end: endDate,
-            interval: plandata.interval
+            interval: plandata.interval,
+            mode: IAP_BYPASS_MODE ? 'BYPASS' : 'PRODUCTION'
         });
 
         // ═══════════════════════════════════════════════════
@@ -401,7 +457,10 @@ exports.verifyIAPSubscription = async (req, res) => {
         // STEP 13: RETURN SUCCESS RESPONSE
         // ═══════════════════════════════════════════════════
         return res.status(200).json({
-            message: "Subscription activated successfully",
+            message: IAP_BYPASS_MODE 
+                ? "Subscription activated successfully (BYPASS MODE - No verification)" 
+                : "Subscription activated successfully",
+            bypass_mode: IAP_BYPASS_MODE,
             data: {
                 subscription: {
                     subscription_id: newSubscription.subscription_id,
@@ -417,7 +476,8 @@ exports.verifyIAPSubscription = async (req, res) => {
                     payment_id: paymentRecord.payment_id,
                     transaction_id: parsedReceipt.transactionId,
                     amount: plandata.price,
-                    currency: plandata.currency || 'USD'
+                    currency: plandata.currency || 'USD',
+                    verified: !IAP_BYPASS_MODE
                 },
                 recruiter_subscription: recruiterSubscription ? {
                     subscription_id: recruiterSubscription.subscription_id,
@@ -490,4 +550,6 @@ exports.getIAPSubscriptions = async (req, res) => {
 };
 
 module.exports = exports;
+
+
 
