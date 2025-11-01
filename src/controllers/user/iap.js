@@ -28,16 +28,17 @@ const {
 } = require("../../utils/iapVerification");
 
 // ═══════════════════════════════════════════════════════════════════════
-// 🚨 BYPASS MODE CONFIGURATION
+// 🚨 PAYMENT VERIFICATION CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════
 // Set to TRUE to bypass payment verification (for testing/development)
 // Set to FALSE to enable full Apple/Google payment verification (production)
-const IAP_BYPASS_MODE = true;
+const IAP_BYPASS_MODE = false;  // ✅ REAL VERIFICATION ENABLED
 
-// ⚠️ WARNING: When BYPASS_MODE is TRUE, all IAP subscriptions will be 
-// automatically approved without verifying with Apple/Google servers.
-// This should ONLY be used for development/testing purposes.
-// For production, set IAP_BYPASS_MODE = false
+// ✅ REAL PAYMENT VERIFICATION IS NOW ACTIVE
+// - All receipts will be verified with Apple/Google servers
+// - Invalid receipts will be rejected
+// - Duplicate transactions will be prevented
+// - Full production security enabled
 // ═══════════════════════════════════════════════════════════════════════
 
 /**

@@ -162,18 +162,33 @@ exports.getNotificationList = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
     try {
-        const { offset = 0, limit = 10,search } = req.query;
-          const searchFilter = search
-      ? {
-          $or: [
-            { full_name: { $regex: search, $options: 'i' } },
-            { first_name: { $regex: search, $options: 'i' } },
-            { last_name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-          ],
+        const { offset = 0, limit = 10, search, user_type } = req.query;
+        
+        const searchFilter = {};
+        
+        // Add user_type filter if provided
+        if (user_type) {
+            searchFilter.user_type = { $in: [user_type] };
         }
-      : {};
-        const users = await User.find(searchFilter).skip(Number(offset)).limit(Number(limit)).select('_id full_name first_name last_name email');
+        
+        // Add search filter
+        if (search) {
+            searchFilter.$or = [
+                { full_name: { $regex: search, $options: 'i' } },
+                { first_name: { $regex: search, $options: 'i' } },
+                { last_name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { unique_user_id: { $regex: search, $options: 'i' } }, // Search by user ID
+                { 'company_data.name': { $regex: search, $options: 'i' } }, // Search by company
+            ];
+        }
+        
+        const users = await User.find(searchFilter)
+            .skip(Number(offset))
+            .limit(Number(limit))
+            .select('_id full_name first_name last_name email unique_user_id company_data')
+            .sort({ createdAt: -1 });
+            
         console.log("users : ", users)
         return res.json({ users, code: 200 })
     } catch (error) {

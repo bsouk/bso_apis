@@ -180,4 +180,28 @@ router.get(
     controller.getdownloadSingleEnquiryPdfdata
 )
 
+// Manual enquiry creation by admin
+router.post(
+    '/createManualEnquiry',
+    trimRequest.all,
+    requireAuth,
+    controller.createManualEnquiry
+)
+
+// Get user addresses (for manual enquiry)
+router.get(
+    '/getUserAddresses/:userId',
+    trimRequest.all,
+    requireAuth,
+    controller.getUserAddresses
+)
+
+// Create address for user (by admin)
+router.post(
+    '/createUserAddress',
+    trimRequest.all,
+    requireAuth,
+    controller.createUserAddress
+)
+
 module.exports = router

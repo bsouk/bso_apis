@@ -4,6 +4,7 @@ const Query = require("../../models/query");
 const Enquiry = require("../../models/Enquiry");
 const BidSetting = require("../../models/bidsetting");
 const utils = require("../../utils/utils");
+const emailer = require("../../utils/emailer");
 const admin = require("../../models/admin");
 const bidsetting = require("../../models/bidsetting");
 const quotation = require("../../models/quotation");
@@ -15,6 +16,9 @@ const fcm_devices = require("../../models/fcm_devices");
 const Notification = require("../../models/notification");
 const EnquiryQuotes = require("../../models/EnquiryQuotes");
 const logistics_quotes = require("../../models/logistics_quotes");
+const User = require("../../models/user");
+const Address = require("../../models/address");
+const quantity_units = require("../../models/quantity_units");
 
 exports.getquery = async (req, res) => {
     try {
@@ -1857,6 +1861,369 @@ exports.getdownloadSingleEnquiryPdfdata = async (req, res) => {
             code: 200
         })
     } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Create Manual Enquiry by Admin
+ * POST /admin/createManualEnquiry
+ * Creates an enquiry on behalf of a selected buyer
+ */
+exports.createManualEnquiry = async (req, res) => {
+    try {
+        const { user_id, ...enquiryData } = req.body;
+        const admin_id = req.user._id;
+        const admin_email = req.user.email;
+        const admin_name = req.user.username || req.user.email;
+
+        console.log("Admin creating manual enquiry for user:", user_id);
+
+        // ═══════════════════════════════════════════════════
+        // STEP 1: VALIDATE BUYER EXISTS
+        // ═══════════════════════════════════════════════════
+        const buyer = await User.findById(user_id);
+        if (!buyer) {
+            return res.status(404).json({
+                message: "Buyer not found",
+                code: 404
+            });
+        }
+
+        if (!buyer.user_type.includes('buyer')) {
+            return res.status(400).json({
+                message: "Selected user is not a buyer",
+                code: 400
+            });
+        }
+
+        console.log("Buyer found:", buyer.full_name || buyer.first_name);
+
+        // ═══════════════════════════════════════════════════
+        // STEP 2: CHECK BUYER SUBSCRIPTION
+        // ═══════════════════════════════════════════════════
+        const buyerSubscription = await subscription.aggregate([
+            {
+                $match: {
+                    user_id: new mongoose.Types.ObjectId(user_id),
+                    status: "active",
+                    type: "buyer"
+                }
+            },
+            {
+                $lookup: {
+                    from: 'plans',
+                    localField: 'plan_id',
+                    foreignField: 'plan_id',
+                    as: 'plan'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$plan',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: {
+                    createdAt: -1
+                }
+            },
+            {
+                $limit: 1
+            }
+        ]);
+
+        if (buyerSubscription.length === 0) {
+            return res.status(400).json({
+                message: "Buyer has no active subscription. Please ensure buyer is subscribed before creating enquiry.",
+                code: 400
+            });
+        }
+
+        console.log("Buyer subscription found:", buyerSubscription[0]?.plan?.plan_name);
+
+        // ═══════════════════════════════════════════════════
+        // STEP 3: PROCESS ENQUIRY ITEMS (UNITS)
+        // ═══════════════════════════════════════════════════
+        if (enquiryData.enquiry_items && Array.isArray(enquiryData.enquiry_items)) {
+            for (let item of enquiryData.enquiry_items) {
+                if (item.quantity && item.quantity.unit) {
+                    const unitValue = item.quantity.unit;
+                    
+                    // Check if unit is a string (temporary unit) instead of ObjectId
+                    if (typeof unitValue === 'string' && !mongoose.Types.ObjectId.isValid(unitValue)) {
+                        // This is a temporary unit name, create it in database
+                        let existingUnit = await quantity_units.findOne({ unit: unitValue });
+                        
+                        if (!existingUnit) {
+                            // Create new unit in database
+                            existingUnit = await quantity_units.create({ unit: unitValue });
+                            console.log("Created new unit:", existingUnit.unit);
+                        }
+                        
+                        // Replace string with ObjectId
+                        item.quantity.unit = existingUnit._id;
+                    }
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // STEP 4: GENERATE ENQUIRY ID
+        // ═══════════════════════════════════════════════════
+        async function EnquiryId() {
+            const token = Math.floor(Math.random() * 1000000);
+            return `#${token}`;
+        }
+
+        const enquiryId = await EnquiryId();
+
+        // ═══════════════════════════════════════════════════
+        // STEP 5: CREATE ENQUIRY
+        // ═══════════════════════════════════════════════════
+        const newEnquiryData = {
+            ...enquiryData,
+            enquiry_unique_id: enquiryId,
+            user_id: user_id,
+            buyer_plan_step: subscription[0]?.plan?.plan_step || null,
+            is_approved: "approved",
+            created_by_admin: true,
+            admin_id: admin_id,
+            status: "pending"
+        };
+
+        console.log("Creating enquiry with data:", {
+            enquiry_id: enquiryId,
+            buyer: buyer.email,
+            items_count: enquiryData.enquiry_items?.length || 0
+        });
+
+        const newEnquiry = await Enquiry.create(newEnquiryData);
+        console.log("Enquiry created successfully:", newEnquiry._id);
+
+        // ═══════════════════════════════════════════════════
+        // STEP 6: SEND EMAIL TO BUYER
+        // ═══════════════════════════════════════════════════
+        try {
+            const buyerAppUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
+            const buyerEmailOptions = {
+                to: buyer.email,
+                subject: `BSO Created an Enquiry on Your Behalf - Ref: ${newEnquiry.enquiry_unique_id}`,
+                app_name: process.env.APP_NAME || 'BSO Services',
+                name: buyer.full_name || buyer.first_name,
+                app_url: buyerAppUrl,
+                storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
+                enquiry: newEnquiry,
+                view_link: `${buyerAppUrl}enquiry-review-page/${newEnquiry._id}`
+            };
+            
+            await emailer.sendEmail(null, buyerEmailOptions, "AdminCreatedEnquiry");
+            console.log("✅ Email sent to buyer:", buyer.email);
+        } catch (emailError) {
+            console.error("❌ Failed to send email to buyer:", emailError.message);
+            // Don't fail the request if email fails
+        }
+
+        // ═══════════════════════════════════════════════════
+        // STEP 7: SEND EMAIL TO ADMIN
+        // ═══════════════════════════════════════════════════
+        try {
+            const adminAppUrl = process.env.ADMIN_APP_URL || 'https://dashboard.bsoservices.com/';
+            const adminEmailOptions = {
+                to: admin_email,
+                subject: `Manual Enquiry Created - ${newEnquiry.enquiry_unique_id}`,
+                app_name: process.env.APP_NAME || 'BSO Services',
+                admin_name: admin_name,
+                buyer_name: buyer.full_name || buyer.first_name,
+                buyer_email: buyer.email,
+                buyer_company: buyer.company_data?.name || null,
+                app_url: adminAppUrl,
+                storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
+                enquiry: newEnquiry,
+                view_link: `${adminAppUrl}enquiry-detail/${newEnquiry._id}`
+            };
+            
+            await emailer.sendEmail(null, adminEmailOptions, "AdminEnquiryConfirmation");
+            console.log("✅ Email sent to admin:", admin_email);
+        } catch (emailError) {
+            console.error("❌ Failed to send email to admin:", emailError.message);
+            // Don't fail the request if email fails
+        }
+
+        // ═══════════════════════════════════════════════════
+        // STEP 8: SEND FCM NOTIFICATION TO BUYER (OPTIONAL)
+        // ═══════════════════════════════════════════════════
+        try {
+            const buyerFcmDevices = await fcm_devices.find({ user_id: buyer._id });
+            
+            if (buyerFcmDevices && buyerFcmDevices.length > 0) {
+                const notificationMessage = {
+                    title: 'New Enquiry Created for You',
+                    description: `Blue Sky admin has created an enquiry on your behalf. Enquiry ID: ${newEnquiry.enquiry_unique_id}`,
+                    enquiry_id: newEnquiry._id
+                };
+
+                for (const device of buyerFcmDevices) {
+                    await utils.sendNotification(device.token, notificationMessage);
+                }
+
+                // Save notification in database
+                const buyerNotificationData = {
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    type: "manual_enquiry_created",
+                    receiver_id: buyer._id,
+                    related_to: newEnquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const newNotification = new Notification(buyerNotificationData);
+                await newNotification.save();
+                
+                console.log("✅ Push notification sent to buyer");
+            }
+        } catch (notificationError) {
+            console.error("❌ Failed to send push notification:", notificationError.message);
+            // Don't fail the request if notification fails
+        }
+
+        // ═══════════════════════════════════════════════════
+        // STEP 9: RETURN SUCCESS RESPONSE
+        // ═══════════════════════════════════════════════════
+        return res.status(200).json({
+            message: "Enquiry created successfully for buyer",
+            data: newEnquiry,
+            emails_sent: {
+                buyer: true,
+                admin: true
+            },
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("❌ Error creating manual enquiry:", error);
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Get User Addresses for Admin
+ * GET /admin/getUserAddresses/:userId
+ * Fetches all addresses of a specific user
+ */
+exports.getUserAddresses = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({
+                message: "User ID is required",
+                code: 400
+            });
+        }
+
+        // Verify user exists
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                code: 404
+            });
+        }
+
+        // Fetch user's addresses
+        const addresses = await Address.find({ user_id: userId }).sort({ default_address: -1, createdAt: -1 });
+
+        return res.status(200).json({
+            message: "User addresses fetched successfully",
+            data: addresses,
+            count: addresses.length,
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("Error fetching user addresses:", error);
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Create Address for User (by Admin)
+ * POST /admin/createUserAddress
+ * Allows admin to create address for a specific user
+ */
+exports.createUserAddress = async (req, res) => {
+    try {
+        const { user_id, address, default_address, first_name, last_name, company_name, phone_number, email } = req.body;
+
+        if (!user_id) {
+            return res.status(400).json({
+                message: "User ID is required",
+                code: 400
+            });
+        }
+
+        // Verify user exists
+        const user = await User.findById(user_id);
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+                code: 404
+            });
+        }
+
+        // Check if this should be default address
+        if (default_address) {
+            // Remove default from other addresses
+            await Address.updateMany(
+                { user_id: user_id },
+                { $set: { default_address: false, is_primary: false } }
+            );
+        }
+
+        // Structure the address data properly
+        const addressData = {
+            user_id: user_id,
+            first_name: first_name || user.first_name || "",
+            last_name: last_name || user.last_name || "",
+            company_name: company_name || user.company_data?.name || "",
+            phone_number: phone_number || user.phone_number || "",
+            email: email || user.email || "",
+            address: {
+                address_line_1: address.address || address.address_line_1 || "",
+                address_line_2: address.address_line_2 || "",
+                city: {
+                    name: address.city || "",
+                    iso_code: ""
+                },
+                state: {
+                    name: address.state?.name || address.state || "",
+                    iso_code: address.state?.iso_code || address.state || ""
+                },
+                country: {
+                    name: address.country?.name || address.country || "",
+                    iso_code: address.country?.iso_code || address.country || ""
+                },
+                pin_code: address.postal_code || address.pin_code || ""
+            },
+            default_address: default_address || false,
+            is_primary: default_address || false,
+            address_type: address.address_type || "Home"
+        };
+
+        // Create new address
+        const newAddress = await Address.create(addressData);
+
+        console.log("Address created for user:", user.email);
+
+        return res.status(200).json({
+            message: "Address created successfully",
+            data: newAddress,
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("Error creating user address:", error);
         utils.handleError(res, error);
     }
 }
