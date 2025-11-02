@@ -2216,6 +2216,9 @@ exports.getLogisticsUserList = async (req, res) => {
         {
           phone_number: { $regex: search, $options: "i" },
         },
+        {
+          unique_user_id: { $regex: search, $options: "i" },
+        },
       ];
     }
 

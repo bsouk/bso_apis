@@ -204,4 +204,20 @@ router.post(
     controller.createUserAddress
 )
 
+// Send enquiry to suppliers (email + FCM notification)
+router.post(
+    '/sendEnquiryToSuppliers',
+    trimRequest.all,
+    requireAuth,
+    controller.sendEnquiryToSuppliers
+)
+
+// Send enquiry to logistics (email + FCM notification)
+router.post(
+    '/sendEnquiryToLogistics',
+    trimRequest.all,
+    requireAuth,
+    controller.sendEnquiryToLogistics
+)
+
 module.exports = router

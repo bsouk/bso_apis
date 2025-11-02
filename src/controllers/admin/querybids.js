@@ -2228,3 +2228,269 @@ exports.createUserAddress = async (req, res) => {
     }
 }
 
+/**
+ * Send Enquiry to Suppliers
+ * POST /admin/sendEnquiryToSuppliers
+ * Sends enquiry notification (email + FCM) to selected or all suppliers
+ */
+exports.sendEnquiryToSuppliers = async (req, res) => {
+    try {
+        const { enquiry_id, send_to_all, supplier_ids } = req.body;
+
+        console.log("📤 Sending enquiry to suppliers:", { enquiry_id, send_to_all, supplier_ids });
+
+        // Validation
+        if (!enquiry_id) {
+            return res.status(400).json({
+                message: "Enquiry ID is required",
+                code: 400
+            });
+        }
+
+        if (!send_to_all && (!supplier_ids || supplier_ids.length === 0)) {
+            return res.status(400).json({
+                message: "Please select at least one supplier or choose 'Send to All'",
+                code: 400
+            });
+        }
+
+        // Fetch enquiry details with populated data
+        const enquiry = await Enquiry.findById(enquiry_id)
+            .populate('user_id shipping_address');
+
+        if (!enquiry) {
+            return res.status(404).json({
+                message: "Enquiry not found",
+                code: 404
+            });
+        }
+
+        // Get suppliers list
+        let suppliers;
+        if (send_to_all) {
+            suppliers = await User.find({
+                user_type: { $in: ['supplier'] },
+                status: 'active',
+                is_deleted: false,
+                is_trashed: { $ne: true }
+            });
+        } else {
+            suppliers = await User.find({
+                _id: { $in: supplier_ids },
+                user_type: { $in: ['supplier'] },
+                is_deleted: false
+            });
+        }
+
+        if (!suppliers || suppliers.length === 0) {
+            return res.status(404).json({
+                message: "No suppliers found",
+                code: 404
+            });
+        }
+
+        const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
+        const storageUrl = process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/';
+
+        // Send notifications to each supplier
+        let emailsSent = 0;
+        let fcmSent = 0;
+
+        for (const supplier of suppliers) {
+            try {
+                // Send Email
+                const mailOptions = {
+                    to: supplier.email,
+                    subject: `New Enquiry Available for Quote - ${enquiry.enquiry_unique_id}`,
+                    supplier_name: supplier.full_name,
+                    buyer_name: enquiry.user_id?.full_name || 'BSO Customer',
+                    app_url: frontendUrl,
+                    storage_url: storageUrl,
+                    enquiry: enquiry,
+                    view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
+                };
+
+                await emailer.sendEmail(null, mailOptions, "NewEnquiryNotification");
+                emailsSent++;
+
+                // Send FCM Notification
+                const notificationMessage = {
+                    title: 'New Enquiry Available',
+                    description: `A new enquiry ${enquiry.enquiry_unique_id} is available for quoting. Priority: ${enquiry.priority}`,
+                    enquiry_id: enquiry._id
+                };
+
+                const fcmDevices = await fcm_devices.find({ user_id: supplier._id });
+                if (fcmDevices && fcmDevices.length > 0) {
+                    for (const device of fcmDevices) {
+                        await utils.sendNotification(device.token, notificationMessage);
+                    }
+                    fcmSent++;
+                }
+
+                // Save notification record
+                const supplierNotification = new Notification({
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    type: "new_enquiry",
+                    receiver_id: supplier._id,
+                    related_to: enquiry._id,
+                    related_to_type: "enquiry"
+                });
+                await supplierNotification.save();
+
+            } catch (error) {
+                console.error(`Error sending to supplier ${supplier.email}:`, error);
+                // Continue with next supplier even if one fails
+            }
+        }
+
+        return res.status(200).json({
+            message: `Enquiry sent to ${suppliers.length} supplier(s) successfully`,
+            data: {
+                total_suppliers: suppliers.length,
+                emails_sent: emailsSent,
+                fcm_sent: fcmSent
+            },
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("❌ Error sending enquiry to suppliers:", error);
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Send Enquiry to Logistics
+ * POST /admin/sendEnquiryToLogistics
+ * Sends enquiry notification (email + FCM) to selected or all logistics providers
+ */
+exports.sendEnquiryToLogistics = async (req, res) => {
+    try {
+        const { enquiry_id, send_to_all, logistics_ids } = req.body;
+
+        console.log("📤 Sending enquiry to logistics:", { enquiry_id, send_to_all, logistics_ids });
+
+        // Validation
+        if (!enquiry_id) {
+            return res.status(400).json({
+                message: "Enquiry ID is required",
+                code: 400
+            });
+        }
+
+        if (!send_to_all && (!logistics_ids || logistics_ids.length === 0)) {
+            return res.status(400).json({
+                message: "Please select at least one logistics provider or choose 'Send to All'",
+                code: 400
+            });
+        }
+
+        // Fetch enquiry details with populated data
+        const enquiry = await Enquiry.findById(enquiry_id)
+            .populate('user_id shipping_address');
+
+        if (!enquiry) {
+            return res.status(404).json({
+                message: "Enquiry not found",
+                code: 404
+            });
+        }
+
+        // Get logistics list
+        let logisticsProviders;
+        if (send_to_all) {
+            logisticsProviders = await User.find({
+                user_type: { $in: ['logistics'] },
+                status: 'active',
+                is_deleted: false,
+                is_trashed: { $ne: true }
+            });
+        } else {
+            logisticsProviders = await User.find({
+                _id: { $in: logistics_ids },
+                user_type: { $in: ['logistics'] },
+                is_deleted: false
+            });
+        }
+
+        if (!logisticsProviders || logisticsProviders.length === 0) {
+            return res.status(404).json({
+                message: "No logistics providers found",
+                code: 404
+            });
+        }
+
+        const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
+        const storageUrl = process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/';
+
+        // Send notifications to each logistics provider
+        let emailsSent = 0;
+        let fcmSent = 0;
+
+        for (const logistics of logisticsProviders) {
+            try {
+                // Send Email
+                const mailOptions = {
+                    to: logistics.email,
+                    subject: `New Logistics Enquiry Available - ${enquiry.enquiry_unique_id}`,
+                    logistics_name: logistics.full_name,
+                    buyer_name: enquiry.user_id?.full_name || 'BSO Customer',
+                    app_url: frontendUrl,
+                    storage_url: storageUrl,
+                    enquiry: enquiry,
+                    view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
+                };
+
+                await emailer.sendEmail(null, mailOptions, "NewLogisticsEnquiry");
+                emailsSent++;
+
+                // Send FCM Notification
+                const notificationMessage = {
+                    title: 'New Logistics Enquiry Available',
+                    description: `A new logistics enquiry ${enquiry.enquiry_unique_id} is available for quoting. Priority: ${enquiry.priority}`,
+                    enquiry_id: enquiry._id
+                };
+
+                const fcmDevices = await fcm_devices.find({ user_id: logistics._id });
+                if (fcmDevices && fcmDevices.length > 0) {
+                    for (const device of fcmDevices) {
+                        await utils.sendNotification(device.token, notificationMessage);
+                    }
+                    fcmSent++;
+                }
+
+                // Save notification record
+                const logisticsNotification = new Notification({
+                    title: notificationMessage.title,
+                    body: notificationMessage.description,
+                    type: "new_enquiry",
+                    receiver_id: logistics._id,
+                    related_to: enquiry._id,
+                    related_to_type: "enquiry"
+                });
+                await logisticsNotification.save();
+
+            } catch (error) {
+                console.error(`Error sending to logistics ${logistics.email}:`, error);
+                // Continue with next logistics provider even if one fails
+            }
+        }
+
+        return res.status(200).json({
+            message: `Enquiry sent to ${logisticsProviders.length} logistics provider(s) successfully`,
+            data: {
+                total_logistics: logisticsProviders.length,
+                emails_sent: emailsSent,
+                fcm_sent: fcmSent
+            },
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("❌ Error sending enquiry to logistics:", error);
+        utils.handleError(res, error);
+    }
+}
+
