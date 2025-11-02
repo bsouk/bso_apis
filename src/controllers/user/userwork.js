@@ -2943,13 +2943,15 @@ exports.createEnquiry = async (req, res) => {
             }
         }
 
+        // Send confirmation email to buyer
+        const buyerAppUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
         const mailOptions = {
             to: req.user?.email,
             subject: `Enquiry Submitted Successfully – Ref: ${newquery.enquiry_unique_id}`,
-            app_name: process.env.APP_NAME,
+            app_name: process.env.APP_NAME || 'BSO Services',
             name: req.user?.full_name,
-            app_url: process.env.APP_URL,
-            storage_url: process.env.STORAGE_BASE_URL,
+            app_url: buyerAppUrl,
+            storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
             enquiry: newquery,
         };
         emailer.sendEmail(null, mailOptions, "EnquirySubmission");
