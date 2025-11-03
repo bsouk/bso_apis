@@ -1,0 +1,33 @@
+═══════════════════════════════════════════════════════════
+⚠️  IMPORTANT: ADD THESE TO YOUR .env FILE ⚠️
+═══════════════════════════════════════════════════════════
+
+1. Open this file in your code editor:
+   /Users/macbook/ProjectWork/Farukh Project/LiveProjects/bso_apis/.env
+
+2. Add these TWO lines at the end of the file:
+
+CHATBOT_API_URL=https://9fv4s4a42r.eu-west-2.awsapprunner.com/api/v1/chat
+CHATBOT_X_API_KEY=YOUR_ACTUAL_KEY_FROM_POSTMAN
+
+3. Replace YOUR_ACTUAL_KEY_FROM_POSTMAN with the real key from Postman:
+   - In Postman, click the "Headers (8)" tab
+   - Find the row with "x-api-key"
+   - Copy the FULL value
+   - Paste it in the .env file
+
+4. Save the .env file
+
+5. Restart your backend server (press Ctrl+C and run: npm start)
+
+═══════════════════════════════════════════════════════════
+EXAMPLE:
+═══════════════════════════════════════════════════════════
+
+# BSO Chatbot Configuration
+CHATBOT_API_URL=https://9fv4s4a42r.eu-west-2.awsapprunner.com/api/v1/chat
+CHATBOT_X_API_KEY=Fbjg_0xiPK0jr1J2CHbjjjXmjNM80AKC3Fxxxxxxxxxxxxxxx
+
+(Replace the x's with your actual key from Postman)
+
+═══════════════════════════════════════════════════════════

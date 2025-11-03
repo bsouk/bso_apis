@@ -1,0 +1,51 @@
+╔═══════════════════════════════════════════════════════════════╗
+║  🔧 MANUAL FIX: Add Chatbot API Key to .env                  ║
+╚═══════════════════════════════════════════════════════════════╝
+
+STEP 1: Get x-api-key from Postman
+────────────────────────────────────────────────────────────────
+1. Open Postman
+2. Look at your BSO Chatbot request:
+   POST https://9fv4s4a42r.eu-west-2.awsapprunner.com/api/v1/chat
+3. Click the "Headers (8)" tab
+4. Scroll down to find: x-api-key
+5. Click on the VALUE field
+6. Press Cmd+A (select all) then Cmd+C (copy)
+7. The key should look like: Fbjg_0xiPK0jr1J2CHbjjjXmjNM80AKC3F...
+
+STEP 2: Open .env file
+────────────────────────────────────────────────────────────────
+Open this file in your code editor:
+/Users/macbook/ProjectWork/Farukh Project/LiveProjects/bso_apis/.env
+
+STEP 3: Find and Replace
+────────────────────────────────────────────────────────────────
+Find this line (near the bottom):
+CHATBOT_X_API_KEY=PASTE_YOUR_KEY_HERE
+
+Replace it with:
+CHATBOT_X_API_KEY=<paste your actual key here>
+
+Example:
+CHATBOT_X_API_KEY=Fbjg_0xiPK0jr1J2CHbjjjXmjNM80AKC3Fxxxxxxxxxxxxxxxxx
+
+STEP 4: Save the file
+────────────────────────────────────────────────────────────────
+Press Cmd+S or Ctrl+S to save
+
+STEP 5: Restart Backend
+────────────────────────────────────────────────────────────────
+In terminal, run:
+cd "/Users/macbook/ProjectWork/Farukh Project/LiveProjects/bso_apis"
+npm start
+
+STEP 6: Test Chatbot
+────────────────────────────────────────────────────────────────
+1. Open: http://localhost:3000
+2. Click the chatbot icon
+3. Type: "hi"
+4. You should get a response!
+
+╔═══════════════════════════════════════════════════════════════╗
+║  ✅ After completing these steps, the 500 error will be gone! ║
+╚═══════════════════════════════════════════════════════════════╝

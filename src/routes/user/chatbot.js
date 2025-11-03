@@ -2,11 +2,9 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 
-// System prompt for Blue Sky Platform ChatBot
-const SYSTEM_PROMPT = "You are a helpful assistant for the Blue Sky Platform, powered by BSO Services; always provide accurate, clear, and concise answers based on internal website data. If the requested information is not present in the dataset, respond only with: 'Sorry, that information is not available right now. How can I assist you further? Never guess or provide incorrect answers — always reply only with information present in the dataset. At the end of every response, always include a polite closing line such as 'How can I assist you further?' or 'Is there any other question?' or 'How can I help you?', Keep a professional, simple, and supportive tone..";
-
 // POST /user/chatbot
-// Simplified endpoint - accepts only user messages, all config handled server-side
+// BSO Chatbot API Integration
+// Accepts user messages and forwards to BSO custom chatbot
 router.post('/chatbot', async (req, res) => {
   try {
     const { messages } = req.body || {};
@@ -16,58 +14,77 @@ router.post('/chatbot', async (req, res) => {
       return res.status(400).json({ error: 'messages array is required' });
     }
 
-    // Check API key configuration
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Server not configured with OPENAI_API_KEY' });
+    // Check chatbot API configuration
+    const chatbotApiUrl = process.env.CHATBOT_API_URL || 'https://9fv4s4a42r.eu-west-2.awsapprunner.com/api/v1/chat';
+    const chatbotApiKey = process.env.CHATBOT_X_API_KEY;
+
+    // Require API key for authentication
+    if (!chatbotApiUrl || !chatbotApiKey) {
+      console.error('❌ Chatbot API not configured. Missing CHATBOT_API_URL or CHATBOT_X_API_KEY');
+      return res.status(500).json({ 
+        error: 'Chatbot service is not configured. Please contact support.' 
+      });
     }
 
-    // Get configuration from environment variables
-    const model = process.env.OPENAI_MODEL;
-    const baseUrl = process.env.OPENAI_BASE_URL;
-    const endpoint = `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+    // Extract the last user message as the question
+    // The new BSO chatbot API expects a simple question string, not a messages array
+    const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+    if (!lastUserMessage || !lastUserMessage.content) {
+      return res.status(400).json({ error: 'No user question found in messages' });
+    }
 
-    // Prepare messages with system prompt
-    // Always include system prompt at the beginning
-    const fullMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...messages.filter(m => m.role !== 'system') // Remove any system messages from frontend
-    ];
+    const question = lastUserMessage.content;
 
-    // Prepare request body with all configuration
+    console.log('💬 Sending question to BSO Chatbot:', question);
+
+    // Prepare request body for BSO Chatbot API
     const requestBody = {
-      model: model,
-      messages: fullMessages,
-      temperature: 0.0,
-      top_p: 0.9,
-      max_tokens: undefined,
+      question: question
     };
 
-    // Make request to OpenAI
+    // Make request to BSO Chatbot API with required authentication
     const response = await axios.post(
-      endpoint,
+      chatbotApiUrl,
       requestBody,
       {
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          'x-api-key': chatbotApiKey,
           'Content-Type': 'application/json',
         },
         timeout: 30000,
       }
     );
 
-    // Extract only the AI message content (remove all metadata)
-    const aiMessage = response.data?.choices?.[0]?.message?.content || 'No response available';
+    // Extract answer and sources from BSO Chatbot response
+    const answer = response.data?.answer || 'No response available';
+    const sources = response.data?.sources || [];
     
-    // Return clean response with only the AI message
+    console.log('✅ BSO Chatbot response received');
+    console.log('📚 Sources:', sources.length, 'document(s)');
+
+    // Return clean response matching frontend expectations
     return res.status(200).json({
-      message: aiMessage
+      message: answer,
+      sources: sources // Optional: frontend can display sources if needed
     });
+
   } catch (error) {
-    console.error('ChatBot API Error:', error.message);
-    const status = error.response?.status || 500;
-    const data = error.response?.data || { error: 'Failed to process chat request' };
-    return res.status(status).json(data);
+    console.error('❌ BSO ChatBot API Error:', error.message);
+    
+    // Handle specific error responses
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+      
+      return res.status(error.response.status).json({
+        error: error.response.data?.error || error.response.data?.message || 'Chatbot request failed'
+      });
+    }
+    
+    // Network or other errors
+    return res.status(500).json({ 
+      error: 'Failed to connect to chatbot service. Please try again later.' 
+    });
   }
 });
 
