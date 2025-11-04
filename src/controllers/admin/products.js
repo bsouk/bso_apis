@@ -147,6 +147,7 @@ exports.addProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
     try {
         const product_id = req.params.id;
+        const { variant_id } = req.body;  // Check if deleting a specific variant
 
         const product = await Product.findById(product_id);
         if (!product)
@@ -155,11 +156,41 @@ exports.deleteProduct = async (req, res) => {
                 code: 404,
             });
 
-        if (product.is_deleted === true)
-            utils.handleError(res, {
+        // If variant_id is provided, delete only that variant (for inventory management)
+        if (variant_id) {
+            const variant = product.variant.find(v => v._id.toString() === variant_id);
+            
+            if (!variant) {
+                return utils.handleError(res, {
+                    message: "Variant not found",
+                    code: 404,
+                });
+            }
+
+            if (variant.is_sku_deleted === true) {
+                return utils.handleError(res, {
+                    message: "Variant is already deleted",
+                    code: 400,
+                });
+            }
+
+            // Mark the specific variant as deleted
+            await Product.findOneAndUpdate(
+                { _id: product_id, 'variant._id': variant_id },
+                { $set: { 'variant.$.is_sku_deleted': true } }
+            );
+
+            return res.json({ message: "Inventory item deleted successfully", code: 200 });
+        }
+
+        // If no variant_id, delete the entire product (for product management)
+        if (product.is_deleted === true) {
+            return utils.handleError(res, {
                 message: "Product is already deleted",
                 code: 400,
             });
+        }
+
         await Product.findByIdAndUpdate(product_id, { is_deleted: true });
 
         res.json({ message: "Product deleted successfully", code: 200 });
@@ -644,7 +675,8 @@ exports.getInventoryList = async (req, res) => {
         const { offset = 0, limit = 10, search, low_stock, out_of_stock } = req.query;
 
         const matchStage = {
-            product_of: 'admin'
+            product_of: 'admin',
+            is_deleted: { $ne: true }  // Filter out deleted products
         };
 
         const pipeline = [
@@ -660,7 +692,9 @@ exports.getInventoryList = async (req, res) => {
         ];
 
         // Apply per-variant filters
-        const variantMatch = {};
+        const variantMatch = {
+            'variant.is_sku_deleted': { $ne: true }  // Filter out deleted variants
+        };
 
         if (search) {
             variantMatch['$or'] = [
@@ -679,9 +713,8 @@ exports.getInventoryList = async (req, res) => {
             variantMatch['variant.inventory_quantity'] = 0;
         }
 
-        if (Object.keys(variantMatch).length > 0) {
-            pipeline.push({ $match: variantMatch });
-        }
+        // Always add the variant match to filter deleted variants
+        pipeline.push({ $match: variantMatch });
 
         // Lookup category info
         pipeline.push(
