@@ -19,6 +19,7 @@ const logistics_quotes = require("../../models/logistics_quotes");
 const User = require("../../models/user");
 const Address = require("../../models/address");
 const quantity_units = require("../../models/quantity_units");
+const { createLog, logSuccess, logFailure } = require("../../utils/logger");
 
 exports.getquery = async (req, res) => {
     try {
@@ -296,9 +297,40 @@ exports.deletequery = async (req, res) => {
                 code: 404
             });
         }
+
+        // Get enquiry details for logging
+        const enquiryNumbers = existingRecords.map(e => e.enquiry_unique_id || e._id.toString()).join(', ');
+
         const result = await Enquiry.deleteMany({ _id: { $in: ids } });
         const assigned_supplier_result = await query_assigned_suppliers.deleteMany({ query_id: { $in: ids } })
         const query_quotation = await quotation.deleteMany({ query_id: { $in: ids } })
+
+        // Log successful deletion
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'manual_enquiry',
+                action: 'delete',
+                status: 'success',
+                related_id: ids.length === 1 ? ids[0] : null,
+                related_collection: 'enquiries',
+                details: {
+                    deleted_count: result.deletedCount,
+                    enquiry_numbers: enquiryNumbers,
+                    enquiry_ids: ids,
+                    also_deleted: {
+                        assigned_suppliers: assigned_supplier_result.deletedCount || 0,
+                        quotations: query_quotation.deletedCount || 0
+                    }
+                },
+                req: req
+            });
+        } catch (logError) {
+            console.error("Error creating log for delete query:", logError);
+        }
 
         res.json({
             message: `${result.deletedCount} query(s) deleted successfully.`,
@@ -306,6 +338,31 @@ exports.deletequery = async (req, res) => {
         });
     } catch (error) {
         console.error("Error in deletequery:", error);
+
+        // Log failed deletion
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'manual_enquiry',
+                action: 'delete',
+                status: 'failure',
+                related_id: req.body.ids?.[0] || null,
+                related_collection: 'enquiries',
+                details: {
+                    enquiry_ids: req.body.ids || [],
+                    error_type: error.name || 'Unknown'
+                },
+                error_message: error.message,
+                error_stack: error.stack,
+                req: req
+            });
+        } catch (logError) {
+            console.error("Error creating log for failed delete query:", logError);
+        }
+
         res.status(500).json({
             message: "Internal Server Error",
             code: 500,
@@ -2088,7 +2145,39 @@ exports.createManualEnquiry = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════════
-        // STEP 9: RETURN SUCCESS RESPONSE
+        // STEP 9: LOG SUCCESS
+        // ═══════════════════════════════════════════════════
+        await createLog({
+            admin_id: admin_id,
+            admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+            admin_email: admin_email,
+            admin_role: req.user.role,
+            feature: 'manual_enquiry',
+            action: 'create',
+            related_id: newEnquiry._id,
+            related_collection: 'enquiries',
+            status: 'success',
+            details: {
+                enquiry_unique_id: newEnquiry.enquiry_unique_id,
+                items_count: enquiryData.enquiry_items?.length || 0,
+                priority: enquiryData.priority,
+                shipment_type: enquiryData.shipment_type
+            },
+            metadata: {
+                buyer_id: buyer._id,
+                buyer_name: buyer.full_name || buyer.first_name,
+                buyer_email: buyer.email,
+                buyer_company: buyer.company_data?.name || null,
+                enquiry_number: newEnquiry.enquiry_unique_id,
+                enquiry_items_count: enquiryData.enquiry_items?.length || 0,
+                shipping_country: newEnquiry.shipping_address?.address?.country?.name || null,
+                plan_step: buyerSubscription[0]?.plan?.plan_step || null
+            },
+            req
+        });
+
+        // ═══════════════════════════════════════════════════
+        // STEP 10: RETURN SUCCESS RESPONSE
         // ═══════════════════════════════════════════════════
         return res.status(200).json({
             message: "Enquiry created successfully for buyer",
@@ -2102,6 +2191,31 @@ exports.createManualEnquiry = async (req, res) => {
 
     } catch (error) {
         console.error("❌ Error creating manual enquiry:", error);
+        
+        // ═══════════════════════════════════════════════════
+        // LOG FAILURE
+        // ═══════════════════════════════════════════════════
+        await createLog({
+            admin_id: req.user._id,
+            admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+            admin_email: req.user.email,
+            admin_role: req.user.role,
+            feature: 'manual_enquiry',
+            action: 'create',
+            status: 'failed',
+            error_message: error.message,
+            error_stack: error.stack,
+            details: {
+                attempted_buyer_id: req.body.user_id,
+                error_type: error.name
+            },
+            metadata: {
+                buyer_id: req.body.user_id,
+                items_count: req.body.enquiry_items?.length || 0
+            },
+            req
+        });
+        
         utils.handleError(res, error);
     }
 }
@@ -2295,8 +2409,18 @@ exports.sendEnquiryToSuppliers = async (req, res) => {
         // Send notifications to each supplier
         let emailsSent = 0;
         let fcmSent = 0;
+        const recipientDetails = []; // Track detailed recipient information
 
         for (const supplier of suppliers) {
+            const recipientInfo = {
+                supplier_id: supplier._id,
+                supplier_name: supplier.full_name,
+                supplier_email: supplier.email,
+                email_sent: false,
+                fcm_sent: false,
+                error: null
+            };
+
             try {
                 // Send Email
                 const mailOptions = {
@@ -2312,6 +2436,7 @@ exports.sendEnquiryToSuppliers = async (req, res) => {
 
                 await emailer.sendEmail(null, mailOptions, "NewEnquiryNotification");
                 emailsSent++;
+                recipientInfo.email_sent = true;
 
                 // Send FCM Notification
                 const notificationMessage = {
@@ -2326,6 +2451,7 @@ exports.sendEnquiryToSuppliers = async (req, res) => {
                         await utils.sendNotification(device.token, notificationMessage);
                     }
                     fcmSent++;
+                    recipientInfo.fcm_sent = true;
                 }
 
                 // Save notification record
@@ -2341,8 +2467,41 @@ exports.sendEnquiryToSuppliers = async (req, res) => {
 
             } catch (error) {
                 console.error(`Error sending to supplier ${supplier.email}:`, error);
+                recipientInfo.error = error.message;
                 // Continue with next supplier even if one fails
             }
+
+            recipientDetails.push(recipientInfo);
+        }
+
+        // Log successful send to suppliers
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'manual_enquiry',
+                action: 'send_to_suppliers',
+                status: 'success',
+                related_id: enquiry_id,
+                related_collection: 'enquiries',
+                details: {
+                    enquiry_number: enquiry.enquiry_unique_id,
+                    buyer_name: enquiry.user_id?.full_name || 'N/A',
+                    buyer_email: enquiry.user_id?.email || 'N/A',
+                    send_to_all: send_to_all,
+                    total_suppliers: suppliers.length,
+                    emails_sent: emailsSent,
+                    fcm_sent: fcmSent,
+                    sent_by_admin: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                    sent_by_email: req.user.email,
+                    recipients: recipientDetails // Detailed list of all recipients
+                },
+                req: req
+            });
+        } catch (logError) {
+            console.error("Error creating log for send to suppliers:", logError);
         }
 
         return res.status(200).json({
@@ -2357,6 +2516,32 @@ exports.sendEnquiryToSuppliers = async (req, res) => {
 
     } catch (error) {
         console.error("❌ Error sending enquiry to suppliers:", error);
+
+        // Log failed send to suppliers
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'manual_enquiry',
+                action: 'send_to_suppliers',
+                status: 'failure',
+                related_id: req.body.enquiry_id || null,
+                related_collection: 'enquiries',
+                details: {
+                    send_to_all: req.body.send_to_all,
+                    supplier_ids: req.body.supplier_ids || [],
+                    error_type: error.name || 'Unknown'
+                },
+                error_message: error.message,
+                error_stack: error.stack,
+                req: req
+            });
+        } catch (logError) {
+            console.error("Error creating log for failed send to suppliers:", logError);
+        }
+
         utils.handleError(res, error);
     }
 }
@@ -2428,8 +2613,18 @@ exports.sendEnquiryToLogistics = async (req, res) => {
         // Send notifications to each logistics provider
         let emailsSent = 0;
         let fcmSent = 0;
+        const recipientDetails = []; // Track detailed recipient information
 
         for (const logistics of logisticsProviders) {
+            const recipientInfo = {
+                logistics_id: logistics._id,
+                logistics_name: logistics.full_name,
+                logistics_email: logistics.email,
+                email_sent: false,
+                fcm_sent: false,
+                error: null
+            };
+
             try {
                 // Send Email
                 const mailOptions = {
@@ -2445,6 +2640,7 @@ exports.sendEnquiryToLogistics = async (req, res) => {
 
                 await emailer.sendEmail(null, mailOptions, "NewLogisticsEnquiry");
                 emailsSent++;
+                recipientInfo.email_sent = true;
 
                 // Send FCM Notification
                 const notificationMessage = {
@@ -2459,6 +2655,7 @@ exports.sendEnquiryToLogistics = async (req, res) => {
                         await utils.sendNotification(device.token, notificationMessage);
                     }
                     fcmSent++;
+                    recipientInfo.fcm_sent = true;
                 }
 
                 // Save notification record
@@ -2474,8 +2671,41 @@ exports.sendEnquiryToLogistics = async (req, res) => {
 
             } catch (error) {
                 console.error(`Error sending to logistics ${logistics.email}:`, error);
+                recipientInfo.error = error.message;
                 // Continue with next logistics provider even if one fails
             }
+
+            recipientDetails.push(recipientInfo);
+        }
+
+        // Log successful send to logistics
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'manual_enquiry',
+                action: 'send_to_logistics',
+                status: 'success',
+                related_id: enquiry_id,
+                related_collection: 'enquiries',
+                details: {
+                    enquiry_number: enquiry.enquiry_unique_id,
+                    buyer_name: enquiry.user_id?.full_name || 'N/A',
+                    buyer_email: enquiry.user_id?.email || 'N/A',
+                    send_to_all: send_to_all,
+                    total_logistics: logisticsProviders.length,
+                    emails_sent: emailsSent,
+                    fcm_sent: fcmSent,
+                    sent_by_admin: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                    sent_by_email: req.user.email,
+                    recipients: recipientDetails // Detailed list of all recipients
+                },
+                req: req
+            });
+        } catch (logError) {
+            console.error("Error creating log for send to logistics:", logError);
         }
 
         return res.status(200).json({
@@ -2490,6 +2720,32 @@ exports.sendEnquiryToLogistics = async (req, res) => {
 
     } catch (error) {
         console.error("❌ Error sending enquiry to logistics:", error);
+
+        // Log failed send to logistics
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'manual_enquiry',
+                action: 'send_to_logistics',
+                status: 'failure',
+                related_id: req.body.enquiry_id || null,
+                related_collection: 'enquiries',
+                details: {
+                    send_to_all: req.body.send_to_all,
+                    logistics_ids: req.body.logistics_ids || [],
+                    error_type: error.name || 'Unknown'
+                },
+                error_message: error.message,
+                error_stack: error.stack,
+                req: req
+            });
+        } catch (logError) {
+            console.error("Error creating log for failed send to logistics:", logError);
+        }
+
         utils.handleError(res, error);
     }
 }
