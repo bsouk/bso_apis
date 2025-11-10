@@ -10,6 +10,8 @@ const initMongo = require("./src/config/mongo");
 const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds");
 const app = express();
 const { handleStripeWebhook } = require("./src/controllers/user/webhook")
+const mongoose = require("mongoose");
+const seedAllInOnePlans = require("./scripts/seedAllInOnePlans");
 
 app.post(
   "/user/webhook",
@@ -87,6 +89,14 @@ app.listen(process.env.PORT || 5000, async () => {
     console.log('✅ Startup tasks completed successfully');
   } catch (error) {
     console.error('❌ Error during startup tasks:', error.message);
+  }
+});
+
+mongoose.connection.once('connected', async () => {
+  try {
+    await seedAllInOnePlans({ useExistingConnection: true, logger: console });
+  } catch (error) {
+    console.error('❌ Failed to seed All-in-One plans:', error.message || error);
   }
 });
 

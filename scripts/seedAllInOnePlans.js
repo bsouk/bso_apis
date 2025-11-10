@@ -9,11 +9,6 @@ const Currency = require('../src/models/currency');
 
 const MONGO_URI = process.env.MONGODB_URI;
 
-if (!MONGO_URI) {
-  console.error('❌ MONGODB_URI is not defined in the environment variables.');
-  process.exit(1);
-}
-
 const randomPlanId = () => `plan-${crypto.randomBytes(5).toString('hex')}`;
 
 const features = [
@@ -43,10 +38,24 @@ const plansToSeed = [
   },
 ];
 
-async function seed() {
+async function seedAllInOnePlans({ useExistingConnection = false, logger = console } = {}) {
+  if (!useExistingConnection && !MONGO_URI) {
+    throw new Error('❌ MONGODB_URI is not defined in the environment variables.');
+  }
+
+  let connectedHere = false;
+
   try {
-    await mongoose.connect(MONGO_URI);
-    console.log('✅ Connected to MongoDB');
+    if (!useExistingConnection) {
+      await mongoose.connect(MONGO_URI);
+      connectedHere = true;
+      logger.log('✅ Connected to MongoDB');
+    } else if (mongoose.connection.readyState !== 1) {
+      await new Promise((resolve, reject) => {
+        mongoose.connection.once('connected', resolve);
+        mongoose.connection.once('error', reject);
+      });
+    }
 
     const defaultCurrencyDoc = await Currency.findOne({ is_default: true, status: 'active' });
     const fallbackCurrencyDoc = await Currency.findOne({ status: 'active' });
@@ -68,7 +77,7 @@ async function seed() {
         existing.plan_step = existing.plan_step || 'direct';
 
         await existing.save();
-        console.log(`ℹ️  Updated existing ${planData.interval} All-in-One plan (${existing.plan_id})`);
+        logger.log(`ℹ️  Updated existing ${planData.interval} All-in-One plan (${existing.plan_id})`);
       } else {
         const doc = new Plan({
           plan_id: randomPlanId(),
@@ -88,18 +97,29 @@ async function seed() {
         });
 
         await doc.save();
-        console.log(`✅ Inserted new ${planData.interval} All-in-One plan (${doc.plan_id})`);
+        logger.log(`✅ Inserted new ${planData.interval} All-in-One plan (${doc.plan_id})`);
       }
     }
 
-    console.log('\n🎉 Seeding completed.');
-  } catch (error) {
-    console.error('❌ Seeding failed:', error);
+    logger.log('🎉 All-in-One plan seeding completed.');
   } finally {
-    await mongoose.disconnect();
-    process.exit(0);
+    if (connectedHere) {
+      await mongoose.disconnect();
+      logger.log('🔌 Disconnected from MongoDB');
+    }
   }
 }
 
-seed();
+module.exports = seedAllInOnePlans;
+
+if (require.main === module) {
+  seedAllInOnePlans()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((error) => {
+      console.error('❌ Seeding failed:', error);
+      process.exit(1);
+    });
+}
 
