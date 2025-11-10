@@ -227,6 +227,12 @@ async function createOtherIndexes(db) {
     await queriesCollection.createIndex({ createdByUser: 1, createdAt: -1 }, { background: true });
     await queriesCollection.createIndex({ status: 1, createdAt: -1 }, { background: true });
     console.log('✅ Created queries indexes');
+
+    // Currency collection indexes
+    const currencyCollection = db.collection('currencies');
+    await currencyCollection.createIndex({ code: 1 }, { unique: true, background: true });
+    await currencyCollection.createIndex({ status: 1, is_default: 1 }, { background: true });
+    console.log('✅ Created currencies indexes');
     
     console.log('🎉 All other indexes created successfully!');
     

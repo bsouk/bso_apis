@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const plan = require("../../models/plan");
 const subscription = require("../../models/subscription");
 const Team = require("../../models/team");
+const Currency = require("../../models/currency");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 async function genratePlanId() {
@@ -149,6 +150,17 @@ exports.createPlan = async (req, res) => {
         console.log("data : ", data)
         const planId = await genratePlanId()
         console.log("plan id : ", planId)
+
+        if (data.currency) {
+            data.currency = data.currency.toUpperCase();
+            const currencyDoc = await Currency.findOne({ code: data.currency, status: 'active' });
+            if (!currencyDoc) {
+                return utils.handleError(res, utils.buildErrObject(400, 'Invalid currency code'));
+            }
+        } else {
+            const defaultCurrency = await Currency.findOne({ is_default: true, status: 'active' });
+            data.currency = defaultCurrency ? defaultCurrency.code : 'USD';
+        }
 
         if (data.type === 'buyer') {
             // Skip Stripe creation, just save the plan data
@@ -324,6 +336,14 @@ exports.editPlan = async (req, res) => {
         }
         const data = req.body;
         console.log("data : ", data);
+
+        if (data.currency) {
+            data.currency = data.currency.toUpperCase();
+            const currencyDoc = await Currency.findOne({ code: data.currency, status: 'active' });
+            if (!currencyDoc) {
+                return utils.handleError(res, utils.buildErrObject(400, 'Invalid currency code'));
+            }
+        }
 
         if (data.type === 'buyer') {
             const response = await plan.findOneAndUpdate(
