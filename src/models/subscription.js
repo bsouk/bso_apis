@@ -47,6 +47,31 @@ const subscriptionSchema = new mongoose.Schema(
         isPurchased: {
             type: Boolean,
             default: false
+        },
+        source: {
+            type: String,
+            enum: ["stripe", "iap", "admin", "system"],
+            default: "stripe"
+        },
+        payment_mode: {
+            type: String,
+            enum: ["stripe", "iap", "admin_manual", "unknown"],
+            default: "stripe"
+        },
+        admin_note: {
+            type: String,
+        },
+        assigned_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'admins'
+        },
+        last_updated_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'admins'
+        },
+        is_active: {
+            type: Boolean,
+            default: true
         }
     },
     {
