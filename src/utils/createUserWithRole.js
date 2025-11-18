@@ -128,11 +128,14 @@ async function createUserWithRole(data, role, res) {
       name: user.full_name,
       account_type: role,
       password_source: data.password ? 'provided' : 'generated',
+      login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+      adminLink: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+      website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
     };
 
     try {
       await emailer.sendEmail(null, mailOptions, "accountCreated");
-      console.log(`✅ Welcome email sent to ${user.email}`);
+      console.log(`✅ Welcome email sent to ${user.email} with login URL: ${mailOptions.login_url}`);
     } catch (emailError) {
       console.warn(`⚠️ Failed to send email to ${user.email}:`, emailError.message);
       // Don't fail the entire process if email fails

@@ -29,6 +29,14 @@ exports.addSubAdmin = async (req, res) => {
         }
         const data = req.body;
 
+        // Validate required fields
+        if (!data.first_name || !data.last_name || !data.email) {
+            return utils.handleError(res, {
+                message: "First name, last name, and email are required",
+                code: 400,
+            });
+        }
+
         const doesEmailExists = await Admin.findOne({ email: data.email });
         if (doesEmailExists)
             return utils.handleError(res, {
@@ -46,11 +54,19 @@ exports.addSubAdmin = async (req, res) => {
                     code: 400,
                 });
         }
-        const password = await createNewPassword();
+        
+        // Use custom password if provided, otherwise generate random password
+        const password = data.password && data.password.trim() !== '' 
+            ? data.password.trim() 
+            : await createNewPassword();
+        
+        // Construct full_name from first_name and last_name if not provided
+        const fullName = data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim();
+        
         const subadminData = {
             first_name: data.first_name,
             last_name: data.last_name,
-            full_name: data.full_name,
+            full_name: fullName,
             email: data.email,
             role: "sub_admin",
             permissions: data.permissions,
@@ -63,18 +79,43 @@ exports.addSubAdmin = async (req, res) => {
         const newsubadmin = new Admin(subadminData);
         await newsubadmin.save();
 
-        const mailOptions = {
-            to: newsubadmin.email,
-            subject: `Welcome to ${process.env.APP_NAME}! Your Account Has Been Created as SubAdmin`,
-            name: data?.first_name,
-            app_name: process.env.APP_NAME,
-            email: newsubadmin.email,
-            account_type: "sub admin",
-            password: password,
-            // adminLink: ADMIN_LINK
-        };
+        // Send welcome email to the newly created SUB-ADMIN with credentials
+        console.log(`📧 Preparing to send welcome email to sub-admin: ${newsubadmin.email}`);
+        console.log(`📧 Sub-admin details - Name: ${newsubadmin.first_name} ${newsubadmin.last_name}, Email: ${newsubadmin.email}`);
+        
+        try {
+            const mailOptions = {
+                to: newsubadmin.email,
+                subject: `Welcome to ${process.env.APP_NAME || 'BSO Services'}! Your Account Has Been Created as SubAdmin`,
+                name: newsubadmin.first_name || newsubadmin.full_name || 'Sub-Admin',
+                app_name: process.env.APP_NAME || 'BSO Services',
+                email: newsubadmin.email,
+                account_type: "sub admin",
+                password: password,
+                website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
+                adminLink: 'https://dashboard.bsoservices.com/',
+                login_url: 'https://dashboard.bsoservices.com/',
+            };
 
-        emailer.sendEmail(null, mailOptions, "accountCreated");
+            console.log(`📧 Mail options prepared:`, {
+                to: mailOptions.to,
+                subject: mailOptions.subject,
+                name: mailOptions.name,
+                account_type: mailOptions.account_type
+            });
+
+            await emailer.sendEmail(null, mailOptions, "accountCreated");
+            console.log(`✅ Welcome email sent successfully to sub-admin ${newsubadmin.email} with credentials`);
+        } catch (emailError) {
+            console.error('❌ Error sending welcome email to sub-admin:', emailError);
+            console.error('❌ Error details:', {
+                message: emailError?.message,
+                stack: emailError?.stack,
+                email: newsubadmin.email
+            });
+            // Don't fail the entire operation if email fails
+            // The sub-admin was already created successfully
+        }
         res.json({
             message: "Subadmin added successfully",
             response: newsubadmin,
@@ -96,12 +137,15 @@ exports.editSubAdmin = async (req, res) => {
         }
         const data = req.body;
         const id = req.params.id;
+        
+        // Fetch the subadmin to update
         const subadmin = await Admin.findById(id);
-        if (!subadmin)
+        if (!subadmin) {
             return utils.handleError(res, {
                 message: "Subadmin not found",
                 code: 404,
             });
+        }
 
         const doesEmailExists = await Admin.findOne({
             email: data.email,
@@ -125,7 +169,26 @@ exports.editSubAdmin = async (req, res) => {
                 });
         }
 
-        await Admin.findByIdAndUpdate(id, data);
+        // Update fields
+        subadmin.first_name = data.first_name || subadmin.first_name;
+        subadmin.last_name = data.last_name || subadmin.last_name;
+        subadmin.full_name = `${data.first_name || subadmin.first_name} ${data.last_name || subadmin.last_name}`;
+        subadmin.email = data.email || subadmin.email;
+        subadmin.phone_number = data.phone_number !== undefined ? data.phone_number : subadmin.phone_number;
+        subadmin.profile_image = data.profile_image !== undefined ? data.profile_image : subadmin.profile_image;
+        subadmin.permissions = data.permissions !== undefined ? data.permissions : subadmin.permissions;
+
+        // Handle password update if provided
+        if (data.password && data.password.trim() !== '') {
+            // Set password - will be hashed automatically by the model's pre-save hook
+            subadmin.password = data.password.trim();
+            subadmin.decoded_password = data.password.trim();
+        }
+
+        // Save to trigger password hashing if password was updated
+        await subadmin.save();
+        
+        // Note: No email is sent on edit as per requirement (confidential)
 
         res.json({ message: "Subadmin edit successfully", code: 200 });
     } catch (error) {

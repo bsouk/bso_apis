@@ -1114,6 +1114,20 @@ exports.editResource = async (req, res) => {
         });
     }
 
+    // Handle password reset
+    let passwordUpdated = false;
+    let newPassword = null;
+    let userData = { ...data };
+
+    if (data.password && data.password.trim() !== '') {
+      passwordUpdated = true;
+      newPassword = data.password.trim();
+      // Hash password using bcrypt (same approach as editCustomer and editSupplier)
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      userData.password = hashedPassword;
+      userData.decoded_password = newPassword;
+    }
+
     if (data.switch_to) {
       let types = user.user_type
       if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
@@ -1125,11 +1139,42 @@ exports.editResource = async (req, res) => {
       if (!types.includes(data.switch_to.trim())) {
         types.push(data.switch_to.trim())
       }
-      data.user_type = types
-      data.current_user_type = data.switch_to
+      userData.user_type = types
+      userData.current_user_type = data.switch_to
     }
-    console.log("data : ", data)
-    const updatedUser = await User.findByIdAndUpdate(id, data);
+    console.log("data : ", userData)
+    const updatedUser = await User.findByIdAndUpdate(id, userData, { new: true });
+
+    // Send email notification if password was updated (non-blocking)
+    if (passwordUpdated) {
+      try {
+        // Fetch the updated user to get the latest email
+        const userAfterUpdate = await User.findById(id);
+        if (!userAfterUpdate) {
+          console.error(`❌ User not found after update: ${id}`);
+        } else {
+          const mailOptions = {
+            to: userAfterUpdate.email,
+            subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
+            app_name: process.env.APP_NAME || 'BSO Services',
+            email: userAfterUpdate.email,
+            password: newPassword,
+            name: userAfterUpdate.full_name || `${userAfterUpdate.first_name || ''} ${userAfterUpdate.last_name || ''}`.trim(),
+            account_type: userAfterUpdate.current_user_type || 'recruiter',
+            login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+            website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+          };
+          
+          console.log(`📧 Sending password update email to recruiter ${userAfterUpdate.email} with login URL: ${mailOptions.login_url}...`);
+          await emailer.sendEmail(null, mailOptions, "passwordUpdated");
+          console.log(`✅ Password update email sent to recruiter ${userAfterUpdate.email}`);
+        }
+      } catch (emailError) {
+        console.error(`❌ Error sending password update email:`, emailError.message);
+        console.error(`❌ Full error:`, emailError);
+        // Don't fail the entire operation if email fails
+      }
+    }
     console.log("updated user is ", updatedUser);
 
     // if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
@@ -1731,7 +1776,53 @@ exports.editSupplier = async (req, res) => {
         });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(id, data);
+    // Handle password reset
+    let passwordUpdated = false;
+    let newPassword = null;
+    let userData = { ...data };
+
+    if (data.password && data.password.trim() !== '') {
+      passwordUpdated = true;
+      newPassword = data.password.trim();
+      // Hash password using bcrypt (same approach as editCustomer)
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      userData.password = hashedPassword;
+      userData.decoded_password = newPassword;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(id, userData, { new: true });
+
+    // Send email notification if password was updated (non-blocking)
+    if (passwordUpdated) {
+      try {
+        // Fetch the updated user to get the latest email
+        const userAfterUpdate = await User.findById(id);
+        if (!userAfterUpdate) {
+          console.error(`❌ User not found after update: ${id}`);
+          return;
+        }
+
+        const mailOptions = {
+          to: userAfterUpdate.email,
+          subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
+          app_name: process.env.APP_NAME || 'BSO Services',
+          email: userAfterUpdate.email,
+          password: newPassword,
+          name: userAfterUpdate.full_name || userAfterUpdate.supplier_name,
+          account_type: "supplier",
+          login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+          website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+        };
+        
+        console.log(`📧 Sending password update email to supplier ${userAfterUpdate.email} with login URL: ${mailOptions.login_url}...`);
+        await emailer.sendEmail(null, mailOptions, "passwordUpdated");
+        console.log(`✅ Password update email sent to supplier ${userAfterUpdate.email}`);
+      } catch (emailError) {
+        console.error(`❌ Error sending password update email:`, emailError.message);
+        console.error(`❌ Full error:`, emailError);
+        // Don't fail the entire operation if email fails
+      }
+    }
 
     if (
       data.phone_number_code ||
@@ -1755,7 +1846,7 @@ exports.editSupplier = async (req, res) => {
         );
       } else {
         const addressData = {
-          user_id: user._id,
+          user_id: updatedUser._id,
           address: data.address,
           location: data.location,
           phone_number_code: data.phone_number_code,
@@ -2136,6 +2227,20 @@ exports.editLogisticsUser = async (req, res) => {
           code: 400,
         });
     }
+    // Handle password reset
+    let passwordUpdated = false;
+    let newPassword = null;
+    let userData = { ...data };
+
+    if (data.password && data.password.trim() !== '') {
+      passwordUpdated = true;
+      newPassword = data.password.trim();
+      // Hash password using bcrypt (same approach as editCustomer and editSupplier)
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      userData.password = hashedPassword;
+      userData.decoded_password = newPassword;
+    }
+
     if (data.switch_to) {
       let types = user.user_type
       if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
@@ -2147,10 +2252,42 @@ exports.editLogisticsUser = async (req, res) => {
       if (!types.includes(data.switch_to.trim())) {
         types.push(data.switch_to.trim())
       }
-      data.user_type = types
-      data.current_user_type = data.switch_to
+      userData.user_type = types
+      userData.current_user_type = data.switch_to
     }
-    await User.findByIdAndUpdate(id, data);
+    
+    const updatedUser = await User.findByIdAndUpdate(id, userData, { new: true });
+
+    // Send email notification if password was updated (non-blocking)
+    if (passwordUpdated) {
+      try {
+        // Fetch the updated user to get the latest email
+        const userAfterUpdate = await User.findById(id);
+        if (!userAfterUpdate) {
+          console.error(`❌ User not found after update: ${id}`);
+        } else {
+          const mailOptions = {
+            to: userAfterUpdate.email,
+            subject: `Password Updated Successfully - ${process.env.APP_NAME || 'BSO Services'}`,
+            app_name: process.env.APP_NAME || 'BSO Services',
+            email: userAfterUpdate.email,
+            password: newPassword,
+            name: userAfterUpdate.full_name,
+            account_type: "logistics",
+            login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+            website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+          };
+          
+          console.log(`📧 Sending password update email to logistics user ${userAfterUpdate.email} with login URL: ${mailOptions.login_url}...`);
+          await emailer.sendEmail(null, mailOptions, "passwordUpdated");
+          console.log(`✅ Password update email sent to logistics user ${userAfterUpdate.email}`);
+        }
+      } catch (emailError) {
+        console.error(`❌ Error sending password update email:`, emailError.message);
+        console.error(`❌ Full error:`, emailError);
+        // Don't fail the entire operation if email fails
+      }
+    }
 
     if (
       data.phone_number_code ||

@@ -75,7 +75,7 @@
 		</tr>
 		<tr>
 			<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
-				You can login using this link: <a href="https://bsoservices.com/sign-in" style="color: #0000FF; text-decoration: underline;">https://bsoservices.com/sign-in</a>
+				You can login using this link: <a href="<%= login_url || adminLink || 'https://dashboard.bsoservices.com/' %>" style="color: #0000FF; text-decoration: underline;"><%= login_url || adminLink || 'https://dashboard.bsoservices.com/' %></a>
 			</td>
 		</tr>
 		<tr>
