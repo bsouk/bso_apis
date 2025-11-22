@@ -162,4 +162,89 @@ router.get(
     controller.getSingleAdminQuotes
 )
 
+// Admin Quote Management Routes
+router.get(
+    '/getQuotesList',
+    trimRequest.all,
+    requireAuth,
+    controller.getQuotesList
+)
+
+router.post(
+    '/createSupplierQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.createSupplierQuote
+)
+
+router.post(
+    '/createLogisticsQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.createLogisticsQuote
+)
+
+router.delete(
+    '/deleteQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.deleteQuote
+)
+
+router.get(
+    '/getEnquiriesForSupplier/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getEnquiriesForSupplier
+)
+
+router.get(
+    '/getEnquiriesForLogistics/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getEnquiriesForLogistics
+)
+
+router.get(
+    '/getEnquiryDetails/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getEnquiryDetails
+)
+
+router.get(
+    '/getSuppliersList',
+    trimRequest.all,
+    requireAuth,
+    controller.getSuppliersList
+)
+
+router.get(
+    '/getLogisticsList',
+    trimRequest.all,
+    requireAuth,
+    controller.getLogisticsList
+)
+
+router.get(
+    '/getSupplierAddresses/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getSupplierAddresses
+)
+
+router.get(
+    '/getLogisticsEnquiryDetail/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getLogisticsEnquiryDetail
+)
+
+router.get(
+    '/getQuoteDetails/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getQuoteDetails
+)
+
 module.exports = router

@@ -172,12 +172,21 @@ exports.changePassword = async (req, res) => {
 
 exports.getMyProfile = async (req, res) => {
   try {
-    const user_id = req.user._id
-    const user = await Admin.findById(user_id).lean();
-    console.log("user is", user);
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized", code: 401 });
+    }
 
+    const user_id = req.user._id;
+    const user = await Admin.findById(user_id).lean();
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found", code: 404 });
+    }
+
+    console.log("user is", user);
     return res.json({ data: user, code: 200 });
   } catch (error) {
+    console.error('Error in getMyProfile:', error);
     utils.handleError(res, error);
   }
 }

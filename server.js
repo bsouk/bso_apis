@@ -31,8 +31,6 @@ const corsOptions = {
   allowedHeaders: "Content-Type, Authorization, X-Requested-With",
 };
 
-app.post
-
 app.use(cors(corsOptions));
 app.use(compression());
 app.use(express.json());
@@ -72,12 +70,13 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: err.message || "Internal Server Error" });
 });
 
-app.listen(process.env.PORT || 5000, async () => {
+const PORT = process.env.PORT || 7012;
+app.listen(PORT, async () => {
   console.log("****************************");
   console.log(
     `*    Starting ${process.env.ENV === "local" ? "HTTP" : "HTTPS"} Server`
   );
-  console.log(`*    Port: ${process.env.PORT || 5000}`);
+  console.log(`*    Port: ${PORT}`);
   console.log(`*    NODE_ENV: ${process.env.NODE_ENV}`);
   console.log(`*    Database: MongoDB`);
   console.log(`*    DB Connection: OK\n****************************\n`);

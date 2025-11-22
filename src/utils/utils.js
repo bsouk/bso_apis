@@ -182,22 +182,42 @@ exports.getCountry = req =>
 exports.handleError = (res, err) => {
   // Prints error in console
   if (process.env.NODE_ENV === 'development') {
-    console.log(err)
+    console.error('Error:', err);
   }
-  // Sends error to user
 
+  // Sends error to user
   function getValidCode(code) {
     code = parseInt(code);
     const isValid = code >= 100 && code < 600;
-    return isValid ? code : 500
+    return isValid ? code : 500;
   }
 
-  res.status(getValidCode(err?.code)).json({
-    errors: {
-      msg: err.message
-    },
-    code: getValidCode(err?.code)
-  })
+  // Extract error message - handle various error formats
+  let errorMessage = 'An error occurred';
+  if (err) {
+    if (err.message) {
+      errorMessage = err.message;
+    } else if (typeof err === 'string') {
+      errorMessage = err;
+    } else if (err.error && err.error.message) {
+      errorMessage = err.error.message;
+    }
+  }
+
+  const statusCode = getValidCode(err?.code || err?.status || 500);
+
+  // Ensure we don't send response if headers already sent
+  if (!res.headersSent) {
+    res.status(statusCode).json({
+      message: errorMessage,
+      errors: {
+        msg: errorMessage
+      },
+      code: statusCode
+    });
+  } else {
+    console.error('Response headers already sent. Cannot send error response.');
+  }
 }
 
 /**
@@ -339,21 +359,36 @@ exports.sendNotification = async (token, notificationData) => {
   try {
     // Ensure that the token is valid and not empty
     if (!token) {
-      return;
+      console.warn("Notification skipped: Empty token provided");
+      return false;
     }
+    
+    if (!notificationData || !notificationData.title) {
+      console.warn("Notification skipped: Missing notification data or title");
+      return false;
+    }
+
     const message = {
       notification: {
         title: notificationData.title,
-        body: notificationData.description,  // Corrected description field name to "body"
+        body: notificationData.description || '',  // Corrected description field name to "body"
       },
       token: token  // This should be the user's FCM token
     };
+    
     // Send the notification using Firebase Admin SDK
     await admin.messaging().send(message);
     console.log("Notification sent successfully to the user.");
+    return true;
 
   } catch (error) {
+    // Log error but don't throw - let the caller handle the error
     console.error("Error sending notification:", error);
+    console.error("Token:", token ? `${token.substring(0, 20)}...` : 'empty');
+    console.error("Notification data:", notificationData);
+    
+    // Return false instead of throwing to prevent crashes
+    return false;
   }
 };
 
@@ -364,43 +399,80 @@ exports.sendPushNotification = async (
   push = true
 ) => {
   try {
+    // Validate notification data
+    if (!notificaiton || !notificaiton.receiver_id) {
+      console.warn("sendPushNotification: Missing notification data or receiver_id");
+      return false;
+    }
 
+    // Save notification to database if requested
     if (create) {
-      const notificationForSeller = new Notification(notificaiton);
-      await notificationForSeller.save();
+      try {
+        const notificationForSeller = new Notification(notificaiton);
+        await notificationForSeller.save();
+      } catch (dbError) {
+        console.error("Error saving notification to database:", dbError);
+        // Continue with push notification even if database save fails
+      }
     }
 
-    const fcm_device = await FCMDevice.findOne({ user_id: new mongoose.Types.ObjectId(notificaiton.receiver_id) });
-    const token = fcm_device?.token ?? ""
+    // Get FCM device token
+    let token = "";
+    try {
+      const fcm_device = await FCMDevice.findOne({ 
+        user_id: new mongoose.Types.ObjectId(notificaiton.receiver_id) 
+      });
+      token = fcm_device?.token ?? "";
+    } catch (tokenError) {
+      console.error("Error fetching FCM device token:", tokenError);
+      return false;
+    }
 
+    // Send push notification if requested and token exists
     if (push && token) {
-      const notificationData = {
-        title: notificaiton.title,
-        body: notificaiton.description,
-      };
-      var message = {
-        notification: notificationData,
-        tokens: [token],
-      };
+      try {
+        const notificationData = {
+          title: notificaiton.title || '',
+          body: notificaiton.description || '',
+        };
+        
+        const message = {
+          notification: notificationData,
+          tokens: [token],
+        };
 
-      admin
-        .messaging()
-        .sendMulticast(message)
-        .then((response) => {
-          console.log("response", response.responses[0].error)
-          if (response.failureCount > 0) {
-            console.log("Failed notification count", response.failureCount)
-          } else {
-            console.log("Notification sent successfully")
-          }
-        })
-        .catch((error) => {
-          console.log("Error sending message:", error);
-        });
+        await admin
+          .messaging()
+          .sendMulticast(message)
+          .then((response) => {
+            if (response.responses && response.responses.length > 0) {
+              const error = response.responses[0].error;
+              if (error) {
+                console.error("FCM notification error:", error);
+              }
+            }
+            if (response.failureCount > 0) {
+              console.warn(`Failed notification count: ${response.failureCount}`);
+            } else {
+              console.log("Notification sent successfully");
+            }
+          })
+          .catch((error) => {
+            console.error("Error sending FCM message:", error);
+            // Don't throw - just log the error
+          });
+      } catch (pushError) {
+        console.error("Error in push notification flow:", pushError);
+        // Don't throw - just log and return false
+        return false;
+      }
     }
+
+    return true;
 
   } catch (err) {
-    console.log(err);
+    console.error("Error in sendPushNotification:", err);
+    // Return false instead of throwing to prevent crashes
     return false;
   }
 };

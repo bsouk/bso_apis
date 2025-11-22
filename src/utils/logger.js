@@ -1,4 +1,5 @@
 const AdminLogs = require('../models/admin_logs');
+const mongoose = require('mongoose');
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -145,11 +146,17 @@ async function createLog({
  * @returns {Promise<Object>} Created log document
  */
 async function createLogFromAdmin(admin, feature, action, options = {}, req = null) {
+  // Handle null or undefined admin gracefully
+  if (!admin) {
+    console.error('❌ Logger: Admin object is null or undefined', { feature, action });
+    return null;
+  }
+
   return createLog({
     admin_id: admin._id || admin.id,
-    admin_name: admin.full_name || `${admin.first_name} ${admin.last_name}`,
-    admin_email: admin.email,
-    admin_role: admin.role,
+    admin_name: admin.full_name || `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Unknown Admin',
+    admin_email: admin.email || 'unknown@example.com',
+    admin_role: admin.role || 'unknown',
     feature,
     action,
     ...options,

@@ -21,6 +21,10 @@ const logisticsQuotesSchema = new mongoose.Schema({
     is_selected: {
         type: Boolean,
         default: false
+    },
+    created_by_admin: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "admins"
     }
 },
     {

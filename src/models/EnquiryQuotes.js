@@ -271,6 +271,10 @@ const EnquiryQuotesSchema = new mongoose.Schema({
     is_merged_quote: {
         type: Boolean,
         default: false
+    },
+    created_by_admin: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "admins"
     }
 },
     {

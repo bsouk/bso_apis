@@ -14,7 +14,13 @@ const version_history = require("../../models/version_history");
 const query_assigned_suppliers = require("../../models/query_assigned_suppliers");
 const { Country, State, City } = require('country-state-city');
 const EnquiryQuotes = require("../../models/EnquiryQuotes");
-const AdminQuotes = require("../../models/admin_quotes")
+const AdminQuotes = require("../../models/admin_quotes");
+const logistics_quotes = require("../../models/logistics_quotes");
+const Subscription = require("../../models/subscription");
+const Notification = require("../../models/notification");
+const fcm_devices = require("../../models/fcm_devices");
+const emailer = require("../../utils/emailer");
+const { createLog, logSuccess, logFailure } = require("../../utils/logger");
 
 
 async function genQuoteId() {
@@ -1876,11 +1882,6 @@ exports.acceptRejectSupplierQuote = async (req, res) => {
     }
 }
 
-async function genQuoteId() {
-    let token = Math.floor(Math.random() * 100000000)
-    return `quote-${token}`
-}
-
 exports.addenquiryquotes = async (req, res) => {
     try {
         const data = req.body;
@@ -2232,6 +2233,1297 @@ exports.getSingleAdminQuotes = async (req, res) => {
             data,
             code: 200
         })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+// ==================== Admin Quote Management Functions ====================
+
+// Get all quotes list for admin panel
+exports.getQuotesList = async (req, res) => {
+    try {
+        const { search, offset = 0, limit = 10, type } = req.query;
+        const filter = {};
+
+        if (search && typeof search === 'string' && search.trim()) {
+            filter.$or = [
+                { quote_unique_id: { $regex: search.trim(), $options: "i" } },
+                { "enquiry_id.enquiry_unique_id": { $regex: search.trim(), $options: "i" } },
+                { "user_id.full_name": { $regex: search.trim(), $options: "i" } },
+                { "user_id.company_data.name": { $regex: search.trim(), $options: "i" } },
+            ];
+        }
+
+        if (type) {
+            filter.type = type; // 'supplier' or 'logistics' or 'admin'
+        }
+
+        // Aggregate pipeline to get quotes with populated data
+        const data = await EnquiryQuotes.aggregate([
+            {
+                $lookup: {
+                    from: "enquires",
+                    localField: "enquiry_id",
+                    foreignField: "_id",
+                    as: "enquiry_id"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$enquiry_id",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user_id",
+                    foreignField: "_id",
+                    as: "user_id"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$user_id",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "admins",
+                    localField: "created_by_admin",
+                    foreignField: "_id",
+                    as: "created_by_admin"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$created_by_admin",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            { 
+                $match: Object.keys(filter).length > 0 ? filter : {} 
+            },
+            { 
+                $sort: { createdAt: -1 } 
+            },
+            { 
+                $skip: parseInt(offset) || 0 
+            },
+            { 
+                $limit: parseInt(limit) || 10 
+            }
+        ]);
+
+        // Get counts for stats - wrap in try-catch to prevent crashes
+        let count = 0;
+        let totalCount = 0;
+        let pendingCount = 0;
+        let acceptedCount = 0;
+        let rejectedCount = 0;
+
+        try {
+            const countFilter = Object.keys(filter).length > 0 ? filter : {};
+            count = await EnquiryQuotes.countDocuments(countFilter);
+            totalCount = await EnquiryQuotes.countDocuments({});
+            pendingCount = await EnquiryQuotes.countDocuments({ is_selected: false, status: "pending" });
+            acceptedCount = await EnquiryQuotes.countDocuments({ is_selected: true });
+            rejectedCount = await EnquiryQuotes.countDocuments({ status: "rejected" });
+        } catch (countError) {
+            console.error('Error getting quote counts:', countError);
+            // Continue with 0 counts if count queries fail
+        }
+
+        return res.status(200).json({
+            message: "Quotes list fetched successfully",
+            data: data || [],
+            count: count || 0,
+            totalCount: totalCount || 0,
+            pendingCount: pendingCount || 0,
+            acceptedCount: acceptedCount || 0,
+            rejectedCount: rejectedCount || 0,
+            code: 200
+        });
+    } catch (error) {
+        console.error('Error in getQuotesList:', error);
+        utils.handleError(res, error);
+    }
+}
+
+// Get quote details by ID - matches frontend pattern
+exports.getQuoteDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, {
+                message: "Invalid quote ID",
+                code: 400,
+            });
+        }
+
+        // First try to find in EnquiryQuotes (supplier quotes)
+        let data = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(id) })
+            .populate({ path: 'collection_readiness', populate: 'collection_address' })
+            .populate('user_id', 'full_name email user_type current_user_type company_data')
+            .populate('payment_terms')
+            .populate('admin_payment_terms')
+            .populate('enquiry_items.quantity.unit')
+            .populate("pickup_address")
+            .populate({ 
+                path: 'enquiry_id', 
+                select: 'priority shipping_address enquiry_unique_id enquiry_number expiry_date delivery_selection_data', 
+                populate: [
+                    { path: 'shipping_address' }, 
+                    { path: 'selected_logistics.quote_id' }
+                ] 
+            })
+            .populate({
+                path: 'created_by_admin',
+                select: 'full_name',
+                strictPopulate: false
+            })
+            .lean();
+
+        // If not found in EnquiryQuotes, try logistics_quotes
+        if (!data) {
+            data = await logistics_quotes.findOne({ _id: id })
+                .populate({
+                    path: 'enquiry_id',
+                    populate: [
+                        {
+                            path: "selected_supplier.quote_id",
+                            populate: [
+                                { path: "pickup_address", strictPopulate: false },
+                                { path: "collection_readiness.collection_address" },
+                                { path: "enquiry_items.quantity.unit" }
+                            ]
+                        },
+                        {
+                            path: "shipping_address"
+                        }
+                    ],
+                    select: '-enquiry_items'
+                })
+                .populate({ path: 'user_id', select: "company_data full_name email" })
+                .populate({
+                    path: 'created_by_admin',
+                    select: 'full_name',
+                    strictPopulate: false
+                })
+                .lean();
+
+            if (data) {
+                // For logistics quotes, also fetch payment data like frontend does
+                const Payment = require("../../models/payment");
+                const paymentdata = await Payment.findOne({ 
+                    enquiry_id: data?.enquiry_id?._id, 
+                    buyer_id: data?.enquiry_id?.user_id 
+                }).lean();
+                
+                const supplierpay = await Payment.findOne({ 
+                    enquiry_id: data?.enquiry_id?._id, 
+                    supplier_id: data?.enquiry_id?.selected_supplier?.quote_id?.user_id 
+                }).lean();
+
+                if (paymentdata && supplierpay && paymentdata.logistic_payment && paymentdata.logistic_payment.length === 0 && supplierpay?.logistic_payment?.length !== 0) {
+                    paymentdata.logistic_payment = supplierpay?.logistic_payment || [];
+                }
+
+                return res.status(200).json({
+                    message: "Logistics quote details fetched successfully",
+                    data,
+                    payment: paymentdata || null,
+                    code: 200
+                });
+            }
+        }
+
+        if (!data) {
+            return res.status(404).json({
+                message: "Quote not found",
+                code: 404
+            });
+        }
+
+        // Transform user_id to include company_name from company_data
+        if (data.user_id && data.user_id.company_data) {
+            data.user_id = {
+                ...data.user_id,
+                company_name: data.user_id.company_data?.name || data.user_id.company_data?.company_name
+            };
+        }
+
+        return res.status(200).json({
+            message: "Quote details fetched successfully",
+            data,
+            code: 200
+        });
+
+    } catch (error) {
+        console.error('Error in getQuoteDetails:', error);
+        utils.handleError(res, error);
+    }
+}
+
+// Create supplier quote on behalf of supplier (admin)
+exports.createSupplierQuote = async (req, res) => {
+    try {
+        const data = req.body;
+        const adminId = req.user._id;
+        const { supplier_id } = data;
+
+        if (!supplier_id) {
+            return utils.handleError(res, {
+                message: "Supplier ID is required",
+                code: 400,
+            });
+        }
+
+        // Verify supplier exists and has active subscription
+        const supplier = await User.findOne({ 
+            _id: supplier_id, 
+            user_type: { $in: ["supplier"] } 
+        });
+
+        if (!supplier) {
+            return utils.handleError(res, {
+                message: "Supplier not found",
+                code: 404,
+            });
+        }
+
+        const activeSubscription = await Subscription.findOne({ 
+            user_id: supplier_id, 
+            status: "active", 
+            type: "supplier" 
+        });
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "Supplier does not have an active subscription",
+                code: 400,
+            });
+        }
+
+        // Check if enquiry exists
+        const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id });
+        if (!buyerenquiry) {
+            return utils.handleError(res, {
+                message: "Enquiry not found",
+                code: 404,
+            });
+        }
+
+        // Check if quote already exists for this supplier and enquiry
+        const existingQuote = await EnquiryQuotes.findOne({ 
+            enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), 
+            user_id: new mongoose.Types.ObjectId(supplier_id) 
+        });
+
+        let quote;
+        if (existingQuote) {
+            // Update existing quote
+            quote = await EnquiryQuotes.findOneAndUpdate(
+                { 
+                    enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), 
+                    user_id: new mongoose.Types.ObjectId(supplier_id) 
+                },
+                { 
+                    $set: {
+                        ...data,
+                        type: "admin",
+                        is_admin_updated: true,
+                        created_by_admin: adminId
+                    }
+                },
+                { new: true }
+            );
+        } else {
+            // Create new quote
+            let quote_unique_id = await genQuoteId();
+            quote = await EnquiryQuotes.create({
+                ...data,
+                quote_unique_id,
+                user_id: supplier_id,
+                type: "admin",
+                is_admin_updated: true,
+                created_by_admin: adminId
+            });
+        }
+
+        // Send notification to buyer - wrapped in try-catch to prevent crashes
+        try {
+            const notificationMessage = {
+                title: 'New Quote submitted by Admin on behalf of Supplier',
+                description: `Admin has created a new quote on behalf of ${supplier.full_name}. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                quote: quote._id
+            };
+
+            const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+            if (buyerfcm && buyerfcm.length > 0) {
+                // Use Promise.all to properly handle async forEach
+                await Promise.all(
+                    buyerfcm.map(async (i) => {
+                        try {
+                            const token = i.token;
+                            if (token) {
+                                await utils.sendNotification(token, notificationMessage);
+                            }
+                        } catch (notifError) {
+                            console.error('Error sending FCM notification to buyer:', notifError);
+                            // Continue with other notifications even if one fails
+                        }
+                    })
+                );
+
+                // Save notification to database
+                try {
+                    const NotificationData = {
+                        title: notificationMessage.title,
+                        description: notificationMessage.description,
+                        type: "supplier_quote_added",
+                        receiver_id: buyerenquiry.user_id,
+                        related_to: quote._id,
+                        related_to_type: "quote",
+                    };
+                    const newNotification = new Notification(NotificationData);
+                    await newNotification.save();
+                } catch (dbError) {
+                    console.error('Error saving buyer notification to database:', dbError);
+                    // Continue even if database save fails
+                }
+            }
+        } catch (notifError) {
+            console.error('Error in buyer notification flow:', notifError);
+            // Continue with the rest of the function even if notifications fail
+        }
+
+        // Send notification to supplier - wrapped in try-catch to prevent crashes
+        try {
+            const supplierNotificationMessage = {
+                title: 'Quote Created on Your Behalf',
+                description: `Admin has created a quote on your behalf for Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                quote: quote._id
+            };
+
+            const supplierfcm = await fcm_devices.find({ user_id: supplier_id });
+            if (supplierfcm && supplierfcm.length > 0) {
+                // Use Promise.all to properly handle async forEach
+                await Promise.all(
+                    supplierfcm.map(async (i) => {
+                        try {
+                            const token = i.token;
+                            if (token) {
+                                await utils.sendNotification(token, supplierNotificationMessage);
+                            }
+                        } catch (notifError) {
+                            console.error('Error sending FCM notification to supplier:', notifError);
+                            // Continue with other notifications even if one fails
+                        }
+                    })
+                );
+
+                // Save notification to database
+                try {
+                    const SupplierNotificationData = {
+                        title: supplierNotificationMessage.title,
+                        description: supplierNotificationMessage.description,
+                        type: "admin_quote_created",
+                        receiver_id: supplier_id,
+                        related_to: quote._id,
+                        related_to_type: "quote",
+                    };
+                    const supplierNotification = new Notification(SupplierNotificationData);
+                    await supplierNotification.save();
+                } catch (dbError) {
+                    console.error('Error saving supplier notification to database:', dbError);
+                    // Continue even if database save fails
+                }
+            }
+        } catch (notifError) {
+            console.error('Error in supplier notification flow:', notifError);
+            // Continue with the rest of the function even if notifications fail
+        }
+
+        // Send email notifications to buyer
+        try {
+            const buyer = await User.findById(buyerenquiry.user_id);
+            if (buyer && buyer.email) {
+                const mailOptions = {
+                    to: buyer.email,
+                    subject: `New Quote Submitted - Enquiry ${buyerenquiry.enquiry_unique_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    email: buyer.email,
+                    name: buyer.full_name || 'Buyer',
+                    enquiry_id: buyerenquiry.enquiry_unique_id,
+                    enquiry_number: buyerenquiry.enquiry_number,
+                    supplier_name: supplier.full_name,
+                    quote_id: quote.quote_unique_id,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}/enquiry/${buyerenquiry._id}`,
+                };
+                await emailer.sendEmail(null, mailOptions, "quoteCreated");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to buyer:', emailError);
+        }
+
+        // Send email notifications to supplier
+        try {
+            if (supplier && supplier.email) {
+                const mailOptions = {
+                    to: supplier.email,
+                    subject: `Quote Created on Your Behalf - Enquiry ${buyerenquiry.enquiry_unique_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    email: supplier.email,
+                    name: supplier.full_name || 'Supplier',
+                    enquiry_id: buyerenquiry.enquiry_unique_id,
+                    enquiry_number: buyerenquiry.enquiry_number,
+                    quote_id: quote.quote_unique_id,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}/quote/${quote._id}`,
+                };
+                await emailer.sendEmail(null, mailOptions, "quoteCreatedForSupplier");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to supplier:', emailError);
+        }
+
+        // Create log entry for admin action
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quote_management',
+                    'create',
+                    {
+                        related_id: quote._id,
+                        related_collection: 'enquiry_quotes',
+                        metadata: {
+                            quote_type: 'supplier',
+                            quote_unique_id: quote.quote_unique_id,
+                            enquiry_id: buyerenquiry.enquiry_unique_id,
+                            enquiry_number: buyerenquiry.enquiry_number,
+                            supplier_id: supplier._id.toString(),
+                            supplier_name: supplier.full_name,
+                            buyer_id: buyerenquiry.user_id.toString(),
+                            grand_total: quote.grand_total,
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
+        return res.status(200).json({
+            message: "Supplier quote created successfully",
+            data: quote,
+            quote_id: quote._id,
+            code: 200
+        });
+
+    } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quote_management',
+                    'create',
+                    error,
+                    {
+                        related_collection: 'enquiry_quotes',
+                        metadata: {
+                            quote_type: 'supplier',
+                            enquiry_id: req.body.enquiry_id,
+                            supplier_id: req.body.supplier_id,
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
+        utils.handleError(res, error);
+    }
+}
+
+// Create logistics quote on behalf of logistics (admin)
+exports.createLogisticsQuote = async (req, res) => {
+    try {
+        const data = req.body;
+        const adminId = req.user._id;
+        const { logistics_id } = data;
+
+        if (!logistics_id) {
+            return utils.handleError(res, {
+                message: "Logistics ID is required",
+                code: 400,
+            });
+        }
+
+        // Verify logistics exists and has active subscription
+        const logistics = await User.findOne({ 
+            _id: logistics_id, 
+            user_type: { $in: ["logistics"] } 
+        });
+
+        if (!logistics) {
+            return utils.handleError(res, {
+                message: "Logistics provider not found",
+                code: 404,
+            });
+        }
+
+        const activeSubscription = await Subscription.findOne({ 
+            user_id: logistics_id, 
+            status: "active", 
+            type: "logistics" 
+        });
+
+        if (!activeSubscription) {
+            return utils.handleError(res, {
+                message: "Logistics provider does not have an active subscription",
+                code: 400,
+            });
+        }
+
+        // Check if enquiry exists
+        const buyerenquiry = await Enquiry.findOne({ _id: data.enquiry_id });
+        if (!buyerenquiry) {
+            return utils.handleError(res, {
+                message: "Enquiry not found",
+                code: 404,
+            });
+        }
+
+        // Check if quote already exists
+        const existingQuote = await logistics_quotes.findOne({ 
+            enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), 
+            user_id: new mongoose.Types.ObjectId(logistics_id) 
+        });
+
+        let quote;
+        if (existingQuote) {
+            // Update existing quote
+            quote = await logistics_quotes.findOneAndUpdate(
+                { 
+                    enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), 
+                    user_id: new mongoose.Types.ObjectId(logistics_id) 
+                },
+                { 
+                    $set: {
+                        ...data,
+                        created_by_admin: adminId
+                    }
+                },
+                { new: true }
+            );
+        } else {
+            // Create new quote
+            let quote_unique_id = await genQuoteId();
+            quote = await logistics_quotes.create({
+                ...data,
+                quote_unique_id,
+                user_id: logistics_id,
+                created_by_admin: adminId
+            });
+        }
+
+        // Send notifications to buyer - wrapped in try-catch to prevent crashes
+        try {
+            const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+            if (buyerfcm && buyerfcm.length > 0) {
+                const notificationMessage = {
+                    title: 'New Logistics Quote Submitted',
+                    description: `Admin has created a logistics quote on behalf of ${logistics.full_name}. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                    quote: quote._id
+                };
+                
+                // Use Promise.all to properly handle async operations
+                await Promise.all(
+                    buyerfcm.map(async (i) => {
+                        try {
+                            const token = i.token;
+                            if (token) {
+                                await utils.sendNotification(token, notificationMessage);
+                            }
+                        } catch (notifError) {
+                            console.error('Error sending FCM notification to buyer:', notifError);
+                            // Continue with other notifications even if one fails
+                        }
+                    })
+                );
+
+                // Save notification to database
+                try {
+                    const NotificationData = {
+                        title: notificationMessage.title,
+                        description: notificationMessage.description,
+                        type: "logistics_quote_added",
+                        receiver_id: buyerenquiry.user_id,
+                        related_to: quote._id,
+                        related_to_type: "quote",
+                    };
+                    const newNotification = new Notification(NotificationData);
+                    await newNotification.save();
+                } catch (dbError) {
+                    console.error('Error saving logistics notification to database:', dbError);
+                    // Continue even if database save fails
+                }
+            }
+        } catch (notifError) {
+            console.error('Error in logistics notification flow:', notifError);
+            // Continue with the rest of the function even if notifications fail
+        }
+
+        // Send email notifications to buyer
+        try {
+            const buyer = await User.findById(buyerenquiry.user_id);
+            if (buyer && buyer.email) {
+                const mailOptions = {
+                    to: buyer.email,
+                    subject: `New Logistics Quote - Enquiry ${buyerenquiry.enquiry_unique_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    email: buyer.email,
+                    name: buyer.full_name || 'Buyer',
+                    enquiry_id: buyerenquiry.enquiry_unique_id,
+                    enquiry_number: buyerenquiry.enquiry_number,
+                    logistics_name: logistics.full_name,
+                    quote_id: quote.quote_unique_id,
+                    shipping_fee: quote.shipping_fee,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}/enquiry/${buyerenquiry._id}`,
+                };
+                await emailer.sendEmail(null, mailOptions, "logisticsQuoteCreated");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to buyer:', emailError);
+        }
+
+        // Send email notifications to logistics
+        try {
+            if (logistics && logistics.email) {
+                const mailOptions = {
+                    to: logistics.email,
+                    subject: `Logistics Quote Created on Your Behalf - Enquiry ${buyerenquiry.enquiry_unique_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    email: logistics.email,
+                    name: logistics.full_name || 'Logistics Provider',
+                    enquiry_id: buyerenquiry.enquiry_unique_id,
+                    enquiry_number: buyerenquiry.enquiry_number,
+                    quote_id: quote.quote_unique_id,
+                    shipping_fee: quote.shipping_fee,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}/logistics-quote/${quote._id}`,
+                };
+                await emailer.sendEmail(null, mailOptions, "logisticsQuoteCreatedForProvider");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to logistics:', emailError);
+        }
+
+        // Create log entry for admin action
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quote_management',
+                    'create',
+                    {
+                        related_id: quote._id,
+                        related_collection: 'logistics_quotes',
+                        metadata: {
+                            quote_type: 'logistics',
+                            quote_unique_id: quote.quote_unique_id,
+                            enquiry_id: buyerenquiry.enquiry_unique_id,
+                            enquiry_number: buyerenquiry.enquiry_number,
+                            logistics_id: logistics._id.toString(),
+                            logistics_name: logistics.full_name,
+                            buyer_id: buyerenquiry.user_id.toString(),
+                            shipping_fee: quote.shipping_fee,
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
+        return res.status(200).json({
+            message: "Logistics quote created successfully",
+            data: quote,
+            quote_id: quote._id,
+            code: 200
+        });
+
+    } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quote_management',
+                    'create',
+                    error,
+                    {
+                        related_collection: 'logistics_quotes',
+                        metadata: {
+                            quote_type: 'logistics',
+                            enquiry_id: req.body.enquiry_id,
+                            logistics_id: req.body.logistics_id,
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
+        utils.handleError(res, error);
+    }
+}
+
+// Delete quotes (bulk or single)
+exports.deleteQuote = async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return utils.handleError(res, {
+                message: "Please provide a valid array of quote IDs to delete",
+                code: 400,
+            });
+        }
+
+        // Delete from EnquiryQuotes
+        const resultEnquiryQuotes = await EnquiryQuotes.deleteMany({ 
+            _id: { $in: ids.map(id => new mongoose.Types.ObjectId(id)) } 
+        });
+
+        // Delete from logistics_quotes
+        const resultLogisticsQuotes = await logistics_quotes.deleteMany({ 
+            _id: { $in: ids.map(id => new mongoose.Types.ObjectId(id)) } 
+        });
+
+        const totalDeleted = resultEnquiryQuotes.deletedCount + resultLogisticsQuotes.deletedCount;
+
+        // Create log entry for deletion
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quote_management',
+                    'bulk_delete',
+                    {
+                        related_collection: 'enquiry_quotes,logistics_quotes',
+                        metadata: {
+                            deleted_count: totalDeleted,
+                            enquiry_quotes_deleted: resultEnquiryQuotes.deletedCount,
+                            logistics_quotes_deleted: resultLogisticsQuotes.deletedCount,
+                            quote_ids: ids,
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
+        return res.status(200).json({
+            message: `${totalDeleted} quote(s) deleted successfully`,
+            deletedCount: totalDeleted,
+            code: 200
+        });
+
+    } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quote_management',
+                    'bulk_delete',
+                    error,
+                    {
+                        related_collection: 'enquiry_quotes,logistics_quotes',
+                        metadata: {
+                            quote_ids: req.body.ids,
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
+        utils.handleError(res, error);
+    }
+}
+
+// Get enquiries for a specific supplier
+exports.getEnquiriesForSupplier = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { search, offset = 0, limit = 100 } = req.query;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, {
+                message: "Invalid supplier ID",
+                code: 400,
+            });
+        }
+
+        const filter = {
+            status: { $in: ["pending", "delivery"] },
+        };
+
+        if (search) {
+            filter.$or = [
+                { enquiry_unique_id: { $regex: search, $options: "i" } },
+                { enquiry_number: { $regex: search, $options: "i" } },
+                { "user_id.full_name": { $regex: search, $options: "i" } },
+            ];
+        }
+
+        // Get enquiries that don't already have quotes from this supplier
+        const enquiries = await Enquiry.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user_id",
+                    foreignField: "_id",
+                    as: "user_id"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$user_id",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "enquiry_quotes",
+                    let: { enquiryId: "$_id", supplierId: new mongoose.Types.ObjectId(id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$enquiry_id", "$$enquiryId"] },
+                                        { $eq: ["$user_id", "$$supplierId"] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "existing_quotes"
+                }
+            },
+            {
+                $match: {
+                    existing_quotes: { $size: 0 } // Only get enquiries without existing quotes from this supplier
+                }
+            },
+            {
+                $project: {
+                    existing_quotes: 0
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $skip: parseInt(offset)
+            },
+            {
+                $limit: parseInt(limit)
+            }
+        ]);
+
+        return res.status(200).json({
+            message: "Enquiries for supplier fetched successfully",
+            data: enquiries,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+// Get enquiries for a specific logistics provider
+exports.getEnquiriesForLogistics = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { search, offset = 0, limit = 100 } = req.query;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, {
+                message: "Invalid logistics ID",
+                code: 400,
+            });
+        }
+
+        const filter = {
+            status: { $in: ["pending", "delivery"] },
+        };
+
+        if (search) {
+            filter.$or = [
+                { enquiry_unique_id: { $regex: search, $options: "i" } },
+                { enquiry_number: { $regex: search, $options: "i" } },
+                { "user_id.full_name": { $regex: search, $options: "i" } },
+            ];
+        }
+
+        // Similar to supplier but check logistics_quotes
+        const enquiries = await Enquiry.aggregate([
+            {
+                $match: filter
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "user_id",
+                    foreignField: "_id",
+                    as: "user_id"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$user_id",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "logistics_quotes",
+                    let: { enquiryId: "$_id", logisticsId: new mongoose.Types.ObjectId(id) },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$enquiry_id", "$$enquiryId"] },
+                                        { $eq: ["$user_id", "$$logisticsId"] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "existing_quotes"
+                }
+            },
+            {
+                $match: {
+                    existing_quotes: { $size: 0 }
+                }
+            },
+            {
+                $project: {
+                    existing_quotes: 0
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $skip: parseInt(offset)
+            },
+            {
+                $limit: parseInt(limit)
+            }
+        ]);
+
+        return res.status(200).json({
+            message: "Enquiries for logistics provider fetched successfully",
+            data: enquiries,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+// Get enquiry details
+exports.getEnquiryDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, {
+                message: "Invalid enquiry ID",
+                code: 400,
+            });
+        }
+
+        const enquiry = await Enquiry.findById(id)
+            .populate('user_id', 'full_name email phone_number company_name')
+            .populate('shipping_address')
+            .populate('selected_supplier.quote_id')
+            .populate('selected_logistics.quote_id');
+
+        if (!enquiry) {
+            return utils.handleError(res, {
+                message: "Enquiry not found",
+                code: 404,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Enquiry details fetched successfully",
+            data: enquiry,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+// Get suppliers list
+exports.getSuppliersList = async (req, res) => {
+    try {
+        const { limit = 100, offset = 0, search = "" } = req.query;
+
+        const condition = {
+            user_type: { $in: ["supplier"] },
+            is_deleted: false,
+            is_trashed: { $ne: true },
+        };
+
+        if (search) {
+            condition["$or"] = [
+                { full_name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+                { company_name: { $regex: search, $options: "i" } },
+                { unique_user_id: { $regex: search, $options: "i" } },
+            ];
+        }
+
+        // Use aggregation to join with subscriptions
+        const suppliers = await User.aggregate([
+            {
+                $match: condition
+            },
+            {
+                $lookup: {
+                    from: "subscriptions",
+                    let: { userId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$user_id", "$$userId"] },
+                                        { $eq: ["$status", "active"] }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "plans",
+                                localField: "plan_id",
+                                foreignField: "plan_id",
+                                as: "plan"
+                            }
+                        },
+                        {
+                            $unwind: {
+                                path: "$plan",
+                                preserveNullAndEmptyArrays: true
+                            }
+                        },
+                        {
+                            $limit: 1
+                        }
+                    ],
+                    as: "subscription"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$subscription",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    full_name: 1,
+                    email: 1,
+                    phone_number: 1,
+                    company_name: "$company_data.name",
+                    company_data: 1,
+                    profile_image: 1,
+                    unique_user_id: 1,
+                    user_type: 1,
+                    createdAt: 1,
+                    subscription: {
+                        _id: "$subscription._id",
+                        status: "$subscription.status",
+                        type: "$subscription.plan.type",
+                        plan_name: "$subscription.plan.plan_name",
+                        subscription_id: "$subscription.subscription_id"
+                    }
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $skip: parseInt(offset)
+            },
+            {
+                $limit: parseInt(limit)
+            }
+        ]);
+
+        return res.status(200).json({
+            message: "Suppliers list fetched successfully",
+            data: suppliers || [],
+            code: 200
+        });
+
+    } catch (error) {
+        console.error('Error in getSuppliersList:', error);
+        utils.handleError(res, error);
+    }
+}
+
+// Get logistics list
+exports.getLogisticsList = async (req, res) => {
+    try {
+        const { limit = 100, offset = 0, search = "" } = req.query;
+
+        const condition = {
+            user_type: { $in: ["logistics"] },
+            is_deleted: false,
+            is_trashed: { $ne: true },
+        };
+
+        if (search) {
+            condition["$or"] = [
+                { full_name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+                { company_name: { $regex: search, $options: "i" } },
+                { unique_user_id: { $regex: search, $options: "i" } },
+            ];
+        }
+
+        const logistics = await User.find(condition)
+            .select('full_name email phone_number company_name profile_image unique_user_id subscription')
+            .populate('subscription')
+            .sort({ createdAt: -1 })
+            .skip(parseInt(offset))
+            .limit(parseInt(limit));
+
+        return res.status(200).json({
+            message: "Logistics providers list fetched successfully",
+            data: logistics,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+// Get supplier addresses
+exports.getSupplierAddresses = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, {
+                message: "Invalid supplier ID",
+                code: 400,
+            });
+        }
+
+        const addresses = await Address.find({ user_id: id })
+            .populate('address.city')
+            .populate('address.state')
+            .populate('address.country')
+            .sort({ default_address: -1, createdAt: -1 });
+
+        return res.status(200).json({
+            message: "Supplier addresses fetched successfully",
+            data: addresses,
+            code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+// Get logistics enquiry detail
+exports.getLogisticsEnquiryDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, {
+                message: "Invalid enquiry ID",
+                code: 400,
+            });
+        }
+
+        const data = await Enquiry.findOne({ _id: id })
+            .populate('selected_payment_terms')
+            .populate("shipping_address")
+            .populate("enquiry_items.quantity.unit")
+            .populate({
+                path: 'selected_supplier.quote_id',
+                populate: [
+                    {
+                        path: "pickup_address"
+                    },
+                    {
+                        path: 'collection_readiness',
+                        populate: 'collection_address'
+                    },
+                    {
+                        path: "enquiry_items.quantity.unit"
+                    }
+                ]
+            });
+
+        if (!data) {
+            return utils.handleError(res, {
+                message: "Enquiry not found",
+                code: 404,
+            });
+        }
+
+        const newdata = {
+            ...data.toObject(),
+            selected_supplier: data?.selected_supplier?.quote_id || null,
+        };
+
+        return res.status(200).json({
+            message: "Logistics enquiry details fetched successfully",
+            data: newdata,
+            code: 200
+        });
+
     } catch (error) {
         utils.handleError(res, error);
     }

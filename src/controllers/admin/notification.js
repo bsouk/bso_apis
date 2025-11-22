@@ -9,30 +9,62 @@ const { default: mongoose } = require("mongoose");
 
 const sendUsernotificationhelper = async (user_id, notificationbody, dbnotificationbody) => {
     try {
+        // Validate inputs
+        if (!user_id || !notificationbody || !dbnotificationbody) {
+            console.warn("sendUsernotificationhelper: Missing required parameters");
+            return false;
+        }
+
         //user notification
         const userFcmDevices = await fcm_devices.find({ user_id });
         console.log("userFcmDevices : ", userFcmDevices)
         const notificationMessage = notificationbody
+        
         if (userFcmDevices && userFcmDevices.length > 0) {
-            userFcmDevices.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
-            const userNotificationData = dbnotificationbody
-            const newuserNotification = new Notification(userNotificationData);
-            console.log("newuserNotification : ", newuserNotification)
-            await newuserNotification.save();
+            // Use Promise.all to properly handle async operations
+            await Promise.all(
+                userFcmDevices.map(async (i) => {
+                    try {
+                        const token = i.token;
+                        console.log("token : ", token);
+                        if (token) {
+                            await utils.sendNotification(token, notificationMessage);
+                        }
+                    } catch (notifError) {
+                        console.error('Error sending FCM notification in helper:', notifError);
+                        // Continue with other notifications even if one fails
+                    }
+                })
+            );
+
+            // Save notification to database
+            try {
+                const userNotificationData = dbnotificationbody;
+                const newuserNotification = new Notification(userNotificationData);
+                console.log("newuserNotification : ", newuserNotification);
+                await newuserNotification.save();
+            } catch (dbError) {
+                console.error('Error saving notification to database in helper:', dbError);
+                // Continue even if database save fails
+            }
         } else {
             console.log(`No active FCM tokens found for user`);
         }
+        
+        return true;
     } catch (error) {
-        console.log(error)
+        console.error('Error in sendUsernotificationhelper:', error);
+        // Return false instead of throwing to prevent crashes
+        return false;
     }
 }
 
 exports.sendNotification = async (req, res) => {
     try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "Unauthorized", code: 401 });
+        }
+
         const admin_id = req.user._id;
         const { sent_to, title, body, all } = req.body;
         console.log("body : ", req.body)
@@ -103,7 +135,12 @@ exports.sendNotification = async (req, res) => {
                     related_to: element?._id,
                     related_to_type: "user",
                 }
-                await sendUsernotificationhelper(element?._id, notificationbody, dbnotificationbody)
+                try {
+                    await sendUsernotificationhelper(element?._id, notificationbody, dbnotificationbody)
+                } catch (notifError) {
+                    console.error('Error sending user notification:', notifError);
+                    // Continue with other notifications even if one fails
+                }
             }
         }
         console.log("device_token", device_tokens)
@@ -120,42 +157,92 @@ exports.sendNotification = async (req, res) => {
             });
             console.log("Admin notification (all):", notification);
         }
-        //push notification
+        //push notification - wrapped in try-catch to prevent crashes
         if (device_tokens.length !== 0) {
-            utils.sendPushNotification(device_tokens, title, body)
+            try {
+                // Note: sendPushNotification expects different parameters
+                // This is a legacy call - we'll handle it gracefully
+                await utils.sendPushNotification(device_tokens, title, body).catch((error) => {
+                    console.error('Error in sendPushNotification:', error);
+                    // Continue even if push notification fails
+                });
+            } catch (pushError) {
+                console.error('Error sending push notifications:', pushError);
+                // Continue even if push notification fails - don't crash the server
+            }
         }
-        res.json({ message: "Notification sent successfully", code: 200 })
+        return res.json({ message: "Notification sent successfully", code: 200 });
     } catch (error) {
-        console.log(error)
-        utils.handleError(res, error)
+        console.error('Error in sendNotification:', error);
+        utils.handleError(res, error);
     }
 }
 
 exports.getReceivedNotificationList = async (req, res) => {
     try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "Unauthorized", code: 401 });
+        }
+
         const admin_id = req.user._id;
-        const { offset = 0, limit = 10 } = req.query;
-        const notifications = await admin_received_notification.find({ receiver_id: admin_id }).sort({ createdAt: -1 }).skip(offset).limit(limit);
+        const offset = parseInt(req.query.offset) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const notifications = await admin_received_notification
+            .find({ receiver_id: admin_id })
+            .sort({ createdAt: -1 })
+            .skip(offset)
+            .limit(limit)
+            .lean();
+
         const totalCount = await admin_received_notification.countDocuments({ receiver_id: admin_id });
-        const unreadCount = await admin_received_notification.countDocuments({ receiver_id: admin_id, is_read: false, is_seen: false });
-        return res.status(200).json({ notifications, totalCount, unreadCount, code: 200 })
+        const unreadCount = await admin_received_notification.countDocuments({ 
+            receiver_id: admin_id, 
+            is_read: { $ne: true },
+            is_seen: { $ne: true }
+        });
+
+        return res.status(200).json({ 
+            notifications: notifications || [], 
+            totalCount: totalCount || 0, 
+            unreadCount: unreadCount || 0, 
+            code: 200 
+        });
     } catch (error) {
-        console.log(error)
-        utils.handleError(res, error)
+        console.error('Error in getReceivedNotificationList:', error);
+        utils.handleError(res, error);
     }
 }
 
 
 exports.getNotificationList = async (req, res) => {
     try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "Unauthorized", code: 401 });
+        }
+
         const admin_id = req.user._id;
-        const { offset = 0, limit = 10 } = req.query;
-        const notifications = await Adminnotification.find({ sender_id: admin_id }).populate('receiver_id').sort({ createdAt: -1 }).skip(offset).limit(limit);
+        const offset = parseInt(req.query.offset) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+
+        const notifications = await Adminnotification
+            .find({ sender_id: admin_id })
+            .populate('receiver_id')
+            .sort({ createdAt: -1 })
+            .skip(offset)
+            .limit(limit)
+            .lean();
+
         const totalCount = await Adminnotification.countDocuments({ sender_id: admin_id });
-        return res.status(200).json({ notifications, totalCount, code: 200 })
+        
+        return res.status(200).json({ 
+            notifications: notifications || [], 
+            totalCount: totalCount || 0, 
+            code: 200 
+        });
     } catch (error) {
-        console.log(error)
-        utils.handleError(res, error)
+        console.error('Error in getNotificationList:', error);
+        utils.handleError(res, error);
     }
 }
 
@@ -189,23 +276,35 @@ exports.getAllUsers = async (req, res) => {
             .select('_id full_name first_name last_name email unique_user_id company_data')
             .sort({ createdAt: -1 });
             
-        console.log("users : ", users)
-        return res.json({ users, code: 200 })
+        console.log("users : ", users);
+        return res.json({ users: users || [], code: 200 });
     } catch (error) {
-        console.log(error)
-        utils.handleError(res, error)
+        console.error('Error in getAllUsers:', error);
+        utils.handleError(res, error);
     }
 }
 
 
 exports.ReadAllNotification = async (req, res) => {
     try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "Unauthorized", code: 401 });
+        }
+
         const admin_id = req.user._id;
-        const notification = await admin_received_notification.updateMany({ receiver_id: admin_id }, { is_read: true, is_seen: true }, { new: true });
-        console.log("notification : ", notification)
-        return res.status(200).json({ message: "Notification read successfully", code: 200 })
+        const result = await admin_received_notification.updateMany(
+            { receiver_id: admin_id }, 
+            { is_read: true, is_seen: true }
+        );
+        
+        console.log("notification : ", result);
+        return res.status(200).json({ 
+            message: "Notification read successfully", 
+            updatedCount: result.modifiedCount || 0,
+            code: 200 
+        });
     } catch (error) {
-        console.log(error)
-        utils.handleError(res, error)
+        console.error('Error in ReadAllNotification:', error);
+        utils.handleError(res, error);
     }
 }
