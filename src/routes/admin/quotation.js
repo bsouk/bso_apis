@@ -247,4 +247,11 @@ router.get(
     controller.getQuoteDetails
 )
 
+router.put(
+    '/updateQuote',
+    trimRequest.all,
+    requireAuth,
+    controller.updateQuote
+)
+
 module.exports = router

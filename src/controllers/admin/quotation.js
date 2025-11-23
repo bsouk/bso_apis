@@ -2797,6 +2797,206 @@ exports.createSupplierQuote = async (req, res) => {
     }
 }
 
+// Update quote (supplier or logistics) - CRUD operation
+exports.updateQuote = async (req, res) => {
+    try {
+        const { quote_id, status, enquiry_items, shipping_fee, notes } = req.body;
+        const adminId = req.user._id;
+
+        if (!quote_id) {
+            return utils.handleError(res, {
+                message: "Quote ID is required",
+                code: 400,
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(quote_id)) {
+            return utils.handleError(res, {
+                message: "Invalid quote ID",
+                code: 400,
+            });
+        }
+
+        // First try to find in EnquiryQuotes (supplier quotes)
+        let quote = await EnquiryQuotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) });
+        let quoteType = 'supplier';
+        let updateData = {};
+        let previousData = null;
+
+        if (quote) {
+            // Supplier quote update
+            previousData = JSON.parse(JSON.stringify(quote));
+            
+            if (status) {
+                updateData.status = status;
+                updateData.is_selected = status === 'accepted';
+                if (status === 'rejected') {
+                    updateData.is_selected = false;
+                }
+            }
+
+            if (enquiry_items && Array.isArray(enquiry_items)) {
+                // Update enquiry items
+                const updatedItems = quote.enquiry_items.map((item) => {
+                    const updatedItem = enquiry_items.find((ei) => ei._id && ei._id.toString() === item._id.toString());
+                    if (updatedItem) {
+                        return {
+                            ...item.toObject(),
+                            unit_price: parseFloat(updatedItem.unit_price) || item.unit_price,
+                            available_quantity: parseFloat(updatedItem.available_quantity) || item.available_quantity,
+                        };
+                    }
+                    return item;
+                });
+                updateData.enquiry_items = updatedItems;
+
+                // Recalculate grand_total
+                let subtotal = 0;
+                updatedItems.forEach((item) => {
+                    subtotal += (parseFloat(item.unit_price) || 0) * (parseFloat(item.available_quantity) || 0);
+                });
+
+                // Apply custom charges and discount
+                let grandTotal = subtotal;
+                if (quote.custom_charges_one && quote.custom_charges_one.value) {
+                    grandTotal += parseFloat(quote.custom_charges_one.value);
+                }
+                if (quote.custom_charges_two && quote.custom_charges_two.value) {
+                    if (quote.custom_charges_two.charge_type === 'percentage') {
+                        grandTotal += (subtotal * parseFloat(quote.custom_charges_two.value)) / 100;
+                    } else {
+                        grandTotal += parseFloat(quote.custom_charges_two.value);
+                    }
+                }
+                if (quote.discount && quote.discount.value) {
+                    if (quote.discount.charge_type === 'percentage') {
+                        grandTotal -= (subtotal * parseFloat(quote.discount.value)) / 100;
+                    } else {
+                        grandTotal -= parseFloat(quote.discount.value);
+                    }
+                }
+                updateData.grand_total = grandTotal;
+            }
+
+            updateData.is_admin_updated = true;
+            updateData.updated_by_admin = adminId;
+
+            quote = await EnquiryQuotes.findOneAndUpdate(
+                { _id: new mongoose.Types.ObjectId(quote_id) },
+                { $set: updateData },
+                { new: true }
+            ).populate('enquiry_id', 'enquiry_unique_id enquiry_number').populate('user_id', 'full_name email');
+
+        } else {
+            // Try logistics quotes
+            quote = await logistics_quotes.findOne({ _id: new mongoose.Types.ObjectId(quote_id) });
+            quoteType = 'logistics';
+
+            if (!quote) {
+                return utils.handleError(res, {
+                    message: "Quote not found",
+                    code: 404,
+                });
+            }
+
+            previousData = JSON.parse(JSON.stringify(quote));
+
+            if (status) {
+                updateData.status = status;
+                updateData.is_selected = status === 'accepted';
+                if (status === 'rejected') {
+                    updateData.is_selected = false;
+                }
+            }
+
+            if (shipping_fee !== undefined) {
+                updateData.shipping_fee = parseFloat(shipping_fee);
+            }
+
+            if (notes !== undefined) {
+                updateData.notes = notes;
+            }
+
+            updateData.updated_by_admin = adminId;
+
+            quote = await logistics_quotes.findOneAndUpdate(
+                { _id: new mongoose.Types.ObjectId(quote_id) },
+                { $set: updateData },
+                { new: true }
+            ).populate('enquiry_id', 'enquiry_unique_id enquiry_number').populate('user_id', 'full_name email');
+        }
+
+        // Create log entry for update
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                const enquiry = quote.enquiry_id;
+                const user = quote.user_id;
+                
+                await logSuccess(
+                    adminUser,
+                    'quote_management',
+                    'update',
+                    {
+                        related_id: quote._id,
+                        related_collection: quoteType === 'supplier' ? 'enquiry_quotes' : 'logistics_quotes',
+                        metadata: {
+                            quote_type: quoteType,
+                            quote_unique_id: quote.quote_unique_id,
+                            enquiry_id: enquiry?.enquiry_unique_id || enquiry?._id?.toString(),
+                            enquiry_number: enquiry?.enquiry_number,
+                            user_id: user?._id?.toString(),
+                            user_name: user?.full_name,
+                            updated_fields: Object.keys(updateData),
+                            previous_status: previousData?.status,
+                            new_status: updateData.status || previousData?.status,
+                            ...(quoteType === 'supplier' && { 
+                                grand_total: updateData.grand_total || previousData?.grand_total 
+                            }),
+                            ...(quoteType === 'logistics' && { 
+                                shipping_fee: updateData.shipping_fee || previousData?.shipping_fee 
+                            }),
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
+        return res.status(200).json({
+            message: "Quote updated successfully",
+            data: quote,
+            code: 200
+        });
+
+    } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quote_management',
+                    'update',
+                    error,
+                    {
+                        related_collection: 'quotes',
+                        metadata: {
+                            quote_id: req.body.quote_id,
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
+        utils.handleError(res, error);
+    }
+}
+
 // Create logistics quote on behalf of logistics (admin)
 exports.createLogisticsQuote = async (req, res) => {
     try {
@@ -2853,8 +3053,10 @@ exports.createLogisticsQuote = async (req, res) => {
         });
 
         let quote;
+        let isUpdate = false;
         if (existingQuote) {
             // Update existing quote
+            isUpdate = true;
             quote = await logistics_quotes.findOneAndUpdate(
                 { 
                     enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), 
@@ -2974,23 +3176,31 @@ exports.createLogisticsQuote = async (req, res) => {
         try {
             const adminUser = await admin.findById(adminId);
             if (adminUser) {
+                const action = isUpdate ? 'update' : 'create';
+                const logMetadata = {
+                    quote_type: 'logistics',
+                    quote_unique_id: quote.quote_unique_id,
+                    enquiry_id: buyerenquiry.enquiry_unique_id,
+                    enquiry_number: buyerenquiry.enquiry_number,
+                    logistics_id: logistics._id.toString(),
+                    logistics_name: logistics.full_name,
+                    buyer_id: buyerenquiry.user_id.toString(),
+                    shipping_fee: quote.shipping_fee,
+                };
+                
+                if (isUpdate) {
+                    logMetadata.previous_quote_id = existingQuote._id.toString();
+                    logMetadata.updated_fields = Object.keys(data);
+                }
+                
                 await logSuccess(
                     adminUser,
                     'quote_management',
-                    'create',
+                    action,
                     {
                         related_id: quote._id,
                         related_collection: 'logistics_quotes',
-                        metadata: {
-                            quote_type: 'logistics',
-                            quote_unique_id: quote.quote_unique_id,
-                            enquiry_id: buyerenquiry.enquiry_unique_id,
-                            enquiry_number: buyerenquiry.enquiry_number,
-                            logistics_id: logistics._id.toString(),
-                            logistics_name: logistics.full_name,
-                            buyer_id: buyerenquiry.user_id.toString(),
-                            shipping_fee: quote.shipping_fee,
-                        },
+                        metadata: logMetadata,
                     },
                     req
                 );
@@ -3000,7 +3210,9 @@ exports.createLogisticsQuote = async (req, res) => {
         }
 
         return res.status(200).json({
-            message: "Logistics quote created successfully",
+            message: isUpdate 
+                ? "Logistics quote updated successfully" 
+                : "Logistics quote created successfully",
             data: quote,
             quote_id: quote._id,
             code: 200
@@ -3011,10 +3223,14 @@ exports.createLogisticsQuote = async (req, res) => {
         try {
             const adminUser = await admin.findById(req.user._id);
             if (adminUser) {
+                // Determine if this was an attempted update or create
+                const wasUpdateAttempt = req.body.quote_id || req.body._id;
+                const action = wasUpdateAttempt ? 'update' : 'create';
+                
                 await logFailure(
                     adminUser,
                     'quote_management',
-                    'create',
+                    action,
                     error,
                     {
                         related_collection: 'logistics_quotes',
@@ -3022,6 +3238,7 @@ exports.createLogisticsQuote = async (req, res) => {
                             quote_type: 'logistics',
                             enquiry_id: req.body.enquiry_id,
                             logistics_id: req.body.logistics_id,
+                            action_attempted: action,
                         },
                     },
                     req
