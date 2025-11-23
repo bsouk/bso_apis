@@ -227,8 +227,35 @@ exports.getPlans = async (req, res) => {
   }
 };
 
+// Helper function to automatically update expired subscriptions
+async function updateExpiredSubscriptions() {
+  try {
+    const now = new Date();
+    const result = await Subscription.updateMany(
+      {
+        status: 'active',
+        end_at: { $exists: true, $lt: now } // end_at exists and is less than now
+      },
+      {
+        $set: { status: 'expired' }
+      }
+    );
+    
+    if (result.modifiedCount > 0) {
+      console.log(`✅ Auto-updated ${result.modifiedCount} expired subscription(s) to 'expired' status`);
+    }
+    return result.modifiedCount;
+  } catch (error) {
+    console.error('❌ Error updating expired subscriptions:', error);
+    return 0;
+  }
+}
+
 exports.listSubscriptions = async (req, res) => {
   try {
+    // First, automatically update expired subscriptions in the database
+    await updateExpiredSubscriptions();
+
     const {
       search,
       status,
