@@ -2323,14 +2323,48 @@ exports.getQuotesList = async (req, res) => {
         let pendingCount = 0;
         let acceptedCount = 0;
         let rejectedCount = 0;
+        
+        // Separate counts for supplier and logistics
+        let pendingSupplierCount = 0;
+        let pendingLogisticsCount = 0;
+        let acceptedSupplierCount = 0;
+        let acceptedLogisticsCount = 0;
+        let rejectedSupplierCount = 0;
+        let rejectedLogisticsCount = 0;
+        let totalSupplierCount = 0;
+        let totalLogisticsCount = 0;
 
         try {
             const countFilter = Object.keys(filter).length > 0 ? filter : {};
             count = await EnquiryQuotes.countDocuments(countFilter);
-            totalCount = await EnquiryQuotes.countDocuments({});
-            pendingCount = await EnquiryQuotes.countDocuments({ is_selected: false, status: "pending" });
-            acceptedCount = await EnquiryQuotes.countDocuments({ is_selected: true });
-            rejectedCount = await EnquiryQuotes.countDocuments({ status: "rejected" });
+            
+            // Total counts (all quotes from both collections)
+            const supplierTotal = await EnquiryQuotes.countDocuments({});
+            const logisticsTotal = await logistics_quotes.countDocuments({});
+            totalCount = supplierTotal + logisticsTotal;
+            totalSupplierCount = supplierTotal;
+            totalLogisticsCount = logisticsTotal;
+            
+            // Pending counts
+            const supplierPending = await EnquiryQuotes.countDocuments({ is_selected: false, status: "pending" });
+            const logisticsPending = await logistics_quotes.countDocuments({ is_selected: false, status: "pending" });
+            pendingCount = supplierPending + logisticsPending;
+            pendingSupplierCount = supplierPending;
+            pendingLogisticsCount = logisticsPending;
+            
+            // Accepted counts
+            const supplierAccepted = await EnquiryQuotes.countDocuments({ is_selected: true });
+            const logisticsAccepted = await logistics_quotes.countDocuments({ is_selected: true });
+            acceptedCount = supplierAccepted + logisticsAccepted;
+            acceptedSupplierCount = supplierAccepted;
+            acceptedLogisticsCount = logisticsAccepted;
+            
+            // Rejected counts
+            const supplierRejected = await EnquiryQuotes.countDocuments({ status: "rejected" });
+            const logisticsRejected = await logistics_quotes.countDocuments({ status: "rejected" });
+            rejectedCount = supplierRejected + logisticsRejected;
+            rejectedSupplierCount = supplierRejected;
+            rejectedLogisticsCount = logisticsRejected;
         } catch (countError) {
             console.error('Error getting quote counts:', countError);
             // Continue with 0 counts if count queries fail
@@ -2344,6 +2378,15 @@ exports.getQuotesList = async (req, res) => {
             pendingCount: pendingCount || 0,
             acceptedCount: acceptedCount || 0,
             rejectedCount: rejectedCount || 0,
+            // Separate counts by type
+            pendingSupplierCount: pendingSupplierCount || 0,
+            pendingLogisticsCount: pendingLogisticsCount || 0,
+            acceptedSupplierCount: acceptedSupplierCount || 0,
+            acceptedLogisticsCount: acceptedLogisticsCount || 0,
+            rejectedSupplierCount: rejectedSupplierCount || 0,
+            rejectedLogisticsCount: rejectedLogisticsCount || 0,
+            totalSupplierCount: totalSupplierCount || 0,
+            totalLogisticsCount: totalLogisticsCount || 0,
             code: 200
         });
     } catch (error) {
@@ -3422,26 +3465,128 @@ exports.getLogisticsList = async (req, res) => {
             condition["$or"] = [
                 { full_name: { $regex: search, $options: "i" } },
                 { email: { $regex: search, $options: "i" } },
-                { company_name: { $regex: search, $options: "i" } },
                 { unique_user_id: { $regex: search, $options: "i" } },
+                { "company_data.name": { $regex: search, $options: "i" } },
             ];
         }
 
-        const logistics = await User.find(condition)
-            .select('full_name email phone_number company_name profile_image unique_user_id subscription')
-            .populate('subscription')
-            .sort({ createdAt: -1 })
-            .skip(parseInt(offset))
-            .limit(parseInt(limit));
+        // Use aggregation to join with subscriptions (same approach as getSuppliersList)
+        const logistics = await User.aggregate([
+            {
+                $match: condition
+            },
+            {
+                $lookup: {
+                    from: "subscriptions",
+                    let: { userId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$user_id", "$$userId"] },
+                                        { $eq: ["$status", "active"] }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "plans",
+                                localField: "plan_id",
+                                foreignField: "plan_id",
+                                as: "plan"
+                            }
+                        },
+                        {
+                            $unwind: {
+                                path: "$plan",
+                                preserveNullAndEmptyArrays: true
+                            }
+                        },
+                        {
+                            $limit: 1
+                        }
+                    ],
+                    as: "subscription"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$subscription",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $sort: { createdAt: -1 }
+            },
+            {
+                $skip: parseInt(offset) || 0
+            },
+            {
+                $limit: parseInt(limit) || 100
+            },
+            {
+                $project: {
+                    _id: 1,
+                    full_name: 1,
+                    email: 1,
+                    phone_number: 1,
+                    phone_number_code: 1,
+                    company_name: {
+                        $ifNull: ["$company_data.name", ""]
+                    },
+                    company_data: 1,
+                    profile_image: 1,
+                    unique_user_id: 1,
+                    user_type: 1,
+                    createdAt: 1,
+                    subscription: {
+                        $cond: {
+                            if: { $ne: ["$subscription", null] },
+                            then: {
+                                _id: "$subscription._id",
+                                status: "$subscription.status",
+                                type: {
+                                    $ifNull: ["$subscription.type", "$subscription.plan.type"]
+                                },
+                                plan_name: {
+                                    $ifNull: ["$subscription.plan.plan_name", ""]
+                                },
+                                subscription_id: "$subscription.subscription_id"
+                            },
+                            else: null
+                        }
+                    }
+                }
+            }
+        ]);
+
+        // Return empty array if no logistics found (not an error)
+        if (!logistics || logistics.length === 0) {
+            return res.status(200).json({
+                message: search ? `No logistics providers found matching "${search}"` : "No logistics providers found",
+                data: [],
+                code: 200
+            });
+        }
 
         return res.status(200).json({
             message: "Logistics providers list fetched successfully",
-            data: logistics,
+            data: logistics || [],
             code: 200
         });
 
     } catch (error) {
-        utils.handleError(res, error);
+        console.error('Error in getLogisticsList:', error);
+        console.error('Error stack:', error.stack);
+        // Return user-friendly error message
+        const errorMessage = error?.message || 'Failed to fetch logistics providers. Please try again.';
+        return res.status(500).json({
+            message: errorMessage,
+            error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+            code: 500
+        });
     }
 }
 

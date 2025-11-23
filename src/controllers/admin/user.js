@@ -2356,11 +2356,15 @@ exports.getLogisticsUserList = async (req, res) => {
         {
           unique_user_id: { $regex: search, $options: "i" },
         },
+        {
+          "company_data.name": { $regex: search, $options: "i" },
+        },
       ];
     }
 
     const countPromise = User.countDocuments(condition);
 
+    // Use aggregation to join with subscriptions (same approach as getLogisticsList)
     const usersPromise = User.aggregate([
       {
         $match: condition,
@@ -2392,6 +2396,48 @@ exports.getLogisticsUserList = async (req, res) => {
         },
       },
       {
+        $lookup: {
+          from: "subscriptions",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$user_id", "$$userId"] },
+                    { $eq: ["$status", "active"] }
+                  ]
+                }
+              }
+            },
+            {
+              $lookup: {
+                from: "plans",
+                localField: "plan_id",
+                foreignField: "plan_id",
+                as: "plan"
+              }
+            },
+            {
+              $unwind: {
+                path: "$plan",
+                preserveNullAndEmptyArrays: true
+              }
+            },
+            {
+              $limit: 1
+            }
+          ],
+          as: "subscription"
+        }
+      },
+      {
+        $unwind: {
+          path: "$subscription",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
         $sort: {
           createdAt: -1,
         },
@@ -2416,18 +2462,47 @@ exports.getLogisticsUserList = async (req, res) => {
           address: 1,
           last_login: 1,
           'company_data.business_category': 1,
+          'company_data.name': 1,
+          company_data: 1,
           unique_user_id: 1,
           is_company_approved: 1,
-          is_user_approved_by_admin: 1
+          is_user_approved_by_admin: 1,
+          subscription: {
+            _id: "$subscription._id",
+            status: "$subscription.status",
+            type: "$subscription.type",
+            plan_name: "$subscription.plan.plan_name",
+            subscription_id: "$subscription.subscription_id"
+          }
         },
       },
     ]);
 
     const [count, users] = await Promise.all([countPromise, usersPromise]);
 
-    res.json({ data: users, count, code: 200 });
+    // Return empty array if no users found (not an error)
+    if (!users || users.length === 0) {
+      return res.status(200).json({
+        message: search ? `No logistics users found matching "${search}"` : "No logistics users found",
+        data: [],
+        count: 0,
+        code: 200
+      });
+    }
+
+    return res.status(200).json({
+      message: "Logistics users list fetched successfully",
+      data: users,
+      count,
+      code: 200
+    });
   } catch (error) {
-    utils.handleError(res, error);
+    console.error('Error in getLogisticsUserList:', error);
+    // Return user-friendly error message
+    return utils.handleError(res, {
+      message: error?.message || 'Failed to fetch logistics users. Please try again.',
+      code: 500
+    });
   }
 };
 
