@@ -1957,7 +1957,9 @@ exports.createManualEnquiry = async (req, res) => {
         console.log("Buyer found:", buyer.full_name || buyer.first_name);
 
         // ═══════════════════════════════════════════════════
-        // STEP 2: CHECK BUYER SUBSCRIPTION
+        // STEP 2: GET BUYER SUBSCRIPTION (OPTIONAL - NO CHECK REQUIRED)
+        // Note: Subscription check removed - buyers can always have enquiries created for them
+        // by admin, regardless of subscription status
         // ═══════════════════════════════════════════════════
         const buyerSubscription = await subscription.aggregate([
             {
@@ -1991,14 +1993,12 @@ exports.createManualEnquiry = async (req, res) => {
             }
         ]);
 
+        // Log subscription status but don't block enquiry creation
         if (buyerSubscription.length === 0) {
-            return res.status(400).json({
-                message: "Buyer has no active subscription. Please ensure buyer is subscribed before creating enquiry.",
-                code: 400
-            });
+            console.log("Note: Buyer has no active subscription, but creating enquiry anyway (manual enquiry by admin)");
+        } else {
+            console.log("Buyer subscription found:", buyerSubscription[0]?.plan?.plan_name);
         }
-
-        console.log("Buyer subscription found:", buyerSubscription[0]?.plan?.plan_name);
 
         // ═══════════════════════════════════════════════════
         // STEP 3: PROCESS ENQUIRY ITEMS (UNITS)
@@ -2043,7 +2043,7 @@ exports.createManualEnquiry = async (req, res) => {
             ...enquiryData,
             enquiry_unique_id: enquiryId,
             user_id: user_id,
-            buyer_plan_step: subscription[0]?.plan?.plan_step || null,
+            buyer_plan_step: buyerSubscription[0]?.plan?.plan_step || null,
             is_approved: "approved",
             created_by_admin: true,
             admin_id: admin_id,

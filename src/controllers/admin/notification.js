@@ -258,7 +258,12 @@ exports.getAllUsers = async (req, res) => {
             searchFilter.user_type = { $in: [user_type] };
         }
         
-        // Add search filter
+        // Only get active users (not deactivated or trashed)
+        // This excludes users with status 'inactive', 'deleted', 'trashed', etc.
+        searchFilter.status = { $nin: ['inactive', 'deleted', 'trashed', 'deactivated'] };
+        searchFilter.is_deleted = { $ne: true };
+        
+        // Add search filter - search by name, email, phone, user ID, or company
         if (search) {
             searchFilter.$or = [
                 { full_name: { $regex: search, $options: 'i' } },
@@ -266,6 +271,7 @@ exports.getAllUsers = async (req, res) => {
                 { last_name: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
                 { unique_user_id: { $regex: search, $options: 'i' } }, // Search by user ID
+                { phone_number: { $regex: search, $options: 'i' } }, // Search by phone number
                 { 'company_data.name': { $regex: search, $options: 'i' } }, // Search by company
             ];
         }
@@ -273,10 +279,10 @@ exports.getAllUsers = async (req, res) => {
         const users = await User.find(searchFilter)
             .skip(Number(offset))
             .limit(Number(limit))
-            .select('_id full_name first_name last_name email unique_user_id company_data')
+            .select('_id full_name first_name last_name email unique_user_id company_data phone_number status')
             .sort({ createdAt: -1 });
             
-        console.log("users : ", users);
+        console.log("getAllUsers - Found", users.length, "users for search:", search, "user_type:", user_type);
         return res.json({ users: users || [], code: 200 });
     } catch (error) {
         console.error('Error in getAllUsers:', error);
