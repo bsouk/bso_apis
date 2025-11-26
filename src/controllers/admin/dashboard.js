@@ -657,6 +657,66 @@ cron.schedule("0 12 * * *", async () => {
     }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CRON: Auto-expire subscriptions - Runs every hour at minute 0
+// Checks for active subscriptions where end_at date has passed and marks them as expired
+// ═══════════════════════════════════════════════════════════════════════════
+cron.schedule("0 * * * *", async () => {
+    try {
+        const now = new Date();
+        console.log(`🔄 Running subscription expiration check at ${now.toISOString()}`);
+        
+        // Find and update all active subscriptions that have expired
+        const result = await Subscription.updateMany(
+            {
+                status: 'active',
+                end_at: { $exists: true, $ne: null, $lt: now }
+            },
+            {
+                $set: { 
+                    status: 'expired',
+                    is_active: false
+                }
+            }
+        );
+        
+        if (result.modifiedCount > 0) {
+            console.log(`✅ Auto-expired ${result.modifiedCount} subscription(s) at ${now.toISOString()}`);
+        }
+    } catch (error) {
+        console.error("❌ Error in subscription expiration cron:", error);
+    }
+});
+
+// Also run subscription expiration check on server startup
+(async () => {
+    try {
+        const now = new Date();
+        console.log(`🚀 Running startup subscription expiration check...`);
+        
+        const result = await Subscription.updateMany(
+            {
+                status: 'active',
+                end_at: { $exists: true, $ne: null, $lt: now }
+            },
+            {
+                $set: { 
+                    status: 'expired',
+                    is_active: false
+                }
+            }
+        );
+        
+        if (result.modifiedCount > 0) {
+            console.log(`✅ Startup: Auto-expired ${result.modifiedCount} subscription(s)`);
+        } else {
+            console.log(`✅ Startup: No expired subscriptions found`);
+        }
+    } catch (error) {
+        console.error("❌ Error in startup subscription expiration check:", error);
+    }
+})();
+
 
 exports.dashboardChartData = async (req, res) => {
     try {

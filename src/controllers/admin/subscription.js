@@ -934,3 +934,65 @@ exports.deleteSubscription = async (req, res) => {
   }
 };
 
+// Manually trigger expiration of all expired subscriptions
+exports.expireSubscriptions = async (req, res) => {
+  try {
+    const now = new Date();
+    
+    // Find all active subscriptions that should be expired
+    const result = await Subscription.updateMany(
+      {
+        status: 'active',
+        end_at: { $exists: true, $ne: null, $lt: now }
+      },
+      {
+        $set: { 
+          status: 'expired',
+          is_active: false,
+          last_updated_by: req.user?._id
+        }
+      }
+    );
+    
+    // Log the action
+    await logSuccess(
+      req.user,
+      "user_subscriptions",
+      "bulk_expire",
+      {
+        details: {
+          expired_count: result.modifiedCount,
+          triggered_at: now.toISOString(),
+        },
+        metadata: {
+          action: "manual_bulk_expiration",
+        },
+      },
+      req
+    );
+    
+    return res.status(200).json({
+      message: `Successfully expired ${result.modifiedCount} subscription(s)`,
+      data: {
+        expired_count: result.modifiedCount,
+        checked_at: now.toISOString()
+      },
+      code: 200,
+    });
+  } catch (error) {
+    await logFailure(
+      req.user,
+      "user_subscriptions",
+      "bulk_expire",
+      error,
+      {
+        metadata: {
+          action: "manual_bulk_expiration",
+        },
+      },
+      req
+    );
+    return utils.handleError(res, error);
+  }
+};
+

@@ -65,6 +65,14 @@ router.delete(
     controller.deleteSubscription
 );
 
+// Manually trigger expiration of all expired subscriptions
+router.post(
+    '/expireSubscriptions',
+    trimRequest.all,
+    requireAuth,
+    controller.expireSubscriptions
+);
+
 module.exports = router;
 
 

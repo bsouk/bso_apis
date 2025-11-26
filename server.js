@@ -39,6 +39,9 @@ app.use(
   morgan(":method :url :status :response-time ms - :res[content-length]")
 );
 
+// Serve static files from the public directory
+app.use('/public', express.static('public'));
+
 app.use(passport.initialize());
 app.use(
   fileUpload({
