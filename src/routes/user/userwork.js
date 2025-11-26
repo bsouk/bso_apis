@@ -110,8 +110,8 @@ router.post(
     "/uploadMedia",
     trimRequest.all,
     requireAuth,
-    // controller.uploadMedia
-    controller.uploadMediaToBucket
+    controller.uploadMedia // Use local storage for development
+    // controller.uploadMediaToBucket // Use S3 bucket for production
 );
 
 router.get(
