@@ -60,6 +60,11 @@ const UserSchema = new mongoose.Schema(
       enum: ["buyer", "supplier", "logistics", "resource", "company", "recruiter"],
       default: "buyer"
     },
+    buyer_type: {
+      type: String,
+      enum: ["direct-buyer", "indirect-buyer"],
+      default: "indirect-buyer"
+    },
     joining_date: {
       type: Date
     },

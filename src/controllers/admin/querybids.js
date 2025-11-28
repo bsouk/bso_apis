@@ -1957,9 +1957,8 @@ exports.createManualEnquiry = async (req, res) => {
         console.log("Buyer found:", buyer.full_name || buyer.first_name);
 
         // ═══════════════════════════════════════════════════
-        // STEP 2: GET BUYER SUBSCRIPTION (OPTIONAL - NO CHECK REQUIRED)
-        // Note: Subscription check removed - buyers can always have enquiries created for them
-        // by admin, regardless of subscription status
+        // STEP 2: CHECK BUYER SUBSCRIPTION (REQUIRED)
+        // Buyer must have an active subscription (free or paid) to create enquiry
         // ═══════════════════════════════════════════════════
         const buyerSubscription = await subscription.aggregate([
             {
@@ -1993,12 +1992,15 @@ exports.createManualEnquiry = async (req, res) => {
             }
         ]);
 
-        // Log subscription status but don't block enquiry creation
+        // Check if buyer has active subscription - REQUIRED
         if (buyerSubscription.length === 0) {
-            console.log("Note: Buyer has no active subscription, but creating enquiry anyway (manual enquiry by admin)");
-        } else {
-            console.log("Buyer subscription found:", buyerSubscription[0]?.plan?.plan_name);
+            console.log("❌ Buyer has no active subscription, cannot create enquiry");
+            return res.status(400).json({
+                message: "Buyer does not have an active subscription. Please ensure the buyer has subscribed to a plan (free or paid) before creating an enquiry.",
+                code: 400
+            });
         }
+        console.log("✅ Buyer subscription found:", buyerSubscription[0]?.plan?.plan_name)
 
         // ═══════════════════════════════════════════════════
         // STEP 3: PROCESS ENQUIRY ITEMS (UNITS)
@@ -2083,33 +2085,7 @@ exports.createManualEnquiry = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════════
-        // STEP 7: SEND EMAIL TO ADMIN
-        // ═══════════════════════════════════════════════════
-        try {
-            const adminAppUrl = process.env.ADMIN_APP_URL || 'https://dashboard.bsoservices.com/';
-            const adminEmailOptions = {
-                to: admin_email,
-                subject: `Manual Enquiry Created - ${newEnquiry.enquiry_unique_id}`,
-                app_name: process.env.APP_NAME || 'BSO Services',
-                admin_name: admin_name,
-                buyer_name: buyer.full_name || buyer.first_name,
-                buyer_email: buyer.email,
-                buyer_company: buyer.company_data?.name || null,
-                app_url: adminAppUrl,
-                storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
-                enquiry: newEnquiry,
-                view_link: `${adminAppUrl}enquiry-detail/${newEnquiry._id}`
-            };
-            
-            await emailer.sendEmail(null, adminEmailOptions, "AdminEnquiryConfirmation");
-            console.log("✅ Email sent to admin:", admin_email);
-        } catch (emailError) {
-            console.error("❌ Failed to send email to admin:", emailError.message);
-            // Don't fail the request if email fails
-        }
-
-        // ═══════════════════════════════════════════════════
-        // STEP 8: SEND FCM NOTIFICATION TO BUYER (OPTIONAL)
+        // STEP 7: SEND FCM NOTIFICATION TO BUYER (OPTIONAL)
         // ═══════════════════════════════════════════════════
         try {
             const buyerFcmDevices = await fcm_devices.find({ user_id: buyer._id });
@@ -2145,7 +2121,7 @@ exports.createManualEnquiry = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════════
-        // STEP 9: LOG SUCCESS
+        // STEP 8: LOG SUCCESS
         // ═══════════════════════════════════════════════════
         await createLog({
             admin_id: admin_id,

@@ -1,9 +1,75 @@
 const User = require("../../models/user");
 const Address = require("../../models/address");
+const Plan = require("../../models/plan");
+const Subscription = require("../../models/subscription");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
+
+// Helper function to generate unique subscription ID
+async function generateSubscriptionId() {
+  const token = crypto.randomBytes(5).toString('hex');
+  return `sub-${token}`;
+}
+
+// Helper function to create free buyer subscription
+async function createFreeBuyerSubscription(userId, adminId = null, buyerType = 'indirect-buyer') {
+  try {
+    // Find the free buyer plan (type = "buyer" and plan_type = "freemium" OR price = 0)
+    const buyerPlan = await Plan.findOne({
+      type: "buyer",
+      status: "active",
+      $or: [
+        { plan_type: "freemium" },
+        { price: 0 }
+      ]
+    });
+
+    if (!buyerPlan) {
+      console.log("⚠️ No free buyer plan found, skipping subscription creation");
+      return null;
+    }
+
+    // Check if user already has an active buyer subscription
+    const existingSubscription = await Subscription.findOne({
+      user_id: userId,
+      type: "buyer",
+      status: "active"
+    });
+
+    if (existingSubscription) {
+      console.log("ℹ️ User already has an active buyer subscription");
+      return existingSubscription;
+    }
+
+    // Create the free subscription with buyer_type tracking
+    const subscriptionData = {
+      user_id: userId,
+      subscription_id: await generateSubscriptionId(),
+      plan_id: buyerPlan.plan_id,
+      start_at: new Date(),
+      end_at: null, // Lifetime for free plans
+      status: "active",
+      type: "buyer",
+      buyer_type: buyerType, // Track direct or indirect buyer
+      subscription_type: "unpaid",
+      source: "admin",
+      payment_mode: "admin_manual",
+      assigned_by: adminId,
+      is_active: true,
+      admin_note: `Auto-created ${buyerType} subscription by admin`
+    };
+
+    const subscription = await Subscription.create(subscriptionData);
+    console.log(`✅ Free ${buyerType} subscription created: ${subscription.subscription_id}`);
+    return subscription;
+  } catch (error) {
+    console.error("❌ Error creating free buyer subscription:", error.message);
+    return null;
+  }
+}
 
 // Test email function
 exports.testEmail = async (req, res) => {
@@ -427,6 +493,18 @@ exports.addCustomer = async (req, res) => {
     await user.save();
     console.log(`✅ User saved successfully: ${user.email}`);
 
+    // Auto-create free buyer subscription for the new customer
+    const buyerType = data.buyer_type || 'indirect-buyer';
+    console.log(`🎫 Creating free ${buyerType} subscription for: ${user.email}`);
+    const adminId = req.user?._id || null; // Get admin ID if available
+    const subscription = await createFreeBuyerSubscription(user._id, adminId, buyerType);
+    
+    if (subscription) {
+      console.log(`✅ Free subscription created successfully: ${subscription.subscription_id}`);
+    } else {
+      console.log(`⚠️ Could not create free subscription (plan may not exist)`);
+    }
+
     // Send welcome email using the same method as frontend registration
     console.log(`📧 Starting email sending process for ${user.email}...`);
     
@@ -460,7 +538,13 @@ exports.addCustomer = async (req, res) => {
       data: {
         user_id: uniqueUserId,
         email: user.email,
-        status: user.status
+        status: user.status,
+        subscription: subscription ? {
+          subscription_id: subscription.subscription_id,
+          plan_id: subscription.plan_id,
+          status: subscription.status,
+          buyer_type: userData.buyer_type || 'indirect-buyer'
+        } : null
       }
     });
   } catch (error) {
@@ -543,7 +627,8 @@ exports.getCustomerList = async (req, res) => {
           is_company_approved: 1,
           is_user_approved_by_admin: 1,
           user_type: 1,
-          current_user_type: 1
+          current_user_type: 1,
+          buyer_type: 1
         },
       },
     ]);
@@ -3183,17 +3268,43 @@ exports.acceptsupplierEnquiry = async (req, res) => {
   try {
     const { id, is_selected } = req.body;
 
-    const result = await EnquiryQuotes.findOneAndUpdate(
-      { _id: id },
-      { $set: { is_admin_approved: is_selected } },
-      { new: true }
-    );
-    if (!result) {
+    // First, get the quote to check status
+    const quoteToAccept = await EnquiryQuotes.findById(id);
+    if (!quoteToAccept) {
       return res.status(404).json({
         message: "Quote not found.",
         code: 404
       });
     }
+
+    // Check if this quote is already accepted
+    if (quoteToAccept.is_admin_approved) {
+      return res.status(400).json({
+        message: "This supplier quote is already accepted.",
+        code: 400
+      });
+    }
+
+    // Check if another quote for the same enquiry is already accepted
+    const existingAcceptedQuote = await EnquiryQuotes.findOne({
+      enquiry_id: quoteToAccept.enquiry_id,
+      is_admin_approved: true,
+      _id: { $ne: id }
+    });
+
+    if (existingAcceptedQuote) {
+      return res.status(400).json({
+        message: "Another supplier quote has already been accepted for this enquiry. Only one supplier quote can be accepted per enquiry.",
+        code: 400
+      });
+    }
+
+    const result = await EnquiryQuotes.findOneAndUpdate(
+      { _id: id },
+      { $set: { is_admin_approved: is_selected } },
+      { new: true }
+    ).populate('user_id', 'full_name email');
+    
     let totalprice = 0;
 
     // Calculate total item price
@@ -3211,18 +3322,64 @@ exports.acceptsupplierEnquiry = async (req, res) => {
     // Update the result with final price
     result.final_price = totalprice;
     await result.save();
-    // await Enquiry.findOneAndUpdate(
-    //   { _id: result.enquiry_id },
-    //   {
-    //     $set: {
-    //       selected_supplier: {
-    //         quote_id: id
-    //       }
-    //     }
-    //   }
-    // );
+
+    // Get enquiry details for email
+    const enquiry = await Enquiry.findById(result.enquiry_id).populate('user_id', 'full_name email');
+    
+    console.log("✅ Supplier quote accepted:", id);
+
+    // Send email notifications
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bsoservices.com';
+    
+    // Email to Buyer
+    if (enquiry?.user_id?.email) {
+      const buyerMailOptions = {
+        to: enquiry.user_id.email,
+        subject: `Supplier Quote Accepted - Enquiry #${enquiry.enquiry_unique_id}`,
+        template: "SupplierQuoteAccepted",
+        context: {
+          name: enquiry.user_id.full_name || "Valued Customer",
+          enquiry_id: enquiry.enquiry_unique_id,
+          supplier_name: result.user_id?.full_name || "Supplier",
+          delivery_time: result.delivery_time || "As quoted",
+          total_amount: totalprice,
+          currency: result.currency || "GBP",
+          view_link: `${frontendUrl}/enquiry-review/${enquiry._id}`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, buyerMailOptions, "SupplierQuoteAccepted");
+        console.log("📧 Email sent to buyer:", enquiry.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send email to buyer:", emailError.message);
+      }
+    }
+    
+    // Email to Supplier
+    if (result?.user_id?.email) {
+      const supplierMailOptions = {
+        to: result.user_id.email,
+        subject: `Your Quote Has Been Accepted - Enquiry #${enquiry.enquiry_unique_id}`,
+        template: "SupplierQuoteAcceptedProvider",
+        context: {
+          name: result.user_id.full_name || "Valued Supplier",
+          enquiry_id: enquiry.enquiry_unique_id,
+          delivery_time: result.delivery_time || "As quoted",
+          total_amount: totalprice,
+          currency: result.currency || "GBP",
+          view_link: `${frontendUrl}/supplier/quote-management`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, supplierMailOptions, "SupplierQuoteAcceptedProvider");
+        console.log("📧 Email sent to supplier:", result.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send email to supplier:", emailError.message);
+      }
+    }
+
     return res.status(200).json({
-      message: `Query accepted successfully.`,
+      message: `Supplier quote accepted successfully.`,
       data: result,
       code: 200
     });
@@ -3426,10 +3583,32 @@ exports.getlogisticquote = async (req, res) => {
 
     const count = await logistics_quotes.countDocuments({ enquiry_id: new mongoose.Types.ObjectId(id) })
 
+    // Check if any quote is already accepted for this enquiry
+    const acceptedQuote = data.find(quote => quote.is_selected === true);
+    const hasAcceptedQuote = !!acceptedQuote;
+    const acceptedQuoteId = acceptedQuote?._id?.toString() || null;
+
+    // Add status field to each quote for easier UI rendering
+    const dataWithStatus = data.map(quote => {
+      let status = 'pending';
+      if (quote.is_selected) {
+        status = 'accepted';
+      } else if (hasAcceptedQuote) {
+        status = 'not_selected'; // Another quote was accepted
+      }
+      return {
+        ...quote.toObject(),
+        status,
+        accepted_quote_id: acceptedQuoteId
+      };
+    });
+
     return res.status(200).json({
       message: "Logistics quotes fetched successfully",
-      data,
+      data: dataWithStatus,
       count,
+      has_accepted_quote: hasAcceptedQuote,
+      accepted_quote_id: acceptedQuoteId,
       code: 200
     })
   } catch (error) {
@@ -3577,33 +3756,125 @@ exports.viewLogisticQuote = async (req, res) => {
   });
 }
 exports.acceptLogisticQuote = async (req, res) => {
-  const id = req.params.id
-  const updatelogisticQuote = await logistics_quotes.findByIdAndUpdate(id, { $set: { is_selected: true } }, { new: true })
-  const selected = await Enquiry.findByIdAndUpdate(
-    {
-      _id: new mongoose.Types.ObjectId(updatelogisticQuote?.enquiry_id)
-    },
-    {
-      $set: {
-        selected_logistics: {
-          quote_id: new mongoose.Types.ObjectId(id)
-        },
-        shipment_type: "delivery"
+  try {
+    const id = req.params.id;
+    
+    // First, get the quote to find the enquiry_id
+    const quoteToAccept = await logistics_quotes.findById(id);
+    if (!quoteToAccept) {
+      return res.status(404).json({
+        message: "Logistics quote not found.",
+        code: 404
+      });
+    }
+
+    // Check if this quote is already accepted
+    if (quoteToAccept.is_selected) {
+      return res.status(400).json({
+        message: "This logistics quote is already accepted.",
+        code: 400
+      });
+    }
+
+    // Check if another quote for the same enquiry is already accepted
+    const existingAcceptedQuote = await logistics_quotes.findOne({
+      enquiry_id: quoteToAccept.enquiry_id,
+      is_selected: true,
+      _id: { $ne: id }
+    });
+
+    if (existingAcceptedQuote) {
+      return res.status(400).json({
+        message: "Another logistics quote has already been accepted for this enquiry. Only one logistics quote can be accepted per enquiry.",
+        code: 400
+      });
+    }
+
+    // Accept this quote
+    const updatelogisticQuote = await logistics_quotes.findByIdAndUpdate(
+      id, 
+      { $set: { is_selected: true } }, 
+      { new: true }
+    ).populate('user_id', 'full_name email');
+
+    // Update enquiry with selected logistics
+    const selected = await Enquiry.findByIdAndUpdate(
+      {
+        _id: new mongoose.Types.ObjectId(updatelogisticQuote?.enquiry_id)
+      },
+      {
+        $set: {
+          selected_logistics: {
+            quote_id: new mongoose.Types.ObjectId(id)
+          },
+          shipment_type: "delivery"
+        }
+      }, 
+      { new: true }
+    ).populate('user_id', 'full_name email');
+    
+    console.log("✅ Logistics quote accepted:", id);
+    console.log("✅ Enquiry updated with selected logistics:", selected?._id);
+
+    // Send email notifications
+    const frontendUrl = process.env.FRONTEND_URL || 'https://bsoservices.com';
+    
+    // Email to Buyer
+    if (selected?.user_id?.email) {
+      const buyerMailOptions = {
+        to: selected.user_id.email,
+        subject: `Logistics Quote Accepted - Enquiry #${selected.enquiry_unique_id}`,
+        template: "LogisticsQuoteAccepted",
+        context: {
+          name: selected.user_id.full_name || "Valued Customer",
+          enquiry_id: selected.enquiry_unique_id,
+          shipping_fee: updatelogisticQuote.shipping_fee,
+          notes: updatelogisticQuote.notes || "N/A",
+          view_link: `${frontendUrl}/enquiry-review/${selected._id}`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, buyerMailOptions, "LogisticsQuoteAccepted");
+        console.log("📧 Email sent to buyer:", selected.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send email to buyer:", emailError.message);
       }
-    }, { new: true }
-  )
-  console.log("selected : ", selected)
-  if (!updatelogisticQuote) {
-    return res.status(404).json({
-      message: "Logistics quote not found.",
-      code: 404
+    }
+    
+    // Email to Logistics Provider
+    if (updatelogisticQuote?.user_id?.email) {
+      const logisticsMailOptions = {
+        to: updatelogisticQuote.user_id.email,
+        subject: `Your Logistics Quote Has Been Accepted - Enquiry #${selected.enquiry_unique_id}`,
+        template: "LogisticsQuoteAcceptedProvider",
+        context: {
+          name: updatelogisticQuote.user_id.full_name || "Logistics Partner",
+          enquiry_id: selected.enquiry_unique_id,
+          shipping_fee: updatelogisticQuote.shipping_fee,
+          notes: updatelogisticQuote.notes || "N/A",
+          view_link: `${frontendUrl}/logistics/quote-management`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, logisticsMailOptions, "LogisticsQuoteAcceptedProvider");
+        console.log("📧 Email sent to logistics provider:", updatelogisticQuote.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send email to logistics provider:", emailError.message);
+      }
+    }
+
+    return res.status(200).json({
+      message: "Logistics quote accepted successfully.",
+      data: updatelogisticQuote,
+      code: 200
+    });
+  } catch (error) {
+    console.error("❌ Error accepting logistics quote:", error);
+    return res.status(500).json({
+      message: "An error occurred while accepting the logistics quote.",
+      code: 500
     });
   }
-  return res.status(200).json({
-    message: "Logistics quote accepted successfully.",
-    data: updatelogisticQuote,
-    code: 200
-  });
 }
 
 

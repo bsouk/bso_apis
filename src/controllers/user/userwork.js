@@ -6269,11 +6269,33 @@ exports.getLogisticsQuotes = async (req, res) => {
         const paymentdata = await payment.findOne({ enquiry_id: new mongoose.Types.ObjectId(id), buyer_id: new mongoose.Types.ObjectId(enquirydata?.user_id) })
         console.log("payment : ", paymentdata)
 
+        // Check if any quote is already accepted for this enquiry
+        const acceptedQuote = data.find(quote => quote.is_selected === true);
+        const hasAcceptedQuote = !!acceptedQuote;
+        const acceptedQuoteId = acceptedQuote?._id?.toString() || null;
+
+        // Add status field to each quote for easier UI rendering
+        const dataWithStatus = data.map(quote => {
+            let status = 'pending';
+            if (quote.is_selected) {
+                status = 'accepted';
+            } else if (hasAcceptedQuote) {
+                status = 'not_selected'; // Another quote was accepted
+            }
+            return {
+                ...quote.toObject(),
+                status,
+                accepted_quote_id: acceptedQuoteId
+            };
+        });
+
         return res.status(200).json({
             message: "Logistics quotes fetched successfully",
-            data,
+            data: dataWithStatus,
             payment: paymentdata,
             count,
+            has_accepted_quote: hasAcceptedQuote,
+            accepted_quote_id: acceptedQuoteId,
             code: 200
         })
     } catch (error) {
