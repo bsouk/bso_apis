@@ -2778,10 +2778,82 @@ exports.getIndustrySubTypes = async (req, res) => {
 
 //BSO New changes
 
+/**
+ * Check if Enquiry Number Already Exists (User side)
+ * GET /user/checkEnquiryNumberExists
+ * Used for real-time validation before creating enquiry
+ */
+exports.checkEnquiryNumberExists = async (req, res) => {
+    try {
+        const { enquiry_number } = req.query;
+        
+        if (!enquiry_number || enquiry_number.trim() === '') {
+            return res.status(400).json({
+                message: "Enquiry number is required",
+                code: 400
+            });
+        }
+        
+        const trimmedNumber = enquiry_number.trim();
+        
+        const existingEnquiry = await Enquiry.findOne({
+            $or: [
+                { enquiry_unique_id: trimmedNumber },
+                { enquiry_number: trimmedNumber }
+            ]
+        }).select('_id enquiry_unique_id enquiry_number');
+        
+        if (existingEnquiry) {
+            return res.status(200).json({
+                exists: true,
+                message: `Enquiry number "${trimmedNumber}" already exists`,
+                code: 200
+            });
+        }
+        
+        return res.status(200).json({
+            exists: false,
+            message: "Enquiry number is available",
+            code: 200
+        });
+        
+    } catch (error) {
+        console.error("Error checking enquiry number:", error);
+        utils.handleError(res, error);
+    }
+}
+
 async function EnquiryId() {
-    const token = Math.floor(Math.random() * 1000000)
-    console.log("token : ", token)
-    return `#${token}`
+    let isUnique = false;
+    let enquiryId = '';
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!isUnique && attempts < maxAttempts) {
+        const token = Math.floor(Math.random() * 1000000);
+        enquiryId = `#${token}`;
+        
+        // Check if this ID already exists
+        const existingEnquiry = await Enquiry.findOne({
+            $or: [
+                { enquiry_unique_id: enquiryId },
+                { enquiry_number: enquiryId }
+            ]
+        });
+        
+        if (!existingEnquiry) {
+            isUnique = true;
+        }
+        attempts++;
+    }
+    
+    if (!isUnique) {
+        // Use timestamp-based ID as fallback
+        enquiryId = `#${Date.now()}`;
+    }
+    
+    console.log("Generated unique enquiry ID:", enquiryId);
+    return enquiryId;
 }
 
 exports.createEnquiry = async (req, res) => {
@@ -2859,8 +2931,30 @@ exports.createEnquiry = async (req, res) => {
             })
         }
 
+        // Validate enquiry number uniqueness if provided by user
+        if (data.enquiry_number && data.enquiry_number.trim() !== '') {
+            const existingEnquiry = await Enquiry.findOne({
+                $or: [
+                    { enquiry_unique_id: data.enquiry_number.trim() },
+                    { enquiry_number: data.enquiry_number.trim() }
+                ]
+            });
+            
+            if (existingEnquiry) {
+                console.log("❌ Enquiry number already exists:", data.enquiry_number);
+                return res.status(400).json({
+                    message: `Enquiry number "${data.enquiry_number}" already exists. Please use a unique enquiry number.`,
+                    code: 400,
+                    error_type: 'duplicate_enquiry_number'
+                });
+            }
+        }
+
         data.is_approved = "approved"
-        let enquiryId = await EnquiryId();
+        // Use provided enquiry_number or generate unique one
+        let enquiryId = data.enquiry_number && data.enquiry_number.trim() !== '' 
+            ? data.enquiry_number.trim() 
+            : await EnquiryId();
         let newdata = {
             ...data,
             enquiry_unique_id: enquiryId,

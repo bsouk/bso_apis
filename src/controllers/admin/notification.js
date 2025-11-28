@@ -249,12 +249,24 @@ exports.getNotificationList = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
     try {
-        const { offset = 0, limit = 10, search, user_type } = req.query;
+        const { offset = 0, limit = 10, search, user_type, buyer_type } = req.query;
         
         const searchFilter = {};
         
+        // If specific buyer_type is requested (direct-buyer or indirect-buyer)
+        if (buyer_type && buyer_type !== 'all') {
+            searchFilter.buyer_type = buyer_type;
+        }
         // Add user_type filter if provided
-        if (user_type) {
+        // For 'buyer' type, we also include 'company' and users with buyer_type set
+        // This is because customers can be companies that are also buyers
+        else if (user_type === 'buyer') {
+            searchFilter.$or = [
+                { user_type: { $in: ['buyer'] } },
+                { user_type: { $in: ['company'] } },
+                { buyer_type: { $in: ['direct-buyer', 'indirect-buyer'] } }
+            ];
+        } else if (user_type) {
             searchFilter.user_type = { $in: [user_type] };
         }
         
@@ -262,27 +274,44 @@ exports.getAllUsers = async (req, res) => {
         // This excludes users with status 'inactive', 'deleted', 'trashed', etc.
         searchFilter.status = { $nin: ['inactive', 'deleted', 'trashed', 'deactivated'] };
         searchFilter.is_deleted = { $ne: true };
+        searchFilter.is_trashed = { $ne: true };
         
         // Add search filter - search by name, email, phone, user ID, or company
         if (search) {
-            searchFilter.$or = [
+            // If we already have $or from user_type, we need to use $and
+            const searchConditions = [
                 { full_name: { $regex: search, $options: 'i' } },
                 { first_name: { $regex: search, $options: 'i' } },
                 { last_name: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
-                { unique_user_id: { $regex: search, $options: 'i' } }, // Search by user ID
-                { phone_number: { $regex: search, $options: 'i' } }, // Search by phone number
-                { 'company_data.name': { $regex: search, $options: 'i' } }, // Search by company
+                { unique_user_id: { $regex: search, $options: 'i' } },
+                { phone_number: { $regex: search, $options: 'i' } },
+                { 'company_data.name': { $regex: search, $options: 'i' } },
             ];
+            
+            if (searchFilter.$or) {
+                // Combine user type filter with search filter using $and
+                const userTypeFilter = searchFilter.$or;
+                delete searchFilter.$or;
+                searchFilter.$and = [
+                    { $or: userTypeFilter },
+                    { $or: searchConditions }
+                ];
+            } else {
+                searchFilter.$or = searchConditions;
+            }
         }
+        
+        console.log("getAllUsers - searchFilter:", JSON.stringify(searchFilter, null, 2));
+        console.log("getAllUsers - Params: search:", search, "user_type:", user_type, "buyer_type:", buyer_type);
         
         const users = await User.find(searchFilter)
             .skip(Number(offset))
             .limit(Number(limit))
-            .select('_id full_name first_name last_name email unique_user_id company_data phone_number status')
+            .select('_id full_name first_name last_name email unique_user_id company_data phone_number status buyer_type user_type')
             .sort({ createdAt: -1 });
             
-        console.log("getAllUsers - Found", users.length, "users for search:", search, "user_type:", user_type);
+        console.log("getAllUsers - Found", users.length, "users");
         return res.json({ users: users || [], code: 200 });
     } catch (error) {
         console.error('Error in getAllUsers:', error);

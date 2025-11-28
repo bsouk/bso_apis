@@ -25,13 +25,10 @@
 	<table cellspacing="0" cellpadding="0" width="800"
 		style="background-color: #fff;padding: 0;border-collapse:collapse;margin: 0 auto; " border="0">
 		<tbody>
+			<!-- Header with Brand Name -->
 			<tr>
-				<td height="30"></td>
-			</tr>
-			<tr>
-				<td class="theme_logo" style="text-align: center;padding: 0 40px;">
-					<!-- <img src="https://developers.promaticstechnologies.com/acclem-rest-apis/public/imgs/logo.png"
-					alt="Medstream" style="width: 270px;" /> -->
+				<td align="center" bgcolor="#055a90" style="padding: 25px 20px;">
+					<h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;">Blue Sky</h1>
 				</td>
 			</tr>
 			<tr>
@@ -75,7 +72,7 @@
 		</tr>
 		<tr>
 			<td style="padding: 0 40px;font-size: 17px;line-height: 25px; ">
-				You can login using this link: <a href="<%= login_url || adminLink || 'https://dashboard.bsoservices.com/' %>" style="color: #0000FF; text-decoration: underline;"><%= login_url || adminLink || 'https://dashboard.bsoservices.com/' %></a>
+				You can login using this link: <a href="<%= typeof login_url !== 'undefined' && login_url ? login_url : (typeof adminLink !== 'undefined' && adminLink ? adminLink : (typeof website_url !== 'undefined' && website_url ? website_url : 'https://bsoservices.com/')) %>" style="color: #0000FF; text-decoration: underline;"><%= typeof login_url !== 'undefined' && login_url ? login_url : (typeof adminLink !== 'undefined' && adminLink ? adminLink : (typeof website_url !== 'undefined' && website_url ? website_url : 'https://bsoservices.com/')) %></a>
 			</td>
 		</tr>
 		<tr>

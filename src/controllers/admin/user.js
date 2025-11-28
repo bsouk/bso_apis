@@ -54,7 +54,7 @@ async function createFreeBuyerSubscription(userId, adminId = null, buyerType = '
       status: "active",
       type: "buyer",
       buyer_type: buyerType, // Track direct or indirect buyer
-      subscription_type: "unpaid",
+      subscription_type: "paid", // Set as paid for admin-created subscriptions
       source: "admin",
       payment_mode: "admin_manual",
       assigned_by: adminId,
@@ -518,7 +518,8 @@ exports.addCustomer = async (req, res) => {
         name: user.full_name,
         account_type: "customer",
         user_id: uniqueUserId,
-        website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
+        website_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+        login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
       };
       
       console.log(`📧 Sending welcome email to ${user.email} using main emailer...`);

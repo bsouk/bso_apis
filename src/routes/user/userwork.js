@@ -240,6 +240,14 @@ router.get(
 );
 
 //changes
+// Check if enquiry number already exists (for validation)
+router.get(
+    "/checkEnquiryNumberExists",
+    trimRequest.all,
+    requireAuth,
+    controller.checkEnquiryNumberExists
+);
+
 router.post(
     "/addQuery",
     trimRequest.all,

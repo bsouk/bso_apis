@@ -1947,14 +1947,23 @@ exports.createManualEnquiry = async (req, res) => {
             });
         }
 
-        if (!buyer.user_type.includes('buyer')) {
+        // Check if user is a valid buyer:
+        // - Has 'buyer' in user_type array, OR
+        // - Has 'company' in user_type array (companies can be buyers), OR
+        // - Has buyer_type set (direct-buyer or indirect-buyer)
+        const isBuyer = buyer.user_type?.includes('buyer') || 
+                        buyer.user_type?.includes('company') || 
+                        buyer.buyer_type === 'direct-buyer' || 
+                        buyer.buyer_type === 'indirect-buyer';
+        
+        if (!isBuyer) {
             return res.status(400).json({
-                message: "Selected user is not a buyer",
+                message: "Selected user is not a buyer. User must be a buyer, company, or have a buyer type set.",
                 code: 400
             });
         }
 
-        console.log("Buyer found:", buyer.full_name || buyer.first_name);
+        console.log("Buyer found:", buyer.full_name || buyer.first_name, "| buyer_type:", buyer.buyer_type, "| user_type:", buyer.user_type);
 
         // ═══════════════════════════════════════════════════
         // STEP 2: CHECK BUYER SUBSCRIPTION (REQUIRED)
@@ -2003,6 +2012,28 @@ exports.createManualEnquiry = async (req, res) => {
         console.log("✅ Buyer subscription found:", buyerSubscription[0]?.plan?.plan_name)
 
         // ═══════════════════════════════════════════════════
+        // STEP 2.5: VALIDATE ENQUIRY NUMBER UNIQUENESS (if provided)
+        // ═══════════════════════════════════════════════════
+        if (enquiryData.enquiry_number && enquiryData.enquiry_number.trim() !== '') {
+            const existingEnquiry = await Enquiry.findOne({
+                $or: [
+                    { enquiry_unique_id: enquiryData.enquiry_number.trim() },
+                    { enquiry_number: enquiryData.enquiry_number.trim() }
+                ]
+            });
+            
+            if (existingEnquiry) {
+                console.log("❌ Enquiry number already exists:", enquiryData.enquiry_number);
+                return res.status(400).json({
+                    message: `Enquiry number "${enquiryData.enquiry_number}" already exists. Please use a unique enquiry number.`,
+                    code: 400,
+                    error_type: 'duplicate_enquiry_number'
+                });
+            }
+            console.log("✅ Enquiry number is unique:", enquiryData.enquiry_number);
+        }
+
+        // ═══════════════════════════════════════════════════
         // STEP 3: PROCESS ENQUIRY ITEMS (UNITS)
         // ═══════════════════════════════════════════════════
         if (enquiryData.enquiry_items && Array.isArray(enquiryData.enquiry_items)) {
@@ -2029,14 +2060,44 @@ exports.createManualEnquiry = async (req, res) => {
         }
 
         // ═══════════════════════════════════════════════════
-        // STEP 4: GENERATE ENQUIRY ID
+        // STEP 4: GENERATE UNIQUE ENQUIRY ID
         // ═══════════════════════════════════════════════════
-        async function EnquiryId() {
-            const token = Math.floor(Math.random() * 1000000);
-            return `#${token}`;
+        async function generateUniqueEnquiryId() {
+            let isUnique = false;
+            let enquiryId = '';
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            while (!isUnique && attempts < maxAttempts) {
+                const token = Math.floor(Math.random() * 1000000);
+                enquiryId = `#${token}`;
+                
+                // Check if this ID already exists
+                const existingEnquiry = await Enquiry.findOne({
+                    $or: [
+                        { enquiry_unique_id: enquiryId },
+                        { enquiry_number: enquiryId }
+                    ]
+                });
+                
+                if (!existingEnquiry) {
+                    isUnique = true;
+                }
+                attempts++;
+            }
+            
+            if (!isUnique) {
+                // Use timestamp-based ID as fallback
+                enquiryId = `#${Date.now()}`;
+            }
+            
+            return enquiryId;
         }
 
-        const enquiryId = await EnquiryId();
+        // Use provided enquiry_number or generate unique one
+        const enquiryId = enquiryData.enquiry_number && enquiryData.enquiry_number.trim() !== '' 
+            ? enquiryData.enquiry_number.trim() 
+            : await generateUniqueEnquiryId();
 
         // ═══════════════════════════════════════════════════
         // STEP 5: CREATE ENQUIRY
@@ -2722,6 +2783,51 @@ exports.sendEnquiryToLogistics = async (req, res) => {
             console.error("Error creating log for failed send to logistics:", logError);
         }
 
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Check if Enquiry Number Already Exists
+ * GET /admin/checkEnquiryNumberExists
+ * Used for real-time validation before creating enquiry
+ */
+exports.checkEnquiryNumberExists = async (req, res) => {
+    try {
+        const { enquiry_number } = req.query;
+        
+        if (!enquiry_number || enquiry_number.trim() === '') {
+            return res.status(400).json({
+                message: "Enquiry number is required",
+                code: 400
+            });
+        }
+        
+        const trimmedNumber = enquiry_number.trim();
+        
+        const existingEnquiry = await Enquiry.findOne({
+            $or: [
+                { enquiry_unique_id: trimmedNumber },
+                { enquiry_number: trimmedNumber }
+            ]
+        }).select('_id enquiry_unique_id enquiry_number');
+        
+        if (existingEnquiry) {
+            return res.status(200).json({
+                exists: true,
+                message: `Enquiry number "${trimmedNumber}" already exists`,
+                code: 200
+            });
+        }
+        
+        return res.status(200).json({
+            exists: false,
+            message: "Enquiry number is available",
+            code: 200
+        });
+        
+    } catch (error) {
+        console.error("Error checking enquiry number:", error);
         utils.handleError(res, error);
     }
 }

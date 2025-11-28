@@ -180,6 +180,14 @@ router.get(
     controller.getdownloadSingleEnquiryPdfdata
 )
 
+// Check if enquiry number already exists (for validation)
+router.get(
+    '/checkEnquiryNumberExists',
+    trimRequest.all,
+    requireAuth,
+    controller.checkEnquiryNumberExists
+)
+
 // Manual enquiry creation by admin
 router.post(
     '/createManualEnquiry',
