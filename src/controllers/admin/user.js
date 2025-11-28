@@ -7,6 +7,7 @@ const crypto = require("crypto");
 
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
+const { createLog } = require("../../utils/logger");
 
 // Helper function to generate unique subscription ID
 async function generateSubscriptionId() {
@@ -3379,12 +3380,60 @@ exports.acceptsupplierEnquiry = async (req, res) => {
       }
     }
 
+    // Log successful supplier quote acceptance
+    try {
+      await createLog({
+        admin_id: req.user._id,
+        admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+        admin_email: req.user.email,
+        admin_role: req.user.role,
+        feature: 'supplier_quote',
+        action: 'accept',
+        related_id: id,
+        related_collection: 'enquiry_quotes',
+        status: 'success',
+        details: {
+          enquiry_id: enquiry._id,
+          enquiry_unique_id: enquiry.enquiry_unique_id,
+          supplier_name: result.user_id?.full_name || 'Unknown',
+          supplier_email: result.user_id?.email || 'Unknown',
+          buyer_name: enquiry.user_id?.full_name || 'Unknown',
+          buyer_email: enquiry.user_id?.email || 'Unknown',
+          total_price: totalprice,
+          currency: result.currency || 'GBP'
+        },
+        req
+      });
+      console.log("✅ Log created for supplier quote acceptance");
+    } catch (logError) {
+      console.error("❌ Failed to create log:", logError.message);
+    }
+
     return res.status(200).json({
       message: `Supplier quote accepted successfully.`,
       data: result,
       code: 200
     });
   } catch (error) {
+    // Log failed supplier quote acceptance
+    try {
+      await createLog({
+        admin_id: req.user?._id,
+        admin_name: req.user?.full_name || `${req.user?.first_name} ${req.user?.last_name}`,
+        admin_email: req.user?.email,
+        admin_role: req.user?.role,
+        feature: 'supplier_quote',
+        action: 'accept',
+        related_id: req.body?.id,
+        related_collection: 'enquiry_quotes',
+        status: 'failure',
+        error_message: error.message,
+        error_stack: error.stack,
+        req
+      });
+    } catch (logError) {
+      console.error("❌ Failed to create error log:", logError.message);
+    }
     utils.handleError(res, error);
   }
 };
@@ -3554,6 +3603,62 @@ exports.updateSubmitQuery = async (req, res) => {
     console.log("quotePayload : ", quotePayload)
     const newQuote = await EnquiryQuotes.create(quotePayload);
     console.log("New Quote Created:", newQuote);
+  }
+
+  // Get buyer details for email notification
+  const buyer = await User.findById(enquiry.user_id);
+  const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com';
+
+  // Send email to buyer about final quote submission
+  if (buyer?.email) {
+    try {
+      const buyerMailOptions = {
+        to: buyer.email,
+        subject: `Final Quote Ready - Enquiry #${enquiry.enquiry_unique_id}`,
+        app_name: process.env.APP_NAME || 'Blue Sky',
+        name: buyer.full_name || buyer.first_name || 'Valued Customer',
+        enquiry_id: enquiry.enquiry_unique_id,
+        admin_price: admin_price,
+        logistics_price: logistics_price,
+        grand_total: grand_total,
+        payment_terms: payment_terms,
+        view_link: `${frontendUrl}/enquiry-review-page/${enq_id}`
+      };
+      await emailer.sendEmail(null, buyerMailOptions, "FinalQuoteReady");
+      console.log("📧 Final quote email sent to buyer:", buyer.email);
+    } catch (emailError) {
+      console.error("❌ Failed to send final quote email to buyer:", emailError.message);
+    }
+  }
+
+  // Log successful final quote submission
+  try {
+    await createLog({
+      admin_id: req.user._id,
+      admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+      admin_email: req.user.email,
+      admin_role: req.user.role,
+      feature: 'final_quote',
+      action: 'submit',
+      related_id: enq_id,
+      related_collection: 'enquiries',
+      status: 'success',
+      details: {
+        enquiry_id: enq_id,
+        enquiry_unique_id: enquiry.enquiry_unique_id,
+        buyer_name: buyer?.full_name || 'Unknown',
+        buyer_email: buyer?.email || 'Unknown',
+        admin_price: admin_price,
+        logistics_price: logistics_price,
+        grand_total: grand_total,
+        payment_terms: payment_terms,
+        items_count: items?.length || 0
+      },
+      req
+    });
+    console.log("✅ Log created for final quote submission");
+  } catch (logError) {
+    console.error("❌ Failed to create log:", logError.message);
   }
 
   return res.status(200).json({
@@ -3864,6 +3969,35 @@ exports.acceptLogisticQuote = async (req, res) => {
       }
     }
 
+    // Log successful logistics quote acceptance
+    try {
+      await createLog({
+        admin_id: req.user._id,
+        admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+        admin_email: req.user.email,
+        admin_role: req.user.role,
+        feature: 'logistics_quote',
+        action: 'accept',
+        related_id: id,
+        related_collection: 'logistics_quotes',
+        status: 'success',
+        details: {
+          enquiry_id: selected._id,
+          enquiry_unique_id: selected.enquiry_unique_id,
+          logistics_name: updatelogisticQuote.user_id?.full_name || 'Unknown',
+          logistics_email: updatelogisticQuote.user_id?.email || 'Unknown',
+          buyer_name: selected.user_id?.full_name || 'Unknown',
+          buyer_email: selected.user_id?.email || 'Unknown',
+          shipping_fee: updatelogisticQuote.shipping_fee,
+          notes: updatelogisticQuote.notes || 'N/A'
+        },
+        req
+      });
+      console.log("✅ Log created for logistics quote acceptance");
+    } catch (logError) {
+      console.error("❌ Failed to create log:", logError.message);
+    }
+
     return res.status(200).json({
       message: "Logistics quote accepted successfully.",
       data: updatelogisticQuote,
@@ -3871,6 +4005,25 @@ exports.acceptLogisticQuote = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error accepting logistics quote:", error);
+    // Log failed logistics quote acceptance
+    try {
+      await createLog({
+        admin_id: req.user?._id,
+        admin_name: req.user?.full_name || `${req.user?.first_name} ${req.user?.last_name}`,
+        admin_email: req.user?.email,
+        admin_role: req.user?.role,
+        feature: 'logistics_quote',
+        action: 'accept',
+        related_id: req.params?.id,
+        related_collection: 'logistics_quotes',
+        status: 'failure',
+        error_message: error.message,
+        error_stack: error.stack,
+        req
+      });
+    } catch (logError) {
+      console.error("❌ Failed to create error log:", logError.message);
+    }
     return res.status(500).json({
       message: "An error occurred while accepting the logistics quote.",
       code: 500
