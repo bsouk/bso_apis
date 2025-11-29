@@ -43,6 +43,54 @@
                                 </tr>
                             </table>
 
+                            <% if (enquiry.shipping_address) { %>
+                            <!-- Shipping Address -->
+                            <h2 style="font-size: 18px; color: #055a90; border-bottom: 1px solid #e6e6e6; padding-bottom: 8px; margin-top: 20px;">
+                                Shipping Address</h2>
+                            <table width="100%" cellpadding="10" cellspacing="0"
+                                style="border: 1px solid #e6e6e6; border-radius: 6px; background-color: #fdfdfd; margin-bottom: 20px;">
+                                <tr>
+                                    <td style="padding: 15px;">
+                                        <% 
+                                        var addressParts = [];
+                                        if (enquiry.shipping_address.first_name || enquiry.shipping_address.last_name) {
+                                            addressParts.push('<strong>' + [enquiry.shipping_address.first_name, enquiry.shipping_address.last_name].filter(Boolean).join(' ') + '</strong>');
+                                        }
+                                        if (enquiry.shipping_address.company_name) {
+                                            addressParts.push(enquiry.shipping_address.company_name);
+                                        }
+                                        if (enquiry.shipping_address.address && enquiry.shipping_address.address.address_line_1) {
+                                            addressParts.push(enquiry.shipping_address.address.address_line_1);
+                                        }
+                                        var locationParts = [];
+                                        if (enquiry.shipping_address.address && enquiry.shipping_address.address.city && enquiry.shipping_address.address.city.name) {
+                                            locationParts.push(enquiry.shipping_address.address.city.name);
+                                        }
+                                        if (enquiry.shipping_address.address && enquiry.shipping_address.address.state && enquiry.shipping_address.address.state.name) {
+                                            locationParts.push(enquiry.shipping_address.address.state.name);
+                                        }
+                                        if (enquiry.shipping_address.address && enquiry.shipping_address.address.country && enquiry.shipping_address.address.country.name) {
+                                            locationParts.push(enquiry.shipping_address.address.country.name);
+                                        }
+                                        if (locationParts.length > 0) {
+                                            addressParts.push(locationParts.join(', '));
+                                        }
+                                        if (enquiry.shipping_address.address && enquiry.shipping_address.address.pin_code) {
+                                            addressParts.push('PIN: ' + enquiry.shipping_address.address.pin_code);
+                                        }
+                                        %>
+                                        <%- addressParts.join('<br />') %>
+                                        <% if (enquiry.shipping_address.phone_number) { %>
+                                        <br /><strong>Phone:</strong> <%= enquiry.shipping_address.phone_number %>
+                                        <% } %>
+                                        <% if (enquiry.shipping_address.email) { %>
+                                        <br /><strong>Email:</strong> <%= enquiry.shipping_address.email %>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            </table>
+                            <% } %>
+
                             <!-- Items -->
                             <% if (enquiry.enquiry_items && enquiry.enquiry_items.length> 0) { %>
                                 <h2 style="font-size: 18px; color: #055a90; border-bottom: 1px solid #e6e6e6; padding-bottom: 8px;">

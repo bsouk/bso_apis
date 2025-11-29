@@ -3346,7 +3346,7 @@ exports.acceptsupplierEnquiry = async (req, res) => {
           delivery_time: result.delivery_time || "As quoted",
           total_amount: totalprice,
           currency: result.currency || "GBP",
-          view_link: `${frontendUrl}/enquiry-review/${enquiry._id}`
+          view_link: `${frontendUrl}/enquiry-review-page/${enquiry._id}`
         }
       };
       try {
@@ -3369,7 +3369,7 @@ exports.acceptsupplierEnquiry = async (req, res) => {
           delivery_time: result.delivery_time || "As quoted",
           total_amount: totalprice,
           currency: result.currency || "GBP",
-          view_link: `${frontendUrl}/supplier/quote-management`
+          view_link: `${frontendUrl}/quotation-management`
         }
       };
       try {
@@ -3936,7 +3936,7 @@ exports.acceptLogisticQuote = async (req, res) => {
           enquiry_id: selected.enquiry_unique_id,
           shipping_fee: updatelogisticQuote.shipping_fee,
           notes: updatelogisticQuote.notes || "N/A",
-          view_link: `${frontendUrl}/enquiry-review/${selected._id}`
+          view_link: `${frontendUrl}/enquiry-review-page/${selected._id}`
         }
       };
       try {
@@ -3958,7 +3958,7 @@ exports.acceptLogisticQuote = async (req, res) => {
           enquiry_id: selected.enquiry_unique_id,
           shipping_fee: updatelogisticQuote.shipping_fee,
           notes: updatelogisticQuote.notes || "N/A",
-          view_link: `${frontendUrl}/logistics/quote-management`
+          view_link: `${frontendUrl}/quotation-management-logistics`
         }
       };
       try {

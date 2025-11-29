@@ -2135,7 +2135,7 @@ exports.createManualEnquiry = async (req, res) => {
                 app_url: buyerAppUrl,
                 storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
                 enquiry: newEnquiry,
-                view_link: `${buyerAppUrl}enquiry-review/${newEnquiry._id}`
+                view_link: `${buyerAppUrl}enquiry-review-page/${newEnquiry._id}`
             };
             
             await emailer.sendEmail(null, buyerEmailOptions, "AdminCreatedEnquiry");
