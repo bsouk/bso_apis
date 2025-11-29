@@ -194,17 +194,54 @@ exports.handleError = (res, err) => {
 
   // Extract error message - handle various error formats
   let errorMessage = 'An error occurred';
+  let statusCode = 500;
+  
   if (err) {
-    if (err.message) {
+    // Handle MongoDB duplicate key error (E11000)
+    if (err.code === 11000 || (err.message && err.message.includes('E11000'))) {
+      // Extract the collection and field from the error
+      const collection = err.message?.match(/collection:\s*\w+\.(\w+)/)?.[1] || 'record';
+      const keyPattern = err.keyPattern ? Object.keys(err.keyPattern)[0] : null;
+      
+      // Create user-friendly message based on collection
+      if (collection === 'enquiry_quotes' || collection.includes('quote')) {
+        errorMessage = 'A quote for this supplier and enquiry already exists. Please update the existing quote instead.';
+      } else if (collection === 'logistics_quotes') {
+        errorMessage = 'A logistics quote for this provider and enquiry already exists. Please update the existing quote instead.';
+      } else if (collection === 'enquiries') {
+        errorMessage = 'An enquiry with this ID already exists. Please use a different enquiry number.';
+      } else if (collection === 'users') {
+        errorMessage = keyPattern === 'email' 
+          ? 'A user with this email already exists.' 
+          : 'A user with this information already exists.';
+      } else {
+        errorMessage = `This ${collection.replace(/_/g, ' ').replace(/s$/, '')} already exists. Please check for duplicates.`;
+      }
+      statusCode = 409; // Conflict status code
+    } else if (err.name === 'ValidationError') {
+      // Handle Mongoose validation errors
+      const errors = Object.values(err.errors || {}).map(e => e.message);
+      errorMessage = errors.length > 0 ? errors.join(', ') : 'Validation failed. Please check your input.';
+      statusCode = 400;
+    } else if (err.name === 'CastError') {
+      // Handle invalid ObjectId or type casting errors
+      errorMessage = 'Invalid data format. Please check your input and try again.';
+      statusCode = 400;
+    } else if (err.message) {
       errorMessage = err.message;
     } else if (typeof err === 'string') {
       errorMessage = err;
     } else if (err.error && err.error.message) {
       errorMessage = err.error.message;
     }
+    
+    // Override status code if provided in error object
+    if (!err.code || err.code === 11000) {
+      // Keep the statusCode we set above
+    } else {
+      statusCode = getValidCode(err.code || err.status || statusCode);
+    }
   }
-
-  const statusCode = getValidCode(err?.code || err?.status || 500);
 
   // Ensure we don't send response if headers already sent
   if (!res.headersSent) {

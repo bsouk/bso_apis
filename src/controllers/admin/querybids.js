@@ -2129,13 +2129,13 @@ exports.createManualEnquiry = async (req, res) => {
             const buyerAppUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
             const buyerEmailOptions = {
                 to: buyer.email,
-                subject: `BSO Created an Enquiry on Your Behalf - Ref: ${newEnquiry.enquiry_unique_id}`,
-                app_name: process.env.APP_NAME || 'BSO Services',
+                subject: `Enquiry Created Successfully - Ref: ${newEnquiry.enquiry_unique_id}`,
+                app_name: process.env.APP_NAME || 'Blue Sky',
                 name: buyer.full_name || buyer.first_name,
                 app_url: buyerAppUrl,
                 storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
                 enquiry: newEnquiry,
-                view_link: `${buyerAppUrl}enquiry-review-page/${newEnquiry._id}`
+                view_link: `${buyerAppUrl}enquiry-review/${newEnquiry._id}`
             };
             
             await emailer.sendEmail(null, buyerEmailOptions, "AdminCreatedEnquiry");

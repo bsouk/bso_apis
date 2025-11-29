@@ -366,7 +366,7 @@ router.get(
   controller.getlogisticquote
 )
 router.get("/viewLogisticQuote/:id", trimRequest.all, controller.viewLogisticQuote)
-router.put("/acceptLogisticQuote/:id", trimRequest.all, controller.acceptLogisticQuote)
+router.put("/acceptLogisticQuote/:id", requireAuth, trimRequest.all, controller.acceptLogisticQuote)
 
 
 router.post(

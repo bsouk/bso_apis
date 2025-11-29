@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Final Quotation Submitted - BSO Services</title>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f9; padding: 30px 0;">
+        <tr>
+            <td align="center">
+                <table width="700" cellpadding="0" cellspacing="0" border="0"
+                    style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+
+                    <!-- Header with Brand Name -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="padding: 25px 20px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;">Blue Sky</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+                            <p><strong>Hello <%= name %>,</strong></p>
+
+                            <p>Great news! 🎉 The final quotation for <strong><%= quotation_id %></strong> has been <strong style="color: #4caf50;">submitted</strong> and is ready for your review.</p>
+
+                            <!-- Quote Box -->
+                            <table width="100%" cellpadding="15" cellspacing="0"
+                                style="background-color: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; margin: 20px 0;">
+                                <tr>
+                                    <td style="font-size: 15px;">
+                                        <strong style="color: #2e7d32;">✓ Final Quotation Ready</strong><br /><br />
+                                        <strong>Quotation ID:</strong> <%= quotation_id %><br />
+                                        <strong>Total Items:</strong> <%= items_count %>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p>Please review the final quotation with all pricing details, including supplier quotes and logistics costs. You can proceed with your order once you're satisfied with the quotation.</p>
+
+                            <!-- Button -->
+                            <p style="text-align: center;">
+                                <a href="<%= view_link %>"
+                                    style="display: inline-block; padding: 14px 28px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                                    Review Final Quotation
+                                </a>
+                            </p>
+
+                            <p style="margin-top: 30px;">Thank you for choosing BSO Services!</p>
+                            <p>Best regards,<br /><strong>BSO Services Team</strong></p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+                            &copy; <%= new Date().getFullYear() %> BSO Services. All rights reserved.
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>
+

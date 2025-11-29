@@ -11,7 +11,7 @@ const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds")
 const app = express();
 const { handleStripeWebhook } = require("./src/controllers/user/webhook")
 const mongoose = require("mongoose");
-const seedAllInOnePlans = require("./scripts/seedAllInOnePlans");
+// const seedAllInOnePlans = require("./scripts/seedAllInOnePlans"); // Disabled - plans already seeded
 
 app.post(
   "/user/webhook",
@@ -94,12 +94,14 @@ app.listen(PORT, async () => {
   }
 });
 
-mongoose.connection.once('connected', async () => {
-  try {
-    await seedAllInOnePlans({ useExistingConnection: true, logger: console });
-  } catch (error) {
-    console.error('❌ Failed to seed All-in-One plans:', error.message || error);
-  }
-});
+// All-in-One plan seeding disabled - plans already exist
+// Uncomment the following block if you need to seed/update All-in-One plans
+// mongoose.connection.once('connected', async () => {
+//   try {
+//     await seedAllInOnePlans({ useExistingConnection: true, logger: console });
+//   } catch (error) {
+//     console.error('❌ Failed to seed All-in-One plans:', error.message || error);
+//   }
+// });
 
 initMongo();

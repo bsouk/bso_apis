@@ -52,6 +52,8 @@ const adminLogsSchema = new mongoose.Schema(
         "customer",
         "supplier",
         "logistics",
+        "logistics_quote",
+        "supplier_quote",
         "order",
         "payment",
         "subscription",
@@ -62,6 +64,7 @@ const adminLogsSchema = new mongoose.Schema(
         "report",
         "notification",
         "quote_management",
+        "quotation",
         // Extensible - can add more features
       ],
       index: true
@@ -75,6 +78,9 @@ const adminLogsSchema = new mongoose.Schema(
         "delete",
         "approve",
         "reject",
+        "accept",
+        "send",
+        "assign",
         "view",
         "export",
         "bulk_delete",

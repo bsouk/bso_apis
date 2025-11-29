@@ -124,6 +124,7 @@ exports.getQuotationList = async (req, res) => {
 exports.deleteMultipleQuotation = async (req, res) => {
     try {
         const { ids } = req.body;
+        const adminId = req.user._id;
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({
@@ -140,15 +141,68 @@ exports.deleteMultipleQuotation = async (req, res) => {
                 code: 404
             });
         }
+
+        // Store quotation details for logging before deletion
+        const quotationDetails = existingRecords.map(q => ({
+            id: q._id.toString(),
+            quotation_unique_id: q.quotation_unique_id
+        }));
+
         const result = await quotation.deleteMany({ _id: { $in: ids } });
 
+        // Create admin log for successful deletion
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quotation_management',
+                    'delete_multiple_quotations',
+                    {
+                        related_collection: 'quotations',
+                        metadata: {
+                            deleted_count: result.deletedCount,
+                            quotation_ids: ids,
+                            quotation_details: quotationDetails
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
         res.json({
-            message: `${result.deletedCount} query(s) deleted successfully.`,
+            message: `${result.deletedCount} quotation(s) deleted successfully.`,
             code: 200
         });
 
     } catch (error) {
-        console.error("Error in deletequery:", error);
+        console.error("Error in deleteMultipleQuotation:", error);
+        
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quotation_management',
+                    'delete_multiple_quotations',
+                    error,
+                    {
+                        related_collection: 'quotations',
+                        metadata: {
+                            quotation_ids: req.body.ids
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
+        
         res.status(500).json({
             message: "Internal Server Error",
             code: 500,
@@ -1179,8 +1233,9 @@ exports.getFinalQuotationList = async (req, res) => {
 exports.addFinalQuotationList = async (req, res) => {
     try {
         const { quotation_id, final_quotation } = req.body
+        const adminId = req.user._id;
         console.log("final_quotes : ", final_quotation)
-        const queryData = await quotation.findOne({ _id: quotation_id })
+        const queryData = await quotation.findOne({ _id: quotation_id }).populate('query_id')
 
         if (!Array.isArray(final_quotation)) {
             return utils.handleError(res, {
@@ -1196,13 +1251,19 @@ exports.addFinalQuotationList = async (req, res) => {
             });
         }
 
+        // Get buyer details
+        let buyer = null;
+        if (queryData.query_id?.createdByUser) {
+            buyer = await User.findById(queryData.query_id.createdByUser);
+        }
+
         const is_supplier_assigned = await query_assigned_suppliers.find({ quotation_id, is_selected: true })
         console.log('is_supplier_assigned : ', is_supplier_assigned)
 
         if (is_supplier_assigned.length === 0) {
             const response = await final_quotation.map(async (i) => {
                 const newquote = await query_assigned_suppliers.create({
-                    query_id,
+                    query_id: queryData.query_id?._id,
                     quotation_id,
                     is_selected: true,
                     final_quotation_submit: true,
@@ -1247,7 +1308,7 @@ exports.addFinalQuotationList = async (req, res) => {
                 console.log("response : ", response)
                 if (!response || response.admin_approved_quotes === null) {
                     const newquote = await query_assigned_suppliers.create({
-                        query_id,
+                        query_id: queryData.query_id?._id,
                         quotation_id,
                         is_selected: true,
                         final_quotation_submit: true,
@@ -1281,7 +1342,7 @@ exports.addFinalQuotationList = async (req, res) => {
                 quantity: i?.quantity,
                 media: i?.admin_approved_quotes?.media,
                 document: i?.admin_approved_quotes?.document,
-                assignedBy: i?.admin_quote.assignedBy ?? null
+                assignedBy: i?.admin_quote?.assignedBy ?? null
             }
             const save_data = await version_history.create({
                 quotation_id,
@@ -1291,11 +1352,77 @@ exports.addFinalQuotationList = async (req, res) => {
         })
         console.log("version history : ", version_history_data)
 
+        // Send email to buyer about final quotation
+        try {
+            if (buyer && buyer.email) {
+                const mailOptions = {
+                    to: buyer.email,
+                    subject: `Final Quotation Submitted - ${queryData.quotation_unique_id || quotation_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: buyer.full_name || buyer.first_name || 'Buyer',
+                    quotation_id: queryData.quotation_unique_id || quotation_id,
+                    items_count: final_quotation.length,
+                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                };
+                await emailer.sendEmail(null, mailOptions, "FinalQuotationSubmitted");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to buyer:', emailError);
+        }
+
+        // Create admin log
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quotation_management',
+                    'submit_final_quotation',
+                    {
+                        related_id: quotation_id,
+                        related_collection: 'quotations',
+                        metadata: {
+                            quotation_id: quotation_id,
+                            quotation_unique_id: queryData.quotation_unique_id,
+                            items_count: final_quotation.length,
+                            buyer_id: buyer?._id?.toString(),
+                            buyer_name: buyer?.full_name
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
         return res.status(200).json({
-            message: "final quotation added successfully",
+            message: "Final quotation added successfully",
             code: 200
         })
     } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quotation_management',
+                    'submit_final_quotation',
+                    error,
+                    {
+                        related_collection: 'quotations',
+                        metadata: {
+                            quotation_id: req.body.quotation_id,
+                            final_quotation_count: req.body.final_quotation?.length
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
         utils.handleError(res, error);
     }
 }
@@ -1374,10 +1501,22 @@ exports.selectLogistics = async (req, res) => {
 
 exports.assignLogistics = async (req, res) => {
     try {
-        const { logistics_id, product_ids, quotation_id } = req.body
+        let { logistics_id, product_ids, quotation_id } = req.body
+        const adminId = req.user._id;
+        
         if (!Array.isArray(product_ids)) {
-            product_ids = [...product_ids]
+            product_ids = [product_ids]
         }
+
+        // Get logistics provider details
+        const logisticsProvider = await User.findById(logistics_id);
+        if (!logisticsProvider) {
+            return utils.handleError(res, {
+                message: "Logistics provider not found",
+                code: 404,
+            });
+        }
+
         const assign_logistics = product_ids.map(async i => quotation.findOneAndUpdate(
             {
                 _id: quotation_id,
@@ -1398,8 +1537,14 @@ exports.assignLogistics = async (req, res) => {
             $set: {
                 is_admin_logistics_decided: 'decided', quotation_type: 'admin-logistics', decided_logistics_id: logistics_id, is_approved: 'processing'
             }
-        }, { new: true })
+        }, { new: true }).populate('query_id')
         console.log('result : ', result)
+
+        // Get buyer details
+        let buyer = null;
+        if (result.query_id?.createdByUser) {
+            buyer = await User.findById(result.query_id.createdByUser);
+        }
 
         await product_ids.map(async e => await result.final_quote.map(async i => {
             if (i.product_id.toString() === e.toString()) {
@@ -1426,11 +1571,98 @@ exports.assignLogistics = async (req, res) => {
 
         await result.save()
 
+        // Send email to logistics provider
+        try {
+            if (logisticsProvider && logisticsProvider.email) {
+                const mailOptions = {
+                    to: logisticsProvider.email,
+                    subject: `You Have Been Assigned to a Quotation - ${result.quotation_unique_id || quotation_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: logisticsProvider.full_name || logisticsProvider.first_name || 'Logistics Provider',
+                    quotation_id: result.quotation_unique_id || quotation_id,
+                    products_count: product_ids.length,
+                    view_link: `${process.env.FRONTEND_PROD_URL}/logistics/quote-management`
+                };
+                await emailer.sendEmail(null, mailOptions, "LogisticsAssigned");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to logistics provider:', emailError);
+        }
+
+        // Send email to buyer
+        try {
+            if (buyer && buyer.email) {
+                const mailOptions = {
+                    to: buyer.email,
+                    subject: `Logistics Assigned to Your Quotation - ${result.quotation_unique_id || quotation_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: buyer.full_name || buyer.first_name || 'Buyer',
+                    quotation_id: result.quotation_unique_id || quotation_id,
+                    logistics_name: logisticsProvider.full_name || logisticsProvider.first_name,
+                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                };
+                await emailer.sendEmail(null, mailOptions, "LogisticsAssignedBuyer");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to buyer:', emailError);
+        }
+
+        // Create admin log
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quotation_management',
+                    'assign_logistics',
+                    {
+                        related_id: quotation_id,
+                        related_collection: 'quotations',
+                        metadata: {
+                            quotation_id: quotation_id,
+                            quotation_unique_id: result.quotation_unique_id,
+                            logistics_id: logistics_id,
+                            logistics_name: logisticsProvider.full_name,
+                            products_assigned: product_ids.length,
+                            buyer_id: buyer?._id?.toString(),
+                            buyer_name: buyer?.full_name
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
         return res.status(200).json({
-            message: "logistics assign successfully",
+            message: "Logistics assigned successfully",
             code: 200
         })
     } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quotation_management',
+                    'assign_logistics',
+                    error,
+                    {
+                        related_collection: 'quotations',
+                        metadata: {
+                            quotation_id: req.body.quotation_id,
+                            logistics_id: req.body.logistics_id,
+                            product_ids: req.body.product_ids
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
         utils.handleError(res, error);
     }
 }
@@ -1438,7 +1670,10 @@ exports.assignLogistics = async (req, res) => {
 exports.approveRejectLogistics = async (req, res) => {
     try {
         const { quotation_id, logistics_id, status } = req.body
-        const quotation_data = await quotation.findOne({ _id: quotation_id })
+        const adminId = req.user._id;
+        const isAccepted = status === 'accepted';
+        
+        const quotation_data = await quotation.findOne({ _id: quotation_id }).populate('query_id')
         if (!quotation_data) {
             return utils.handleError(res, {
                 message: "quotation not found",
@@ -1451,6 +1686,21 @@ exports.approveRejectLogistics = async (req, res) => {
                 message: "rejected reason is required",
                 code: 400,
             });
+        }
+
+        // Get logistics provider details
+        const logisticsProvider = await User.findById(logistics_id);
+        if (!logisticsProvider) {
+            return utils.handleError(res, {
+                message: "Logistics provider not found",
+                code: 404,
+            });
+        }
+
+        // Get buyer details from the query
+        let buyer = null;
+        if (quotation_data.query_id?.createdByUser) {
+            buyer = await User.findById(quotation_data.query_id.createdByUser);
         }
 
         if (status === 'accepted') {
@@ -1466,9 +1716,11 @@ exports.approveRejectLogistics = async (req, res) => {
             quotation_data.logistics_quote = null
             quotation_data.admin_notes = null
             quotation_data.accepted_logistics = null
-            quotation_data.rejected_reason.reason = req.body.reason
+            
             if (!quotation_data.rejected_reason) {
-                quotation_data.rejected_reason = { reason: "", logistics_ids: [] };
+                quotation_data.rejected_reason = { reason: req.body.reason, logistics_ids: [] };
+            } else {
+                quotation_data.rejected_reason.reason = req.body.reason
             }
             if (!Array.isArray(quotation_data.rejected_reason.logistics_ids)) {
                 quotation_data.rejected_reason.logistics_ids = [];
@@ -1476,26 +1728,6 @@ exports.approveRejectLogistics = async (req, res) => {
             if (!quotation_data.rejected_reason.logistics_ids.includes(logistics_id)) {
                 quotation_data.rejected_reason.logistics_ids.push(logistics_id)
             }
-            // const response = await quotation.findOneAndUpdate(
-            //     {
-            //         _id: new mongoose.Types.ObjectId(quotation_id)
-            //     },
-            //     {
-            //         $set: {
-            //             is_admin_logistics_decided: 'undecided',
-            //             decided_logistics_id: null,
-            //             logistics_quote: null,
-            //             admin_notes: null,
-            //             accepted_logistics: null,
-            //             "rejected_reason.reason": req.body.reason
-            //         },
-            //         $addToSet: {
-            //             "rejected_reason.logistics_ids": logistics_id,
-            //         },
-            //     },
-            //     { new: true, upsert: true }
-            // )
-            // console.log("response : ", response)
 
             const result = await quotation.updateMany(
                 { 'final_quote.logistics_id': logistics_id },
@@ -1505,11 +1737,102 @@ exports.approveRejectLogistics = async (req, res) => {
         }
         await quotation_data.save()
 
+        // Send email to logistics provider
+        try {
+            if (logisticsProvider && logisticsProvider.email) {
+                const mailOptions = {
+                    to: logisticsProvider.email,
+                    subject: `Your Logistics Quote Has Been ${isAccepted ? 'Accepted' : 'Rejected'} - Quotation ${quotation_data.quotation_unique_id || quotation_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: logisticsProvider.full_name || logisticsProvider.first_name || 'Logistics Provider',
+                    quotation_id: quotation_data.quotation_unique_id || quotation_id,
+                    status: isAccepted ? 'Accepted' : 'Rejected',
+                    reason: req.body.reason || '',
+                    view_link: `${process.env.FRONTEND_PROD_URL}/logistics/quote-management`
+                };
+                await emailer.sendEmail(null, mailOptions, isAccepted ? "LogisticsQuoteAcceptedProvider" : "LogisticsQuoteRejected");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to logistics provider:', emailError);
+        }
+
+        // Send email to buyer
+        try {
+            if (buyer && buyer.email) {
+                const mailOptions = {
+                    to: buyer.email,
+                    subject: `Logistics Quote ${isAccepted ? 'Accepted' : 'Rejected'} - Quotation ${quotation_data.quotation_unique_id || quotation_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: buyer.full_name || buyer.first_name || 'Buyer',
+                    quotation_id: quotation_data.quotation_unique_id || quotation_id,
+                    logistics_name: logisticsProvider.full_name || logisticsProvider.first_name,
+                    status: isAccepted ? 'Accepted' : 'Rejected',
+                    reason: req.body.reason || '',
+                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                };
+                await emailer.sendEmail(null, mailOptions, isAccepted ? "LogisticsQuoteAccepted" : "LogisticsQuoteRejectedBuyer");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to buyer:', emailError);
+        }
+
+        // Create admin log
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quotation_management',
+                    isAccepted ? 'accept_logistics_quote' : 'reject_logistics_quote',
+                    {
+                        related_id: quotation_id,
+                        related_collection: 'quotations',
+                        metadata: {
+                            quotation_id: quotation_id,
+                            quotation_unique_id: quotation_data.quotation_unique_id,
+                            logistics_id: logistics_id,
+                            logistics_name: logisticsProvider.full_name,
+                            status: status,
+                            reason: req.body.reason || null,
+                            buyer_id: buyer?._id?.toString(),
+                            buyer_name: buyer?.full_name
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
         return res.status(200).json({
-            message: `logistics ${status} successfully`,
+            message: `Logistics ${status} successfully`,
             code: 200
         })
     } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quotation_management',
+                    'approve_reject_logistics',
+                    error,
+                    {
+                        related_collection: 'quotations',
+                        metadata: {
+                            quotation_id: req.body.quotation_id,
+                            logistics_id: req.body.logistics_id,
+                            status: req.body.status
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
         utils.handleError(res, error);
     }
 }
@@ -1518,6 +1841,13 @@ exports.approveRejectLogistics = async (req, res) => {
 exports.addAdminQuotationNotes = async (req, res) => {
     try {
         const { quotation_id, supplier_id, variant_id, note } = req.body
+        const adminId = req.user._id;
+
+        // Get quotation details for logging
+        const quotationData = await quotation.findById(quotation_id);
+        
+        // Get supplier details
+        const supplier = await User.findById(supplier_id);
 
         const result = await query_assigned_suppliers.findOneAndUpdate(
             {
@@ -1553,6 +1883,33 @@ exports.addAdminQuotationNotes = async (req, res) => {
             ...timeline_data
         })
 
+        // Create admin log
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quotation_management',
+                    'add_admin_notes',
+                    {
+                        related_id: quotation_id,
+                        related_collection: 'query_assigned_suppliers',
+                        metadata: {
+                            quotation_id: quotation_id,
+                            quotation_unique_id: quotationData?.quotation_unique_id,
+                            supplier_id: supplier_id,
+                            supplier_name: supplier?.full_name,
+                            variant_id: variant_id,
+                            note_preview: note?.substring(0, 100)
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
         return res.status(200).json({
             message: "Admin Quotation notes added successfully",
             data: result,
@@ -1560,6 +1917,29 @@ exports.addAdminQuotationNotes = async (req, res) => {
         })
 
     } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quotation_management',
+                    'add_admin_notes',
+                    error,
+                    {
+                        related_collection: 'query_assigned_suppliers',
+                        metadata: {
+                            quotation_id: req.body.quotation_id,
+                            supplier_id: req.body.supplier_id,
+                            variant_id: req.body.variant_id
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
         utils.handleError(res, error);
     }
 }
@@ -1849,12 +2229,30 @@ exports.getQuotationAssignedSupplier = async (req, res) => {
 exports.acceptRejectSupplierQuote = async (req, res) => {
     try {
         const { quotation_id, supplier_id, quote_id, status } = req.body
-        const queryData = await quotation.findById({ _id: quotation_id })
+        const adminId = req.user._id;
+        const isAccepted = (status === true || status === "true");
+        
+        const queryData = await quotation.findById({ _id: quotation_id }).populate('query_id');
         if (!queryData) {
             return utils.handleError(res, {
                 message: "Quotation not found",
                 code: 404,
             });
+        }
+
+        // Get supplier details
+        const supplier = await User.findById(supplier_id);
+        if (!supplier) {
+            return utils.handleError(res, {
+                message: "Supplier not found",
+                code: 404,
+            });
+        }
+
+        // Get buyer details from the query
+        let buyer = null;
+        if (queryData.query_id?.createdByUser) {
+            buyer = await User.findById(queryData.query_id.createdByUser);
         }
 
         const result = await query_assigned_suppliers.findOneAndUpdate(
@@ -1865,19 +2263,108 @@ exports.acceptRejectSupplierQuote = async (req, res) => {
             },
             {
                 $set: {
-                    is_admin_approved: (status === true || status === "true") ? true : false
+                    is_admin_approved: isAccepted
                 }
             },
             { new: true }
         )
         console.log("result : ", result)
 
+        // Send email to supplier
+        try {
+            if (supplier && supplier.email) {
+                const mailOptions = {
+                    to: supplier.email,
+                    subject: `Your Quote Has Been ${isAccepted ? 'Accepted' : 'Rejected'} - Quotation ${queryData.quotation_unique_id || quotation_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: supplier.full_name || supplier.first_name || 'Supplier',
+                    quotation_id: queryData.quotation_unique_id || quotation_id,
+                    status: isAccepted ? 'Accepted' : 'Rejected',
+                    view_link: `${process.env.FRONTEND_PROD_URL}/quote-management`
+                };
+                await emailer.sendEmail(null, mailOptions, isAccepted ? "SupplierQuoteAcceptedProvider" : "SupplierQuoteRejected");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to supplier:', emailError);
+        }
+
+        // Send email to buyer
+        try {
+            if (buyer && buyer.email) {
+                const mailOptions = {
+                    to: buyer.email,
+                    subject: `Supplier Quote ${isAccepted ? 'Accepted' : 'Rejected'} - Quotation ${queryData.quotation_unique_id || quotation_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: buyer.full_name || buyer.first_name || 'Buyer',
+                    quotation_id: queryData.quotation_unique_id || quotation_id,
+                    supplier_name: supplier.full_name || supplier.first_name,
+                    status: isAccepted ? 'Accepted' : 'Rejected',
+                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                };
+                await emailer.sendEmail(null, mailOptions, isAccepted ? "SupplierQuoteAccepted" : "SupplierQuoteRejectedBuyer");
+            }
+        } catch (emailError) {
+            console.error('Error sending email to buyer:', emailError);
+        }
+
+        // Create admin log
+        try {
+            const adminUser = await admin.findById(adminId);
+            if (adminUser) {
+                await logSuccess(
+                    adminUser,
+                    'quotation_management',
+                    isAccepted ? 'accept_supplier_quote' : 'reject_supplier_quote',
+                    {
+                        related_id: quote_id,
+                        related_collection: 'query_assigned_suppliers',
+                        metadata: {
+                            quotation_id: quotation_id,
+                            quotation_unique_id: queryData.quotation_unique_id,
+                            supplier_id: supplier_id,
+                            supplier_name: supplier.full_name,
+                            status: isAccepted ? 'accepted' : 'rejected',
+                            buyer_id: buyer?._id?.toString(),
+                            buyer_name: buyer?.full_name
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating log:', logError);
+        }
+
         return res.status(200).json({
-            message: "Supplier quote status updated successfully",
+            message: `Supplier quote ${isAccepted ? 'accepted' : 'rejected'} successfully`,
             data: result,
             code: 200
         })
     } catch (error) {
+        // Log failure
+        try {
+            const adminUser = await admin.findById(req.user._id);
+            if (adminUser) {
+                await logFailure(
+                    adminUser,
+                    'quotation_management',
+                    'accept_reject_supplier_quote',
+                    error,
+                    {
+                        related_collection: 'query_assigned_suppliers',
+                        metadata: {
+                            quotation_id: req.body.quotation_id,
+                            supplier_id: req.body.supplier_id,
+                            quote_id: req.body.quote_id,
+                            status: req.body.status
+                        },
+                    },
+                    req
+                );
+            }
+        } catch (logError) {
+            console.error('Error creating failure log:', logError);
+        }
         utils.handleError(res, error);
     }
 }
@@ -2243,24 +2730,87 @@ exports.getSingleAdminQuotes = async (req, res) => {
 // Get all quotes list for admin panel
 exports.getQuotesList = async (req, res) => {
     try {
-        const { search, offset = 0, limit = 10, type } = req.query;
-        const filter = {};
+        const { search, offset = 0, limit = 10, type, status } = req.query;
+        const supplierFilter = {};
+        const logisticsFilter = {};
 
         if (search && typeof search === 'string' && search.trim()) {
-            filter.$or = [
-                { quote_unique_id: { $regex: search.trim(), $options: "i" } },
-                { "enquiry_id.enquiry_unique_id": { $regex: search.trim(), $options: "i" } },
-                { "user_id.full_name": { $regex: search.trim(), $options: "i" } },
-                { "user_id.company_data.name": { $regex: search.trim(), $options: "i" } },
+            const searchRegex = { $regex: search.trim(), $options: "i" };
+            supplierFilter.$or = [
+                { quote_unique_id: searchRegex },
+                { "enquiry_id.enquiry_unique_id": searchRegex },
+                { "user_id.full_name": searchRegex },
+                { "user_id.company_data.name": searchRegex },
+            ];
+            logisticsFilter.$or = [
+                { quote_unique_id: searchRegex },
+                { "enquiry_id.enquiry_unique_id": searchRegex },
+                { "user_id.full_name": searchRegex },
+                { "user_id.company_data.name": searchRegex },
             ];
         }
 
-        if (type) {
-            filter.type = type; // 'supplier' or 'logistics' or 'admin'
+        // Apply status filter
+        if (status) {
+            const statusLower = status.toLowerCase();
+            if (statusLower === 'pending') {
+                // Pending = not selected and not rejected
+                supplierFilter.$and = supplierFilter.$and || [];
+                supplierFilter.$and.push({
+                    $or: [
+                        { is_selected: false },
+                        { is_selected: { $exists: false } }
+                    ]
+                });
+                supplierFilter.$and.push({
+                    $or: [
+                        { status: { $ne: "rejected" } },
+                        { status: { $exists: false } }
+                    ]
+                });
+                
+                logisticsFilter.$and = logisticsFilter.$and || [];
+                logisticsFilter.$and.push({
+                    $or: [
+                        { is_selected: false },
+                        { is_selected: { $exists: false } }
+                    ]
+                });
+                logisticsFilter.$and.push({
+                    $or: [
+                        { status: { $ne: "rejected" } },
+                        { status: { $exists: false } }
+                    ]
+                });
+            } else if (statusLower === 'accepted') {
+                // Accepted = is_selected is true
+                supplierFilter.is_selected = true;
+                logisticsFilter.is_selected = true;
+            } else if (statusLower === 'rejected') {
+                // Rejected = status is rejected
+                supplierFilter.status = "rejected";
+                logisticsFilter.status = "rejected";
+            }
         }
 
-        // Aggregate pipeline to get quotes with populated data
-        const data = await EnquiryQuotes.aggregate([
+        // Apply type filter
+        if (type === 'admin') {
+            supplierFilter.type = 'admin';
+        } else if (type === 'supplier') {
+            supplierFilter.$and = supplierFilter.$and || [];
+            supplierFilter.$and.push({ $or: [{ type: 'supplier' }, { type: { $exists: false } }, { type: null }] });
+            supplierFilter.$and.push({ type: { $ne: 'admin' } });
+        }
+
+        // Determine which collections to query based on type
+        const includeSupplier = !type || type === 'supplier' || type === 'admin' || type === 'all';
+        const includeLogistics = !type || type === 'logistics' || type === 'all';
+
+        let data = [];
+
+        // Query EnquiryQuotes (supplier quotes)
+        if (includeSupplier && type !== 'logistics') {
+            const supplierData = await EnquiryQuotes.aggregate([
             {
                 $lookup: {
                     from: "enquires",
@@ -2304,21 +2854,90 @@ exports.getQuotesList = async (req, res) => {
                 }
             },
             { 
-                $match: Object.keys(filter).length > 0 ? filter : {} 
+                    $match: Object.keys(supplierFilter).length > 0 ? supplierFilter : {} 
+                },
+                {
+                    $addFields: {
+                        quote_source: "supplier" // Mark as supplier quote
+                    }
             },
             { 
                 $sort: { createdAt: -1 } 
-            },
-            { 
-                $skip: parseInt(offset) || 0 
-            },
-            { 
-                $limit: parseInt(limit) || 10 
-            }
-        ]);
+                }
+            ]);
+            data = [...supplierData];
+        }
+
+        // Query logistics_quotes (logistics quotes)
+        if (includeLogistics && type !== 'supplier' && type !== 'admin') {
+            const logisticsData = await logistics_quotes.aggregate([
+                {
+                    $lookup: {
+                        from: "enquires",
+                        localField: "enquiry_id",
+                        foreignField: "_id",
+                        as: "enquiry_id"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$enquiry_id",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "users",
+                        localField: "user_id",
+                        foreignField: "_id",
+                        as: "user_id"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$user_id",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "admins",
+                        localField: "created_by_admin",
+                        foreignField: "_id",
+                        as: "created_by_admin"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$created_by_admin",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                { 
+                    $match: Object.keys(logisticsFilter).length > 0 ? logisticsFilter : {} 
+                },
+                {
+                    $addFields: {
+                        quote_source: "logistics", // Mark as logistics quote
+                        type: "logistics" // Ensure type is set for display
+                    }
+                },
+                { 
+                    $sort: { createdAt: -1 } 
+                }
+            ]);
+            data = [...data, ...logisticsData];
+        }
+
+        // Sort combined data by createdAt descending
+        data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Apply pagination
+        const totalDataCount = data.length;
+        const paginatedData = data.slice(parseInt(offset) || 0, (parseInt(offset) || 0) + (parseInt(limit) || 10));
 
         // Get counts for stats - wrap in try-catch to prevent crashes
-        let count = 0;
+        let count = totalDataCount;
         let totalCount = 0;
         let pendingCount = 0;
         let acceptedCount = 0;
@@ -2335,9 +2954,6 @@ exports.getQuotesList = async (req, res) => {
         let totalLogisticsCount = 0;
 
         try {
-            const countFilter = Object.keys(filter).length > 0 ? filter : {};
-            count = await EnquiryQuotes.countDocuments(countFilter);
-            
             // Total counts (all quotes from both collections)
             const supplierTotal = await EnquiryQuotes.countDocuments({});
             const logisticsTotal = await logistics_quotes.countDocuments({});
@@ -2345,9 +2961,19 @@ exports.getQuotesList = async (req, res) => {
             totalSupplierCount = supplierTotal;
             totalLogisticsCount = logisticsTotal;
             
-            // Pending counts
-            const supplierPending = await EnquiryQuotes.countDocuments({ is_selected: false, status: "pending" });
-            const logisticsPending = await logistics_quotes.countDocuments({ is_selected: false, status: "pending" });
+            // Pending counts (not selected and status is pending or not set)
+            const supplierPending = await EnquiryQuotes.countDocuments({ 
+                $or: [
+                    { is_selected: false },
+                    { is_selected: { $exists: false } }
+                ]
+            });
+            const logisticsPending = await logistics_quotes.countDocuments({ 
+                $or: [
+                    { is_selected: false },
+                    { is_selected: { $exists: false } }
+                ]
+            });
             pendingCount = supplierPending + logisticsPending;
             pendingSupplierCount = supplierPending;
             pendingLogisticsCount = logisticsPending;
@@ -2372,7 +2998,7 @@ exports.getQuotesList = async (req, res) => {
 
         return res.status(200).json({
             message: "Quotes list fetched successfully",
-            data: data || [],
+            data: paginatedData || [],
             count: count || 0,
             totalCount: totalCount || 0,
             pendingCount: pendingCount || 0,
@@ -2475,6 +3101,17 @@ exports.getQuoteDetails = async (req, res) => {
                     paymentdata.logistic_payment = supplierpay?.logistic_payment || [];
                 }
 
+                // Add type for logistics quotes so frontend can identify it
+                data.type = 'logistics';
+
+                // Transform user_id to include company_name from company_data
+                if (data.user_id && data.user_id.company_data) {
+                    data.user_id = {
+                        ...data.user_id,
+                        company_name: data.user_id.company_data?.name || data.user_id.company_data?.company_name
+                    };
+                }
+
                 return res.status(200).json({
                     message: "Logistics quote details fetched successfully",
                     data,
@@ -2489,6 +3126,11 @@ exports.getQuoteDetails = async (req, res) => {
                 message: "Quote not found",
                 code: 404
             });
+        }
+
+        // Add type for supplier quotes if not already set
+        if (!data.type) {
+            data.type = 'supplier';
         }
 
         // Transform user_id to include company_name from company_data
@@ -2538,13 +3180,54 @@ exports.createSupplierQuote = async (req, res) => {
             });
         }
 
+        // Check for active subscription - check for supplier type OR all_in_one type
+        // Use case-insensitive search for status
         const activeSubscription = await Subscription.findOne({ 
             user_id: supplier_id, 
-            status: "active", 
-            type: "supplier" 
+            status: { $regex: /^active$/i }, 
+            type: { $in: ["supplier", "all_in_one"] }
         });
 
-        if (!activeSubscription) {
+        console.log('🔍 Supplier subscription check:', {
+            supplier_id,
+            activeSubscription: activeSubscription ? {
+                _id: activeSubscription._id,
+                status: activeSubscription.status,
+                type: activeSubscription.type,
+                plan_id: activeSubscription.plan_id
+            } : null
+        });
+
+        // If no subscription found with type filter, check without type filter (in case type is not set)
+        let hasValidSubscription = !!activeSubscription;
+        if (!hasValidSubscription) {
+            const anyActiveSubscription = await Subscription.findOne({ 
+                user_id: supplier_id, 
+                status: { $regex: /^active$/i }
+            });
+            if (anyActiveSubscription) {
+                console.log('✅ Found active subscription without type filter:', {
+                    _id: anyActiveSubscription._id,
+                    status: anyActiveSubscription.status,
+                    type: anyActiveSubscription.type,
+                    plan_id: anyActiveSubscription.plan_id
+                });
+                hasValidSubscription = true;
+            } else {
+                // Log all subscriptions for this user for debugging
+                const allSubs = await Subscription.find({ user_id: supplier_id });
+                console.log('❌ No active subscription found. All subscriptions for user:', allSubs.map(s => ({
+                    _id: s._id,
+                    status: s.status,
+                    type: s.type,
+                    plan_id: s.plan_id,
+                    start_at: s.start_at,
+                    end_at: s.end_at
+                })));
+            }
+        }
+
+        if (!hasValidSubscription) {
             return utils.handleError(res, {
                 message: "Supplier does not have an active subscription",
                 code: 400,
@@ -2566,9 +3249,24 @@ exports.createSupplierQuote = async (req, res) => {
             user_id: new mongoose.Types.ObjectId(supplier_id) 
         });
 
+        // Remove _id from data to prevent duplicate key errors
+        // The _id might come from fetched enquiry data
+        const safeData = { ...data };
+        delete safeData._id;
+        delete safeData.id;
+        
+        // Debug logging for custom charges
+        console.log('📋 Custom charges data:', {
+            custom_charges_one: safeData.custom_charges_one,
+            custom_charges_two: safeData.custom_charges_two,
+            discount: safeData.discount,
+            grand_total: safeData.grand_total
+        });
+
         let quote;
         if (existingQuote) {
-            // Update existing quote
+            // Update existing quote instead of creating a new one
+            console.log('📝 Updating existing quote:', existingQuote._id);
             quote = await EnquiryQuotes.findOneAndUpdate(
                 { 
                     enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), 
@@ -2576,9 +3274,10 @@ exports.createSupplierQuote = async (req, res) => {
                 },
                 { 
                     $set: {
-                        ...data,
+                        ...safeData,
                         type: "admin",
-                        is_admin_updated: true,
+                        // is_admin_updated is set to false initially - will be set to true when final quote is submitted
+                        is_admin_updated: false,
                         created_by_admin: adminId
                     }
                 },
@@ -2586,13 +3285,15 @@ exports.createSupplierQuote = async (req, res) => {
             );
         } else {
             // Create new quote
+            console.log('📝 Creating new quote for supplier:', supplier_id);
             let quote_unique_id = await genQuoteId();
             quote = await EnquiryQuotes.create({
-                ...data,
+                ...safeData,
                 quote_unique_id,
                 user_id: supplier_id,
                 type: "admin",
-                is_admin_updated: true,
+                // is_admin_updated is set to false initially - will be set to true when final quote is submitted
+                is_admin_updated: false,
                 created_by_admin: adminId
             });
         }
@@ -2600,8 +3301,8 @@ exports.createSupplierQuote = async (req, res) => {
         // Send notification to buyer - wrapped in try-catch to prevent crashes
         try {
             const notificationMessage = {
-                title: 'New Quote submitted by Admin on behalf of Supplier',
-                description: `Admin has created a new quote on behalf of ${supplier.full_name}. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                title: 'New Quote Submitted',
+                description: `${supplier.full_name} has submitted a new quote. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
                 quote: quote._id
             };
 
@@ -2647,8 +3348,8 @@ exports.createSupplierQuote = async (req, res) => {
         // Send notification to supplier - wrapped in try-catch to prevent crashes
         try {
             const supplierNotificationMessage = {
-                title: 'Quote Created on Your Behalf',
-                description: `Admin has created a quote on your behalf for Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                title: 'Your Quote Has Been Submitted',
+                description: `Your quote has been submitted for Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
                 quote: quote._id
             };
 
@@ -2718,7 +3419,7 @@ exports.createSupplierQuote = async (req, res) => {
             if (supplier && supplier.email) {
                 const mailOptions = {
                     to: supplier.email,
-                    subject: `Quote Created on Your Behalf - Enquiry ${buyerenquiry.enquiry_unique_id}`,
+                    subject: `Your Quote Has Been Submitted - Enquiry ${buyerenquiry.enquiry_unique_id}`,
                     app_name: process.env.APP_NAME || 'BSO Services',
                     email: supplier.email,
                     name: supplier.full_name || 'Supplier',
@@ -2800,7 +3501,22 @@ exports.createSupplierQuote = async (req, res) => {
 // Update quote (supplier or logistics) - CRUD operation
 exports.updateQuote = async (req, res) => {
     try {
-        const { quote_id, status, enquiry_items, shipping_fee, notes } = req.body;
+        const { 
+            quote_id, 
+            status, 
+            enquiry_items, 
+            shipping_fee, 
+            notes,
+            // Additional fields for supplier quotes
+            custom_charges_one,
+            custom_charges_two,
+            discount,
+            delivery_time,
+            payment_terms,
+            pickup_address,
+            currency,
+            grand_total
+        } = req.body;
         const adminId = req.user._id;
 
         if (!quote_id) {
@@ -2835,6 +3551,31 @@ exports.updateQuote = async (req, res) => {
                 }
             }
 
+            // Update custom charges if provided
+            if (custom_charges_one !== undefined) {
+                updateData.custom_charges_one = custom_charges_one;
+            }
+            if (custom_charges_two !== undefined) {
+                updateData.custom_charges_two = custom_charges_two;
+            }
+            if (discount !== undefined) {
+                updateData.discount = discount;
+            }
+
+            // Update other fields if provided
+            if (delivery_time !== undefined) {
+                updateData.delivery_time = delivery_time;
+            }
+            if (payment_terms !== undefined) {
+                updateData.payment_terms = payment_terms;
+            }
+            if (pickup_address !== undefined) {
+                updateData.pickup_address = pickup_address;
+            }
+            if (currency !== undefined) {
+                updateData.currency = currency;
+            }
+
             if (enquiry_items && Array.isArray(enquiry_items)) {
                 // Update enquiry items
                 const updatedItems = quote.enquiry_items.map((item) => {
@@ -2849,34 +3590,42 @@ exports.updateQuote = async (req, res) => {
                     return item;
                 });
                 updateData.enquiry_items = updatedItems;
-
-                // Recalculate grand_total
-                let subtotal = 0;
-                updatedItems.forEach((item) => {
-                    subtotal += (parseFloat(item.unit_price) || 0) * (parseFloat(item.available_quantity) || 0);
-                });
-
-                // Apply custom charges and discount
-                let grandTotal = subtotal;
-                if (quote.custom_charges_one && quote.custom_charges_one.value) {
-                    grandTotal += parseFloat(quote.custom_charges_one.value);
-                }
-                if (quote.custom_charges_two && quote.custom_charges_two.value) {
-                    if (quote.custom_charges_two.charge_type === 'percentage') {
-                        grandTotal += (subtotal * parseFloat(quote.custom_charges_two.value)) / 100;
-                    } else {
-                        grandTotal += parseFloat(quote.custom_charges_two.value);
-                    }
-                }
-                if (quote.discount && quote.discount.value) {
-                    if (quote.discount.charge_type === 'percentage') {
-                        grandTotal -= (subtotal * parseFloat(quote.discount.value)) / 100;
-                    } else {
-                        grandTotal -= parseFloat(quote.discount.value);
-                    }
-                }
-                updateData.grand_total = grandTotal;
             }
+
+            // Recalculate grand_total using updated values or existing values
+            const itemsForCalc = updateData.enquiry_items || quote.enquiry_items || [];
+                let subtotal = 0;
+            itemsForCalc.forEach((item) => {
+                const itemObj = item.toObject ? item.toObject() : item;
+                subtotal += (parseFloat(itemObj.unit_price) || 0) * (parseFloat(itemObj.available_quantity) || 0);
+            });
+
+            // Use updated charges if provided, otherwise use existing
+            const chargeOne = updateData.custom_charges_one || quote.custom_charges_one;
+            const chargeTwo = updateData.custom_charges_two || quote.custom_charges_two;
+            const discountData = updateData.discount || quote.discount;
+
+                let grandTotal = subtotal;
+            if (chargeOne && chargeOne.value) {
+                grandTotal += parseFloat(chargeOne.value);
+            }
+            if (chargeTwo && chargeTwo.value) {
+                if (chargeTwo.charge_type === 'percentage') {
+                    grandTotal += (subtotal * parseFloat(chargeTwo.value)) / 100;
+                    } else {
+                    grandTotal += parseFloat(chargeTwo.value);
+                }
+            }
+            if (discountData && discountData.value) {
+                if (discountData.charge_type === 'percentage') {
+                    grandTotal -= (subtotal * parseFloat(discountData.value)) / 100;
+                    } else {
+                    grandTotal -= parseFloat(discountData.value);
+                    }
+            }
+            
+            // Use provided grand_total if available and valid, otherwise use calculated
+            updateData.grand_total = (grand_total && grand_total > 0) ? grand_total : grandTotal;
 
             updateData.is_admin_updated = true;
             updateData.updated_by_admin = adminId;
@@ -2924,6 +3673,53 @@ exports.updateQuote = async (req, res) => {
                 { $set: updateData },
                 { new: true }
             ).populate('enquiry_id', 'enquiry_unique_id enquiry_number').populate('user_id', 'full_name email');
+        }
+
+        // Send email notifications
+        try {
+            const enquiry = quote.enquiry_id;
+            const user = quote.user_id;
+            
+            // Send email to the quote provider (supplier/logistics)
+            if (user && user.email) {
+                const mailOptions = {
+                    to: user.email,
+                    subject: `Your Quote Has Been Updated - ${enquiry?.enquiry_unique_id || quote.quote_unique_id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services',
+                    name: user.full_name || 'Provider',
+                    quote_unique_id: quote.quote_unique_id,
+                    enquiry_id: enquiry?.enquiry_unique_id,
+                    enquiry_number: enquiry?.enquiry_number,
+                    updated_fields: Object.keys(updateData).join(', '),
+                    new_status: updateData.status || previousData?.status,
+                    view_link: quoteType === 'supplier' 
+                        ? `${process.env.FRONTEND_PROD_URL}/quote-management`
+                        : `${process.env.FRONTEND_PROD_URL}/logistics/quote-management`
+                };
+                await emailer.sendEmail(null, mailOptions, "QuoteUpdated");
+            }
+
+            // Send email to buyer if enquiry has user_id
+            if (enquiry && enquiry.user_id) {
+                const buyerData = await User.findById(enquiry.user_id);
+                if (buyerData && buyerData.email) {
+                    const mailOptions = {
+                        to: buyerData.email,
+                        subject: `Quote Updated for Your Enquiry - ${enquiry?.enquiry_unique_id}`,
+                        app_name: process.env.APP_NAME || 'BSO Services',
+                        name: buyerData.full_name || 'Buyer',
+                        quote_unique_id: quote.quote_unique_id,
+                        enquiry_id: enquiry?.enquiry_unique_id,
+                        provider_name: user?.full_name,
+                        quote_type: quoteType,
+                        new_status: updateData.status || previousData?.status,
+                        view_link: `${process.env.FRONTEND_PROD_URL}/enquiry-review-page/${enquiry._id}`
+                    };
+                    await emailer.sendEmail(null, mailOptions, "QuoteUpdatedBuyer");
+                }
+            }
+        } catch (emailError) {
+            console.error('Error sending email notifications:', emailError);
         }
 
         // Create log entry for update
@@ -3024,13 +3820,54 @@ exports.createLogisticsQuote = async (req, res) => {
             });
         }
 
+        // Check for active subscription - check for logistics type OR all_in_one type
+        // Use case-insensitive search for status
         const activeSubscription = await Subscription.findOne({ 
             user_id: logistics_id, 
-            status: "active", 
-            type: "logistics" 
+            status: { $regex: /^active$/i }, 
+            type: { $in: ["logistics", "all_in_one"] }
         });
 
-        if (!activeSubscription) {
+        console.log('🔍 Logistics subscription check:', {
+            logistics_id,
+            activeSubscription: activeSubscription ? {
+                _id: activeSubscription._id,
+                status: activeSubscription.status,
+                type: activeSubscription.type,
+                plan_id: activeSubscription.plan_id
+            } : null
+        });
+
+        // If no subscription found with type filter, check without type filter (in case type is not set)
+        let hasValidSubscription = !!activeSubscription;
+        if (!hasValidSubscription) {
+            const anyActiveSubscription = await Subscription.findOne({ 
+                user_id: logistics_id, 
+                status: { $regex: /^active$/i }
+            });
+            if (anyActiveSubscription) {
+                console.log('✅ Found active logistics subscription without type filter:', {
+                    _id: anyActiveSubscription._id,
+                    status: anyActiveSubscription.status,
+                    type: anyActiveSubscription.type,
+                    plan_id: anyActiveSubscription.plan_id
+                });
+                hasValidSubscription = true;
+            } else {
+                // Log all subscriptions for this user for debugging
+                const allSubs = await Subscription.find({ user_id: logistics_id });
+                console.log('❌ No active logistics subscription found. All subscriptions for user:', allSubs.map(s => ({
+                    _id: s._id,
+                    status: s.status,
+                    type: s.type,
+                    plan_id: s.plan_id,
+                    start_at: s.start_at,
+                    end_at: s.end_at
+                })));
+            }
+        }
+
+        if (!hasValidSubscription) {
             return utils.handleError(res, {
                 message: "Logistics provider does not have an active subscription",
                 code: 400,
@@ -3052,11 +3889,17 @@ exports.createLogisticsQuote = async (req, res) => {
             user_id: new mongoose.Types.ObjectId(logistics_id) 
         });
 
+        // Remove _id from data to prevent duplicate key errors
+        const safeData = { ...data };
+        delete safeData._id;
+        delete safeData.id;
+
         let quote;
         let isUpdate = false;
         if (existingQuote) {
             // Update existing quote
             isUpdate = true;
+            console.log('📝 Updating existing logistics quote:', existingQuote._id);
             quote = await logistics_quotes.findOneAndUpdate(
                 { 
                     enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), 
@@ -3064,7 +3907,7 @@ exports.createLogisticsQuote = async (req, res) => {
                 },
                 { 
                     $set: {
-                        ...data,
+                        ...safeData,
                         created_by_admin: adminId
                     }
                 },
@@ -3072,9 +3915,10 @@ exports.createLogisticsQuote = async (req, res) => {
             );
         } else {
             // Create new quote
+            console.log('📝 Creating new logistics quote for provider:', logistics_id);
             let quote_unique_id = await genQuoteId();
             quote = await logistics_quotes.create({
-                ...data,
+                ...safeData,
                 quote_unique_id,
                 user_id: logistics_id,
                 created_by_admin: adminId
@@ -3087,7 +3931,7 @@ exports.createLogisticsQuote = async (req, res) => {
             if (buyerfcm && buyerfcm.length > 0) {
                 const notificationMessage = {
                     title: 'New Logistics Quote Submitted',
-                    description: `Admin has created a logistics quote on behalf of ${logistics.full_name}. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                    description: `${logistics.full_name} has submitted a logistics quote. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
                     quote: quote._id
                 };
                 
@@ -3156,7 +4000,7 @@ exports.createLogisticsQuote = async (req, res) => {
             if (logistics && logistics.email) {
                 const mailOptions = {
                     to: logistics.email,
-                    subject: `Logistics Quote Created on Your Behalf - Enquiry ${buyerenquiry.enquiry_unique_id}`,
+                    subject: `Your Logistics Quote Has Been Submitted - Enquiry ${buyerenquiry.enquiry_unique_id}`,
                     app_name: process.env.APP_NAME || 'BSO Services',
                     email: logistics.email,
                     name: logistics.full_name || 'Logistics Provider',
@@ -3592,7 +4436,14 @@ exports.getSuppliersList = async (req, res) => {
                                 $expr: {
                                     $and: [
                                         { $eq: ["$user_id", "$$userId"] },
-                                        { $eq: ["$status", "active"] }
+                                        // Case-insensitive check for active status
+                                        { 
+                                            $regexMatch: { 
+                                                input: "$status", 
+                                                regex: "^active$", 
+                                                options: "i" 
+                                            } 
+                                        }
                                     ]
                                 }
                             }
@@ -3702,7 +4553,14 @@ exports.getLogisticsList = async (req, res) => {
                                 $expr: {
                                     $and: [
                                         { $eq: ["$user_id", "$$userId"] },
-                                        { $eq: ["$status", "active"] }
+                                        // Case-insensitive check for active status
+                                        { 
+                                            $regexMatch: { 
+                                                input: "$status", 
+                                                regex: "^active$", 
+                                                options: "i" 
+                                            } 
+                                        }
                                     ]
                                 }
                             }
@@ -3778,6 +4636,15 @@ exports.getLogisticsList = async (req, res) => {
                 }
             }
         ]);
+
+        // Log for debugging
+        console.log('🔍 getLogisticsList - Found logistics:', logistics.length);
+        if (logistics.length > 0) {
+            console.log('🔍 Sample logistics subscription data:', {
+                name: logistics[0].full_name,
+                subscription: logistics[0].subscription
+            });
+        }
 
         // Return empty array if no logistics found (not an error)
         if (!logistics || logistics.length === 0) {

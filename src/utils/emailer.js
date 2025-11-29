@@ -276,11 +276,19 @@ module.exports = {
    */
 
   async sendEmail(locale, mailOptions, template) {
+    // If context is provided, spread its values to the top level for express-mailer
+    if (mailOptions.context && typeof mailOptions.context === 'object') {
+      const { context, ...rest } = mailOptions;
+      mailOptions = { ...rest, ...context };
+    }
+    
     mailOptions.website_url = process.env.FRONTEND_PROD_URL;
 
     locale = locale == null ? "" : `${locale}/`;
 
     console.log("📧 Sending email to:", mailOptions.to);
+    console.log("📧 Email template:", template);
+    console.log("📧 Email variables:", { name: mailOptions.name, enquiry_id: mailOptions.enquiry_id });
 
     return new Promise((resolve, reject) => {
       app.mailer.send(`${locale}${template}`, mailOptions, function (err, message) {
