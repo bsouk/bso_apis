@@ -351,6 +351,7 @@ router.get(
 )
 router.post(
   "/acceptsupplierEnquiry",
+  requireAuth,
   trimRequest.all,
   controller.acceptsupplierEnquiry
 )
@@ -368,6 +369,9 @@ router.get(
 router.get("/viewLogisticQuote/:id", trimRequest.all, controller.viewLogisticQuote)
 router.put("/acceptLogisticQuote/:id", requireAuth, trimRequest.all, controller.acceptLogisticQuote)
 
+// Reject supplier and logistics quotes (from view-quote page)
+router.post("/rejectsupplierEnquiry", requireAuth, trimRequest.all, controller.rejectsupplierEnquiry)
+router.post("/rejectLogisticQuote", requireAuth, trimRequest.all, controller.rejectLogisticQuote)
 
 router.post(
   "/addAdminFCMDevice",

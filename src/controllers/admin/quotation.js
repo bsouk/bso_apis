@@ -1362,7 +1362,7 @@ exports.addFinalQuotationList = async (req, res) => {
                     name: buyer.full_name || buyer.first_name || 'Buyer',
                     quotation_id: queryData.quotation_unique_id || quotation_id,
                     items_count: final_quotation.length,
-                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                    view_link: `${process.env.FRONTEND_PROD_URL}quotation-management`
                 };
                 await emailer.sendEmail(null, mailOptions, "FinalQuotationSubmitted");
             }
@@ -1581,7 +1581,7 @@ exports.assignLogistics = async (req, res) => {
                     name: logisticsProvider.full_name || logisticsProvider.first_name || 'Logistics Provider',
                     quotation_id: result.quotation_unique_id || quotation_id,
                     products_count: product_ids.length,
-                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management-logistics`
+                    view_link: `${process.env.FRONTEND_PROD_URL}quotation-management-logistics`
                 };
                 await emailer.sendEmail(null, mailOptions, "LogisticsAssigned");
             }
@@ -1599,7 +1599,7 @@ exports.assignLogistics = async (req, res) => {
                     name: buyer.full_name || buyer.first_name || 'Buyer',
                     quotation_id: result.quotation_unique_id || quotation_id,
                     logistics_name: logisticsProvider.full_name || logisticsProvider.first_name,
-                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                    view_link: `${process.env.FRONTEND_PROD_URL}quotation-management`
                 };
                 await emailer.sendEmail(null, mailOptions, "LogisticsAssignedBuyer");
             }
@@ -1748,7 +1748,7 @@ exports.approveRejectLogistics = async (req, res) => {
                     quotation_id: quotation_data.quotation_unique_id || quotation_id,
                     status: isAccepted ? 'Accepted' : 'Rejected',
                     reason: req.body.reason || '',
-                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management-logistics`
+                    view_link: `${process.env.FRONTEND_PROD_URL}quotation-management-logistics`
                 };
                 await emailer.sendEmail(null, mailOptions, isAccepted ? "LogisticsQuoteAcceptedProvider" : "LogisticsQuoteRejected");
             }
@@ -1768,7 +1768,7 @@ exports.approveRejectLogistics = async (req, res) => {
                     logistics_name: logisticsProvider.full_name || logisticsProvider.first_name,
                     status: isAccepted ? 'Accepted' : 'Rejected',
                     reason: req.body.reason || '',
-                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                    view_link: `${process.env.FRONTEND_PROD_URL}quotation-management`
                 };
                 await emailer.sendEmail(null, mailOptions, isAccepted ? "LogisticsQuoteAccepted" : "LogisticsQuoteRejectedBuyer");
             }
@@ -2280,7 +2280,7 @@ exports.acceptRejectSupplierQuote = async (req, res) => {
                     name: supplier.full_name || supplier.first_name || 'Supplier',
                     quotation_id: queryData.quotation_unique_id || quotation_id,
                     status: isAccepted ? 'Accepted' : 'Rejected',
-                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                    view_link: `${process.env.FRONTEND_PROD_URL}quotation-management`
                 };
                 await emailer.sendEmail(null, mailOptions, isAccepted ? "SupplierQuoteAcceptedProvider" : "SupplierQuoteRejected");
             }
@@ -2299,7 +2299,7 @@ exports.acceptRejectSupplierQuote = async (req, res) => {
                     quotation_id: queryData.quotation_unique_id || quotation_id,
                     supplier_name: supplier.full_name || supplier.first_name,
                     status: isAccepted ? 'Accepted' : 'Rejected',
-                    view_link: `${process.env.FRONTEND_PROD_URL}/quotation-management`
+                    view_link: `${process.env.FRONTEND_PROD_URL}quotation-management`
                 };
                 await emailer.sendEmail(null, mailOptions, isAccepted ? "SupplierQuoteAccepted" : "SupplierQuoteRejectedBuyer");
             }
@@ -3275,7 +3275,7 @@ exports.createSupplierQuote = async (req, res) => {
                 { 
                     $set: {
                         ...safeData,
-                        type: "admin",
+                        type: "supplier",
                         // is_admin_updated is set to false initially - will be set to true when final quote is submitted
                         is_admin_updated: false,
                         created_by_admin: adminId
@@ -3291,7 +3291,7 @@ exports.createSupplierQuote = async (req, res) => {
                 ...safeData,
                 quote_unique_id,
                 user_id: supplier_id,
-                type: "admin",
+                type: "supplier",
                 // is_admin_updated is set to false initially - will be set to true when final quote is submitted
                 is_admin_updated: false,
                 created_by_admin: adminId
@@ -3406,7 +3406,7 @@ exports.createSupplierQuote = async (req, res) => {
                     enquiry_number: buyerenquiry.enquiry_number,
                     supplier_name: supplier.full_name,
                     quote_id: quote.quote_unique_id,
-                    quote_link: `${process.env.FRONTEND_PROD_URL}/enquiry-review-page/${buyerenquiry._id}`,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}enquiry-review-page/${buyerenquiry._id}`,
                 };
                 await emailer.sendEmail(null, mailOptions, "quoteCreated");
             }
@@ -3426,7 +3426,7 @@ exports.createSupplierQuote = async (req, res) => {
                     enquiry_id: buyerenquiry.enquiry_unique_id,
                     enquiry_number: buyerenquiry.enquiry_number,
                     quote_id: quote.quote_unique_id,
-                    quote_link: `${process.env.FRONTEND_PROD_URL}/quote-review-page/${quote._id}`,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}quote-review-page/${quote._id}`,
                 };
                 await emailer.sendEmail(null, mailOptions, "quoteCreatedForSupplier");
             }
@@ -3693,8 +3693,8 @@ exports.updateQuote = async (req, res) => {
                     updated_fields: Object.keys(updateData).join(', '),
                     new_status: updateData.status || previousData?.status,
                     view_link: quoteType === 'supplier' 
-                        ? `${process.env.FRONTEND_PROD_URL}/quotation-management`
-                        : `${process.env.FRONTEND_PROD_URL}/quotation-management-logistics`
+                        ? `${process.env.FRONTEND_PROD_URL}quotation-management`
+                        : `${process.env.FRONTEND_PROD_URL}quotation-management-logistics`
                 };
                 await emailer.sendEmail(null, mailOptions, "QuoteUpdated");
             }
@@ -3713,7 +3713,7 @@ exports.updateQuote = async (req, res) => {
                         provider_name: user?.full_name,
                         quote_type: quoteType,
                         new_status: updateData.status || previousData?.status,
-                        view_link: `${process.env.FRONTEND_PROD_URL}/enquiry-review-page/${enquiry._id}`
+                        view_link: `${process.env.FRONTEND_PROD_URL}enquiry-review-page/${enquiry._id}`
                     };
                     await emailer.sendEmail(null, mailOptions, "QuoteUpdatedBuyer");
                 }
@@ -3987,7 +3987,7 @@ exports.createLogisticsQuote = async (req, res) => {
                     logistics_name: logistics.full_name,
                     quote_id: quote.quote_unique_id,
                     shipping_fee: quote.shipping_fee,
-                    quote_link: `${process.env.FRONTEND_PROD_URL}/enquiry-review-page/${buyerenquiry._id}`,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}enquiry-review-page/${buyerenquiry._id}`,
                 };
                 await emailer.sendEmail(null, mailOptions, "logisticsQuoteCreated");
             }
@@ -4008,7 +4008,7 @@ exports.createLogisticsQuote = async (req, res) => {
                     enquiry_number: buyerenquiry.enquiry_number,
                     quote_id: quote.quote_unique_id,
                     shipping_fee: quote.shipping_fee,
-                    quote_link: `${process.env.FRONTEND_PROD_URL}/quote-review-page-logistics/${quote._id}`,
+                    quote_link: `${process.env.FRONTEND_PROD_URL}quote-review-page-logistics/${quote._id}`,
                 };
                 await emailer.sendEmail(null, mailOptions, "logisticsQuoteCreatedForProvider");
             }

@@ -3280,30 +3280,35 @@ exports.acceptsupplierEnquiry = async (req, res) => {
     }
 
     // Check if this quote is already accepted
-    if (quoteToAccept.is_admin_approved) {
+    if (quoteToAccept.is_admin_approved || quoteToAccept.is_selected) {
+      // If is_admin_approved is true but is_selected is false, sync them
+      if (quoteToAccept.is_admin_approved && !quoteToAccept.is_selected) {
+        await EnquiryQuotes.findByIdAndUpdate(id, { $set: { is_selected: true } });
+        return res.status(200).json({
+          message: "Supplier quote status synced and accepted.",
+          code: 200,
+          data: { ...quoteToAccept.toObject(), is_selected: true }
+        });
+      }
       return res.status(400).json({
         message: "This supplier quote is already accepted.",
         code: 400
       });
     }
 
-    // Check if another quote for the same enquiry is already accepted
-    const existingAcceptedQuote = await EnquiryQuotes.findOne({
-      enquiry_id: quoteToAccept.enquiry_id,
-      is_admin_approved: true,
-      _id: { $ne: id }
-    });
-
-    if (existingAcceptedQuote) {
-      return res.status(400).json({
-        message: "Another supplier quote has already been accepted for this enquiry. Only one supplier quote can be accepted per enquiry.",
-        code: 400
-      });
-    }
+    // Mark all other quotes for this enquiry as "not_selected"
+    // This indicates the enquiry is closed and another quote was chosen
+    await EnquiryQuotes.updateMany(
+      {
+        enquiry_id: quoteToAccept.enquiry_id,
+        _id: { $ne: id }
+      },
+      { $set: { is_admin_approved: false, is_selected: false, status: 'not_selected' } }
+    );
 
     const result = await EnquiryQuotes.findOneAndUpdate(
       { _id: id },
-      { $set: { is_admin_approved: is_selected } },
+      { $set: { is_admin_approved: is_selected, is_selected: is_selected, status: 'accepted' } },
       { new: true }
     ).populate('user_id', 'full_name email');
     
@@ -3331,7 +3336,7 @@ exports.acceptsupplierEnquiry = async (req, res) => {
     console.log("✅ Supplier quote accepted:", id);
 
     // Send email notifications
-    const frontendUrl = process.env.FRONTEND_URL || 'https://bsoservices.com';
+    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
     
     // Email to Buyer
     if (enquiry?.user_id?.email) {
@@ -3346,7 +3351,7 @@ exports.acceptsupplierEnquiry = async (req, res) => {
           delivery_time: result.delivery_time || "As quoted",
           total_amount: totalprice,
           currency: result.currency || "GBP",
-          view_link: `${frontendUrl}/enquiry-review-page/${enquiry._id}`
+          view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
         }
       };
       try {
@@ -3369,7 +3374,7 @@ exports.acceptsupplierEnquiry = async (req, res) => {
           delivery_time: result.delivery_time || "As quoted",
           total_amount: totalprice,
           currency: result.currency || "GBP",
-          view_link: `${frontendUrl}/quotation-management`
+          view_link: `${frontendUrl}quotation-management`
         }
       };
       try {
@@ -3435,6 +3440,317 @@ exports.acceptsupplierEnquiry = async (req, res) => {
       console.error("❌ Failed to create error log:", logError.message);
     }
     utils.handleError(res, error);
+  }
+};
+
+// Reject supplier quote from view-quote page
+exports.rejectsupplierEnquiry = async (req, res) => {
+  try {
+    const { id, reason } = req.body;
+
+    console.log("🔄 Rejecting supplier quote:", { id, reason });
+
+    // Get the quote to check status
+    const quoteToReject = await EnquiryQuotes.findById(id);
+    console.log("📋 Quote found:", quoteToReject ? { _id: quoteToReject._id, status: quoteToReject.status } : null);
+    
+    if (!quoteToReject) {
+      return res.status(404).json({
+        message: "Quote not found.",
+        code: 404
+      });
+    }
+
+    // Check if already rejected
+    if (quoteToReject.status === 'rejected') {
+      return res.status(400).json({
+        message: "This supplier quote is already rejected.",
+        code: 400
+      });
+    }
+
+    // Update quote to rejected
+    const result = await EnquiryQuotes.findOneAndUpdate(
+      { _id: id },
+      { 
+        $set: { 
+          is_admin_approved: false, 
+          is_selected: false, 
+          status: 'rejected',
+          rejection_reason: reason || ''
+        } 
+      },
+      { new: true }
+    ).populate('user_id', 'full_name email');
+
+    console.log("📋 Quote after update:", result ? { _id: result._id, status: result.status, is_selected: result.is_selected } : null);
+
+    // Get enquiry details for email
+    const enquiry = await Enquiry.findById(result.enquiry_id).populate('user_id', 'full_name email');
+    
+    console.log("✅ Supplier quote rejected:", id);
+
+    // Send email notifications
+    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
+    
+    // Email to Buyer
+    if (enquiry?.user_id?.email) {
+      const buyerMailOptions = {
+        to: enquiry.user_id.email,
+        subject: `Supplier Quote Rejected - Enquiry #${enquiry.enquiry_unique_id}`,
+        template: "SupplierQuoteRejectedBuyer",
+        context: {
+          name: enquiry.user_id.full_name || "Valued Customer",
+          quotation_id: enquiry.enquiry_unique_id,
+          enquiry_id: enquiry.enquiry_unique_id,
+          supplier_name: result.user_id?.full_name || "Supplier",
+          status: "Rejected",
+          reason: reason || "No reason provided",
+          view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, buyerMailOptions, "SupplierQuoteRejectedBuyer");
+        console.log("📧 Rejection email sent to buyer:", enquiry.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send rejection email to buyer:", emailError.message);
+      }
+    }
+    
+    // Email to Supplier
+    if (result?.user_id?.email) {
+      const supplierMailOptions = {
+        to: result.user_id.email,
+        subject: `Your Quote Has Been Rejected - Enquiry #${enquiry.enquiry_unique_id}`,
+        template: "SupplierQuoteRejected",
+        context: {
+          name: result.user_id.full_name || "Valued Supplier",
+          quotation_id: enquiry.enquiry_unique_id,
+          enquiry_id: enquiry.enquiry_unique_id,
+          status: "Rejected",
+          reason: reason || "No reason provided",
+          view_link: `${frontendUrl}quotation-management`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, supplierMailOptions, "SupplierQuoteRejected");
+        console.log("📧 Rejection email sent to supplier:", result.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send rejection email to supplier:", emailError.message);
+      }
+    }
+
+    // Log successful supplier quote rejection
+    try {
+      await createLog({
+        admin_id: req.user._id,
+        admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+        admin_email: req.user.email,
+        admin_role: req.user.role,
+        feature: 'supplier_quote',
+        action: 'reject',
+        related_id: id,
+        related_collection: 'enquiry_quotes',
+        status: 'success',
+        details: {
+          enquiry_id: enquiry._id,
+          enquiry_unique_id: enquiry.enquiry_unique_id,
+          supplier_name: result.user_id?.full_name || 'Unknown',
+          supplier_email: result.user_id?.email || 'Unknown',
+          buyer_name: enquiry.user_id?.full_name || 'Unknown',
+          buyer_email: enquiry.user_id?.email || 'Unknown',
+          reason: reason || 'No reason provided'
+        },
+        req
+      });
+      console.log("✅ Log created for supplier quote rejection");
+    } catch (logError) {
+      console.error("❌ Failed to create log:", logError.message);
+    }
+
+    return res.status(200).json({
+      message: `Supplier quote rejected successfully.`,
+      data: result,
+      code: 200
+    });
+  } catch (error) {
+    // Log failed supplier quote rejection
+    try {
+      await createLog({
+        admin_id: req.user?._id,
+        admin_name: req.user?.full_name || `${req.user?.first_name} ${req.user?.last_name}`,
+        admin_email: req.user?.email,
+        admin_role: req.user?.role,
+        feature: 'supplier_quote',
+        action: 'reject',
+        related_id: req.body?.id,
+        related_collection: 'enquiry_quotes',
+        status: 'failure',
+        error_message: error.message,
+        error_stack: error.stack,
+        req
+      });
+    } catch (logError) {
+      console.error("❌ Failed to create error log:", logError.message);
+    }
+    utils.handleError(res, error);
+  }
+};
+
+// Reject logistics quote from view-quote page
+exports.rejectLogisticQuote = async (req, res) => {
+  try {
+    const { id, reason } = req.body;
+    
+    console.log("🔄 Rejecting logistics quote:", { id, reason });
+    
+    // Get the quote to check status
+    const quoteToReject = await logistics_quotes.findById(id);
+    console.log("📋 Quote found:", quoteToReject ? { _id: quoteToReject._id, status: quoteToReject.status } : null);
+    
+    if (!quoteToReject) {
+      return res.status(404).json({
+        message: "Logistics quote not found.",
+        code: 404
+      });
+    }
+
+    // Check if already rejected
+    if (quoteToReject.status === 'rejected') {
+      return res.status(400).json({
+        message: "This logistics quote is already rejected.",
+        code: 400
+      });
+    }
+
+    // Update quote to rejected
+    const updatelogisticQuote = await logistics_quotes.findByIdAndUpdate(
+      id, 
+      { 
+        $set: { 
+          is_selected: false, 
+          status: 'rejected',
+          rejection_reason: reason || ''
+        } 
+      }, 
+      { new: true }
+    ).populate('user_id', 'full_name email');
+
+    console.log("📋 Quote after update:", updatelogisticQuote ? { _id: updatelogisticQuote._id, status: updatelogisticQuote.status, is_selected: updatelogisticQuote.is_selected } : null);
+
+    // Get enquiry details
+    const enquiry = await Enquiry.findById(updatelogisticQuote.enquiry_id).populate('user_id', 'full_name email');
+    
+    console.log("✅ Logistics quote rejected:", id);
+
+    // Send email notifications
+    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
+    
+    // Email to Buyer
+    if (enquiry?.user_id?.email) {
+      const buyerMailOptions = {
+        to: enquiry.user_id.email,
+        subject: `Logistics Quote Rejected - Enquiry #${enquiry.enquiry_unique_id}`,
+        template: "LogisticsQuoteRejectedBuyer",
+        context: {
+          name: enquiry.user_id.full_name || "Valued Customer",
+          quotation_id: enquiry.enquiry_unique_id,
+          enquiry_id: enquiry.enquiry_unique_id,
+          logistics_name: updatelogisticQuote.user_id?.full_name || "Logistics Provider",
+          status: "Rejected",
+          reason: reason || "No reason provided",
+          view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, buyerMailOptions, "LogisticsQuoteRejectedBuyer");
+        console.log("📧 Rejection email sent to buyer:", enquiry.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send rejection email to buyer:", emailError.message);
+      }
+    }
+    
+    // Email to Logistics Provider
+    if (updatelogisticQuote?.user_id?.email) {
+      const logisticsMailOptions = {
+        to: updatelogisticQuote.user_id.email,
+        subject: `Your Logistics Quote Has Been Rejected - Enquiry #${enquiry.enquiry_unique_id}`,
+        template: "LogisticsQuoteRejected",
+        context: {
+          name: updatelogisticQuote.user_id.full_name || "Logistics Partner",
+          quotation_id: enquiry.enquiry_unique_id,
+          enquiry_id: enquiry.enquiry_unique_id,
+          status: "Rejected",
+          reason: reason || "No reason provided",
+          view_link: `${frontendUrl}quotation-management-logistics`
+        }
+      };
+      try {
+        await emailer.sendEmail(null, logisticsMailOptions, "LogisticsQuoteRejected");
+        console.log("📧 Rejection email sent to logistics provider:", updatelogisticQuote.user_id.email);
+      } catch (emailError) {
+        console.error("❌ Failed to send rejection email to logistics provider:", emailError.message);
+      }
+    }
+
+    // Log successful logistics quote rejection
+    try {
+      await createLog({
+        admin_id: req.user._id,
+        admin_name: req.user.full_name || `${req.user.first_name} ${req.user.last_name}`,
+        admin_email: req.user.email,
+        admin_role: req.user.role,
+        feature: 'logistics_quote',
+        action: 'reject',
+        related_id: id,
+        related_collection: 'logistics_quotes',
+        status: 'success',
+        details: {
+          enquiry_id: enquiry._id,
+          enquiry_unique_id: enquiry.enquiry_unique_id,
+          logistics_name: updatelogisticQuote.user_id?.full_name || 'Unknown',
+          logistics_email: updatelogisticQuote.user_id?.email || 'Unknown',
+          buyer_name: enquiry.user_id?.full_name || 'Unknown',
+          buyer_email: enquiry.user_id?.email || 'Unknown',
+          reason: reason || 'No reason provided'
+        },
+        req
+      });
+      console.log("✅ Log created for logistics quote rejection");
+    } catch (logError) {
+      console.error("❌ Failed to create log:", logError.message);
+    }
+
+    return res.status(200).json({
+      message: "Logistics quote rejected successfully.",
+      data: updatelogisticQuote,
+      code: 200
+    });
+  } catch (error) {
+    console.error("❌ Error rejecting logistics quote:", error);
+    // Log failed logistics quote rejection
+    try {
+      await createLog({
+        admin_id: req.user?._id,
+        admin_name: req.user?.full_name || `${req.user?.first_name} ${req.user?.last_name}`,
+        admin_email: req.user?.email,
+        admin_role: req.user?.role,
+        feature: 'logistics_quote',
+        action: 'reject',
+        related_id: req.body?.id,
+        related_collection: 'logistics_quotes',
+        status: 'failure',
+        error_message: error.message,
+        error_stack: error.stack,
+        req
+      });
+    } catch (logError) {
+      console.error("❌ Failed to create error log:", logError.message);
+    }
+    return res.status(500).json({
+      message: "An error occurred while rejecting the logistics quote.",
+      code: 500
+    });
   }
 };
 
@@ -3607,7 +3923,7 @@ exports.updateSubmitQuery = async (req, res) => {
 
   // Get buyer details for email notification
   const buyer = await User.findById(enquiry.user_id);
-  const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com';
+  const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
 
   // Send email to buyer about final quote submission
   if (buyer?.email) {
@@ -3622,7 +3938,7 @@ exports.updateSubmitQuery = async (req, res) => {
         logistics_price: logistics_price,
         grand_total: grand_total,
         payment_terms: payment_terms,
-        view_link: `${frontendUrl}/enquiry-review-page/${enq_id}`
+        view_link: `${frontendUrl}enquiry-review-page/${enq_id}`
       };
       await emailer.sendEmail(null, buyerMailOptions, "FinalQuoteReady");
       console.log("📧 Final quote email sent to buyer:", buyer.email);
@@ -3882,24 +4198,20 @@ exports.acceptLogisticQuote = async (req, res) => {
       });
     }
 
-    // Check if another quote for the same enquiry is already accepted
-    const existingAcceptedQuote = await logistics_quotes.findOne({
-      enquiry_id: quoteToAccept.enquiry_id,
-      is_selected: true,
-      _id: { $ne: id }
-    });
-
-    if (existingAcceptedQuote) {
-      return res.status(400).json({
-        message: "Another logistics quote has already been accepted for this enquiry. Only one logistics quote can be accepted per enquiry.",
-        code: 400
-      });
-    }
+    // Mark all other logistics quotes for this enquiry as "not_selected"
+    // This indicates the enquiry is closed and another quote was chosen
+    await logistics_quotes.updateMany(
+      {
+        enquiry_id: quoteToAccept.enquiry_id,
+        _id: { $ne: id }
+      },
+      { $set: { is_selected: false, status: 'not_selected' } }
+    );
 
     // Accept this quote
     const updatelogisticQuote = await logistics_quotes.findByIdAndUpdate(
       id, 
-      { $set: { is_selected: true } }, 
+      { $set: { is_selected: true, status: 'accepted' } }, 
       { new: true }
     ).populate('user_id', 'full_name email');
 
@@ -3923,7 +4235,7 @@ exports.acceptLogisticQuote = async (req, res) => {
     console.log("✅ Enquiry updated with selected logistics:", selected?._id);
 
     // Send email notifications
-    const frontendUrl = process.env.FRONTEND_URL || 'https://bsoservices.com';
+    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
     
     // Email to Buyer
     if (selected?.user_id?.email) {
@@ -3936,7 +4248,7 @@ exports.acceptLogisticQuote = async (req, res) => {
           enquiry_id: selected.enquiry_unique_id,
           shipping_fee: updatelogisticQuote.shipping_fee,
           notes: updatelogisticQuote.notes || "N/A",
-          view_link: `${frontendUrl}/enquiry-review-page/${selected._id}`
+          view_link: `${frontendUrl}enquiry-review-page/${selected._id}`
         }
       };
       try {
@@ -3958,7 +4270,7 @@ exports.acceptLogisticQuote = async (req, res) => {
           enquiry_id: selected.enquiry_unique_id,
           shipping_fee: updatelogisticQuote.shipping_fee,
           notes: updatelogisticQuote.notes || "N/A",
-          view_link: `${frontendUrl}/quotation-management-logistics`
+          view_link: `${frontendUrl}quotation-management-logistics`
         }
       };
       try {

@@ -22,6 +22,15 @@ const logisticsQuotesSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    status: {
+        type: String,
+        enum: ['pending', 'accepted', 'rejected', 'not_selected'],
+        default: 'pending'
+    },
+    rejection_reason: {
+        type: String,
+        default: ''
+    },
     created_by_admin: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "admins"

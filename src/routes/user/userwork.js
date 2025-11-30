@@ -604,5 +604,12 @@ router.get(
     controller.getNotificationList
 )
 
+// AI-powered enquiry generation from text prompt
+router.post(
+    "/generateAiManualEnquiry",
+    trimRequest.all,
+    controller.generateAiManualEnquiry
+)
+
 
 module.exports = router;

@@ -51,6 +51,7 @@ const Notification = require("../../models/notification")
 const OTP = require("../../models/otp")
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const puppeteer = require('puppeteer');
+const axios = require('axios');
 
 
 
@@ -7868,5 +7869,84 @@ exports.getNotificationList = async (req, res) => {
     } catch (error) {
         console.log(error)
         utils.handleError(res, error)
+    }
+}
+
+
+/**
+ * Generate enquiry items from AI based on text prompt
+ * POST /user/generateAiManualEnquiry
+ * Calls external AI API to extract enquiry data from natural language
+ */
+exports.generateAiManualEnquiry = async (req, res) => {
+    try {
+        const { text } = req.body;
+
+        if (!text || text.trim() === '') {
+            return res.status(400).json({
+                message: "Please provide a text prompt to generate enquiry",
+                code: 400
+            });
+        }
+
+        // AI API configuration from environment variables
+        const AI_API_URL = process.env.AI_ENQUIRY_API_URL || 'https://qpyjcdhd22.eu-west-2.awsapprunner.com/api/v1/enquiry';
+        const AI_API_KEY = process.env.AI_ENQUIRY_API_KEY;
+
+        if (!AI_API_KEY) {
+            console.error("AI_ENQUIRY_API_KEY is not configured");
+            return res.status(500).json({
+                message: "AI service is not configured properly",
+                code: 500
+            });
+        }
+
+        console.log("Calling AI API with prompt:", text);
+
+        // Call the external AI API with x-api-key header
+        const aiResponse = await axios.post(AI_API_URL, {
+            text: text
+        }, {
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': AI_API_KEY
+            },
+            timeout: 30000 // 30 second timeout
+        });
+
+        console.log("AI API Response:", aiResponse.data);
+
+        // Return the AI response to the frontend
+        return res.status(200).json({
+            message: "Enquiry data generated successfully",
+            data: aiResponse.data,
+            code: 200
+        });
+
+    } catch (error) {
+        console.error("Error generating AI enquiry:", error);
+
+        // Handle axios errors specifically
+        if (error.response) {
+            // The AI API responded with an error
+            return res.status(error.response.status || 500).json({
+                message: error.response.data?.message || "AI service error",
+                code: error.response.status || 500,
+                error: error.response.data
+            });
+        } else if (error.request) {
+            // The request was made but no response was received
+            return res.status(503).json({
+                message: "AI service is currently unavailable. Please try again later.",
+                code: 503
+            });
+        } else {
+            // Something happened in setting up the request
+            return res.status(500).json({
+                message: "Failed to generate enquiry from AI",
+                code: 500,
+                error: error.message
+            });
+        }
     }
 }
