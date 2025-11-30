@@ -8,6 +8,12 @@ const crypto = require("crypto");
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const { createLog } = require("../../utils/logger");
+const { 
+    getCleanFrontendUrl, 
+    getEnquiryReviewUrl, 
+    getQuotationManagementUrl, 
+    getLogisticsQuotationManagementUrl 
+} = require("../../utils/urlHelper");
 
 // Helper function to generate unique subscription ID
 async function generateSubscriptionId() {
@@ -3335,9 +3341,41 @@ exports.acceptsupplierEnquiry = async (req, res) => {
     
     console.log("✅ Supplier quote accepted:", id);
 
+    // Update enquiry with selected supplier and status
+    const previousStatus = enquiry.status;
+    await Enquiry.findByIdAndUpdate(
+      result.enquiry_id,
+      {
+        $set: {
+          'selected_supplier.quote_id': id,
+          status: 'supplier_quote_accepted'
+        },
+        $push: {
+          activity_logs: {
+            action: 'supplier_quote_accepted',
+            description: `Supplier quote accepted from ${result.user_id?.full_name || 'Supplier'}`,
+            performed_by: {
+              user_id: req.user._id,
+              user_type: 'admin',
+              name: req.user.full_name || req.user.email || 'Admin'
+            },
+            previous_status: previousStatus,
+            new_status: 'supplier_quote_accepted',
+            metadata: {
+              quote_id: id,
+              supplier_name: result.user_id?.full_name,
+              supplier_email: result.user_id?.email,
+              total_price: totalprice,
+              currency: result.currency || 'GBP'
+            },
+            created_at: new Date()
+          }
+        }
+      }
+    );
+    console.log("✅ Enquiry status updated to supplier_quote_accepted");
+
     // Send email notifications
-    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
-    
     // Email to Buyer
     if (enquiry?.user_id?.email) {
       const buyerMailOptions = {
@@ -3351,7 +3389,7 @@ exports.acceptsupplierEnquiry = async (req, res) => {
           delivery_time: result.delivery_time || "As quoted",
           total_amount: totalprice,
           currency: result.currency || "GBP",
-          view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
+          view_link: getEnquiryReviewUrl(enquiry._id)
         }
       };
       try {
@@ -3374,7 +3412,7 @@ exports.acceptsupplierEnquiry = async (req, res) => {
           delivery_time: result.delivery_time || "As quoted",
           total_amount: totalprice,
           currency: result.currency || "GBP",
-          view_link: `${frontendUrl}quotation-management`
+          view_link: getQuotationManagementUrl()
         }
       };
       try {
@@ -3491,8 +3529,6 @@ exports.rejectsupplierEnquiry = async (req, res) => {
     console.log("✅ Supplier quote rejected:", id);
 
     // Send email notifications
-    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
-    
     // Email to Buyer
     if (enquiry?.user_id?.email) {
       const buyerMailOptions = {
@@ -3506,7 +3542,7 @@ exports.rejectsupplierEnquiry = async (req, res) => {
           supplier_name: result.user_id?.full_name || "Supplier",
           status: "Rejected",
           reason: reason || "No reason provided",
-          view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
+          view_link: getEnquiryReviewUrl(enquiry._id)
         }
       };
       try {
@@ -3529,7 +3565,7 @@ exports.rejectsupplierEnquiry = async (req, res) => {
           enquiry_id: enquiry.enquiry_unique_id,
           status: "Rejected",
           reason: reason || "No reason provided",
-          view_link: `${frontendUrl}quotation-management`
+          view_link: getQuotationManagementUrl()
         }
       };
       try {
@@ -3644,8 +3680,6 @@ exports.rejectLogisticQuote = async (req, res) => {
     console.log("✅ Logistics quote rejected:", id);
 
     // Send email notifications
-    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
-    
     // Email to Buyer
     if (enquiry?.user_id?.email) {
       const buyerMailOptions = {
@@ -3659,7 +3693,7 @@ exports.rejectLogisticQuote = async (req, res) => {
           logistics_name: updatelogisticQuote.user_id?.full_name || "Logistics Provider",
           status: "Rejected",
           reason: reason || "No reason provided",
-          view_link: `${frontendUrl}enquiry-review-page/${enquiry._id}`
+          view_link: getEnquiryReviewUrl(enquiry._id)
         }
       };
       try {
@@ -3682,7 +3716,7 @@ exports.rejectLogisticQuote = async (req, res) => {
           enquiry_id: enquiry.enquiry_unique_id,
           status: "Rejected",
           reason: reason || "No reason provided",
-          view_link: `${frontendUrl}quotation-management-logistics`
+          view_link: getLogisticsQuotationManagementUrl()
         }
       };
       try {
@@ -3923,7 +3957,6 @@ exports.updateSubmitQuery = async (req, res) => {
 
   // Get buyer details for email notification
   const buyer = await User.findById(enquiry.user_id);
-  const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
 
   // Send email to buyer about final quote submission
   if (buyer?.email) {
@@ -3938,7 +3971,7 @@ exports.updateSubmitQuery = async (req, res) => {
         logistics_price: logistics_price,
         grand_total: grand_total,
         payment_terms: payment_terms,
-        view_link: `${frontendUrl}enquiry-review-page/${enq_id}`
+        view_link: getEnquiryReviewUrl(enq_id)
       };
       await emailer.sendEmail(null, buyerMailOptions, "FinalQuoteReady");
       console.log("📧 Final quote email sent to buyer:", buyer.email);
@@ -4215,7 +4248,11 @@ exports.acceptLogisticQuote = async (req, res) => {
       { new: true }
     ).populate('user_id', 'full_name email');
 
-    // Update enquiry with selected logistics
+    // Get current enquiry status for activity log
+    const currentEnquiry = await Enquiry.findById(updatelogisticQuote?.enquiry_id);
+    const previousStatus = currentEnquiry?.status || 'pending';
+
+    // Update enquiry with selected logistics, status, and activity log
     const selected = await Enquiry.findByIdAndUpdate(
       {
         _id: new mongoose.Types.ObjectId(updatelogisticQuote?.enquiry_id)
@@ -4225,18 +4262,37 @@ exports.acceptLogisticQuote = async (req, res) => {
           selected_logistics: {
             quote_id: new mongoose.Types.ObjectId(id)
           },
-          shipment_type: "delivery"
+          shipment_type: "delivery",
+          status: "logistics_quote_accepted"
+        },
+        $push: {
+          activity_logs: {
+            action: 'logistics_quote_accepted',
+            description: `Logistics quote accepted from ${updatelogisticQuote.user_id?.full_name || 'Logistics Provider'}`,
+            performed_by: {
+              user_id: req.user._id,
+              user_type: 'admin',
+              name: req.user.full_name || req.user.email || 'Admin'
+            },
+            previous_status: previousStatus,
+            new_status: 'logistics_quote_accepted',
+            metadata: {
+              quote_id: id,
+              logistics_name: updatelogisticQuote.user_id?.full_name,
+              logistics_email: updatelogisticQuote.user_id?.email,
+              shipping_fee: updatelogisticQuote.shipping_fee
+            },
+            created_at: new Date()
+          }
         }
       }, 
       { new: true }
     ).populate('user_id', 'full_name email');
     
     console.log("✅ Logistics quote accepted:", id);
-    console.log("✅ Enquiry updated with selected logistics:", selected?._id);
+    console.log("✅ Enquiry status updated to logistics_quote_accepted:", selected?._id);
 
     // Send email notifications
-    const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
-    
     // Email to Buyer
     if (selected?.user_id?.email) {
       const buyerMailOptions = {
@@ -4248,7 +4304,7 @@ exports.acceptLogisticQuote = async (req, res) => {
           enquiry_id: selected.enquiry_unique_id,
           shipping_fee: updatelogisticQuote.shipping_fee,
           notes: updatelogisticQuote.notes || "N/A",
-          view_link: `${frontendUrl}enquiry-review-page/${selected._id}`
+          view_link: getEnquiryReviewUrl(selected._id)
         }
       };
       try {
@@ -4270,7 +4326,7 @@ exports.acceptLogisticQuote = async (req, res) => {
           enquiry_id: selected.enquiry_unique_id,
           shipping_fee: updatelogisticQuote.shipping_fee,
           notes: updatelogisticQuote.notes || "N/A",
-          view_link: `${frontendUrl}quotation-management-logistics`
+          view_link: getLogisticsQuotationManagementUrl()
         }
       };
       try {

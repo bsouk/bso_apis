@@ -1,6 +1,69 @@
 const mongoose = require("mongoose");
 const mongoosePaginate = require("mongoose-paginate-v2");
 
+// Activity Log Schema for tracking all enquiry actions
+const ActivityLogSchema = new mongoose.Schema({
+    action: {
+        type: String,
+        required: true,
+        enum: [
+            "enquiry_created",
+            "enquiry_approved",
+            "enquiry_rejected",
+            "supplier_quote_submitted",
+            "supplier_quote_accepted",
+            "supplier_quote_rejected",
+            "logistics_quote_submitted",
+            "logistics_quote_accepted",
+            "logistics_quote_rejected",
+            "final_quote_sent",
+            "payment_received",
+            "shipment_ready",
+            "logistic_pickup",
+            "delivered",
+            "self_delivered",
+            "cancelled",
+            "status_updated"
+        ]
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    performed_by: {
+        user_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "users"
+        },
+        user_type: {
+            type: String,
+            enum: ["buyer", "supplier", "logistics", "admin", "system"]
+        },
+        name: String
+    },
+    on_behalf_of: {
+        user_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "users"
+        },
+        user_type: {
+            type: String,
+            enum: ["buyer", "supplier", "logistics"]
+        },
+        name: String
+    },
+    previous_status: String,
+    new_status: String,
+    metadata: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
+    },
+    created_at: {
+        type: Date,
+        default: Date.now
+    }
+}, { _id: true });
+
 const EnquirySchema = new mongoose.Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -22,7 +85,39 @@ const EnquirySchema = new mongoose.Schema({
     },
     status: {
         type: String,
+        enum: [
+            "pending",
+            "approved",
+            "rejected",
+            "supplier_quote_accepted",
+            "logistics_quote_accepted",
+            "final_quote_sent",
+            "payment_received",
+            "shipment_ready",
+            "logistic_pickup",
+            "delivered",
+            "self_delivered",
+            "cancelled"
+        ],
         default: "pending"
+    },
+    // Admin who created this enquiry on behalf of buyer (if manual enquiry)
+    created_by_admin: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users"
+    },
+    // Final quote details
+    final_quote_sent_at: {
+        type: Date
+    },
+    final_quote_sent_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users"
+    },
+    // Activity logs for tracking all actions
+    activity_logs: {
+        type: [ActivityLogSchema],
+        default: []
     },
     expiry_date: {
         type: String

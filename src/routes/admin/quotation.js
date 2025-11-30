@@ -254,4 +254,20 @@ router.put(
     controller.updateQuote
 )
 
+// Send final quote to buyer
+router.post(
+    '/sendFinalQuoteToBuyer',
+    trimRequest.all,
+    requireAuth,
+    controller.sendFinalQuoteToBuyer
+)
+
+// Get enquiry activity logs
+router.get(
+    '/getEnquiryActivityLogs/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getEnquiryActivityLogs
+)
+
 module.exports = router

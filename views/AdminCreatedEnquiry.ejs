@@ -43,7 +43,21 @@
                                 </tr>
                             </table>
 
-                            <% if (enquiry.shipping_address) { %>
+                            <% 
+                            // Check if shipping address has actual content
+                            var hasShippingAddress = enquiry.shipping_address && (
+                                enquiry.shipping_address.first_name ||
+                                enquiry.shipping_address.last_name ||
+                                enquiry.shipping_address.company_name ||
+                                (enquiry.shipping_address.address && (
+                                    enquiry.shipping_address.address.address_line_1 ||
+                                    (enquiry.shipping_address.address.city && enquiry.shipping_address.address.city.name) ||
+                                    (enquiry.shipping_address.address.state && enquiry.shipping_address.address.state.name) ||
+                                    (enquiry.shipping_address.address.country && enquiry.shipping_address.address.country.name)
+                                ))
+                            );
+                            %>
+                            <% if (hasShippingAddress) { %>
                             <!-- Shipping Address -->
                             <h2 style="font-size: 18px; color: #055a90; border-bottom: 1px solid #e6e6e6; padding-bottom: 8px; margin-top: 20px;">
                                 Shipping Address</h2>

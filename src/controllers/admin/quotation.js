@@ -4189,7 +4189,8 @@ exports.getEnquiriesForSupplier = async (req, res) => {
         }
 
         const filter = {
-            status: { $in: ["pending", "delivery"] },
+            // Include approved status for manual enquiries created by admin
+            status: { $in: ["pending", "approved", "delivery", "supplier_quote_accepted"] },
         };
 
         if (search) {
@@ -4284,7 +4285,8 @@ exports.getEnquiriesForLogistics = async (req, res) => {
         }
 
         const filter = {
-            status: { $in: ["pending", "delivery"] },
+            // Include approved and supplier_quote_accepted for manual enquiries and enquiries with accepted supplier quotes
+            status: { $in: ["pending", "approved", "delivery", "supplier_quote_accepted", "logistics_quote_accepted"] },
         };
 
         if (search) {
@@ -4751,6 +4753,309 @@ exports.getLogisticsEnquiryDetail = async (req, res) => {
             message: "Logistics enquiry details fetched successfully",
             data: newdata,
             code: 200
+        });
+
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Send Final Quote to Buyer
+ * This API is used by admin to send the final quote to the buyer
+ * after supplier and logistics quotes have been accepted
+ */
+exports.sendFinalQuoteToBuyer = async (req, res) => {
+    try {
+        const adminId = req.user._id;
+        const adminName = req.user.full_name || req.user.email || 'Admin';
+        const { 
+            enquiry_id, 
+            payment_terms_id,
+            admin_margin,
+            admin_margin_type,
+            additional_notes,
+            logistics_price_override,
+            supplier_price_override
+        } = req.body;
+
+        // Validate enquiry_id
+        if (!enquiry_id || !mongoose.Types.ObjectId.isValid(enquiry_id)) {
+            return utils.handleError(res, {
+                message: "Valid enquiry ID is required",
+                code: 400,
+            });
+        }
+
+        // Get enquiry with all related data
+        const enquiry = await Enquiry.findById(enquiry_id)
+            .populate('user_id', 'full_name email')
+            .populate('selected_payment_terms')
+            .populate('shipping_address')
+            .populate({
+                path: 'selected_supplier.quote_id',
+                populate: [
+                    { path: 'user_id', select: 'full_name email company_data' },
+                    { path: 'pickup_address' }
+                ]
+            })
+            .populate({
+                path: 'selected_logistics.quote_id',
+                populate: [
+                    { path: 'user_id', select: 'full_name email company_data' }
+                ]
+            });
+
+        if (!enquiry) {
+            return utils.handleError(res, {
+                message: "Enquiry not found",
+                code: 404,
+            });
+        }
+
+        // Check if final quote was already sent
+        if (enquiry.status === 'final_quote_sent' || enquiry.final_quote_sent_at) {
+            return utils.handleError(res, {
+                message: "Final quote has already been sent for this enquiry",
+                code: 400,
+            });
+        }
+
+        // Validate that supplier quote is selected OR price override is provided
+        if (!enquiry.selected_supplier?.quote_id && (!supplier_price_override || supplier_price_override <= 0)) {
+            return utils.handleError(res, {
+                message: "A supplier quote must be accepted or supplier price must be provided before sending final quote",
+                code: 400,
+            });
+        }
+
+        const supplierQuote = enquiry.selected_supplier?.quote_id;
+        const logisticsQuote = enquiry.selected_logistics?.quote_id;
+
+        // Calculate supplier total - Use override if provided, otherwise calculate from quote
+        let supplierTotal = 0;
+        if (supplier_price_override && supplier_price_override > 0) {
+            // Use provided override
+            supplierTotal = supplier_price_override;
+        } else if (supplierQuote && supplierQuote.enquiry_items) {
+            // Calculate from quote
+            supplierQuote.enquiry_items.forEach(item => {
+                supplierTotal += (item.unit_price || 0) * (item.available_quantity || item.quantity?.value || 0);
+            });
+            // Add custom charges
+            supplierTotal += supplierQuote.custom_charges_one?.value || 0;
+            if (supplierQuote.custom_charges_two?.charge_type === 'flat') {
+                supplierTotal += supplierQuote.custom_charges_two?.value || 0;
+            } else if (supplierQuote.custom_charges_two?.charge_type === 'percentage') {
+                supplierTotal += (supplierTotal * (supplierQuote.custom_charges_two?.value || 0)) / 100;
+            }
+            // Subtract discount
+            if (supplierQuote.discount?.charge_type === 'flat') {
+                supplierTotal -= supplierQuote.discount?.value || 0;
+            } else if (supplierQuote.discount?.charge_type === 'percentage') {
+                supplierTotal -= (supplierTotal * (supplierQuote.discount?.value || 0)) / 100;
+            }
+        }
+
+        // Calculate logistics total - Use override if provided
+        let logisticsTotal = 0;
+        if (logistics_price_override && logistics_price_override > 0) {
+            logisticsTotal = logistics_price_override;
+        } else if (logisticsQuote) {
+            logisticsTotal = logisticsQuote.shipping_fee || 0;
+        }
+
+        // Calculate admin margin
+        let adminMarginAmount = 0;
+        const marginValue = admin_margin || 0;
+        const marginType = admin_margin_type || 'flat';
+        const subtotal = supplierTotal + logisticsTotal;
+        
+        if (marginType === 'flat') {
+            adminMarginAmount = marginValue;
+        } else if (marginType === 'percentage') {
+            // Percentage is calculated on subtotal (supplier + logistics)
+            adminMarginAmount = (subtotal * marginValue) / 100;
+        }
+
+        // Calculate grand total for buyer
+        const grandTotal = subtotal + adminMarginAmount;
+
+        // Update payment terms if provided
+        let paymentTermsUpdate = {};
+        if (payment_terms_id && mongoose.Types.ObjectId.isValid(payment_terms_id)) {
+            paymentTermsUpdate = { selected_payment_terms: payment_terms_id };
+        }
+
+        const previousStatus = enquiry.status;
+
+        // Update enquiry with final quote details
+        const updatedEnquiry = await Enquiry.findByIdAndUpdate(
+            enquiry_id,
+            {
+                $set: {
+                    status: 'final_quote_sent',
+                    supplier_charges: supplierTotal,
+                    logistics_charges: logisticsTotal,
+                    admin_price: adminMarginAmount,
+                    admin_grand_total: grandTotal,
+                    grand_total: grandTotal,
+                    final_quote_sent_at: new Date(),
+                    final_quote_sent_by: adminId,
+                    additional_notes: additional_notes || enquiry.additional_notes,
+                    ...paymentTermsUpdate
+                },
+                $push: {
+                    activity_logs: {
+                        action: 'final_quote_sent',
+                        description: `Final quote sent to buyer by admin ${adminName}`,
+                        performed_by: {
+                            user_id: adminId,
+                            user_type: 'admin',
+                            name: adminName
+                        },
+                        previous_status: previousStatus,
+                        new_status: 'final_quote_sent',
+                        metadata: {
+                            supplier_charges: supplierTotal,
+                            logistics_charges: logisticsTotal,
+                            admin_margin: adminMarginAmount,
+                            admin_margin_type: marginType,
+                            grand_total: grandTotal,
+                            payment_terms_id: payment_terms_id
+                        },
+                        created_at: new Date()
+                    }
+                }
+            },
+            { new: true }
+        ).populate('user_id', 'full_name email')
+         .populate('selected_payment_terms');
+
+        console.log("✅ Final quote sent to buyer:", {
+            enquiry_id: enquiry_id,
+            buyer: enquiry.user_id?.email,
+            grand_total: grandTotal
+        });
+
+        // Send email to buyer
+        const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
+        // Remove trailing slash if exists to avoid double slashes
+        const cleanFrontendUrl = frontendUrl.endsWith('/') ? frontendUrl.slice(0, -1) : frontendUrl;
+
+        if (enquiry.user_id?.email) {
+            const buyerMailOptions = {
+                to: enquiry.user_id.email,
+                subject: `Final Quote Ready - Enquiry #${enquiry.enquiry_unique_id}`,
+                template: "FinalQuoteSent",
+                context: {
+                    name: enquiry.user_id.full_name || "Valued Customer",
+                    enquiry_id: enquiry.enquiry_unique_id,
+                    enquiry_number: enquiry.enquiry_number,
+                    supplier_name: supplierQuote.user_id?.full_name || supplierQuote.user_id?.company_data?.name || "Supplier",
+                    logistics_name: logisticsQuote?.user_id?.full_name || logisticsQuote?.user_id?.company_data?.name || "N/A",
+                    supplier_charges: supplierTotal,
+                    logistics_charges: logisticsTotal,
+                    grand_total: grandTotal,
+                    currency: enquiry.currency || supplierQuote.currency || 'GBP',
+                    payment_terms: updatedEnquiry.selected_payment_terms?.name || "To be confirmed",
+                    additional_notes: additional_notes || "",
+                    view_link: `${cleanFrontendUrl}/enquiry-review-page/${enquiry._id}`,
+                    app_name: process.env.APP_NAME || 'BSO Services'
+                }
+            };
+            try {
+                await emailer.sendEmail(null, buyerMailOptions, "FinalQuoteSent");
+                console.log("📧 Final quote email sent to buyer:", enquiry.user_id.email);
+            } catch (emailError) {
+                console.error("❌ Failed to send final quote email to buyer:", emailError.message);
+            }
+        }
+
+        // Create admin log
+        try {
+            await createLog({
+                admin_id: adminId,
+                admin_name: adminName,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'enquiry',
+                action: 'send_final_quote',
+                related_id: enquiry_id,
+                related_collection: 'enquires',
+                status: 'success',
+                details: {
+                    enquiry_unique_id: enquiry.enquiry_unique_id,
+                    buyer_name: enquiry.user_id?.full_name,
+                    buyer_email: enquiry.user_id?.email,
+                    supplier_charges: supplierTotal,
+                    logistics_charges: logisticsTotal,
+                    admin_margin: adminMarginAmount,
+                    grand_total: grandTotal
+                },
+                req
+            });
+        } catch (logError) {
+            console.error("❌ Failed to create admin log:", logError.message);
+        }
+
+        return res.status(200).json({
+            message: "Final quote sent to buyer successfully",
+            code: 200,
+            data: {
+                enquiry_id: enquiry_id,
+                enquiry_unique_id: enquiry.enquiry_unique_id,
+                status: 'final_quote_sent',
+                supplier_charges: supplierTotal,
+                logistics_charges: logisticsTotal,
+                admin_margin: adminMarginAmount,
+                grand_total: grandTotal,
+                final_quote_sent_at: updatedEnquiry.final_quote_sent_at
+            }
+        });
+
+    } catch (error) {
+        console.error("❌ Error sending final quote to buyer:", error);
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Get Enquiry Activity Logs
+ * This API returns all activity logs for an enquiry
+ */
+exports.getEnquiryActivityLogs = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, {
+                message: "Invalid enquiry ID",
+                code: 400,
+            });
+        }
+
+        const enquiry = await Enquiry.findById(id)
+            .select('enquiry_unique_id enquiry_number status activity_logs')
+            .lean();
+
+        if (!enquiry) {
+            return utils.handleError(res, {
+                message: "Enquiry not found",
+                code: 404,
+            });
+        }
+
+        return res.status(200).json({
+            message: "Activity logs fetched successfully",
+            code: 200,
+            data: {
+                enquiry_id: id,
+                enquiry_unique_id: enquiry.enquiry_unique_id,
+                enquiry_number: enquiry.enquiry_number,
+                current_status: enquiry.status,
+                activity_logs: enquiry.activity_logs || []
+            }
         });
 
     } catch (error) {

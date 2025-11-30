@@ -20,6 +20,7 @@ const User = require("../../models/user");
 const Address = require("../../models/address");
 const quantity_units = require("../../models/quantity_units");
 const { createLog, logSuccess, logFailure } = require("../../utils/logger");
+const { getCleanFrontendUrl, getEnquiryReviewUrl } = require("../../utils/urlHelper");
 
 exports.getquery = async (req, res) => {
     try {
@@ -1813,29 +1814,85 @@ exports.getEnquiryDetails = async (req, res) => {
 
 exports.approveRejectEnquiry = async (req, res) => {
     try {
-        const { id, status } = req.body
-        console.log("data : ", req.body)
+        const { id, status, reason } = req.body;
+        const adminId = req.user._id;
+        const adminName = req.user.full_name || req.user.email || 'Admin';
+        console.log("data : ", req.body);
 
-        let updata = {
-            is_approved: status,
-            status: status === "rejected" ? "rejected" : "pending"
+        // Get current enquiry for activity log
+        const currentEnquiry = await Enquiry.findById(id).populate('user_id', 'full_name email');
+        if (!currentEnquiry) {
+            return res.status(404).json({
+                message: "Enquiry not found",
+                code: 404
+            });
         }
+
+        const previousStatus = currentEnquiry.status;
+        const newStatus = status === "rejected" ? "rejected" : "approved";
+
         const result = await Enquiry.findOneAndUpdate(
             {
                 _id: new mongoose.Types.ObjectId(id)
             },
             {
-                $set: updata
+                $set: {
+                    is_approved: status,
+                    status: newStatus
+                },
+                $push: {
+                    activity_logs: {
+                        action: status === "rejected" ? 'enquiry_rejected' : 'enquiry_approved',
+                        description: `Enquiry ${status === "rejected" ? 'rejected' : 'approved'} by admin ${adminName}${reason ? '. Reason: ' + reason : ''}`,
+                        performed_by: {
+                            user_id: adminId,
+                            user_type: 'admin',
+                            name: adminName
+                        },
+                        previous_status: previousStatus,
+                        new_status: newStatus,
+                        metadata: {
+                            reason: reason || null
+                        },
+                        created_at: new Date()
+                    }
+                }
             },
             { new: true }
-        )
-        console.log("result : ", result)
+        );
+        console.log("result : ", result);
+
+        // Log admin action
+        try {
+            await createLog({
+                admin_id: adminId,
+                admin_name: adminName,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'enquiry',
+                action: status === "rejected" ? 'reject' : 'approve',
+                related_id: id,
+                related_collection: 'enquires',
+                status: 'success',
+                details: {
+                    enquiry_unique_id: currentEnquiry.enquiry_unique_id,
+                    buyer_name: currentEnquiry.user_id?.full_name,
+                    buyer_email: currentEnquiry.user_id?.email,
+                    previous_status: previousStatus,
+                    new_status: newStatus,
+                    reason: reason || null
+                },
+                req
+            });
+        } catch (logError) {
+            console.error("❌ Failed to create admin log:", logError.message);
+        }
 
         return res.status(200).json({
-            message: `Query ${status} successfully`,
+            message: `Enquiry ${status} successfully`,
             data: result,
             code: 200
-        })
+        });
     } catch (error) {
         utils.handleError(res, error);
     }
@@ -2108,9 +2165,30 @@ exports.createManualEnquiry = async (req, res) => {
             user_id: user_id,
             buyer_plan_step: buyerSubscription[0]?.plan?.plan_step || null,
             is_approved: "approved",
-            created_by_admin: true,
-            admin_id: admin_id,
-            status: "pending"
+            created_by_admin: admin_id,
+            status: "approved", // Manual enquiries are auto-approved
+            activity_logs: [{
+                action: 'enquiry_created',
+                description: `Manual enquiry created by admin ${req.user.full_name || req.user.email} on behalf of buyer ${buyer.full_name || buyer.email}`,
+                performed_by: {
+                    user_id: admin_id,
+                    user_type: 'admin',
+                    name: req.user.full_name || req.user.email
+                },
+                on_behalf_of: {
+                    user_id: buyer._id,
+                    user_type: 'buyer',
+                    name: buyer.full_name || buyer.email
+                },
+                previous_status: null,
+                new_status: 'approved',
+                metadata: {
+                    items_count: enquiryData.enquiry_items?.length || 0,
+                    priority: enquiryData.priority,
+                    shipment_type: enquiryData.shipment_type
+                },
+                created_at: new Date()
+            }]
         };
 
         console.log("Creating enquiry with data:", {
@@ -2126,16 +2204,15 @@ exports.createManualEnquiry = async (req, res) => {
         // STEP 6: SEND EMAIL TO BUYER
         // ═══════════════════════════════════════════════════
         try {
-            const buyerAppUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
             const buyerEmailOptions = {
                 to: buyer.email,
                 subject: `Enquiry Created Successfully - Ref: ${newEnquiry.enquiry_unique_id}`,
                 app_name: process.env.APP_NAME || 'Blue Sky',
                 name: buyer.full_name || buyer.first_name,
-                app_url: buyerAppUrl,
+                app_url: getCleanFrontendUrl(),
                 storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
                 enquiry: newEnquiry,
-                view_link: `${buyerAppUrl}enquiry-review-page/${newEnquiry._id}`
+                view_link: getEnquiryReviewUrl(newEnquiry._id)
             };
             
             await emailer.sendEmail(null, buyerEmailOptions, "AdminCreatedEnquiry");

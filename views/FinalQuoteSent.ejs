@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Final Quote Ready - <%= app_name || 'Blue Sky' %></title>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f9; padding: 30px 0;">
+        <tr>
+            <td align="center">
+                <table width="700" cellpadding="0" cellspacing="0" border="0"
+                    style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+
+                    <!-- Header with Brand Name -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="padding: 25px 20px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;"><%= app_name || 'Blue Sky' %></h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+                            <p><strong>Hello <%= name %>,</strong></p>
+
+                            <p>Great news! Your final quote is ready for Enquiry <strong>#<%= enquiry_id %></strong>.</p>
+
+                            <p>Our team has reviewed all quotations and finalized the pricing for your spare parts enquiry. Here's a detailed summary:</p>
+
+                            <!-- Quote Summary Box -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0;">
+                                <tr>
+                                    <td style="background-color: #f8f9fa; border-radius: 8px; padding: 20px;">
+                                        <table width="100%" cellpadding="8" cellspacing="0" border="0">
+                                            <tr>
+                                                <td style="font-weight: bold; color: #666; width: 40%;">Enquiry ID:</td>
+                                                <td style="color: #333;"><%= enquiry_id %></td>
+                                            </tr>
+                                            <% if (enquiry_number) { %>
+                                            <tr>
+                                                <td style="font-weight: bold; color: #666;">Enquiry Number:</td>
+                                                <td style="color: #333;"><%= enquiry_number %></td>
+                                            </tr>
+                                            <% } %>
+                                            <tr>
+                                                <td style="font-weight: bold; color: #666;">Selected Supplier:</td>
+                                                <td style="color: #333;"><%= supplier_name %></td>
+                                            </tr>
+                                            <% if (logistics_name && logistics_name !== 'N/A') { %>
+                                            <tr>
+                                                <td style="font-weight: bold; color: #666;">Logistics Provider:</td>
+                                                <td style="color: #333;"><%= logistics_name %></td>
+                                            </tr>
+                                            <% } %>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Pricing Details -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                                <tr>
+                                    <td style="background-color: #055a90; color: #ffffff; padding: 12px 20px; font-weight: bold;">
+                                        Pricing Details
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0;">
+                                        <table width="100%" cellpadding="12" cellspacing="0" border="0">
+                                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                                <td style="color: #666;">Spare Parts Cost:</td>
+                                                <td style="text-align: right; font-weight: bold;"><%= currency %> <%= Number(supplier_charges).toFixed(2) %></td>
+                                            </tr>
+                                            <% if (logistics_charges > 0) { %>
+                                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                                <td style="color: #666;">Logistics Charges:</td>
+                                                <td style="text-align: right; font-weight: bold;"><%= currency %> <%= Number(logistics_charges).toFixed(2) %></td>
+                                            </tr>
+                                            <% } %>
+                                            <tr style="background-color: #e8f5e9;">
+                                                <td style="font-weight: bold; font-size: 18px; color: #2e7d32;">Grand Total:</td>
+                                                <td style="text-align: right; font-weight: bold; font-size: 18px; color: #2e7d32;"><%= currency %> <%= Number(grand_total).toFixed(2) %></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <% if (payment_terms) { %>
+                            <table width="100%" cellpadding="15" cellspacing="0"
+                                style="background-color: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; margin: 20px 0;">
+                                <tr>
+                                    <td style="font-size: 15px;">
+                                        <strong>Payment Terms:</strong> <%= payment_terms %>
+                                    </td>
+                                </tr>
+                            </table>
+                            <% } %>
+
+                            <% if (additional_notes) { %>
+                            <p style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                                <strong>Notes:</strong><br />
+                                <%= additional_notes %>
+                            </p>
+                            <% } %>
+
+                            <p style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin: 20px 0;">
+                                <strong>Next Step:</strong> Please review the final quote and proceed with the payment to confirm your order.
+                            </p>
+
+                            <!-- View Button -->
+                            <p style="text-align: center; margin: 30px 0;">
+                                <a href="<%= view_link %>"
+                                    style="display: inline-block; padding: 14px 32px; background-color: #4caf50; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                                    View Final Quote & Pay Now
+                                </a>
+                            </p>
+
+                            <p style="margin-top: 30px;">If you have any questions about your quote, please don't hesitate to contact our support team.</p>
+                            <p>Best regards,<br /><strong><%= app_name || 'Blue Sky' %> Team</strong></p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+                            &copy; <%= new Date().getFullYear() %> <%= app_name || 'Blue Sky' %>. All rights reserved.
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>
+
