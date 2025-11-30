@@ -5062,3 +5062,357 @@ exports.getEnquiryActivityLogs = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+/**
+ * Status flow configuration - defines valid transitions and required actions
+ */
+const STATUS_FLOW = {
+    pending: { next: ['approved', 'rejected', 'cancelled'], label: 'Pending', description: 'Enquiry created, waiting for approval' },
+    approved: { next: ['supplier_quote_accepted', 'cancelled'], label: 'Approved', description: 'Enquiry approved' },
+    rejected: { next: [], label: 'Rejected', description: 'Enquiry rejected' },
+    supplier_quote_accepted: { next: ['logistics_quote_accepted', 'final_quote_sent', 'cancelled'], label: 'Supplier Quote Accepted', description: 'Supplier quote accepted' },
+    logistics_quote_accepted: { next: ['final_quote_sent', 'cancelled'], label: 'Logistics Quote Accepted', description: 'Logistics quote accepted' },
+    final_quote_sent: { next: ['quote_accepted_by_buyer', 'cancelled'], label: 'Final Quote Sent', description: 'Final quote sent to buyer' },
+    quote_accepted_by_buyer: { next: ['payment_pending', 'payment_received', 'cancelled'], label: 'Quote Accepted', description: 'Buyer accepted the quote' },
+    payment_pending: { next: ['payment_received', 'cancelled'], label: 'Payment Pending', description: 'Waiting for payment' },
+    payment_received: { next: ['order_confirmed', 'cancelled'], label: 'Payment Received', description: 'Payment received' },
+    order_confirmed: { next: ['processing', 'cancelled'], label: 'Order Confirmed', description: 'Order confirmed' },
+    processing: { next: ['ready_for_pickup', 'self_pickup_ready', 'cancelled'], label: 'Processing', description: 'Order being processed' },
+    ready_for_pickup: { next: ['picked_up', 'cancelled'], label: 'Ready for Pickup', description: 'Ready for logistics pickup' },
+    self_pickup_ready: { next: ['self_pickup_completed', 'cancelled'], label: 'Ready for Self Pickup', description: 'Ready for buyer pickup' },
+    picked_up: { next: ['in_transit', 'cancelled'], label: 'Picked Up', description: 'Logistics picked up' },
+    in_transit: { next: ['out_for_delivery', 'cancelled'], label: 'In Transit', description: 'Shipment in transit' },
+    out_for_delivery: { next: ['delivered', 'cancelled'], label: 'Out for Delivery', description: 'Out for delivery' },
+    delivered: { next: ['completed'], label: 'Delivered', description: 'Order delivered' },
+    self_pickup_completed: { next: ['completed'], label: 'Self Pickup Done', description: 'Buyer picked up order' },
+    completed: { next: [], label: 'Completed', description: 'Order completed' },
+    cancelled: { next: [], label: 'Cancelled', description: 'Order cancelled' }
+};
+
+/**
+ * Get available next statuses for an enquiry
+ */
+exports.getAvailableStatuses = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return utils.handleError(res, { message: "Invalid enquiry ID", code: 400 });
+        }
+        const enquiry = await Enquiry.findById(id).select('status shipment_type');
+        if (!enquiry) {
+            return utils.handleError(res, { message: "Enquiry not found", code: 404 });
+        }
+        const currentStatus = enquiry.status || 'pending';
+        const statusConfig = STATUS_FLOW[currentStatus];
+        let availableStatuses = statusConfig?.next || [];
+        
+        if (enquiry.shipment_type === 'self-pickup') {
+            availableStatuses = availableStatuses.filter(s => !['ready_for_pickup', 'picked_up', 'in_transit', 'out_for_delivery'].includes(s));
+        } else {
+            availableStatuses = availableStatuses.filter(s => !['self_pickup_ready', 'self_pickup_completed'].includes(s));
+        }
+        const statusOptions = availableStatuses.map(status => ({
+            value: status, label: STATUS_FLOW[status]?.label || status, description: STATUS_FLOW[status]?.description || ''
+        }));
+        return res.status(200).json({
+            code: 200, message: "Available statuses fetched",
+            data: {
+                current_status: currentStatus, current_label: statusConfig?.label || currentStatus,
+                available_statuses: statusOptions,
+                all_statuses: Object.entries(STATUS_FLOW).map(([key, val]) => ({ value: key, label: val.label, description: val.description }))
+            }
+        });
+    } catch (error) { utils.handleError(res, error); }
+};
+
+/**
+ * Update enquiry status with activity logging and email notifications
+ */
+exports.updateEnquiryStatus = async (req, res) => {
+    try {
+        const adminId = req.user._id;
+        const adminName = req.user.full_name || req.user.email || 'Admin';
+        const { enquiry_id, new_status, notes, on_behalf_of, payment_info, tracking_info, cancellation_reason } = req.body;
+
+        if (!enquiry_id || !mongoose.Types.ObjectId.isValid(enquiry_id)) {
+            return utils.handleError(res, { message: "Valid enquiry ID is required", code: 400 });
+        }
+        if (!new_status) {
+            return utils.handleError(res, { message: "New status is required", code: 400 });
+        }
+
+        const enquiry = await Enquiry.findById(enquiry_id)
+            .populate('user_id', 'full_name email')
+            .populate({ path: 'selected_supplier.quote_id', populate: { path: 'user_id', select: 'full_name email company_data' } })
+            .populate({ path: 'selected_logistics.quote_id', populate: { path: 'user_id', select: 'full_name email company_data' } });
+
+        if (!enquiry) {
+            return utils.handleError(res, { message: "Enquiry not found", code: 404 });
+        }
+
+        const previousStatus = enquiry.status;
+        const updateObj = { status: new_status, [`status_timestamps.${new_status.replace(/-/g, '_')}_at`]: new Date() };
+
+        // Handle payment info
+        if (payment_info && ['payment_received', 'payment_pending'].includes(new_status)) {
+            updateObj.payment_info = {
+                status: new_status === 'payment_received' ? 'received' : 'pending',
+                platform: payment_info.platform, transaction_id: payment_info.transaction_id,
+                amount_paid: payment_info.amount_paid || enquiry.grand_total,
+                payment_date: payment_info.payment_date || new Date(),
+                payment_notes: payment_info.payment_notes, updated_by: adminId, updated_at: new Date()
+            };
+        }
+
+        // Handle tracking info
+        if (tracking_info && ['picked_up', 'in_transit', 'out_for_delivery'].includes(new_status)) {
+            updateObj.tracking_info = {
+                ...enquiry.tracking_info?.toObject?.() || enquiry.tracking_info || {},
+                tracking_number: tracking_info.tracking_number, carrier: tracking_info.carrier,
+                carrier_url: tracking_info.carrier_url, estimated_delivery: tracking_info.estimated_delivery
+            };
+        }
+
+        // Handle delivery/cancellation
+        if (['delivered', 'self_pickup_completed'].includes(new_status)) {
+            updateObj['tracking_info.actual_delivery'] = new Date();
+            if (tracking_info?.receiver_name) updateObj['tracking_info.receiver_name'] = tracking_info.receiver_name;
+        }
+        if (new_status === 'cancelled') {
+            updateObj['status_timestamps.cancelled_at'] = new Date();
+            updateObj['status_timestamps.cancelled_reason'] = cancellation_reason || 'Cancelled by admin';
+        }
+
+        // Build activity log
+        const activityLog = {
+            action: new_status === 'cancelled' ? 'cancelled' : 'status_updated',
+            description: `Status: ${STATUS_FLOW[previousStatus]?.label} → ${STATUS_FLOW[new_status]?.label}${notes ? ': ' + notes : ''}`,
+            performed_by: { user_id: adminId, user_type: 'admin', name: adminName },
+            previous_status: previousStatus, new_status: new_status,
+            metadata: { notes, payment_info, tracking_info }, created_at: new Date()
+        };
+        if (on_behalf_of?.user_type) {
+            activityLog.on_behalf_of = { user_id: on_behalf_of.user_id, user_type: on_behalf_of.user_type, name: on_behalf_of.name };
+            activityLog.description = `[On behalf of ${on_behalf_of.user_type}] ` + activityLog.description;
+        }
+
+        const updatedEnquiry = await Enquiry.findByIdAndUpdate(enquiry_id,
+            { $set: updateObj, $push: { activity_logs: activityLog } }, { new: true }
+        ).populate('user_id', 'full_name email')
+         .populate({ path: 'selected_supplier.quote_id', populate: { path: 'user_id', select: 'full_name email company_data' } })
+         .populate({ path: 'selected_logistics.quote_id', populate: { path: 'user_id', select: 'full_name email company_data' } });
+
+        console.log(`✅ Status updated: ${previousStatus} → ${new_status}`, { enquiry_id, admin: adminName });
+
+        // Send emails
+        await sendStatusEmails(updatedEnquiry, previousStatus, new_status, { notes, payment_info, tracking_info, cancellation_reason });
+
+        return res.status(200).json({
+            code: 200, message: `Status updated to ${STATUS_FLOW[new_status]?.label}`,
+            data: { enquiry_id, previous_status: previousStatus, new_status, new_status_label: STATUS_FLOW[new_status]?.label }
+        });
+    } catch (error) {
+        console.error("Error updating status:", error);
+        utils.handleError(res, error);
+    }
+};
+
+async function sendStatusEmails(enquiry, prevStatus, newStatus, opts = {}) {
+    const frontendUrl = (process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/').replace(/\/$/, '');
+    const buyerEmail = enquiry.user_id?.email;
+    const buyerName = enquiry.user_id?.full_name || 'Customer';
+    const supplierEmail = enquiry.selected_supplier?.quote_id?.user_id?.email;
+    const supplierName = enquiry.selected_supplier?.quote_id?.user_id?.full_name || 'Supplier';
+    const logisticsEmail = enquiry.selected_logistics?.quote_id?.user_id?.email;
+    const logisticsName = enquiry.selected_logistics?.quote_id?.user_id?.full_name || 'Logistics';
+    
+    const baseContext = {
+        enquiry_id: enquiry.enquiry_unique_id,
+        enquiry_number: enquiry.enquiry_number,
+        view_link: `${frontendUrl}/enquiry-review-page/${enquiry._id}`,
+        app_name: process.env.APP_NAME || 'BSO Services'
+    };
+
+    try {
+        if (newStatus === 'quote_accepted_by_buyer') {
+            if (supplierEmail) {
+                await emailer.sendEmail(null, {
+                    to: supplierEmail,
+                    subject: `Quote Accepted - Enquiry #${baseContext.enquiry_id}`,
+                    name: supplierName,
+                    buyer_name: buyerName,
+                    ...baseContext
+                }, "QuoteAcceptedByBuyer");
+            }
+            if (logisticsEmail) {
+                await emailer.sendEmail(null, {
+                    to: logisticsEmail,
+                    subject: `Quote Accepted - Enquiry #${baseContext.enquiry_id}`,
+                    name: logisticsName,
+                    buyer_name: buyerName,
+                    recipient_type: 'logistics',
+                    ...baseContext
+                }, "QuoteAcceptedByBuyer");
+            }
+        }
+        
+        if (newStatus === 'payment_received' && buyerEmail) {
+            await emailer.sendEmail(null, {
+                to: buyerEmail,
+                subject: `Payment Confirmed - Enquiry #${baseContext.enquiry_id}`,
+                name: buyerName,
+                amount: enquiry.grand_total,
+                currency: enquiry.currency || 'GBP',
+                payment_method: opts.payment_info?.platform || 'N/A',
+                transaction_id: opts.payment_info?.transaction_id || 'N/A',
+                ...baseContext
+            }, "PaymentReceived");
+        }
+        
+        if (newStatus === 'ready_for_pickup' && logisticsEmail) {
+            await emailer.sendEmail(null, {
+                to: logisticsEmail,
+                subject: `Pickup Ready - Enquiry #${baseContext.enquiry_id}`,
+                name: logisticsName,
+                pickup_address: enquiry.selected_supplier?.quote_id?.pickup_address || 'Contact supplier',
+                ...baseContext
+            }, "ReadyForPickup");
+        }
+        
+        if (['picked_up', 'in_transit', 'out_for_delivery'].includes(newStatus) && buyerEmail) {
+            await emailer.sendEmail(null, {
+                to: buyerEmail,
+                subject: `Shipment Update - Enquiry #${baseContext.enquiry_id}`,
+                name: buyerName,
+                status: STATUS_FLOW[newStatus]?.label || newStatus,
+                tracking_number: opts.tracking_info?.tracking_number || enquiry.tracking_info?.tracking_number || 'N/A',
+                carrier: opts.tracking_info?.carrier || enquiry.tracking_info?.carrier || 'N/A',
+                ...baseContext
+            }, "ShipmentUpdate");
+        }
+        
+        if (['delivered', 'self_pickup_completed'].includes(newStatus) && buyerEmail) {
+            await emailer.sendEmail(null, {
+                to: buyerEmail,
+                subject: `Order Delivered - Enquiry #${baseContext.enquiry_id}`,
+                name: buyerName,
+                delivery_type: newStatus === 'delivered' ? 'Standard Delivery' : 'Self Pickup',
+                delivery_date: new Date().toLocaleDateString(),
+                ...baseContext
+            }, "OrderDelivered");
+        }
+        
+        if (newStatus === 'cancelled') {
+            if (buyerEmail) {
+                await emailer.sendEmail(null, {
+                    to: buyerEmail,
+                    subject: `Order Cancelled - Enquiry #${baseContext.enquiry_id}`,
+                    name: buyerName,
+                    reason: opts.cancellation_reason || 'Order has been cancelled',
+                    ...baseContext
+                }, "OrderCancelled");
+            }
+            if (supplierEmail) {
+                await emailer.sendEmail(null, {
+                    to: supplierEmail,
+                    subject: `Order Cancelled - Enquiry #${baseContext.enquiry_id}`,
+                    name: supplierName,
+                    reason: opts.cancellation_reason || 'Order has been cancelled',
+                    ...baseContext
+                }, "OrderCancelled");
+            }
+            if (logisticsEmail) {
+                await emailer.sendEmail(null, {
+                    to: logisticsEmail,
+                    subject: `Order Cancelled - Enquiry #${baseContext.enquiry_id}`,
+                    name: logisticsName,
+                    reason: opts.cancellation_reason || 'Order has been cancelled',
+                    ...baseContext
+                }, "OrderCancelled");
+            }
+        }
+    } catch (e) {
+        console.error("Email error:", e);
+    }
+}
+
+/**
+ * Update payment information
+ */
+exports.updatePaymentInfo = async (req, res) => {
+    try {
+        const adminId = req.user._id, adminName = req.user.full_name || 'Admin';
+        const { enquiry_id, platform, transaction_id, amount_paid, payment_date, payment_notes, payment_status } = req.body;
+        if (!enquiry_id || !mongoose.Types.ObjectId.isValid(enquiry_id)) return utils.handleError(res, { message: "Valid enquiry ID required", code: 400 });
+        
+        const updateObj = {
+            'payment_info.platform': platform, 'payment_info.transaction_id': transaction_id,
+            'payment_info.amount_paid': amount_paid, 'payment_info.payment_date': payment_date || new Date(),
+            'payment_info.payment_notes': payment_notes, 'payment_info.status': payment_status || 'received',
+            'payment_info.updated_by': adminId, 'payment_info.updated_at': new Date()
+        };
+        const log = { action: 'payment_info_added', description: `Payment: ${platform} - ${transaction_id || 'N/A'}`,
+            performed_by: { user_id: adminId, user_type: 'admin', name: adminName },
+            metadata: { platform, transaction_id, amount_paid }, created_at: new Date() };
+
+        await Enquiry.findByIdAndUpdate(enquiry_id, { $set: updateObj, $push: { activity_logs: log } });
+        return res.status(200).json({ code: 200, message: "Payment info updated" });
+    } catch (error) { utils.handleError(res, error); }
+};
+
+/**
+ * Update tracking information
+ */
+exports.updateTrackingInfo = async (req, res) => {
+    try {
+        const adminId = req.user._id, adminName = req.user.full_name || 'Admin';
+        const { enquiry_id, tracking_number, carrier, carrier_url, estimated_delivery } = req.body;
+        if (!enquiry_id || !mongoose.Types.ObjectId.isValid(enquiry_id)) return utils.handleError(res, { message: "Valid enquiry ID required", code: 400 });
+        
+        const updateObj = { 'tracking_info.tracking_number': tracking_number, 'tracking_info.carrier': carrier,
+            'tracking_info.carrier_url': carrier_url, 'tracking_info.estimated_delivery': estimated_delivery };
+        const log = { action: 'tracking_updated', description: `Tracking: ${carrier} - ${tracking_number}`,
+            performed_by: { user_id: adminId, user_type: 'admin', name: adminName },
+            metadata: { tracking_number, carrier }, created_at: new Date() };
+
+        await Enquiry.findByIdAndUpdate(enquiry_id, { $set: updateObj, $push: { activity_logs: log } });
+        return res.status(200).json({ code: 200, message: "Tracking info updated" });
+    } catch (error) { utils.handleError(res, error); }
+};
+
+/**
+ * Get enquiry status timeline
+ */
+exports.getEnquiryStatusTimeline = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) return utils.handleError(res, { message: "Invalid ID", code: 400 });
+        
+        const enquiry = await Enquiry.findById(id)
+            .select('enquiry_unique_id status shipment_type status_timestamps payment_info tracking_info activity_logs grand_total currency')
+            .populate('user_id', 'full_name email')
+            .populate({ path: 'selected_supplier.quote_id', populate: { path: 'user_id', select: 'full_name email company_data' } })
+            .populate({ path: 'selected_logistics.quote_id', populate: { path: 'user_id', select: 'full_name email company_data' } }).lean();
+        if (!enquiry) return utils.handleError(res, { message: "Not found", code: 404 });
+
+        const isDelivery = enquiry.shipment_type === 'delivery';
+        const steps = isDelivery 
+            ? ['pending','approved','supplier_quote_accepted','logistics_quote_accepted','final_quote_sent','quote_accepted_by_buyer','payment_pending','payment_received','order_confirmed','processing','ready_for_pickup','picked_up','in_transit','out_for_delivery','delivered','completed']
+            : ['pending','approved','supplier_quote_accepted','final_quote_sent','quote_accepted_by_buyer','payment_pending','payment_received','order_confirmed','processing','self_pickup_ready','self_pickup_completed','completed'];
+        
+        const idx = steps.indexOf(enquiry.status);
+        const timeline = steps.map((s, i) => ({
+            status: s, label: STATUS_FLOW[s]?.label, description: STATUS_FLOW[s]?.description,
+            completed: i < idx || enquiry.status === 'completed', current: i === idx, pending: i > idx,
+            timestamp: enquiry.status_timestamps?.[`${s}_at`]
+        }));
+
+        return res.status(200).json({ code: 200, data: {
+            enquiry_id: id, current_status: enquiry.status, current_label: STATUS_FLOW[enquiry.status]?.label,
+            shipment_type: enquiry.shipment_type, timeline, payment_info: enquiry.payment_info,
+            tracking_info: enquiry.tracking_info, buyer: enquiry.user_id,
+            supplier: enquiry.selected_supplier?.quote_id?.user_id, logistics: enquiry.selected_logistics?.quote_id?.user_id,
+            grand_total: enquiry.grand_total, currency: enquiry.currency, activity_logs: enquiry.activity_logs?.slice(-20) || []
+        }});
+    } catch (error) { utils.handleError(res, error); }
+}

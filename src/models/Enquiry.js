@@ -17,13 +17,24 @@ const ActivityLogSchema = new mongoose.Schema({
             "logistics_quote_accepted",
             "logistics_quote_rejected",
             "final_quote_sent",
+            "quote_accepted_by_buyer",
+            "payment_pending",
             "payment_received",
-            "shipment_ready",
-            "logistic_pickup",
+            "order_confirmed",
+            "processing",
+            "ready_for_pickup",
+            "picked_up",
+            "in_transit",
+            "out_for_delivery",
             "delivered",
-            "self_delivered",
+            "completed",
+            "self_pickup_ready",
+            "self_pickup_completed",
             "cancelled",
-            "status_updated"
+            "status_updated",
+            "tracking_updated",
+            "payment_info_added",
+            "note_added"
         ]
     },
     description: {
@@ -92,11 +103,19 @@ const EnquirySchema = new mongoose.Schema({
             "supplier_quote_accepted",
             "logistics_quote_accepted",
             "final_quote_sent",
+            "quote_accepted_by_buyer",
+            "payment_pending",
             "payment_received",
-            "shipment_ready",
-            "logistic_pickup",
+            "order_confirmed",
+            "processing",
+            "ready_for_pickup",
+            "picked_up",
+            "in_transit",
+            "out_for_delivery",
             "delivered",
-            "self_delivered",
+            "completed",
+            "self_pickup_ready",
+            "self_pickup_completed",
             "cancelled"
         ],
         default: "pending"
@@ -321,7 +340,62 @@ const EnquirySchema = new mongoose.Schema({
         tracking_media: String,
         details: String
     },
-    buyer_plan_step: String
+    buyer_plan_step: String,
+    
+    // Payment tracking fields
+    payment_info: {
+        status: {
+            type: String,
+            enum: ["pending", "partial", "received", "refunded"],
+            default: "pending"
+        },
+        platform: {
+            type: String,
+            enum: ["bank_transfer", "stripe", "paypal", "cash", "cheque", "credit_card", "other"],
+        },
+        transaction_id: String,
+        amount_paid: {
+            type: Number,
+            default: 0
+        },
+        payment_date: Date,
+        payment_proof: [String],  // Document/screenshot URLs
+        payment_notes: String,
+        updated_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "users"
+        },
+        updated_at: Date
+    },
+    
+    // Order/Delivery tracking fields
+    tracking_info: {
+        tracking_number: String,
+        carrier: String,
+        carrier_url: String,
+        estimated_delivery: Date,
+        actual_delivery: Date,
+        delivery_proof: [String],
+        receiver_name: String,
+        receiver_signature: String,
+        delivery_notes: String
+    },
+    
+    // Status timestamps for tracking
+    status_timestamps: {
+        quote_accepted_at: Date,
+        payment_received_at: Date,
+        order_confirmed_at: Date,
+        processing_started_at: Date,
+        ready_for_pickup_at: Date,
+        picked_up_at: Date,
+        in_transit_at: Date,
+        out_for_delivery_at: Date,
+        delivered_at: Date,
+        completed_at: Date,
+        cancelled_at: Date,
+        cancelled_reason: String
+    }
 },
     {
         timestamps: true

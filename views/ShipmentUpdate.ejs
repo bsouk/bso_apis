@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shipment Update - <%= app_name || 'Blue Sky' %></title>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f9; padding: 30px 0;">
+        <tr>
+            <td align="center">
+                <table width="700" cellpadding="0" cellspacing="0" border="0"
+                    style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+
+                    <!-- Header with Brand Name -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="padding: 25px 20px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;"><%= app_name || 'Blue Sky' %></h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+                            <p><strong>Hello <%= name %>,</strong></p>
+
+                            <p>🚚 Your order <strong>#<%= enquiry_id %></strong> status has been updated.</p>
+
+                            <!-- Status Update Box -->
+                            <table width="100%" cellpadding="15" cellspacing="0"
+                                style="background-color: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; margin: 20px 0;">
+                                <tr>
+                                    <td style="font-size: 15px;">
+                                        <strong style="color: #1565c0;">🚚 Shipment Update</strong><br /><br />
+                                        <strong>Enquiry ID:</strong> #<%= enquiry_id %><br />
+                                        <% if (enquiry_number) { %>
+                                        <strong>Enquiry Number:</strong> <%= enquiry_number %><br />
+                                        <% } %>
+                                        <strong>Current Status:</strong> <%= status %><br />
+                                        <% if (tracking_number && tracking_number !== 'N/A') { %>
+                                        <strong>Tracking Number:</strong> <%= tracking_number %><br />
+                                        <% } %>
+                                        <% if (carrier && carrier !== 'N/A') { %>
+                                        <strong>Carrier:</strong> <%= carrier %><br />
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p>You can track your shipment using the tracking number provided above.</p>
+
+                            <!-- Button -->
+                            <p style="text-align: center;">
+                                <a href="<%= view_link %>"
+                                    style="display: inline-block; padding: 14px 28px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                                    Track Your Order
+                                </a>
+                            </p>
+
+                            <p style="margin-top: 30px;">Best regards,<br /><strong><%= app_name || 'Blue Sky' %> Team</strong></p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+                            &copy; <%= new Date().getFullYear() %> <%= app_name || 'Blue Sky' %>. All rights reserved.
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>

@@ -270,4 +270,44 @@ router.get(
     controller.getEnquiryActivityLogs
 )
 
+// Get available statuses for an enquiry
+router.get(
+    '/getAvailableStatuses/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getAvailableStatuses
+)
+
+// Update enquiry status
+router.post(
+    '/updateEnquiryStatus',
+    trimRequest.all,
+    requireAuth,
+    controller.updateEnquiryStatus
+)
+
+// Update payment information
+router.post(
+    '/updatePaymentInfo',
+    trimRequest.all,
+    requireAuth,
+    controller.updatePaymentInfo
+)
+
+// Update tracking information
+router.post(
+    '/updateTrackingInfo',
+    trimRequest.all,
+    requireAuth,
+    controller.updateTrackingInfo
+)
+
+// Get enquiry status timeline
+router.get(
+    '/getEnquiryStatusTimeline/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.getEnquiryStatusTimeline
+)
+
 module.exports = router
