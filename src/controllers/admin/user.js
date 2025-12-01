@@ -3274,7 +3274,14 @@ exports.getQuotesdata = async (req, res) => {
 
 exports.acceptsupplierEnquiry = async (req, res) => {
   try {
-    const { id, is_selected } = req.body;
+    const { id, is_selected, action_date } = req.body;
+
+    // Handle custom action_date from admin (allows past dates)
+    let customActionDate = null;
+    if (action_date) {
+      customActionDate = new Date(action_date);
+      console.log("📅 Using custom action date for accept:", customActionDate);
+    }
 
     // First, get the quote to check status
     const quoteToAccept = await EnquiryQuotes.findById(id);
@@ -3314,7 +3321,16 @@ exports.acceptsupplierEnquiry = async (req, res) => {
 
     const result = await EnquiryQuotes.findOneAndUpdate(
       { _id: id },
-      { $set: { is_admin_approved: is_selected, is_selected: is_selected, status: 'accepted' } },
+      { 
+        $set: { 
+          is_admin_approved: is_selected, 
+          is_selected: is_selected, 
+          status: 'accepted',
+          accepted_at: customActionDate || new Date(),
+          // Update updatedAt to custom date if provided
+          ...(customActionDate && { updatedAt: customActionDate })
+        } 
+      },
       { new: true }
     ).populate('user_id', 'full_name email');
     
@@ -3366,9 +3382,10 @@ exports.acceptsupplierEnquiry = async (req, res) => {
               supplier_name: result.user_id?.full_name,
               supplier_email: result.user_id?.email,
               total_price: totalprice,
-              currency: result.currency || 'GBP'
+              currency: result.currency || 'GBP',
+              custom_action_date: customActionDate ? customActionDate.toISOString() : null
             },
-            created_at: new Date()
+            created_at: customActionDate || new Date()
           }
         }
       }
@@ -3484,9 +3501,16 @@ exports.acceptsupplierEnquiry = async (req, res) => {
 // Reject supplier quote from view-quote page
 exports.rejectsupplierEnquiry = async (req, res) => {
   try {
-    const { id, reason } = req.body;
+    const { id, reason, action_date } = req.body;
 
-    console.log("🔄 Rejecting supplier quote:", { id, reason });
+    // Handle custom action_date from admin (allows past dates)
+    let customActionDate = null;
+    if (action_date) {
+      customActionDate = new Date(action_date);
+      console.log("📅 Using custom action date for reject:", customActionDate);
+    }
+
+    console.log("🔄 Rejecting supplier quote:", { id, reason, action_date });
 
     // Get the quote to check status
     const quoteToReject = await EnquiryQuotes.findById(id);
@@ -3515,7 +3539,10 @@ exports.rejectsupplierEnquiry = async (req, res) => {
           is_admin_approved: false, 
           is_selected: false, 
           status: 'rejected',
-          rejection_reason: reason || ''
+          rejection_reason: reason || '',
+          rejected_at: customActionDate || new Date(),
+          // Update updatedAt to custom date if provided
+          ...(customActionDate && { updatedAt: customActionDate })
         } 
       },
       { new: true }
@@ -3636,9 +3663,16 @@ exports.rejectsupplierEnquiry = async (req, res) => {
 // Reject logistics quote from view-quote page
 exports.rejectLogisticQuote = async (req, res) => {
   try {
-    const { id, reason } = req.body;
+    const { id, reason, action_date } = req.body;
+
+    // Handle custom action_date from admin (allows past dates)
+    let customActionDate = null;
+    if (action_date) {
+      customActionDate = new Date(action_date);
+      console.log("📅 Using custom action date for logistics reject:", customActionDate);
+    }
     
-    console.log("🔄 Rejecting logistics quote:", { id, reason });
+    console.log("🔄 Rejecting logistics quote:", { id, reason, action_date });
     
     // Get the quote to check status
     const quoteToReject = await logistics_quotes.findById(id);
@@ -3666,7 +3700,9 @@ exports.rejectLogisticQuote = async (req, res) => {
         $set: { 
           is_selected: false, 
           status: 'rejected',
-          rejection_reason: reason || ''
+          rejection_reason: reason || '',
+          rejected_at: customActionDate || new Date(),
+          ...(customActionDate && { updatedAt: customActionDate })
         } 
       }, 
       { new: true }
@@ -4213,6 +4249,14 @@ exports.viewLogisticQuote = async (req, res) => {
 exports.acceptLogisticQuote = async (req, res) => {
   try {
     const id = req.params.id;
+    const { action_date } = req.body;
+
+    // Handle custom action_date from admin (allows past dates)
+    let customActionDate = null;
+    if (action_date) {
+      customActionDate = new Date(action_date);
+      console.log("📅 Using custom action date for logistics accept:", customActionDate);
+    }
     
     // First, get the quote to find the enquiry_id
     const quoteToAccept = await logistics_quotes.findById(id);
@@ -4244,7 +4288,14 @@ exports.acceptLogisticQuote = async (req, res) => {
     // Accept this quote
     const updatelogisticQuote = await logistics_quotes.findByIdAndUpdate(
       id, 
-      { $set: { is_selected: true, status: 'accepted' } }, 
+      { 
+        $set: { 
+          is_selected: true, 
+          status: 'accepted',
+          accepted_at: customActionDate || new Date(),
+          ...(customActionDate && { updatedAt: customActionDate })
+        } 
+      }, 
       { new: true }
     ).populate('user_id', 'full_name email');
 
@@ -4280,9 +4331,10 @@ exports.acceptLogisticQuote = async (req, res) => {
               quote_id: id,
               logistics_name: updatelogisticQuote.user_id?.full_name,
               logistics_email: updatelogisticQuote.user_id?.email,
-              shipping_fee: updatelogisticQuote.shipping_fee
+              shipping_fee: updatelogisticQuote.shipping_fee,
+              custom_action_date: customActionDate ? customActionDate.toISOString() : null
             },
-            created_at: new Date()
+            created_at: customActionDate || new Date()
           }
         }
       }, 

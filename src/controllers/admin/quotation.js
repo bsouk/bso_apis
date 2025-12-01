@@ -3263,6 +3263,14 @@ exports.createSupplierQuote = async (req, res) => {
             grand_total: safeData.grand_total
         });
 
+        // Handle custom created_date from admin (allows past dates)
+        let customCreatedAt = null;
+        if (safeData.created_date) {
+            customCreatedAt = new Date(safeData.created_date);
+            console.log("📅 Using custom created date for quote:", customCreatedAt);
+            delete safeData.created_date; // Remove from data to prevent field conflict
+        }
+
         let quote;
         if (existingQuote) {
             // Update existing quote instead of creating a new one
@@ -3278,7 +3286,9 @@ exports.createSupplierQuote = async (req, res) => {
                         type: "supplier",
                         // is_admin_updated is set to false initially - will be set to true when final quote is submitted
                         is_admin_updated: false,
-                        created_by_admin: adminId
+                        created_by_admin: adminId,
+                        // Update createdAt if custom date provided
+                        ...(customCreatedAt && { createdAt: customCreatedAt })
                     }
                 },
                 { new: true }
@@ -3294,7 +3304,9 @@ exports.createSupplierQuote = async (req, res) => {
                 type: "supplier",
                 // is_admin_updated is set to false initially - will be set to true when final quote is submitted
                 is_admin_updated: false,
-                created_by_admin: adminId
+                created_by_admin: adminId,
+                // Set custom createdAt if provided
+                ...(customCreatedAt && { createdAt: customCreatedAt })
             });
         }
 
@@ -3894,6 +3906,14 @@ exports.createLogisticsQuote = async (req, res) => {
         delete safeData._id;
         delete safeData.id;
 
+        // Handle custom created_date from admin (allows past dates)
+        let customCreatedAt = null;
+        if (safeData.created_date) {
+            customCreatedAt = new Date(safeData.created_date);
+            console.log("📅 Using custom created date for logistics quote:", customCreatedAt);
+            delete safeData.created_date; // Remove from data to prevent field conflict
+        }
+
         let quote;
         let isUpdate = false;
         if (existingQuote) {
@@ -3908,7 +3928,9 @@ exports.createLogisticsQuote = async (req, res) => {
                 { 
                     $set: {
                         ...safeData,
-                        created_by_admin: adminId
+                        created_by_admin: adminId,
+                        // Update createdAt if custom date provided
+                        ...(customCreatedAt && { createdAt: customCreatedAt })
                     }
                 },
                 { new: true }
@@ -3921,7 +3943,9 @@ exports.createLogisticsQuote = async (req, res) => {
                 ...safeData,
                 quote_unique_id,
                 user_id: logistics_id,
-                created_by_admin: adminId
+                created_by_admin: adminId,
+                // Set custom createdAt if provided
+                ...(customCreatedAt && { createdAt: customCreatedAt })
             });
         }
 
@@ -5132,13 +5156,22 @@ exports.updateEnquiryStatus = async (req, res) => {
     try {
         const adminId = req.user._id;
         const adminName = req.user.full_name || req.user.email || 'Admin';
-        const { enquiry_id, new_status, notes, on_behalf_of, payment_info, tracking_info, cancellation_reason } = req.body;
+        const { enquiry_id, new_status, notes, on_behalf_of, payment_info, tracking_info, cancellation_reason, action_date } = req.body;
 
         if (!enquiry_id || !mongoose.Types.ObjectId.isValid(enquiry_id)) {
             return utils.handleError(res, { message: "Valid enquiry ID is required", code: 400 });
         }
         if (!new_status) {
             return utils.handleError(res, { message: "New status is required", code: 400 });
+        }
+
+        // Handle custom action_date from admin (allows past dates)
+        let customActionDate = null;
+        if (action_date) {
+            customActionDate = new Date(action_date);
+            console.log("📅 Using custom action date for status update:", customActionDate);
+        } else {
+            customActionDate = new Date();
         }
 
         const enquiry = await Enquiry.findById(enquiry_id)
@@ -5151,7 +5184,7 @@ exports.updateEnquiryStatus = async (req, res) => {
         }
 
         const previousStatus = enquiry.status;
-        const updateObj = { status: new_status, [`status_timestamps.${new_status.replace(/-/g, '_')}_at`]: new Date() };
+        const updateObj = { status: new_status, [`status_timestamps.${new_status.replace(/-/g, '_')}_at`]: customActionDate };
 
         // Handle payment info
         if (payment_info && ['payment_received', 'payment_pending'].includes(new_status)) {
@@ -5159,8 +5192,8 @@ exports.updateEnquiryStatus = async (req, res) => {
                 status: new_status === 'payment_received' ? 'received' : 'pending',
                 platform: payment_info.platform, transaction_id: payment_info.transaction_id,
                 amount_paid: payment_info.amount_paid || enquiry.grand_total,
-                payment_date: payment_info.payment_date || new Date(),
-                payment_notes: payment_info.payment_notes, updated_by: adminId, updated_at: new Date()
+                payment_date: payment_info.payment_date || customActionDate,
+                payment_notes: payment_info.payment_notes, updated_by: adminId, updated_at: customActionDate
             };
         }
 
@@ -5175,11 +5208,11 @@ exports.updateEnquiryStatus = async (req, res) => {
 
         // Handle delivery/cancellation
         if (['delivered', 'self_pickup_completed'].includes(new_status)) {
-            updateObj['tracking_info.actual_delivery'] = new Date();
+            updateObj['tracking_info.actual_delivery'] = customActionDate;
             if (tracking_info?.receiver_name) updateObj['tracking_info.receiver_name'] = tracking_info.receiver_name;
         }
         if (new_status === 'cancelled') {
-            updateObj['status_timestamps.cancelled_at'] = new Date();
+            updateObj['status_timestamps.cancelled_at'] = customActionDate;
             updateObj['status_timestamps.cancelled_reason'] = cancellation_reason || 'Cancelled by admin';
         }
 
@@ -5189,7 +5222,8 @@ exports.updateEnquiryStatus = async (req, res) => {
             description: `Status: ${STATUS_FLOW[previousStatus]?.label} → ${STATUS_FLOW[new_status]?.label}${notes ? ': ' + notes : ''}`,
             performed_by: { user_id: adminId, user_type: 'admin', name: adminName },
             previous_status: previousStatus, new_status: new_status,
-            metadata: { notes, payment_info, tracking_info }, created_at: new Date()
+            metadata: { notes, payment_info, tracking_info, custom_action_date: customActionDate.toISOString() }, 
+            created_at: customActionDate
         };
         if (on_behalf_of?.user_type) {
             activityLog.on_behalf_of = { user_id: on_behalf_of.user_id, user_type: on_behalf_of.user_type, name: on_behalf_of.name };

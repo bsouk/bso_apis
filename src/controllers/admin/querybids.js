@@ -2159,6 +2159,24 @@ exports.createManualEnquiry = async (req, res) => {
         // ═══════════════════════════════════════════════════
         // STEP 5: CREATE ENQUIRY
         // ═══════════════════════════════════════════════════
+        
+        // Handle custom created_date from admin (allows past dates)
+        let customCreatedAt = null;
+        if (enquiryData.created_date) {
+            customCreatedAt = new Date(enquiryData.created_date);
+            // Validate that expiry_date is after created_date
+            if (enquiryData.expiry_date) {
+                const expiryDate = new Date(enquiryData.expiry_date);
+                if (expiryDate <= customCreatedAt) {
+                    return res.status(400).json({
+                        message: "Expiry date must be after the created date",
+                        code: 400
+                    });
+                }
+            }
+            console.log("Using custom created date:", customCreatedAt);
+        }
+        
         const newEnquiryData = {
             ...enquiryData,
             enquiry_unique_id: enquiryId,
@@ -2167,6 +2185,8 @@ exports.createManualEnquiry = async (req, res) => {
             is_approved: "approved",
             created_by_admin: admin_id,
             status: "approved", // Manual enquiries are auto-approved
+            // Set custom createdAt if provided
+            ...(customCreatedAt && { createdAt: customCreatedAt }),
             activity_logs: [{
                 action: 'enquiry_created',
                 description: `Manual enquiry created by admin ${req.user.full_name || req.user.email} on behalf of buyer ${buyer.full_name || buyer.email}`,
@@ -2185,9 +2205,10 @@ exports.createManualEnquiry = async (req, res) => {
                 metadata: {
                     items_count: enquiryData.enquiry_items?.length || 0,
                     priority: enquiryData.priority,
-                    shipment_type: enquiryData.shipment_type
+                    shipment_type: enquiryData.shipment_type,
+                    custom_created_date: customCreatedAt ? customCreatedAt.toISOString() : null
                 },
-                created_at: new Date()
+                created_at: customCreatedAt || new Date()
             }]
         };
 
