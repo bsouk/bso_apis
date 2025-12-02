@@ -2730,7 +2730,7 @@ exports.getSingleAdminQuotes = async (req, res) => {
 // Get all quotes list for admin panel
 exports.getQuotesList = async (req, res) => {
     try {
-        const { search, offset = 0, limit = 10, type, status } = req.query;
+        const { search, offset = 0, limit = 10, type, status, start_date, end_date } = req.query;
         const supplierFilter = {};
         const logisticsFilter = {};
 
@@ -2748,6 +2748,23 @@ exports.getQuotesList = async (req, res) => {
                 { "user_id.full_name": searchRegex },
                 { "user_id.company_data.name": searchRegex },
             ];
+        }
+
+        // ⭐ Date range filter
+        if (start_date || end_date) {
+            const dateFilter = {};
+            if (start_date) {
+                dateFilter.$gte = new Date(start_date);
+            }
+            if (end_date) {
+                // Add one day to end_date to include the entire end date
+                const endDateObj = new Date(end_date);
+                endDateObj.setDate(endDateObj.getDate() + 1);
+                dateFilter.$lt = endDateObj;
+            }
+            supplierFilter.createdAt = dateFilter;
+            logisticsFilter.createdAt = dateFilter;
+            console.log("dateFilter applied to quotes: ", dateFilter);
         }
 
         // Apply status filter

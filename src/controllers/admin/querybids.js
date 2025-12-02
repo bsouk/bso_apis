@@ -1527,11 +1527,12 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
 
 exports.getAllEnquiry = async (req, res) => {
     try {
-        const { status, search, offset = 0, limit = 10, brand, countries, plan_step } = req.query;
+        const { status, search, offset = 0, limit = 10, brand, countries, plan_step, start_date, end_date } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
         const filter = {};
         let brandfilter = {}
         let countryFilter = {};
+        let dateFilter = {};
 
         if (plan_step) {
             filter['subscription.plan.plan_step'] = plan_step;
@@ -1562,8 +1563,23 @@ exports.getAllEnquiry = async (req, res) => {
             console.log("countryFilter : ", countryFilter)
         }
 
+        // ⭐ Date range filter
+        if (start_date || end_date) {
+            dateFilter.createdAt = {};
+            if (start_date) {
+                dateFilter.createdAt.$gte = new Date(start_date);
+            }
+            if (end_date) {
+                // Add one day to end_date to include the entire end date
+                const endDateObj = new Date(end_date);
+                endDateObj.setDate(endDateObj.getDate() + 1);
+                dateFilter.createdAt.$lt = endDateObj;
+            }
+            console.log("dateFilter : ", dateFilter);
+        }
+
         let count = 0
-        console.log("brandfilter : ", brandfilter, " filter : ", filter)
+        console.log("brandfilter : ", brandfilter, " filter : ", filter, " dateFilter : ", dateFilter)
         const data = await Enquiry.aggregate(
             [
                 {
@@ -1699,7 +1715,8 @@ exports.getAllEnquiry = async (req, res) => {
                 {
                     $match: {
                         ...filter,
-                        ...countryFilter
+                        ...countryFilter,
+                        ...dateFilter
                     },
                 },
                 {
@@ -1737,13 +1754,85 @@ exports.getAllEnquiry = async (req, res) => {
             ]
         );
 
-        count = await Enquiry.countDocuments({ ...filter, ...brandfilter, ...countryFilter });
+        count = await Enquiry.countDocuments({ ...filter, ...brandfilter, ...countryFilter, ...dateFilter });
 
-        const totalCount = await Enquiry.countDocuments()
-        const pendingCount = await Enquiry.countDocuments({ status: "pending" })
-        const splitCount = await Enquiry.countDocuments({ selected_supplier: { $exists: true } })
+        // ═══════════════════════════════════════════════════
+        // COMPREHENSIVE STATS CALCULATION (ALL STATUSES)
+        // ═══════════════════════════════════════════════════
+        const statsFilter = { ...brandfilter, ...countryFilter, ...dateFilter };
+        
+        const totalCount = await Enquiry.countDocuments(statsFilter);
+        const pendingCount = await Enquiry.countDocuments({ ...statsFilter, status: "pending" });
+        const approvedCount = await Enquiry.countDocuments({ ...statsFilter, status: "approved" });
+        const supplierQuoteAcceptedCount = await Enquiry.countDocuments({ ...statsFilter, status: "supplier_quote_accepted" });
+        const logisticsQuoteAcceptedCount = await Enquiry.countDocuments({ ...statsFilter, status: "logistics_quote_accepted" });
+        const finalQuoteSentCount = await Enquiry.countDocuments({ ...statsFilter, status: "final_quote_sent" });
+        const quoteAcceptedByBuyerCount = await Enquiry.countDocuments({ ...statsFilter, status: "quote_accepted_by_buyer" }); // ⭐ Added
+        const paymentPendingCount = await Enquiry.countDocuments({ ...statsFilter, status: "payment_pending" }); // ⭐ Added
+        const paymentReceivedCount = await Enquiry.countDocuments({ ...statsFilter, status: "payment_received" });
+        const orderConfirmedCount = await Enquiry.countDocuments({ ...statsFilter, status: "order_confirmed" }); // ⭐ Added
+        const processingCount = await Enquiry.countDocuments({ ...statsFilter, status: "processing" }); // ⭐ Added
+        const readyForPickupCount = await Enquiry.countDocuments({ ...statsFilter, status: "ready_for_pickup" }); // ⭐ Added
+        const pickedUpCount = await Enquiry.countDocuments({ ...statsFilter, status: "picked_up" }); // ⭐ Added
+        const inTransitCount = await Enquiry.countDocuments({ ...statsFilter, status: "in_transit" }); // ⭐ Added
+        const outForDeliveryCount = await Enquiry.countDocuments({ ...statsFilter, status: "out_for_delivery" }); // ⭐ Added
+        const shipmentReadyCount = await Enquiry.countDocuments({ ...statsFilter, status: "shipment_ready" });
+        const logisticPickupCount = await Enquiry.countDocuments({ ...statsFilter, status: "logistic_pickup" });
+        const deliveredCount = await Enquiry.countDocuments({ ...statsFilter, status: "delivered" });
+        const selfPickupReadyCount = await Enquiry.countDocuments({ ...statsFilter, status: "self_pickup_ready" }); // ⭐ Added
+        const selfPickupCompletedCount = await Enquiry.countDocuments({ ...statsFilter, status: "self_pickup_completed" }); // ⭐ Added
+        const selfDeliveredCount = await Enquiry.countDocuments({ ...statsFilter, status: "self_delivered" });
+        const completedCount = await Enquiry.countDocuments({ 
+            ...statsFilter, 
+            status: { $in: ["completed", "delivered", "self_delivered", "self_pickup_completed"] } 
+        });
+        const cancelledCount = await Enquiry.countDocuments({ ...statsFilter, status: "cancelled" });
+        const rejectedCount = await Enquiry.countDocuments({ ...statsFilter, status: "rejected" });
+        
+        // Check for expired enquiries (expiry_date < today and status is still pending/approved)
+        const today = new Date();
+        const expiredCount = await Enquiry.countDocuments({ 
+            ...statsFilter,
+            expiry_date: { $lt: today },
+            status: { $in: ["pending", "approved"] }
+        });
 
-        return res.json({ data, count, totalCount, pendingCount, splitCount, code: 200 });
+        const splitCount = await Enquiry.countDocuments({ 
+            ...statsFilter,
+            selected_supplier: { $exists: true } 
+        });
+
+        return res.json({ 
+            data, 
+            count, 
+            totalCount, 
+            pendingCount,
+            approvedCount,
+            supplierQuoteAcceptedCount,
+            logisticsQuoteAcceptedCount,
+            finalQuoteSentCount,
+            quoteAcceptedByBuyerCount, // ⭐ Added
+            paymentPendingCount, // ⭐ Added
+            paymentReceivedCount,
+            orderConfirmedCount, // ⭐ Added
+            processingCount, // ⭐ Added
+            readyForPickupCount, // ⭐ Added
+            pickedUpCount, // ⭐ Added
+            inTransitCount, // ⭐ Added
+            outForDeliveryCount, // ⭐ Added
+            shipmentReadyCount,
+            logisticPickupCount,
+            deliveredCount,
+            selfPickupReadyCount, // ⭐ Added
+            selfPickupCompletedCount, // ⭐ Added
+            selfDeliveredCount,
+            completedCount,
+            cancelledCount,
+            rejectedCount,
+            expiredCount,
+            splitCount,
+            code: 200 
+        });
 
     } catch (error) {
         utils.handleError(res, error);
