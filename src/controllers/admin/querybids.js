@@ -2158,28 +2158,6 @@ exports.createManualEnquiry = async (req, res) => {
         console.log("✅ Buyer subscription found:", buyerSubscription[0]?.plan?.plan_name)
 
         // ═══════════════════════════════════════════════════
-        // STEP 2.5: VALIDATE ENQUIRY NUMBER UNIQUENESS (if provided)
-        // ═══════════════════════════════════════════════════
-        if (enquiryData.enquiry_number && enquiryData.enquiry_number.trim() !== '') {
-            const existingEnquiry = await Enquiry.findOne({
-                $or: [
-                    { enquiry_unique_id: enquiryData.enquiry_number.trim() },
-                    { enquiry_number: enquiryData.enquiry_number.trim() }
-                ]
-            });
-            
-            if (existingEnquiry) {
-                console.log("❌ Enquiry number already exists:", enquiryData.enquiry_number);
-                return res.status(400).json({
-                    message: `Enquiry number "${enquiryData.enquiry_number}" already exists. Please use a unique enquiry number.`,
-                    code: 400,
-                    error_type: 'duplicate_enquiry_number'
-                });
-            }
-            console.log("✅ Enquiry number is unique:", enquiryData.enquiry_number);
-        }
-
-        // ═══════════════════════════════════════════════════
         // STEP 3: PROCESS ENQUIRY ITEMS (UNITS)
         // ═══════════════════════════════════════════════════
         if (enquiryData.enquiry_items && Array.isArray(enquiryData.enquiry_items)) {
@@ -2240,10 +2218,21 @@ exports.createManualEnquiry = async (req, res) => {
             return enquiryId;
         }
 
-        // Use provided enquiry_number or generate unique one
-        const enquiryId = enquiryData.enquiry_number && enquiryData.enquiry_number.trim() !== '' 
+        // ═══════════════════════════════════════════════════
+        // ALWAYS GENERATE enquiry_unique_id (System ID - Format: #123456)
+        // enquiry_number is separate - user-provided reference (optional)
+        // ═══════════════════════════════════════════════════
+        const enquiryUniqueId = await generateUniqueEnquiryId();
+        
+        // enquiry_number can be:
+        // 1. Custom provided by admin, OR
+        // 2. Default to enquiry_unique_id if not provided
+        const enquiryNumber = enquiryData.enquiry_number && enquiryData.enquiry_number.trim() !== '' 
             ? enquiryData.enquiry_number.trim() 
-            : await generateUniqueEnquiryId();
+            : enquiryUniqueId; // Default to unique_id if not provided
+        
+        console.log("✅ Generated enquiry_unique_id:", enquiryUniqueId);
+        console.log("✅ Enquiry number:", enquiryNumber);
 
         // ═══════════════════════════════════════════════════
         // STEP 5: CREATE ENQUIRY
@@ -2268,7 +2257,8 @@ exports.createManualEnquiry = async (req, res) => {
         
         const newEnquiryData = {
             ...enquiryData,
-            enquiry_unique_id: enquiryId,
+            enquiry_unique_id: enquiryUniqueId,
+            enquiry_number: enquiryNumber,
             user_id: user_id,
             buyer_plan_step: buyerSubscription[0]?.plan?.plan_step || null,
             is_approved: "approved",
@@ -2302,7 +2292,8 @@ exports.createManualEnquiry = async (req, res) => {
         };
 
         console.log("Creating enquiry with data:", {
-            enquiry_id: enquiryId,
+            enquiry_unique_id: enquiryUniqueId,
+            enquiry_number: enquiryNumber,
             buyer: buyer.email,
             items_count: enquiryData.enquiry_items?.length || 0
         });

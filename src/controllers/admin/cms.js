@@ -227,22 +227,40 @@ exports.queryReply = async (req, res) => {
   try {
     const data = await ContactUs.findById(req.body.id);
     if (!data) return res.json({ message: "Query not found", code: 404 });
-    await data.updateOne({ $set: { reply: req.body.reply, status: 'Replied' } });
-    await data.save();
+    
+    // Prepare update object
+    const updateObj = { 
+      reply: req.body.reply, 
+      status: 'Replied' 
+    };
+    
+    // Add reply_date if provided, otherwise use current date
+    if (req.body.reply_date) {
+      updateObj.reply_date = new Date(req.body.reply_date);
+    } else {
+      updateObj.reply_date = new Date();
+    }
+    
+    await data.updateOne({ $set: updateObj });
+    
+    // Fetch updated data for email
+    const updatedData = await ContactUs.findById(req.body.id);
+    
     const mailOptions = {
-      to: data.email,
+      to: updatedData.email,
       subject: "Reply from Blue Sky Organisation",
-      name: data.full_name,
-      reply: data.reply,
-      email: data.email,
+      name: updatedData.full_name,
+      reply: updatedData.reply,
+      email: updatedData.email,
       app_url: process.env.APP_URL,
       storage_url: process.env.STORAGE_BASE_URL,
-      message: data?.message,
-      contact_on: data?.createdAt
+      message: updatedData?.message,
+      contact_on: updatedData?.createdAt,
+      reply_date: updatedData?.reply_date
     }
 
     emailer.sendEmail(null, mailOptions, "contactusreply");
-    console.log('data', data)
+    console.log('Reply sent with date:', updatedData.reply_date)
     return res.json({ code: 200, message: 'Your reply for query has been sent successfully' })
   } catch (error) {
     utils.handleError(res, error);
