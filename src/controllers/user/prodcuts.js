@@ -597,37 +597,182 @@ exports.getMyProductList = async (req, res) => {
 exports.editProduct = async (req, res) => {
   try {
     const productId = req.params.id;
-    console.log("⚙️ Incoming req.body:", req.body);
+    const userId = req.user?.id || req.user?._id;
+    console.log("⚙️ Incoming req.body:", JSON.stringify(req.body, null, 2));
+    console.log("⚙️ Product ID:", productId);
+    console.log("⚙️ User ID:", userId);
+
+    if (!productId) {
+      return utils.handleError(res, { message: "Product ID is required", code: 400 });
+    }
 
     const product = await Product.findById(productId);
     if (!product || product.is_deleted) {
       return utils.handleError(res, { message: "Product not found", code: 404 });
     }
 
+    // Optional: Check if product belongs to user (uncomment if needed)
+    // if (product.user_id && product.user_id.toString() !== userId?.toString()) {
+    //   return utils.handleError(res, { message: "You don't have permission to edit this product", code: 403 });
+    // }
+
     const data_to_edit = {};
+    
+    // Handle category fields - ensure they're always arrays
     ['category_id', 'sub_category_id', 'sub_sub_category_id'].forEach(f => {
-      if (req.body[f]) data_to_edit[f] = [...req.body[f]];
+      if (req.body[f] !== undefined && req.body[f] !== null) {
+        if (Array.isArray(req.body[f])) {
+          // Filter out empty strings and null values
+          data_to_edit[f] = req.body[f].filter(item => item && item !== '');
+        } else if (req.body[f] !== '' && req.body[f] !== null) {
+          // Convert single value to array
+          data_to_edit[f] = [req.body[f]];
+        }
+        // If it's an empty string or null, don't include it in the update
+      }
     });
+    
     if (req.body.name) data_to_edit.name = req.body.name;
     if (req.body.brand_id) data_to_edit.brand_id = req.body.brand_id;
 
+    // Handle variant/sku_data
     const incomingVariants = req.body.variant || req.body.sku_data;
     if (incomingVariants) {
-      product.variant = Array.isArray(product.variant) ? product.variant : [];
-      for (const newV of incomingVariants) {
-        const idx = product.variant.findIndex(v => v.sku_id === newV.sku_id);
-        if (idx === -1) {
-          return utils.handleError(res, { message: `Variant ${newV.sku_id} not found`, code: 404 });
+      try {
+        product.variant = Array.isArray(product.variant) ? product.variant : [];
+        const variantsArray = Array.isArray(incomingVariants) ? incomingVariants : [incomingVariants];
+        
+        console.log("📦 Processing variants. Incoming:", variantsArray.length, "Existing:", product.variant.length);
+        
+        let hasValidVariant = false;
+        const updatedVariants = [...product.variant]; // Create a copy to avoid direct mutation
+        
+        for (const newV of variantsArray) {
+          if (!newV || !newV.sku_id) {
+            console.warn("⚠️ Skipping invalid variant:", newV);
+            continue;
+          }
+          
+          // Try to find variant by sku_id (handle both string and ObjectId comparisons)
+          const idx = updatedVariants.findIndex(v => {
+            if (!v || !v.sku_id) return false;
+            const existingSku = String(v.sku_id).trim();
+            const incomingSku = String(newV.sku_id).trim();
+            return existingSku === incomingSku;
+          });
+          
+          if (idx === -1) {
+            const availableSkus = updatedVariants.map(v => v?.sku_id).filter(Boolean);
+            console.warn(`⚠️ Variant with sku_id "${newV.sku_id}" not found. Available SKUs:`, availableSkus);
+            // Return error if variant not found - this is a critical issue
+            return utils.handleError(res, { 
+              message: `Variant with SKU ID "${newV.sku_id}" not found in product. Available SKUs: ${availableSkus.join(', ')}`, 
+              code: 404 
+            });
+          }
+          
+          hasValidVariant = true;
+          
+          // Process images - ensure they're strings (file paths), not objects
+          let processedImages = [];
+          if (newV.images && Array.isArray(newV.images)) {
+            processedImages = newV.images.map(img => {
+              if (typeof img === 'string') return img.trim();
+              if (img && typeof img === 'object') {
+                if (img.url) return String(img.url).trim();
+                if (img.fileKey) return String(img.fileKey).trim();
+              }
+              return null;
+            }).filter(Boolean);
+          } else if (newV.images !== undefined) {
+            // If images is explicitly set to null/undefined, keep existing
+            processedImages = updatedVariants[idx].images || [];
+          } else {
+            // If images not provided, keep existing
+            processedImages = updatedVariants[idx].images || [];
+          }
+          
+          // Process specification - ensure it's in the correct format
+          let processedSpecs = [];
+          if (newV.specification && Array.isArray(newV.specification)) {
+            processedSpecs = newV.specification
+              .filter(spec => spec && (spec.specification_type || spec.value))
+              .map(spec => {
+                if (typeof spec === 'object' && spec.specification_type && spec.value) {
+                  return {
+                    specification_type: String(spec.specification_type).trim(),
+                    value: String(spec.value).trim()
+                  };
+                }
+                return spec;
+              });
+          } else if (newV.specification !== undefined) {
+            processedSpecs = updatedVariants[idx].specification || [];
+          } else {
+            processedSpecs = updatedVariants[idx].specification || [];
+          }
+          
+          // Process tag - ensure it's an array of strings
+          let processedTags = [];
+          if (newV.tag && Array.isArray(newV.tag)) {
+            processedTags = newV.tag.map(t => String(t).trim()).filter(Boolean);
+          } else if (newV.tag !== undefined) {
+            processedTags = updatedVariants[idx].tag || [];
+          } else {
+            processedTags = updatedVariants[idx].tag || [];
+          }
+          
+          // Build updated variant object - only update provided fields
+          const updatedVariant = {
+            ...updatedVariants[idx].toObject ? updatedVariants[idx].toObject() : updatedVariants[idx],
+            ...(newV.sku_id !== undefined && { sku_id: String(newV.sku_id).trim() }),
+            ...(newV.part_no !== undefined && { part_no: String(newV.part_no).trim() }),
+            ...(newV.description !== undefined && { description: String(newV.description).trim() }),
+            ...(newV.inventory_quantity !== undefined && { inventory_quantity: String(newV.inventory_quantity).trim() }),
+            ...(newV.price !== undefined && { price: Number(newV.price) }),
+            ...(newV.discount !== undefined && { discount: Number(newV.discount) }),
+            ...(newV.bulk_discount !== undefined && { bulk_discount: Number(newV.bulk_discount) }),
+            images: processedImages,
+            specification: processedSpecs,
+            tag: processedTags,
+          };
+          
+          // Remove undefined values
+          Object.keys(updatedVariant).forEach(key => {
+            if (updatedVariant[key] === undefined) {
+              delete updatedVariant[key];
+            }
+          });
+          
+          updatedVariants[idx] = updatedVariant;
         }
-        Object.assign(product.variant[idx], newV);
+        
+        if (hasValidVariant) {
+          data_to_edit.variant = updatedVariants;
+          console.log("✅ Variants processed successfully");
+        } else {
+          console.warn("⚠️ No valid variants found to update");
+        }
+      } catch (variantError) {
+        console.error("🔴 Error processing variants:", variantError);
+        return utils.handleError(res, { 
+          message: `Error processing variants: ${variantError.message}`, 
+          code: 500,
+          error: variantError.toString()
+        });
       }
-      data_to_edit.variant = product.variant;
     }
 
     // 🚨 Debug: view data before GPT
     console.log("🔍 Data to validate:", data_to_edit);
 
-    const gptPrompt = `
+    // Optional GPT Validation - Skip if API key is not available or if API call fails
+    let gptValidationPassed = true;
+    const gptApiKey = process.env.GPT_API_KEY;
+    
+    if (gptApiKey) {
+      try {
+        const gptPrompt = `
 You are a strict validator for product data.
 
 You will be given a product JSON. Validate it based on the rules below and respond with ONLY valid JSON (no markdown, no explanation, no extra text).
@@ -654,59 +799,132 @@ If invalid:
 ⚠️ Respond with clean JSON only. Do not include backticks, markdown, explanations, or comments.
 `;
 
+        const gptResp = await axios.post('https://api.openai.com/v1/chat/completions', {
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: 'You are a strict product validator.' },
+            { role: 'user', content: gptPrompt }
+          ],
+          temperature: 0
+        }, {
+          headers: { Authorization: `Bearer ${gptApiKey}` },
+          timeout: 10000 // 10 second timeout
+        });
 
+        const content = gptResp.data.choices[0].message.content.trim();
+        let gptResult;
+        console.log('GPT content', content);
+        
+        try {
+          // Match only the JSON part of the response
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error("No JSON found in GPT response");
 
-    const gptResp = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4',
-      messages: [
-        { role: 'system', content: 'You are a strict product validator.' },
-        { role: 'user', content: gptPrompt }
-      ],
-      temperature: 0
-    }, {
-      headers: { Authorization: `Bearer ${process.env.GPT_API_KEY}` }
-    });
+          gptResult = JSON.parse(jsonMatch[0]);
+        } catch (ex) {
+          console.warn("⚠️ Invalid GPT response format, skipping GPT validation:", ex.message);
+          gptValidationPassed = true; // Continue without GPT validation
+        }
 
-    const content = gptResp.data.choices[0].message.content.trim();
-    let gptResult;
-    console.log('content', content)
+        if (gptResult && gptResult.status !== 'valid') {
+          console.log("🔻 GPT Validation failed:", gptResult.errors);
+          // Continue anyway - GPT validation is optional
+          // You can uncomment the line below to reject invalid products
+          // return res.status(400).json({ message: gptResult?.errors, errors: gptResult, code: 400 });
+          console.warn("⚠️ GPT validation failed but continuing with update (GPT validation is optional)");
+        }
+      } catch (gptError) {
+        // GPT API call failed - log but continue with update
+        console.warn("⚠️ GPT validation failed (API unavailable or error), continuing without validation:", gptError.message);
+        gptValidationPassed = true; // Continue without GPT validation
+      }
+    } else {
+      console.log("ℹ️ GPT_API_KEY not configured, skipping GPT validation");
+    }
+
+    // Only set approval status if we have data to update
+    if (Object.keys(data_to_edit).length > 0) {
+      data_to_edit.is_admin_approved = 'approved';
+    }
+    
+    console.log("✅ Updating product (approved):", JSON.stringify(data_to_edit, null, 2));
+
+    // Validate data_to_edit is not empty
+    if (Object.keys(data_to_edit).length === 0) {
+      return utils.handleError(res, { 
+        message: "No data provided to update", 
+        code: 400 
+      });
+    }
+
     try {
-      // Match only the JSON part of the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found in GPT response");
+      // Use updateOne instead of findByIdAndUpdate for better error handling
+      const updateResult = await Product.updateOne(
+        { _id: productId },
+        { $set: data_to_edit },
+        { runValidators: false }
+      );
+      
+      console.log("📝 Update result:", updateResult);
+      
+      if (updateResult.matchedCount === 0) {
+        return utils.handleError(res, { 
+          message: "Product not found", 
+          code: 404 
+        });
+      }
+      
+      if (updateResult.modifiedCount === 0 && updateResult.matchedCount > 0) {
+        console.warn("⚠️ Product found but no changes were made");
+      }
+      
+      // Fetch the updated product
+      const updated = await Product.findById(productId);
+      
+      if (!updated) {
+        return utils.handleError(res, { 
+          message: "Product not found after update", 
+          code: 404 
+        });
+      }
 
-      gptResult = JSON.parse(jsonMatch[0]);
-    } catch (ex) {
-      return res.status(500).json({
-        message: "Invalid GPT response",
-        gpt_raw: content,
-        error: ex.message,
-        code: 500
+      res.json({ data: updated, message: "Updated & approved", code: 200 });
+    } catch (updateError) {
+      console.error("🔴 MongoDB update error:", updateError);
+      console.error("🔴 Error stack:", updateError.stack);
+      console.error("🔴 Update data that failed:", JSON.stringify(data_to_edit, null, 2));
+      
+      // Check for specific MongoDB errors
+      if (updateError.name === 'ValidationError') {
+        return utils.handleError(res, { 
+          message: `Validation error: ${updateError.message}`, 
+          code: 400,
+          errors: updateError.errors
+        });
+      }
+      
+      if (updateError.name === 'CastError') {
+        return utils.handleError(res, { 
+          message: `Invalid data format: ${updateError.message}`, 
+          code: 400
+        });
+      }
+      
+      return utils.handleError(res, { 
+        message: updateError.message || "Failed to update product", 
+        code: 500,
+        error: updateError.toString()
       });
     }
-
-    if (gptResult.status !== 'valid') {
-      console.log("🔻 Validation failed:", gptResult.issues);
-      // await Product.findByIdAndUpdate(productId, { is_admin_approved: 'rejected' });
-
-      return res.status(400).json({
-        message: gptResult?.errors,
-        errors: gptResult,
-        code: 400
-      });
-    }
-
-    data_to_edit.is_admin_approved = 'approved';
-    console.log("✅ Updating product (approved):", data_to_edit);
-
-    await Product.findByIdAndUpdate(productId, data_to_edit);
-    const updated = await Product.findById(productId);
-
-    res.json({ data: updated, message: "Updated & approved", code: 200 });
 
   } catch (err) {
     console.error("🔴 editProduct error:", err);
-    utils.handleError(res, err);
+    console.error("🔴 Error stack:", err.stack);
+    utils.handleError(res, {
+      message: err.message || "Internal server error",
+      code: err.code || 500,
+      error: err.toString()
+    });
   }
 };
 

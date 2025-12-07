@@ -12,8 +12,20 @@ const moment = require("moment");
 const emailer = require("../../utils/emailer");
 
 async function generateUniqueId() {
-    const id = await Math.floor(Math.random() * 1000000)
-    return `#${id}`
+    const jobs_model = require("../../models/jobs");
+    let isUnique = false;
+    let job_id;
+    
+    while (!isUnique) {
+        const randomId = Math.floor(Math.random() * 1000000);
+        job_id = `#${randomId}`;
+        const existingJob = await jobs_model.findOne({ job_unique_id: job_id });
+        if (!existingJob) {
+            isUnique = true;
+        }
+    }
+    
+    return job_id;
 }
 const isFieldPopulated = (obj, path) => {
     console.log("object is ", obj, " and path is ", path)
@@ -632,8 +644,12 @@ exports.getCompanyPostedJobs = async (req, res) => {
             filter.job_category = { $in: JSON.parse(industry_id) };
         }
         if (skills) {
-            skills = JSON.parse(skills);
-            filter.skills = { $in: skills }
+            try {
+                skills = typeof skills === 'string' ? JSON.parse(skills) : skills;
+                filter.skills = { $in: skills };
+            } catch (e) {
+                console.error("Error parsing skills:", e);
+            }
         }
         // if (location) {
         //     filter.location = { $regex: location, $options: "i" };

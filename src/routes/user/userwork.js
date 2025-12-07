@@ -4,6 +4,8 @@ require("../../config/passport");
 const passport = require("passport");
 const requireAuth = passport.authenticate("jwt", {
     session: false,
+    failureRedirect: false,
+    failWithError: true
 });
 
 const controller = require("../../controllers/user/userwork");
@@ -110,14 +112,27 @@ router.post(
     "/uploadMedia",
     trimRequest.all,
     requireAuth,
-    controller.uploadMedia // Use local storage for development
-    // controller.uploadMediaToBucket // Use S3 bucket for production
+    // controller.uploadMedia // Use local storage for development
+    controller.uploadMediaToBucket // Use S3 bucket for production
 );
 
 router.get(
     "/getProfileDetails",
     trimRequest.all,
-    requireAuth,
+    (req, res, next) => {
+        requireAuth(req, res, (err) => {
+            if (err || !req.user) {
+                console.error("Authentication failed in getProfileDetails route");
+                console.error("Error:", err);
+                console.error("req.user:", req.user);
+                return res.status(401).json({
+                    message: "Authentication failed. Please login again.",
+                    code: 401
+                });
+            }
+            next();
+        });
+    },
     controller.getProfileDetails
 );
 

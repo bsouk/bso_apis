@@ -1,4 +1,5 @@
 const passport = require('passport')
+const mongoose = require('mongoose')
 const User = require('../models/user')
 const Admin = require('../models/admin')
 const JwtStrategy = require('passport-jwt').Strategy
@@ -38,23 +39,56 @@ const jwtOptions = {
  * Login with JWT middleware
  */
 const jwtLogin = new JwtStrategy(jwtOptions, (payload, done) => {
+  console.log("=== Passport JWT Strategy Debug ===");
+  console.log("Payload:", payload);
+  console.log("Payload data:", payload?.data);
+  console.log("Payload data type:", payload?.data?.type);
+  console.log("Payload data _id:", payload?.data?._id);
+
+  if (!payload || !payload.data || !payload.data._id) {
+    console.error("Invalid payload structure");
+    return done(null, false, { message: "Invalid token payload" });
+  }
 
   let collection = payload.data.type == "admin" ? Admin : User
+  
+  // Convert _id to ObjectId if it's a string
+  let userId;
+  try {
+    if (typeof payload.data._id === 'string') {
+      userId = new mongoose.Types.ObjectId(payload.data._id);
+    } else {
+      userId = payload.data._id;
+    }
+  } catch (err) {
+    console.error("Invalid user ID in token:", payload.data._id, err);
+    return done(null, false, { message: "Invalid user ID in token" });
+  }
+  
+  console.log("Looking up user with ID:", userId);
   collection.findOne({
-    _id: payload.data._id
+    _id: userId
   }).then(user => {
-    // return !user ? done(null, false) : done(null, user)
+    console.log("User found in database:", user ? "Yes" : "No");
+    if (user) {
+      console.log("User email:", user.email);
+      console.log("User _id:", user._id);
+    }
+    
     if (!user) {
-      return done(null, false);
+      console.error("User not found in database with ID:", payload.data._id);
+      return done(null, false, { message: "User not found" });
     }
 
     if (payload.data.type === "user" && user.member_status === "suspend") {
+      console.error("User account is suspended");
       return done(null, false, { message: "Account suspended" });
     }
 
+    console.log("Authentication successful for user:", user.email);
     return done(null, user);
   }).catch(err => {
-    console.log("err", err)
+    console.error("Passport JWT Strategy error:", err);
     return done(err, false)
   })
 })

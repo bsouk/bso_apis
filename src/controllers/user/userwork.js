@@ -203,15 +203,36 @@ exports.createBuyerProfile = async (req, res) => {
 exports.editProfile = async (req, res) => {
     try {
         const data = req.body;
+        
+        // Debug logging
+        console.log("=== editProfile Debug ===");
+        console.log("req.user:", req.user);
+        console.log("req.user._id:", req.user?._id);
+        console.log("req.body:", JSON.stringify(data, null, 2));
+        
+        // Check if user is authenticated
+        if (!req.user || !req.user._id) {
+            console.error("Authentication failed: req.user is missing or invalid");
+            return utils.handleError(res, {
+                message: "Authentication failed. Please login again.",
+                code: 401,
+            });
+        }
+        
         const id = req.user._id;
+        console.log("Looking for user with ID:", id);
 
         const user = await User.findById(id);
-        console.log("user is ", user)
-        if (!user)
+        console.log("User found:", user ? "Yes" : "No");
+        console.log("User details:", user ? { _id: user._id, email: user.email, full_name: user.full_name } : "N/A");
+        
+        if (!user) {
+            console.error("User not found in database with ID:", id);
             return utils.handleError(res, {
                 message: "Profile not found",
                 code: 404,
             });
+        }
 
         if (user.is_deleted)
             return utils.handleError(res, {
@@ -248,7 +269,9 @@ exports.editProfile = async (req, res) => {
             for (const key in source) {
                 if (
                     source[key] instanceof Object &&
-                    !(source[key] instanceof Array)
+                    !(source[key] instanceof Array) &&
+                    !(source[key] instanceof Date) &&
+                    source[key] !== null
                 ) {
                     target[key] = deepMerge({ ...(target[key] || {}) }, source[key]);
                 } else {
@@ -256,6 +279,25 @@ exports.editProfile = async (req, res) => {
                 }
             }
             return target;
+        }
+
+        // Explicitly handle image fields to ensure they're saved even if they don't exist in user object
+        if (data.profile_image !== undefined) {
+            if (data.profile_image && typeof data.profile_image === 'string' && data.profile_image.trim() !== '' && data.profile_image !== 'null' && data.profile_image !== 'undefined') {
+                console.log("Saving profile_image:", data.profile_image);
+            } else if (data.profile_image === null || data.profile_image === '') {
+                // Allow clearing profile_image if explicitly set to null or empty
+                console.log("Clearing profile_image");
+            }
+        }
+        
+        if (data.company_data && data.company_data.company_logo !== undefined) {
+            if (data.company_data.company_logo && typeof data.company_data.company_logo === 'string' && data.company_data.company_logo.trim() !== '' && data.company_data.company_logo !== 'null' && data.company_data.company_logo !== 'undefined') {
+                console.log("Saving company_data.company_logo:", data.company_data.company_logo);
+            } else if (data.company_data.company_logo === null || data.company_data.company_logo === '') {
+                // Allow clearing company_logo if explicitly set to null or empty
+                console.log("Clearing company_data.company_logo");
+            }
         }
 
         if (data.switch_to) {
@@ -274,7 +316,30 @@ exports.editProfile = async (req, res) => {
         };
 
         console.log("data : ", data)
-        const updatedUser = await User.findByIdAndUpdate(id, deepMerge(user.toObject(), data));
+        
+        // Ensure image fields are properly handled
+        const updateData = deepMerge(user.toObject(), data);
+        
+        // Explicitly ensure profile_image is saved if provided
+        if (data.profile_image !== undefined) {
+            if (data.profile_image && typeof data.profile_image === 'string' && data.profile_image.trim() !== '' && data.profile_image !== 'null' && data.profile_image !== 'undefined') {
+                updateData.profile_image = data.profile_image;
+                console.log("Setting profile_image:", data.profile_image);
+            }
+        }
+        
+        // Explicitly ensure company_data.company_logo is saved if provided
+        if (data.company_data && data.company_data.company_logo !== undefined) {
+            if (!updateData.company_data) {
+                updateData.company_data = {};
+            }
+            if (data.company_data.company_logo && typeof data.company_data.company_logo === 'string' && data.company_data.company_logo.trim() !== '' && data.company_data.company_logo !== 'null' && data.company_data.company_logo !== 'undefined') {
+                updateData.company_data.company_logo = data.company_data.company_logo;
+                console.log("Setting company_data.company_logo:", data.company_data.company_logo);
+            }
+        }
+        
+        const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true });
         console.log("updated user is ", updatedUser);
 
         // if (updatedUser.full_name && updatedUser.phone_number && updatedUser.email && updatedUser.first_name && updatedUser.last_name) {
@@ -1364,13 +1429,72 @@ exports.uploadMediaToBucket = async (req, res) => {
 //get User Profile details
 exports.getProfileDetails = async (req, res) => {
     try {
+        // Debug logging
+        console.log("=== getProfileDetails Debug ===");
+        console.log("req.user:", req.user);
+        console.log("req.user._id:", req.user?._id);
+        console.log("req.headers.authorization:", req.headers.authorization ? "Present" : "Missing");
+        
+        // Check if user is authenticated
+        if (!req.user || !req.user._id) {
+            console.error("Authentication failed: req.user is missing or invalid");
+            return utils.handleError(res, {
+                message: "Authentication failed. Please login again.",
+                code: 401,
+            });
+        }
+
         const user_id = req.user._id;
-        console.log("user : ", user_id)
+        console.log("Looking for user with ID:", user_id);
+
+        // Set cache-control headers to prevent caching
+        res.set({
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+        });
+
+        // Convert user_id to ObjectId if it's a string
+        let userIdObjectId;
+        try {
+            if (typeof user_id === 'string') {
+                userIdObjectId = new mongoose.Types.ObjectId(user_id);
+            } else {
+                userIdObjectId = user_id;
+            }
+        } catch (err) {
+            console.error("Invalid user ID format:", user_id, err);
+            return utils.handleError(res, {
+                message: "Invalid user ID format",
+                code: 400,
+            });
+        }
+
+        // First try to find user directly to verify it exists
+        const userExists = await User.findById(userIdObjectId);
+        if (!userExists) {
+            console.error("User not found in database with ID:", userIdObjectId);
+            console.error("User ID type:", typeof user_id);
+            console.error("User ID value:", user_id);
+            
+            // List all users to help debug
+            const allUsers = await User.find({}).select('_id email full_name').limit(5);
+            console.error("Sample users in database:", allUsers.map(u => ({ id: u._id.toString(), email: u.email })));
+            
+            return utils.handleError(res, {
+                message: "User not found",
+                code: 404,
+            });
+        }
+
+        console.log("User exists, fetching full profile details...");
+        console.log("User email:", userExists.email);
+        console.log("User _id:", userExists._id.toString());
 
         const user = await User.aggregate([
             {
                 $match: {
-                    _id: new mongoose.Types.ObjectId(user_id),
+                    _id: userIdObjectId,
                 },
             },
             {
@@ -1407,8 +1531,22 @@ exports.getProfileDetails = async (req, res) => {
             }
         ]);
 
+        if (!user || user.length === 0) {
+            console.error("User aggregation returned empty result for ID:", user_id);
+            return utils.handleError(res, {
+                message: "User not found",
+                code: 404,
+            });
+        }
+
+        console.log("getProfileDetails - User found:", user[0] ? "Yes" : "No");
+        console.log("getProfileDetails - User email:", user[0]?.email);
+        console.log("getProfileDetails - User full_name:", user[0]?.full_name);
+
         res.json({ data: user[0], code: 200 });
     } catch (err) {
+        console.error("getProfileDetails error:", err);
+        console.error("Error stack:", err.stack);
         utils.handleError(res, err);
     }
 }
@@ -4502,9 +4640,13 @@ exports.AddTeamMember = async (req, res) => {
         data.user_id = userId;
         data.user_type = user.user_type;
 
+        // Construct full_name from first_name and last_name
+        const full_name = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+        
         const password = createNewPassword();
         const userData = {
             ...data,
+            full_name: full_name || data.full_name || `${data.first_name} ${data.last_name}`,
             password,
             decoded_password: password,
             company_data: user.company_data,
@@ -4515,6 +4657,29 @@ exports.AddTeamMember = async (req, res) => {
 
         const Adduser = new User(userData);
         await Adduser.save();
+        
+        // Create TeamMember record with permissions
+        const teamMemberData = {
+            user_id: Adduser._id,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            email: data.email,
+            company_name: data.company || user.company_data?.name || '',
+            message: data.message || '',
+            permission_role: data.permission_role || 'custom',
+            permission: data.permission || {
+                request: 'all',
+                quotation: 'all',
+                inventory: 'all',
+                address: 'all',
+                invoice: 'all',
+                member: 'all',
+            }
+        };
+        
+        const teamMember = new TeamMember(teamMemberData);
+        await teamMember.save();
+        console.log("TeamMember record created:", teamMember._id);
 
         const teammemberadd = await Team.findOneAndUpdate(
             { admin_id: new mongoose.Types.ObjectId(userId), team_type: data.type },
@@ -4543,7 +4708,16 @@ exports.AddTeamMember = async (req, res) => {
             email: Adduser.email,
             password: Adduser.decoded_password
         };
-        emailer.sendEmail(null, mailOptions, "teamInvite");
+        // Send invitation email
+        try {
+            await emailer.sendEmail(null, mailOptions, "teamInvite");
+            console.log("✅ Team invitation email sent successfully to:", Adduser.email);
+        } catch (emailError) {
+            console.error("❌ Failed to send team invitation email:", emailError);
+            // Continue even if email fails - user is still created
+            // Log the error but don't fail the request
+        }
+        
         return res.status(200).json({
             message: "Team Member Added successfully",
             data: Adduser,
@@ -4583,7 +4757,15 @@ exports.ResendInvite = async (req, res) => {
             email: memberdata.email,
             password: memberdata.decoded_password
         };
-        emailer.sendEmail(null, mailOptions, "teamInvite");
+        // Resend invitation email
+        try {
+            await emailer.sendEmail(null, mailOptions, "teamInvite");
+            console.log("✅ Team invitation email resent successfully to:", memberdata.email);
+        } catch (emailError) {
+            console.error("❌ Failed to resend team invitation email:", emailError);
+            // Continue even if email fails
+        }
+        
         return res.status(200).json({
             message: "Invite resent successfully",
             link,
@@ -4835,6 +5017,22 @@ exports.editTeamMember = async (req, res) => {
             });
         }
 
+        // Get existing member to preserve values if not provided
+        const existingMember = await User.findById(Id);
+        if (!existingMember) {
+            return res.status(404).json({
+                message: "Team Member not found",
+                code: 404
+            });
+        }
+        
+        // Construct full_name from first_name and last_name if provided
+        if (updateData.first_name || updateData.last_name) {
+            const first_name = updateData.first_name || existingMember.first_name || '';
+            const last_name = updateData.last_name || existingMember.last_name || '';
+            updateData.full_name = `${first_name} ${last_name}`.trim();
+        }
+        
         const updatedMember = await User.findByIdAndUpdate(Id, updateData, {
             new: true,
             runValidators: true
@@ -4845,6 +5043,27 @@ exports.editTeamMember = async (req, res) => {
                 message: "Team Member not found",
                 code: 404
             });
+        }
+        
+        // Update TeamMember record if permissions are provided
+        if (updateData.permission || updateData.permission_role) {
+            const teamMemberUpdate = {};
+            if (updateData.permission) {
+                teamMemberUpdate.permission = updateData.permission;
+            }
+            if (updateData.permission_role) {
+                teamMemberUpdate.permission_role = updateData.permission_role;
+            }
+            if (updateData.first_name) teamMemberUpdate.first_name = updateData.first_name;
+            if (updateData.last_name) teamMemberUpdate.last_name = updateData.last_name;
+            if (updateData.message) teamMemberUpdate.message = updateData.message;
+            
+            await TeamMember.findOneAndUpdate(
+                { user_id: new mongoose.Types.ObjectId(Id) },
+                teamMemberUpdate,
+                { new: true, upsert: true }
+            );
+            console.log("TeamMember record updated for user:", Id);
         }
 
         return res.status(200).json({

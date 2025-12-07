@@ -398,6 +398,19 @@ exports.login = async (req, res) => {
     user = user.toJSON();
 
     delete user.password;
+    
+    // Map 'company' to 'buyer' for current_user_type if needed
+    if (user.current_user_type === 'company') {
+      user.current_user_type = 'buyer';
+    }
+    // Also ensure if user_type includes 'company' but not 'buyer', we treat it as buyer
+    if (user.user_type && user.user_type.includes('company') && !user.user_type.includes('buyer')) {
+      // Add buyer to user_type array for frontend
+      if (!user.user_type.includes('buyer')) {
+        user.user_type.push('buyer');
+      }
+    }
+    
     res.status(200).json({ code: 200, data: { user: user, token: token } });
   } catch (error) {
     utils.handleError(res, error);
