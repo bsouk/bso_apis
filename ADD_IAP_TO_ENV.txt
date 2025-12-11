@@ -1,0 +1,62 @@
+═══════════════════════════════════════════════════════════
+⚠️  ADD THESE TO YOUR .env FILE FOR IAP VERIFICATION ⚠️
+═══════════════════════════════════════════════════════════
+
+1. Open your .env file:
+   /Users/macbook/ProjectWork/Farukh Project/LiveProjects/bso_apis/.env
+
+2. Add these lines at the end:
+
+# Google Play IAP Configuration
+GOOGLE_PACKAGE_NAME=com.bluesky.pro
+GOOGLE_SERVICE_ACCOUNT_KEY=./config/google-service-account.json
+
+═══════════════════════════════════════════════════════════
+IMPORTANT NOTES:
+═══════════════════════════════════════════════════════════
+
+⚠️  The key you provided (MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...)
+    is a Google Play LICENSE KEY (for app licensing), NOT a service account.
+
+⚠️  For IAP verification, you need a GOOGLE CLOUD SERVICE ACCOUNT JSON file.
+
+📋 To get the service account JSON:
+   1. Go to Google Cloud Console
+   2. IAM & Admin > Service Accounts
+   3. Create service account
+   4. Create key (JSON format)
+   5. Download the JSON file
+   6. Save it as: config/google-service-account.json
+
+📋 Then enable:
+   1. Google Play Android Developer API (in Google Cloud)
+   2. Grant service account access in Google Play Console
+
+═══════════════════════════════════════════════════════════
+ALTERNATIVE METHOD (JSON in .env):
+═══════════════════════════════════════════════════════════
+
+If you prefer to store JSON in .env instead of a file:
+
+GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n","client_email":"..."}'
+GOOGLE_PACKAGE_NAME=com.bluesky.pro
+
+═══════════════════════════════════════════════════════════
+EXAMPLE .env ENTRY:
+═══════════════════════════════════════════════════════════
+
+# Google Play IAP Configuration
+GOOGLE_PACKAGE_NAME=com.bluesky.pro
+GOOGLE_SERVICE_ACCOUNT_KEY=./config/google-service-account.json
+
+═══════════════════════════════════════════════════════════
+AFTER ADDING TO .env:
+═══════════════════════════════════════════════════════════
+
+1. Save the .env file
+2. Restart your backend server
+3. Test with: node test_iap_verification.js
+
+═══════════════════════════════════════════════════════════
+
+
