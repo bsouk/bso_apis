@@ -17,6 +17,7 @@ const Notification = require("../../models/notification")
 const admin_received_notification = require("../../models/admin_received_notification");
 const payment = require("../../models/payment");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { determinePaymentDetails, extractPaymentMethodDetails } = require('./paymentManagement');
 
 
 exports.getPaymentListing = async (req, res) => {
@@ -1000,6 +1001,21 @@ exports.paynow = async (req, res) => {
             currency: confirmedIntent?.currency,
         })
 
+        // Auto-populate payment management fields
+        try {
+            const paymentDetails = await determinePaymentDetails(payment_data);
+            payment_data.payment_purpose = paymentDetails.payment_purpose;
+            payment_data.payment_feature = paymentDetails.payment_feature;
+            payment_data.user_type = paymentDetails.user_type;
+            payment_data.purpose_details = paymentDetails.purpose_details;
+            
+            const methodDetails = await extractPaymentMethodDetails(payment_data);
+            payment_data.payment_method_details = methodDetails;
+        } catch (error) {
+            console.error("Error auto-populating payment fields:", error);
+            // Don't fail the payment if auto-populate fails
+        }
+
         await payment_data.save()
 
 
@@ -1192,6 +1208,20 @@ exports.logisticpaynow = async (req, res) => {
             currency: confirmedIntent?.currency || null,
         })
 
+        // Auto-populate payment management fields
+        try {
+            const paymentDetails = await determinePaymentDetails(payment_data);
+            payment_data.payment_purpose = paymentDetails.payment_purpose;
+            payment_data.payment_feature = paymentDetails.payment_feature;
+            payment_data.user_type = paymentDetails.user_type;
+            payment_data.purpose_details = paymentDetails.purpose_details;
+            
+            const methodDetails = await extractPaymentMethodDetails(payment_data);
+            payment_data.payment_method_details = methodDetails;
+        } catch (error) {
+            console.error("Error auto-populating payment fields:", error);
+        }
+
         await payment_data.save()
 
 
@@ -1348,6 +1378,21 @@ exports.checkoutOfflinePayment = async (req, res) => {
         }
         )
         console.log("paymentdata : ", paymentdata)
+
+        // Auto-populate payment management fields
+        try {
+            const paymentDetails = await determinePaymentDetails(paymentdata);
+            paymentdata.payment_purpose = paymentDetails.payment_purpose;
+            paymentdata.payment_feature = paymentDetails.payment_feature;
+            paymentdata.user_type = paymentDetails.user_type;
+            paymentdata.purpose_details = paymentDetails.purpose_details;
+            
+            const methodDetails = await extractPaymentMethodDetails(paymentdata);
+            paymentdata.payment_method_details = methodDetails;
+            await paymentdata.save();
+        } catch (error) {
+            console.error("Error auto-populating payment fields:", error);
+        }
 
         const tracking_data = {
             tracking_unique_id: await generateUniqueId(),
@@ -1610,6 +1655,19 @@ exports.uploadReceipt = async (req, res) => {
             payment_method: "bank_transfer",
         })
 
+        // Auto-populate payment management fields
+        try {
+            const paymentDetails = await determinePaymentDetails(paymenthistory);
+            paymenthistory.payment_purpose = paymentDetails.payment_purpose;
+            paymenthistory.payment_feature = paymentDetails.payment_feature;
+            paymenthistory.user_type = paymentDetails.user_type;
+            paymenthistory.purpose_details = paymentDetails.purpose_details;
+            
+            const methodDetails = await extractPaymentMethodDetails(paymenthistory);
+            paymenthistory.payment_method_details = methodDetails;
+        } catch (error) {
+            console.error("Error auto-populating payment fields:", error);
+        }
 
         await paymenthistory.save()
 

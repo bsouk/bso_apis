@@ -7,6 +7,7 @@ const requireAuth = passport.authenticate('jwt', {
 })
 
 const controller = require('../../controllers/user/payment')
+const paymentManagementController = require('../../controllers/user/paymentManagement')
 const trimRequest = require('trim-request');
 
 router.get(
@@ -123,5 +124,40 @@ router.post(
     controller.uploadReceipt
 )
 
+// Payment Management Routes
+router.get(
+    '/getPaymentManagement',
+    trimRequest.all,
+    requireAuth,
+    paymentManagementController.getPaymentManagement
+)
+
+router.get(
+    '/getPaymentManagementDetails/:id',
+    trimRequest.all,
+    requireAuth,
+    paymentManagementController.getPaymentManagementDetails
+)
+
+router.delete(
+    '/deletePaymentManagement/:id',
+    trimRequest.all,
+    requireAuth,
+    paymentManagementController.deletePaymentManagement
+)
+
+router.post(
+    '/restorePaymentManagement/:id',
+    trimRequest.all,
+    requireAuth,
+    paymentManagementController.restorePaymentManagement
+)
+
+router.get(
+    '/getPaymentStatistics',
+    trimRequest.all,
+    requireAuth,
+    paymentManagementController.getPaymentStatistics
+)
 
 module.exports = router

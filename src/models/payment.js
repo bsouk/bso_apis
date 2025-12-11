@@ -179,7 +179,91 @@ const PaymentSchema = new mongoose.Schema(
                 stripe_payment_intent: String,
                 stripe_payment_method: String,
             }
-        ]
+        ],
+        // Payment Management Fields
+        payment_purpose: {
+            type: String,
+            enum: [
+                "subscription",
+                "enquiry_payment",
+                "logistics_payment",
+                "team_member",
+                "subscription_renewal",
+                "other"
+            ]
+        },
+        payment_feature: {
+            type: String,
+            enum: [
+                "buyer_subscription",
+                "supplier_subscription",
+                "logistics_subscription",
+                "recruiter_subscription",
+                "enquiry_purchase",
+                "order_payment",
+                "logistics_fee",
+                "team_expansion",
+                "other"
+            ]
+        },
+        user_type: {
+            type: String,
+            enum: ["buyer", "supplier", "logistics", "recruiter", "resource"]
+        },
+        payment_method_details: {
+            card_last4: String,
+            card_brand: String,
+            card_exp_month: Number,
+            card_exp_year: Number,
+            bank_name: String,
+            bank_account_last4: String,
+            transaction_id: String,
+            receipt_url: String,
+            receipt_image: String
+        },
+        purpose_details: {
+            enquiry_unique_id: String,
+            order_unique_id: String,
+            subscription_id: String,
+            plan_name: String,
+            plan_type: String,
+            description: String
+        },
+        // Soft Delete Fields
+        is_deleted: {
+            type: Boolean,
+            default: false
+        },
+        deleted_at: {
+            type: Date,
+            default: null
+        },
+        deleted_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "users",
+            default: null
+        },
+        deleted_by_admin: {
+            type: Boolean,
+            default: false
+        },
+        deleted_by_user: {
+            type: Boolean,
+            default: false
+        },
+        is_permanently_deleted: {
+            type: Boolean,
+            default: false
+        },
+        permanently_deleted_at: {
+            type: Date,
+            default: null
+        },
+        permanently_deleted_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "admins",
+            default: null
+        }
     },
     {
         versionKey: false,

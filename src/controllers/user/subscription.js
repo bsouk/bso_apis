@@ -14,6 +14,7 @@ const fcm_devices = require("../../models/fcm_devices");
 const admin_notification = require("../../models/admin_notification");
 const admin_received_notification = require("../../models/admin_received_notification");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { determinePaymentDetails, extractPaymentMethodDetails } = require('./paymentManagement');
 
 async function genrateSubscriptionId() {
     const token = crypto.randomBytes(5).toString('hex')
@@ -516,7 +517,7 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 isPurchased: true
             });
 
-            await Payment.create({
+            const paymentRecord = await Payment.create({
                 subscription_id: subscriptionDoc._id,
                 buyer_id: userid,
                 total_amount: paymentIntent.amount_received / 100,
@@ -527,6 +528,21 @@ exports.createMultipleSubscriptions = async (req, res) => {
                 stripe_payment_method_id: payment_method_id,
                 receipt: paymentIntent?.charges?.data?.[0]?.receipt_url || null
             });
+
+            // Auto-populate payment management fields
+            try {
+                const paymentDetails = await determinePaymentDetails(paymentRecord);
+                paymentRecord.payment_purpose = paymentDetails.payment_purpose;
+                paymentRecord.payment_feature = paymentDetails.payment_feature;
+                paymentRecord.user_type = paymentDetails.user_type;
+                paymentRecord.purpose_details = paymentDetails.purpose_details;
+                
+                const methodDetails = await extractPaymentMethodDetails(paymentRecord);
+                paymentRecord.payment_method_details = methodDetails;
+                await paymentRecord.save();
+            } catch (error) {
+                console.error("Error auto-populating payment fields:", error);
+            }
 
             createdSubscriptions.push({
                 subscription: subscriptionDoc,
@@ -786,6 +802,21 @@ exports.createSubscription = async (req, res) => {
             receipt: paymentIntent?.charges?.data?.[0]?.receipt_url || null
         })
         console.log("paymentdata : ", paymentrecord)
+
+        // Auto-populate payment management fields
+        try {
+            const paymentDetails = await determinePaymentDetails(paymentrecord);
+            paymentrecord.payment_purpose = paymentDetails.payment_purpose;
+            paymentrecord.payment_feature = paymentDetails.payment_feature;
+            paymentrecord.user_type = paymentDetails.user_type;
+            paymentrecord.purpose_details = paymentDetails.purpose_details;
+            
+            const methodDetails = await extractPaymentMethodDetails(paymentrecord);
+            paymentrecord.payment_method_details = methodDetails;
+            await paymentrecord.save();
+        } catch (error) {
+            console.error("Error auto-populating payment fields:", error);
+        }
 
 
         if (plandata.type === 'supplier' || plandata.type === 'logistics') {
