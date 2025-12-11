@@ -409,6 +409,21 @@ exports.createPaymentIntentlogisticsupplier = async (req, res) => {
             }
             )
             console.log("paymenthistory : ", paymenthistory)
+            
+            // Auto-populate payment management fields
+            try {
+                const paymentDetails = await determinePaymentDetails(paymenthistory);
+                paymenthistory.payment_purpose = paymentDetails.payment_purpose;
+                paymenthistory.payment_feature = paymentDetails.payment_feature;
+                paymenthistory.user_type = paymentDetails.user_type;
+                paymenthistory.purpose_details = paymentDetails.purpose_details;
+                
+                const methodDetails = await extractPaymentMethodDetails(paymenthistory);
+                paymenthistory.payment_method_details = methodDetails;
+                await paymenthistory.save();
+            } catch (error) {
+                console.error("Error auto-populating payment fields:", error);
+            }
         }
         paymentAmount = supplieramount
 
@@ -508,6 +523,21 @@ exports.createPaymentIntentlogisticbuyer = async (req, res) => {
             }
             )
             console.log("paymenthistory : ", paymenthistory)
+            
+            // Auto-populate payment management fields
+            try {
+                const paymentDetails = await determinePaymentDetails(paymenthistory);
+                paymenthistory.payment_purpose = paymentDetails.payment_purpose;
+                paymenthistory.payment_feature = paymentDetails.payment_feature;
+                paymenthistory.user_type = paymentDetails.user_type;
+                paymenthistory.purpose_details = paymentDetails.purpose_details;
+                
+                const methodDetails = await extractPaymentMethodDetails(paymenthistory);
+                paymenthistory.payment_method_details = methodDetails;
+                await paymenthistory.save();
+            } catch (error) {
+                console.error("Error auto-populating payment fields:", error);
+            }
         }
         paymentAmount = buyeramount
 
@@ -729,6 +759,21 @@ exports.createappPaymentIntentsupplier = async (req, res) => {
             }
             )
             console.log("paymenthistory : ", paymenthistory)
+            
+            // Auto-populate payment management fields
+            try {
+                const paymentDetails = await determinePaymentDetails(paymenthistory);
+                paymenthistory.payment_purpose = paymentDetails.payment_purpose;
+                paymenthistory.payment_feature = paymentDetails.payment_feature;
+                paymenthistory.user_type = paymentDetails.user_type;
+                paymenthistory.purpose_details = paymentDetails.purpose_details;
+                
+                const methodDetails = await extractPaymentMethodDetails(paymenthistory);
+                paymenthistory.payment_method_details = methodDetails;
+                await paymenthistory.save();
+            } catch (error) {
+                console.error("Error auto-populating payment fields:", error);
+            }
         }
         paymentAmount = supplieramount
 
@@ -1589,6 +1634,21 @@ exports.uploadReceipt = async (req, res) => {
             }
             )
             console.log("paymenthistory : ", paymenthistory)
+            
+            // Auto-populate payment management fields
+            try {
+                const paymentDetails = await determinePaymentDetails(paymenthistory);
+                paymenthistory.payment_purpose = paymentDetails.payment_purpose;
+                paymenthistory.payment_feature = paymentDetails.payment_feature;
+                paymenthistory.user_type = paymentDetails.user_type;
+                paymenthistory.purpose_details = paymentDetails.purpose_details;
+                
+                const methodDetails = await extractPaymentMethodDetails(paymenthistory);
+                paymenthistory.payment_method_details = methodDetails;
+                await paymenthistory.save();
+            } catch (error) {
+                console.error("Error auto-populating payment fields:", error);
+            }
         }
 
         if (fetch_term.method == "advanced") {
