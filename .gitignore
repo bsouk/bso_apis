@@ -40,3 +40,8 @@ next-env.d.ts
 
 # IAP Bypass Mode Testing Files (internal documentation)
 test_iap_bypass.js
+
+# Google Service Account Credentials (SENSITIVE - DO NOT COMMIT)
+config/google-service-account.json
+*.service-account.json
+**/google-service-account.json
