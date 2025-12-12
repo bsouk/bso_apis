@@ -376,7 +376,7 @@ exports.verifyIAPSubscription = async (req, res) => {
         const newSubscription = await Subscription.create({
             user_id: userid,
             subscription_id: await generateSubscriptionId(),
-            plan_id: plan_id,
+            plan_id: primaryPlanId, // Use primary plan ID (first from comma-separated list)
             start_at: startDate,
             end_at: endDate,
             status: 'active',
