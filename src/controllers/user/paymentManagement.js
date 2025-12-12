@@ -178,58 +178,95 @@ exports.getPaymentManagement = async (req, res) => {
             search
         } = req.query;
 
-        // Build filter
+        // Build filter - include old payments that don't have is_deleted field
+        // This ensures compatibility with existing payments that don't have the new fields
         const filter = {
-            $or: [
-                { buyer_id: new mongoose.Types.ObjectId(userId) },
-                { supplier_id: new mongoose.Types.ObjectId(userId) }
-            ],
-            is_deleted: false,
-            is_permanently_deleted: false
+            $and: [
+                {
+                    $or: [
+                        { buyer_id: new mongoose.Types.ObjectId(userId) },
+                        { supplier_id: new mongoose.Types.ObjectId(userId) }
+                    ]
+                },
+                {
+                    $or: [
+                        { is_deleted: { $exists: false } }, // Include old payments without is_deleted field
+                        { is_deleted: false }
+                    ]
+                },
+                {
+                    $or: [
+                        { is_permanently_deleted: { $exists: false } }, // Include old payments without is_permanently_deleted field
+                        { is_permanently_deleted: false }
+                    ]
+                }
+            ]
         };
 
+        // Additional filters - add directly to filter (outside $and for simple conditions)
         // Date filter
         if (start_date && end_date) {
             const startDate = new Date(start_date);
             const endDate = new Date(end_date);
             endDate.setHours(23, 59, 59, 999); // End of day
-            filter.createdAt = { $gte: startDate, $lte: endDate };
+            filter.$and.push({ createdAt: { $gte: startDate, $lte: endDate } });
         }
 
-        // User type filter
+        // User type filter - include payments without user_type field (old payments)
         if (user_type) {
-            filter.user_type = user_type;
+            filter.$and.push({
+                $or: [
+                    { user_type: { $exists: false } }, // Old payments without user_type
+                    { user_type: user_type }
+                ]
+            });
         }
 
-        // Payment purpose filter
+        // Payment purpose filter - include payments without payment_purpose field (old payments)
         if (payment_purpose) {
-            filter.payment_purpose = payment_purpose;
+            filter.$and.push({
+                $or: [
+                    { payment_purpose: { $exists: false } }, // Old payments without payment_purpose
+                    { payment_purpose: payment_purpose }
+                ]
+            });
         }
 
-        // Payment feature filter
+        // Payment feature filter - include payments without payment_feature field (old payments)
         if (payment_feature) {
-            filter.payment_feature = payment_feature;
+            filter.$and.push({
+                $or: [
+                    { payment_feature: { $exists: false } }, // Old payments without payment_feature
+                    { payment_feature: payment_feature }
+                ]
+            });
         }
 
-        // Payment method filter
+        // Payment method filter - match by payment_method_type or check payment_stage
         if (payment_method) {
-            filter.payment_method_type = payment_method;
+            filter.$and.push({
+                $or: [
+                    { payment_method_type: payment_method },
+                    { "payment_stage.payment_method": payment_method }
+                ]
+            });
         }
 
         // Payment status filter
         if (payment_status) {
-            filter.payment_status = payment_status;
+            filter.$and.push({ payment_status: payment_status });
         }
 
         // Search filter
         if (search) {
-            filter.$or = [
-                ...filter.$or,
-                { "purpose_details.enquiry_unique_id": { $regex: search, $options: "i" } },
-                { "purpose_details.order_unique_id": { $regex: search, $options: "i" } },
-                { "purpose_details.subscription_id": { $regex: search, $options: "i" } },
-                { "payment_method_details.transaction_id": { $regex: search, $options: "i" } }
-            ];
+            filter.$and.push({
+                $or: [
+                    { "purpose_details.enquiry_unique_id": { $regex: search, $options: "i" } },
+                    { "purpose_details.order_unique_id": { $regex: search, $options: "i" } },
+                    { "purpose_details.subscription_id": { $regex: search, $options: "i" } },
+                    { "payment_method_details.transaction_id": { $regex: search, $options: "i" } }
+                ]
+            });
         }
 
         // Aggregate query
@@ -356,16 +393,28 @@ exports.getPaymentManagementDetails = async (req, res) => {
         const userId = req.user._id;
         const { id } = req.params;
 
-        const payment = await Payment.aggregate([
-            {
-                $match: {
-                    _id: new mongoose.Types.ObjectId(id),
+        // Build filter - include old payments that don't have is_deleted field
+        const filter = {
+            $and: [
+                { _id: new mongoose.Types.ObjectId(id) },
+                {
                     $or: [
                         { buyer_id: new mongoose.Types.ObjectId(userId) },
                         { supplier_id: new mongoose.Types.ObjectId(userId) }
-                    ],
-                    is_permanently_deleted: false
+                    ]
+                },
+                {
+                    $or: [
+                        { is_permanently_deleted: { $exists: false } }, // Include old payments without is_permanently_deleted field
+                        { is_permanently_deleted: false }
+                    ]
                 }
+            ]
+        };
+
+        const payment = await Payment.aggregate([
+            {
+                $match: filter
             },
             {
                 $lookup: {
