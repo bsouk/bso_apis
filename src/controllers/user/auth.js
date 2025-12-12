@@ -311,6 +311,12 @@ exports.signup = async (req, res) => {
         });
     }
 
+    // Set buyer_type to 'direct-buyer' by default for buyers registering from frontend
+    if (data.user_type === 'buyer' && !data.buyer_type) {
+      data.buyer_type = 'direct-buyer';
+      console.log(`✅ Setting buyer_type to 'direct-buyer' for new buyer registration`);
+    }
+
     let user = await User(data);
     const token = await saveUserAccessAndReturnToken(req, user);
 
@@ -318,6 +324,29 @@ exports.signup = async (req, res) => {
     // await utils.createCustomer(user)
     //user = user.toJSON();
     delete user.password;
+
+    // Auto-create subscription for buyers (direct-buyer by default)
+    // This happens in the background after OTP verification
+    if (data.user_type === 'buyer' && data.buyer_type) {
+      console.log(`🎫 Auto-creating subscription for buyer: ${user.email}, buyer_type: ${data.buyer_type}`);
+      
+      // Import createFreeBuyerSubscription function
+      const adminUserController = require('../admin/user');
+      
+      // Create subscription in background (non-blocking)
+      adminUserController.createFreeBuyerSubscription(user._id, null, data.buyer_type, true)
+        .then((subscription) => {
+          if (subscription) {
+            console.log(`✅ Auto-subscription created successfully for ${user.email}: ${subscription.subscription_id}`);
+          } else {
+            console.log(`⚠️ Could not create auto-subscription for ${user.email} (plan may not exist)`);
+          }
+        })
+        .catch((error) => {
+          console.error(`❌ Error creating auto-subscription for ${user.email}:`, error.message);
+          // Don't fail the registration if subscription creation fails
+        });
+    }
 
     const notificaitonData = {
       receiver_id: user._id,
