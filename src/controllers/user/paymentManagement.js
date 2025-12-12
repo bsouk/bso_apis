@@ -170,6 +170,7 @@ exports.getPaymentManagement = async (req, res) => {
             limit = 10,
             start_date,
             end_date,
+            time_filter,
             user_type,
             payment_purpose,
             payment_feature,
@@ -204,8 +205,52 @@ exports.getPaymentManagement = async (req, res) => {
         };
 
         // Additional filters - add directly to filter (outside $and for simple conditions)
-        // Date filter
-        if (start_date && end_date) {
+        // Date filter - handle time_filter or date range
+        if (time_filter) {
+            const now = new Date();
+            let start, end;
+
+            switch (time_filter) {
+                case 'today': {
+                    start = new Date(now);
+                    start.setHours(0, 0, 0, 0);
+                    end = new Date(now);
+                    end.setHours(23, 59, 59, 999);
+                    break;
+                }
+                case 'this_week': {
+                    start = new Date(now);
+                    start.setDate(now.getDate() - 6);
+                    start.setHours(0, 0, 0, 0);
+                    end = new Date(now);
+                    end.setHours(23, 59, 59, 999);
+                    break;
+                }
+                case 'this_month': {
+                    start = new Date(now.getFullYear(), now.getMonth(), 1);
+                    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                    break;
+                }
+                case 'previous_month': {
+                    const prevMonth = now.getMonth() - 1;
+                    const year = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+                    const month = (prevMonth + 12) % 12;
+                    start = new Date(year, month, 1);
+                    end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+                    break;
+                }
+                case 'this_year': {
+                    start = new Date(now.getFullYear(), 0, 1);
+                    end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+                    break;
+                }
+                default:
+                    break;
+            }
+            if (start && end) {
+                filter.$and.push({ createdAt: { $gte: start, $lte: end } });
+            }
+        } else if (start_date && end_date) {
             const startDate = new Date(start_date);
             const endDate = new Date(end_date);
             endDate.setHours(23, 59, 59, 999); // End of day
@@ -618,18 +663,77 @@ exports.restorePaymentManagement = async (req, res) => {
 exports.getPaymentStatistics = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { start_date, end_date, user_type } = req.query;
+        const { start_date, end_date, time_filter, user_type } = req.query;
 
         const filter = {
-            $or: [
-                { buyer_id: new mongoose.Types.ObjectId(userId) },
-                { supplier_id: new mongoose.Types.ObjectId(userId) }
-            ],
-            is_deleted: false,
-            is_permanently_deleted: false
+            $and: [
+                {
+                    $or: [
+                        { buyer_id: new mongoose.Types.ObjectId(userId) },
+                        { supplier_id: new mongoose.Types.ObjectId(userId) }
+                    ]
+                },
+                {
+                    $or: [
+                        { is_deleted: { $exists: false } },
+                        { is_deleted: false }
+                    ]
+                },
+                {
+                    $or: [
+                        { is_permanently_deleted: { $exists: false } },
+                        { is_permanently_deleted: false }
+                    ]
+                }
+            ]
         };
 
-        if (start_date && end_date) {
+        // Handle time_filter or date range
+        if (time_filter) {
+            const now = new Date();
+            let start, end;
+
+            switch (time_filter) {
+                case 'today': {
+                    start = new Date(now);
+                    start.setHours(0, 0, 0, 0);
+                    end = new Date(now);
+                    end.setHours(23, 59, 59, 999);
+                    break;
+                }
+                case 'this_week': {
+                    start = new Date(now);
+                    start.setDate(now.getDate() - 6);
+                    start.setHours(0, 0, 0, 0);
+                    end = new Date(now);
+                    end.setHours(23, 59, 59, 999);
+                    break;
+                }
+                case 'this_month': {
+                    start = new Date(now.getFullYear(), now.getMonth(), 1);
+                    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+                    break;
+                }
+                case 'previous_month': {
+                    const prevMonth = now.getMonth() - 1;
+                    const year = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+                    const month = (prevMonth + 12) % 12;
+                    start = new Date(year, month, 1);
+                    end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+                    break;
+                }
+                case 'this_year': {
+                    start = new Date(now.getFullYear(), 0, 1);
+                    end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+                    break;
+                }
+                default:
+                    break;
+            }
+            if (start && end) {
+                filter.createdAt = { $gte: start, $lte: end };
+            }
+        } else if (start_date && end_date) {
             const startDate = new Date(start_date);
             const endDate = new Date(end_date);
             endDate.setHours(23, 59, 59, 999);

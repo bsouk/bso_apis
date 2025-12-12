@@ -33,6 +33,9 @@ const UserSchema = new mongoose.Schema({
   },
   reply:{
     type: String
+  },
+  reply_date: {
+    type: Date
   }
 },
   {
