@@ -148,11 +148,31 @@ exports.verifyIAPSubscription = async (req, res) => {
         // ═══════════════════════════════════════════════════
         // STEP 3: PLAN VERIFICATION
         // ═══════════════════════════════════════════════════
-        const plandata = await plan.findOne({ plan_id });
+        // Handle multiple plan IDs (comma-separated) for "allinone" subscriptions
+        // If multiple plan IDs are provided, use the first one as primary
+        let primaryPlanId = plan_id;
+        let allPlanIds = [];
+        
+        if (plan_id && plan_id.includes(',')) {
+            // Multiple plan IDs provided (e.g., "plan-1,plan-2")
+            allPlanIds = plan_id.split(',').map(id => id.trim());
+            primaryPlanId = allPlanIds[0]; // Use first plan as primary
+            console.log('📋 Multiple plan IDs detected:', {
+                all_plans: allPlanIds,
+                primary_plan: primaryPlanId
+            });
+        } else {
+            allPlanIds = [plan_id];
+        }
+        
+        // Verify primary plan exists
+        const plandata = await plan.findOne({ plan_id: primaryPlanId });
         if (!plandata) {
             return res.status(404).json({
-                message: "Plan not found",
-                code: 404
+                message: `Plan not found: ${primaryPlanId}`,
+                code: 404,
+                requested_plan_id: plan_id,
+                primary_plan_id: primaryPlanId
             });
         }
 
@@ -164,10 +184,12 @@ exports.verifyIAPSubscription = async (req, res) => {
         }
 
         console.log('📋 Plan Details:', {
+            plan_id: primaryPlanId,
             type: plandata.type,
             interval: plandata.interval,
             price: plandata.price,
-            name: plandata.plan_name
+            name: plandata.plan_name,
+            all_plan_ids: allPlanIds.length > 1 ? allPlanIds : 'Single plan'
         });
 
         // ═══════════════════════════════════════════════════
