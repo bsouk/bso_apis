@@ -284,7 +284,7 @@ exports.validationResult = (req, res, next) => {
     }
     return next()
   } catch (err) {
-    return this.handleError(res, this.buildErrObject(422, err.array()))
+    return exports.handleError(res, exports.buildErrObject(422, err.array()))
   }
 }
 
@@ -322,7 +322,7 @@ exports.isIDGood = async id => {
     const goodID = mongoose.Types.ObjectId.isValid(id)
     return goodID
       ? resolve(id)
-      : reject(this.buildErrObject(422, 'ID_MALFORMED'))
+      : reject(exports.buildErrObject(422, 'ID_MALFORMED'))
   })
 }
 
@@ -335,10 +335,10 @@ exports.isIDGood = async id => {
  */
 exports.itemNotFound = (err, item, reject, message) => {
   if (err) {
-    reject(this.buildErrObject(422, err.message))
+    reject(exports.buildErrObject(422, err.message))
   }
   if (!item) {
-    reject(this.buildErrObject(404, message))
+    reject(exports.buildErrObject(404, message))
   }
 }
 
@@ -352,10 +352,10 @@ exports.itemNotFound = (err, item, reject, message) => {
 exports.itemAlreadyExists = (err, item, reject, message) => {
   console.log(item);
   if (err) {
-    reject(this.buildErrObject(422, err.message))
+    reject(exports.buildErrObject(422, err.message))
   }
   if (item) {
-    reject(this.buildErrObject(422, message))
+    reject(exports.buildErrObject(422, message))
   }
 }
 

@@ -73,7 +73,8 @@ const sendNotification = (model, object) => {
 
     } catch (err) {
       console.log(err)
-      reject(this.buildErrObject(422, err.message))
+      const { buildErrObject } = require("./utils");
+      reject(buildErrObject(422, err.message))
     }
   })
 }
