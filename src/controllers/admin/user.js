@@ -22,7 +22,7 @@ async function generateSubscriptionId() {
 }
 
 // Helper function to create free buyer subscription
-async function createFreeBuyerSubscription(userId, adminId = null, buyerType = 'indirect-buyer') {
+async function createFreeBuyerSubscription(userId, adminId = null, buyerType = 'indirect-buyer', checkExisting = true) {
   try {
     // Find the free buyer plan (type = "buyer" and plan_type = "freemium" OR price = 0)
     const buyerPlan = await Plan.findOne({
@@ -39,16 +39,19 @@ async function createFreeBuyerSubscription(userId, adminId = null, buyerType = '
       return null;
     }
 
-    // Check if user already has an active buyer subscription
-    const existingSubscription = await Subscription.findOne({
-      user_id: userId,
-      type: "buyer",
-      status: "active"
-    });
+    // Check if user already has an active buyer subscription for this specific buyer_type
+    if (checkExisting) {
+      const existingSubscription = await Subscription.findOne({
+        user_id: userId,
+        type: "buyer",
+        buyer_type: buyerType,
+        status: "active"
+      });
 
-    if (existingSubscription) {
-      console.log("ℹ️ User already has an active buyer subscription");
-      return existingSubscription;
+      if (existingSubscription) {
+        console.log(`ℹ️ User already has an active ${buyerType} subscription`);
+        return existingSubscription;
+      }
     }
 
     // Create the free subscription with buyer_type tracking
@@ -504,12 +507,47 @@ exports.addCustomer = async (req, res) => {
     const buyerType = data.buyer_type || 'indirect-buyer';
     console.log(`🎫 Creating free ${buyerType} subscription for: ${user.email}`);
     const adminId = req.user?._id || null; // Get admin ID if available
-    const subscription = await createFreeBuyerSubscription(user._id, adminId, buyerType);
     
-    if (subscription) {
-      console.log(`✅ Free subscription created successfully: ${subscription.subscription_id}`);
+    // Check if user already has subscription for this buyer_type
+    const existingSubscription = await Subscription.findOne({
+      user_id: user._id,
+      type: "buyer",
+      buyer_type: buyerType,
+      status: "active"
+    });
+
+    if (!existingSubscription) {
+      const subscription = await createFreeBuyerSubscription(user._id, adminId, buyerType, false);
+      
+      if (subscription) {
+        console.log(`✅ Free subscription created successfully: ${subscription.subscription_id}`);
+        
+        // Send subscription email notification (non-blocking)
+        try {
+          const mailOptions = {
+            to: user.email,
+            subject: `Buyer Subscription Activated - ${process.env.APP_NAME || 'BSO Services'}`,
+            app_name: process.env.APP_NAME || 'BSO Services',
+            email: user.email,
+            name: user.full_name || `${user.first_name} ${user.last_name}`,
+            subscription_type: buyerType === 'direct-buyer' ? 'Direct Buyer' : 'Indirect Buyer',
+            subscription_id: subscription.subscription_id,
+            login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+            website_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+          };
+          
+          console.log(`📧 Sending subscription email to ${user.email}...`);
+          await emailer.sendEmail(null, mailOptions, "accountCreated");
+          console.log(`✅ Subscription email sent to ${user.email}`);
+        } catch (emailError) {
+          console.error(`❌ Error sending subscription email to ${user.email}:`, emailError.message);
+          // Don't fail the operation if email fails
+        }
+      } else {
+        console.log(`⚠️ Could not create free subscription (plan may not exist)`);
+      }
     } else {
-      console.log(`⚠️ Could not create free subscription (plan may not exist)`);
+      console.log(`ℹ️ User already has an active ${buyerType} subscription`);
     }
 
     // Send welcome email using the same method as frontend registration
@@ -765,7 +803,68 @@ exports.editCustomer = async (req, res) => {
 
     console.log("userData is ", userData)
 
+    // Track buyer_type change for subscription management
+    const oldBuyerType = user.buyer_type;
+    const newBuyerType = data.buyer_type;
+    const buyerTypeChanged = newBuyerType && oldBuyerType !== newBuyerType;
+
     await User.findByIdAndUpdate(id, userData);
+    const updatedUser = await User.findById(id);
+
+    // Handle subscription assignment when buyer_type is set or changed
+    if (newBuyerType && (buyerTypeChanged || !oldBuyerType)) {
+      console.log(`🎫 Checking subscription for buyer_type: ${newBuyerType}`);
+      const adminId = req.user?._id || null;
+      
+      // Check if user has an active subscription for this buyer_type
+      const existingSubscription = await Subscription.findOne({
+        user_id: new mongoose.Types.ObjectId(id),
+        type: "buyer",
+        buyer_type: newBuyerType,
+        status: "active"
+      });
+
+      if (!existingSubscription) {
+        console.log(`📝 Creating ${newBuyerType} subscription for user ${id}`);
+        const subscription = await createFreeBuyerSubscription(
+          new mongoose.Types.ObjectId(id),
+          adminId,
+          newBuyerType,
+          false // Don't check existing - we already checked above
+        );
+
+        if (subscription) {
+          console.log(`✅ Subscription created successfully: ${subscription.subscription_id}`);
+          
+          // Send subscription email notification (non-blocking)
+          try {
+            const mailOptions = {
+              to: updatedUser.email,
+              subject: `Buyer Subscription Activated - ${process.env.APP_NAME || 'BSO Services'}`,
+              app_name: process.env.APP_NAME || 'BSO Services',
+              email: updatedUser.email,
+              name: updatedUser.full_name || `${updatedUser.first_name} ${updatedUser.last_name}`,
+              subscription_type: newBuyerType === 'direct-buyer' ? 'Direct Buyer' : 'Indirect Buyer',
+              subscription_id: subscription.subscription_id,
+              login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+              website_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+            };
+            
+            console.log(`📧 Sending subscription email to ${updatedUser.email}...`);
+            // Use accountCreated template for subscription notification
+            await emailer.sendEmail(null, mailOptions, "accountCreated");
+            console.log(`✅ Subscription email sent to ${updatedUser.email}`);
+          } catch (emailError) {
+            console.error(`❌ Error sending subscription email to ${updatedUser.email}:`, emailError.message);
+            // Don't fail the operation if email fails
+          }
+        } else {
+          console.log(`⚠️ Could not create subscription (plan may not exist)`);
+        }
+      } else {
+        console.log(`ℹ️ User already has an active ${newBuyerType} subscription`);
+      }
+    }
 
     // Send email notification if password was updated (non-blocking)
     if (passwordUpdated) {

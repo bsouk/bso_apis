@@ -46,22 +46,23 @@ config/google-service-account.json
 *.service-account.json
 **/google-service-account.json
 
-# Test and Helper Scripts (Development/Testing Only)
-test_*.js
-*_test.js
-*Test.js
-verify_*.js
-check_*.js
-create_*.js
-find_*.js
-setup_*.js
-get_*.js
-run_*.js
-fix_*.js
-final_*.js
-*_test_*.js
-run_*.sh
-get_*.sh
+# Test and Helper Scripts (Development/Testing Only - Root directory only)
+/test_*.js
+/*_test.js
+/*Test.js
+/verify_*.js
+/check_*.js
+/create_*.js
+/find_*.js
+/setup_*.js
+/get_*.js
+/run_*.js
+/fix_*.js
+/final_*.js
+/*_test_*.js
+/run_*.sh
+/get_*.sh
+/add_test_*.js
 
 # Documentation Files (Markdown) - All excluded
 *.md
