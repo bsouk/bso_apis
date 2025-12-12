@@ -63,7 +63,5 @@ final_*.js
 run_*.sh
 get_*.sh
 
-# Documentation Files (Markdown)
+# Documentation Files (Markdown) - All excluded
 *.md
-!README.md
-!CHANGELOG.md
