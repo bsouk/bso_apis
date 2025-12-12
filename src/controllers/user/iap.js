@@ -282,10 +282,30 @@ exports.verifyIAPSubscription = async (req, res) => {
                 if (platform.toLowerCase() === 'ios') {
                     // Verify with Apple
                     console.log('🍎 Verifying Apple receipt...');
+                    console.log('📝 Receipt data type:', typeof receipt_data);
+                    console.log('📝 Receipt data length:', receipt_data?.length);
+                    console.log('📝 Receipt data preview (first 150):', receipt_data?.substring(0, 150));
+                    console.log('📝 Receipt data ending (last 150):', receipt_data?.length > 150 ? '...' + receipt_data.substring(receipt_data.length - 150) : receipt_data);
+                    console.log('📝 Receipt data dot count:', (receipt_data?.match(/\./g) || []).length);
+                    console.log('📝 Receipt data split by dots:', receipt_data?.split('.').length, 'parts');
+                    
                     const appleResponse = await verifyAppleReceipt(receipt_data);
+                    console.log('✅ Apple verification completed');
+                    console.log('📋 Apple response keys:', Object.keys(appleResponse));
+                    console.log('📋 Apple response status:', appleResponse.status);
+                    console.log('📋 Has latest_receipt_info:', !!appleResponse.latest_receipt_info);
+                    console.log('📋 latest_receipt_info length:', appleResponse.latest_receipt_info?.length || 0);
+                    
                     parsedReceipt = parseAppleReceipt(appleResponse);
+                    console.log('✅ Receipt parsed successfully');
+                    console.log('📋 Parsed receipt:', {
+                        isValid: parsedReceipt.isValid,
+                        transactionId: parsedReceipt.transactionId,
+                        productId: parsedReceipt.productId
+                    });
 
                     if (!parsedReceipt.isValid) {
+                        console.error('❌ Receipt validation failed');
                         return res.status(400).json({
                             message: "Invalid Apple receipt",
                             code: 400,

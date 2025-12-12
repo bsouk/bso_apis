@@ -24,17 +24,49 @@ app.post(
 app.use(helmet());
 
 const corsOptions = {
-  origin: "*",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    // Get allowed origins from environment or use default
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+      : [
+          'http://localhost:3000',
+          'http://localhost:3039',
+          'http://localhost:5173',
+          'http://localhost:5174',
+          'https://bsoservices.com',
+          'https://www.bsoservices.com',
+          'https://admin.bsoservices.com',
+          'https://api.bsoservices.com'
+        ];
+    
+    // Allow all origins for local testing (can be restricted in production)
+    if (process.env.ENV === 'local' || process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // In production, check against allowed origins
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
   preflightContinue: false,
   optionsSuccessStatus: 204,
-  allowedHeaders: "Content-Type, Authorization, X-Requested-With",
+  allowedHeaders: "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+  exposedHeaders: "Content-Length, Content-Type"
 };
 
 app.use(cors(corsOptions));
 app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase body parser limit to handle large JWT tokens (Apple IAP tokens can be 5000+ characters)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(
   morgan(":method :url :status :response-time ms - :res[content-length]")
 );

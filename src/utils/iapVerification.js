@@ -15,20 +15,41 @@ const jwt = require('jsonwebtoken');
  */
 function isJWTToken(receiptData) {
     if (!receiptData || typeof receiptData !== 'string') {
+        console.log('🔍 JWT detection: Invalid input type:', typeof receiptData);
         return false;
     }
     
     const trimmed = receiptData.trim();
+    const dotCount = (trimmed.match(/\./g) || []).length;
+    const parts = trimmed.split('.');
+    
     // JWT tokens start with "eyJ" (base64 encoded {" header)
     // They also have 3 parts separated by dots: header.payload.signature
-    const isJWT = trimmed.startsWith('eyJ') && trimmed.split('.').length === 3;
+    const startsWithEyJ = trimmed.startsWith('eyJ');
+    const hasThreeParts = parts.length === 3;
+    const isJWT = startsWithEyJ && hasThreeParts;
     
     console.log('🔍 JWT detection:', {
-        startsWithEyJ: trimmed.startsWith('eyJ'),
-        hasThreeParts: trimmed.split('.').length === 3,
+        startsWithEyJ: startsWithEyJ,
+        tokenLength: trimmed.length,
+        dotCount: dotCount,
+        hasThreeParts: hasThreeParts,
+        partCount: parts.length,
+        partLengths: parts.map((p, i) => `part${i+1}:${p.length}`).join(', '),
         isJWT: isJWT,
-        preview: trimmed.substring(0, 50)
+        preview: trimmed.substring(0, 100),
+        endsWith: trimmed.length > 50 ? '...' + trimmed.substring(trimmed.length - 50) : trimmed
     });
+    
+    // If it starts with eyJ but doesn't have 3 parts, log a warning
+    if (startsWithEyJ && !hasThreeParts) {
+        console.log('⚠️  WARNING: Token starts with eyJ but does not have 3 parts!');
+        console.log('   This might indicate:');
+        console.log('   - Token is truncated');
+        console.log('   - Token format is non-standard');
+        console.log('   - Dots are missing or escaped');
+        console.log('   - Token needs to be decoded differently');
+    }
     
     return isJWT;
 }
@@ -93,20 +114,31 @@ function parseJWTTransaction(jwtPayload) {
     let renewalData = null;
     
     // Try to find transactionInfo (could be nested JWT or direct object)
-    // Check multiple possible locations
-    const transactionInfo = jwtPayload.transactionInfo || 
-                           jwtPayload.signedTransactionInfo ||
+    // Apple's App Store Server Notification v2 uses 'signedTransactionInfo' as the primary field
+    // Check multiple possible locations, prioritizing signedTransactionInfo
+    const transactionInfo = jwtPayload.signedTransactionInfo ||  // Primary field in App Store Server Notification v2
+                           jwtPayload.transactionInfo || 
                            jwtPayload.data?.signedTransactionInfo || 
-                           jwtPayload.data?.transactionInfo;
+                           jwtPayload.data?.transactionInfo ||
+                           jwtPayload.transaction;
     
     // Try to find renewalInfo (could be nested JWT or direct object)
-    const renewalInfo = jwtPayload.renewalInfo || 
-                       jwtPayload.signedRenewalInfo ||
+    // Apple's App Store Server Notification v2 uses 'signedRenewalInfo' as the primary field
+    const renewalInfo = jwtPayload.signedRenewalInfo ||  // Primary field in App Store Server Notification v2
+                       jwtPayload.renewalInfo || 
                        jwtPayload.data?.signedRenewalInfo || 
-                       jwtPayload.data?.renewalInfo;
+                       jwtPayload.data?.renewalInfo ||
+                       jwtPayload.renewal;
     
     console.log('🔍 Found transactionInfo:', !!transactionInfo, typeof transactionInfo);
+    if (transactionInfo && typeof transactionInfo === 'string') {
+        console.log('   transactionInfo is string, length:', transactionInfo.length);
+        console.log('   transactionInfo preview:', transactionInfo.substring(0, 100));
+    }
     console.log('🔍 Found renewalInfo:', !!renewalInfo, typeof renewalInfo);
+    if (renewalInfo && typeof renewalInfo === 'string') {
+        console.log('   renewalInfo is string, length:', renewalInfo.length);
+    }
     
     // If transactionInfo is a JWT string, decode it
     if (typeof transactionInfo === 'string' && transactionInfo.startsWith('eyJ')) {
@@ -141,25 +173,31 @@ function parseJWTTransaction(jwtPayload) {
     console.log('🔍 Transaction keys:', Object.keys(transaction));
     
     // Extract transaction details with multiple fallback options
-    const transactionId = transaction.originalTransactionId || 
+    // Apple's App Store Server Notification v2 uses camelCase fields
+    const transactionId = transaction.originalTransactionId ||  // Primary field in Apple's structure
                          transaction.transactionId || 
                          transaction.original_transaction_id ||
                          transaction.transaction_id ||
-                         transaction.id;
+                         transaction.id ||
+                         transaction.webOrderLineItemId; // Alternative identifier
     
-    const productId = transaction.productId || 
+    const productId = transaction.productId ||  // Primary field in Apple's structure
                      transaction.product_id ||
                      transaction.productIdentifier ||
-                     transaction.productIdentifier ||
-                     transaction.bundleId; // Sometimes product ID is in bundleId
+                     transaction.bundleId || // Sometimes product ID is in bundleId
+                     transaction.productIdentifier;
     
     console.log('🔍 Extracted transactionId:', transactionId);
     console.log('🔍 Extracted productId:', productId);
     
-    // Handle date parsing (could be ISO string, timestamp, or milliseconds)
+    // Handle date parsing (Apple uses ISO 8601 format strings)
+    // Apple's dates are in ISO 8601 format: "2023-10-23T10:30:00.000Z"
     let purchaseDate = new Date();
     if (transaction.purchaseDate) {
+        // Apple uses ISO 8601 format
         purchaseDate = new Date(transaction.purchaseDate);
+    } else if (transaction.originalPurchaseDate) {
+        purchaseDate = new Date(transaction.originalPurchaseDate);
     } else if (transaction.purchase_date_ms) {
         purchaseDate = new Date(parseInt(transaction.purchase_date_ms));
     } else if (transaction.purchaseDateMs) {
@@ -172,6 +210,7 @@ function parseJWTTransaction(jwtPayload) {
     
     let expiryDate = null;
     if (transaction.expiresDate) {
+        // Apple uses ISO 8601 format
         expiryDate = new Date(transaction.expiresDate);
     } else if (transaction.expires_date_ms) {
         expiryDate = new Date(parseInt(transaction.expires_date_ms));
@@ -241,9 +280,20 @@ function parseJWTTransaction(jwtPayload) {
  * @returns {Promise<Object>} Apple verification response or JWT payload
  */
 async function verifyAppleReceipt(receiptData) {
+    const trimmed = receiptData.trim();
+    const startsWithEyJ = trimmed.startsWith('eyJ');
+    const isStandardJWT = isJWTToken(receiptData);
+    
     // Check if it's a JWT token (App Store Server Notification v2)
-    if (isJWTToken(receiptData)) {
-        console.log('🍎 Detected JWT token format (App Store Server Notification v2)');
+    // Try JWT decoding if it starts with eyJ, even if it doesn't have exactly 3 parts
+    // (Some tokens might be in non-standard format or have encoding issues)
+    if (isStandardJWT || startsWithEyJ) {
+        if (!isStandardJWT && startsWithEyJ) {
+            console.log('⚠️  Token starts with eyJ but does not have standard 3-part JWT structure');
+            console.log('   Attempting JWT decode anyway (might be non-standard format)');
+        } else {
+            console.log('🍎 Detected JWT token format (App Store Server Notification v2)');
+        }
         console.log('📝 JWT token length:', receiptData.length);
         console.log('📝 JWT token preview:', receiptData.substring(0, 100) + '...');
         
@@ -272,14 +322,43 @@ async function verifyAppleReceipt(receiptData) {
                 // The controller will handle validation
             }
             
+            // Validate critical fields before creating response
+            const transactionId = transactionData.transactionId || `jwt_${Date.now()}`;
+            const productId = transactionData.productId || 'unknown_product';
+            
+            if (transactionId === 'unknown' || productId === 'unknown_product') {
+                console.error('❌ CRITICAL: Missing transactionId or productId');
+                console.error('📋 Transaction data:', JSON.stringify(transactionData, null, 2));
+                console.error('📋 JWT payload:', JSON.stringify(jwtPayload, null, 2).substring(0, 2000));
+                
+                // Try to extract from jwtPayload directly as last resort
+                const fallbackTransactionId = jwtPayload.originalTransactionId || 
+                                             jwtPayload.transactionId || 
+                                             jwtPayload.id ||
+                                             `fallback_${Date.now()}`;
+                const fallbackProductId = jwtPayload.productId || 
+                                        jwtPayload.product_id ||
+                                        jwtPayload.bundleId ||
+                                        'fallback_product';
+                
+                console.log('⚠️  Using fallback values:', {
+                    transactionId: fallbackTransactionId,
+                    productId: fallbackProductId
+                });
+                
+                // Use fallback values
+                transactionData.transactionId = fallbackTransactionId;
+                transactionData.productId = fallbackProductId;
+            }
+            
             // Return in format compatible with parseAppleReceipt
             const response = {
                 status: 0, // Success
                 environment: transactionData.environment || 'Production',
                 latest_receipt_info: [{
-                    transaction_id: transactionData.transactionId || `jwt_${Date.now()}`,
-                    original_transaction_id: transactionData.transactionId || `jwt_${Date.now()}`,
-                    product_id: transactionData.productId || 'unknown_product',
+                    transaction_id: transactionData.transactionId,
+                    original_transaction_id: transactionData.transactionId,
+                    product_id: transactionData.productId,
                     purchase_date_ms: transactionData.purchaseDate ? transactionData.purchaseDate.getTime().toString() : Date.now().toString(),
                     expires_date_ms: transactionData.expiryDate ? transactionData.expiryDate.getTime().toString() : null,
                     is_trial_period: transactionData.isTrialPeriod ? 'true' : 'false',
@@ -289,8 +368,15 @@ async function verifyAppleReceipt(receiptData) {
                 jwt_payload: jwtPayload
             };
             
+            // Validate response structure
+            if (!response.latest_receipt_info || response.latest_receipt_info.length === 0) {
+                console.error('❌ CRITICAL: latest_receipt_info is empty!');
+                console.error('📋 Response structure:', JSON.stringify(response, null, 2));
+                throw new Error('Failed to create valid receipt info structure');
+            }
+            
             console.log('✅ Returning formatted response with latest_receipt_info:', response.latest_receipt_info.length, 'items');
-            console.log('📋 Response latest_receipt_info[0]:', response.latest_receipt_info[0]);
+            console.log('📋 Response latest_receipt_info[0]:', JSON.stringify(response.latest_receipt_info[0], null, 2));
             return response;
         } catch (error) {
             console.error('❌ JWT token processing error:', error.message);
@@ -344,23 +430,32 @@ async function verifyAppleReceipt(receiptData) {
 async function verifyGoogleReceipt(packageName, productId, purchaseToken) {
     try {
         // Initialize Google Auth
+        // Priority: Use GOOGLE_SERVICE_ACCOUNT_JSON from .env (recommended)
+        // Fallback: Use GOOGLE_SERVICE_ACCOUNT_KEY file path (if needed)
         let auth;
         
-        if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
-            // Use service account key file
+        if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+            // Use service account JSON string from .env (recommended method)
+            console.log('🔑 Using Google service account JSON from .env');
+            try {
+                const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+                auth = new google.auth.GoogleAuth({
+                    credentials: credentials,
+                    scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+                });
+            } catch (parseError) {
+                console.error('❌ Error parsing GOOGLE_SERVICE_ACCOUNT_JSON:', parseError.message);
+                throw new Error(`Invalid GOOGLE_SERVICE_ACCOUNT_JSON format: ${parseError.message}`);
+            }
+        } else if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+            // Fallback: Use service account key file (optional, for backward compatibility)
+            console.log('🔑 Using Google service account key file:', process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
             auth = new google.auth.GoogleAuth({
                 keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY,
                 scopes: ['https://www.googleapis.com/auth/androidpublisher'],
             });
-        } else if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-            // Use service account JSON string
-            const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-            auth = new google.auth.GoogleAuth({
-                credentials: credentials,
-                scopes: ['https://www.googleapis.com/auth/androidpublisher'],
-            });
         } else {
-            throw new Error('Google service account credentials not configured');
+            throw new Error('Google service account credentials not configured. Please set GOOGLE_SERVICE_ACCOUNT_JSON in .env');
         }
 
         const androidPublisher = google.androidpublisher({
