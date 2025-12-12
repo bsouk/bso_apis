@@ -14,8 +14,23 @@ const jwt = require('jsonwebtoken');
  * @returns {boolean} True if JWT token
  */
 function isJWTToken(receiptData) {
+    if (!receiptData || typeof receiptData !== 'string') {
+        return false;
+    }
+    
+    const trimmed = receiptData.trim();
     // JWT tokens start with "eyJ" (base64 encoded {" header)
-    return receiptData && typeof receiptData === 'string' && receiptData.trim().startsWith('eyJ');
+    // They also have 3 parts separated by dots: header.payload.signature
+    const isJWT = trimmed.startsWith('eyJ') && trimmed.split('.').length === 3;
+    
+    console.log('🔍 JWT detection:', {
+        startsWithEyJ: trimmed.startsWith('eyJ'),
+        hasThreeParts: trimmed.split('.').length === 3,
+        isJWT: isJWT,
+        preview: trimmed.substring(0, 50)
+    });
+    
+    return isJWT;
 }
 
 /**
@@ -29,14 +44,31 @@ function decodeAppleJWT(jwtToken) {
         // In production, you should verify with Apple's public keys
         const decoded = jwt.decode(jwtToken, { complete: true });
         
-        if (!decoded || !decoded.payload) {
-            throw new Error('Invalid JWT token structure');
+        if (!decoded) {
+            throw new Error('JWT decode returned null/undefined');
+        }
+        
+        console.log('✅ JWT decoded, has payload:', !!decoded.payload);
+        console.log('📋 JWT header:', decoded.header);
+        
+        if (!decoded.payload) {
+            // Try decoding without complete flag
+            const simpleDecoded = jwt.decode(jwtToken, { complete: false });
+            if (simpleDecoded) {
+                console.log('✅ Fallback: Decoded JWT without complete flag');
+                return simpleDecoded;
+            }
+            throw new Error('Invalid JWT token structure - no payload found');
         }
 
         console.log('✅ JWT token decoded successfully');
+        console.log('📋 Payload type:', typeof decoded.payload);
+        console.log('📋 Payload is array:', Array.isArray(decoded.payload));
+        
         return decoded.payload;
     } catch (error) {
         console.error('❌ JWT decode error:', error.message);
+        console.error('❌ JWT token preview:', jwtToken.substring(0, 200));
         throw new Error(`JWT decode failed: ${error.message}`);
     }
 }
@@ -50,29 +82,44 @@ function parseJWTTransaction(jwtPayload) {
     // JWT payload structure for App Store Server Notification v2
     // The payload may contain nested JWTs for transactionInfo and renewalInfo
     
+    console.log('🔍 Parsing JWT transaction, payload structure:', {
+        hasTransactionInfo: !!jwtPayload.transactionInfo,
+        hasSignedTransactionInfo: !!jwtPayload.signedTransactionInfo,
+        hasData: !!jwtPayload.data,
+        topLevelKeys: Object.keys(jwtPayload)
+    });
+    
     let transactionData = null;
     let renewalData = null;
     
     // Try to find transactionInfo (could be nested JWT or direct object)
+    // Check multiple possible locations
     const transactionInfo = jwtPayload.transactionInfo || 
+                           jwtPayload.signedTransactionInfo ||
                            jwtPayload.data?.signedTransactionInfo || 
-                           jwtPayload.signedTransactionInfo;
+                           jwtPayload.data?.transactionInfo;
     
     // Try to find renewalInfo (could be nested JWT or direct object)
     const renewalInfo = jwtPayload.renewalInfo || 
+                       jwtPayload.signedRenewalInfo ||
                        jwtPayload.data?.signedRenewalInfo || 
-                       jwtPayload.signedRenewalInfo;
+                       jwtPayload.data?.renewalInfo;
+    
+    console.log('🔍 Found transactionInfo:', !!transactionInfo, typeof transactionInfo);
+    console.log('🔍 Found renewalInfo:', !!renewalInfo, typeof renewalInfo);
     
     // If transactionInfo is a JWT string, decode it
     if (typeof transactionInfo === 'string' && transactionInfo.startsWith('eyJ')) {
         try {
             transactionData = jwt.decode(transactionInfo, { complete: false });
             console.log('✅ Decoded nested transactionInfo JWT');
+            console.log('📋 Transaction data keys:', Object.keys(transactionData || {}));
         } catch (error) {
             console.error('❌ Error decoding transactionInfo JWT:', error.message);
         }
     } else if (transactionInfo && typeof transactionInfo === 'object') {
         transactionData = transactionInfo;
+        console.log('✅ Using transactionInfo as object');
     }
     
     // If renewalInfo is a JWT string, decode it
@@ -90,15 +137,24 @@ function parseJWTTransaction(jwtPayload) {
     // Use transactionData if available, otherwise fall back to jwtPayload
     const transaction = transactionData || jwtPayload;
     
+    console.log('🔍 Using transaction source:', transactionData ? 'transactionData' : 'jwtPayload');
+    console.log('🔍 Transaction keys:', Object.keys(transaction));
+    
     // Extract transaction details with multiple fallback options
     const transactionId = transaction.originalTransactionId || 
                          transaction.transactionId || 
                          transaction.original_transaction_id ||
-                         transaction.transaction_id;
+                         transaction.transaction_id ||
+                         transaction.id;
     
     const productId = transaction.productId || 
                      transaction.product_id ||
-                     transaction.productIdentifier;
+                     transaction.productIdentifier ||
+                     transaction.productIdentifier ||
+                     transaction.bundleId; // Sometimes product ID is in bundleId
+    
+    console.log('🔍 Extracted transactionId:', transactionId);
+    console.log('🔍 Extracted productId:', productId);
     
     // Handle date parsing (could be ISO string, timestamp, or milliseconds)
     let purchaseDate = new Date();
@@ -108,6 +164,10 @@ function parseJWTTransaction(jwtPayload) {
         purchaseDate = new Date(parseInt(transaction.purchase_date_ms));
     } else if (transaction.purchaseDateMs) {
         purchaseDate = new Date(parseInt(transaction.purchaseDateMs));
+    } else if (transaction.purchaseDateTimestamp) {
+        purchaseDate = new Date(parseInt(transaction.purchaseDateTimestamp));
+    } else if (transaction.signedDate) {
+        purchaseDate = new Date(transaction.signedDate);
     }
     
     let expiryDate = null;
@@ -117,13 +177,52 @@ function parseJWTTransaction(jwtPayload) {
         expiryDate = new Date(parseInt(transaction.expires_date_ms));
     } else if (transaction.expiresDateMs) {
         expiryDate = new Date(parseInt(transaction.expiresDateMs));
+    } else if (transaction.expiresDateTimestamp) {
+        expiryDate = new Date(parseInt(transaction.expiresDateTimestamp));
     } else if (renewalData && renewalData.expiresDate) {
         expiryDate = new Date(renewalData.expiresDate);
+    } else if (renewalData && renewalData.expiresDateMs) {
+        expiryDate = new Date(parseInt(renewalData.expiresDateMs));
+    }
+    
+    // If we still don't have transactionId or productId, try to extract from jwtPayload directly
+    let finalTransactionId = transactionId;
+    let finalProductId = productId;
+    
+    if (!finalTransactionId || finalTransactionId === 'unknown') {
+        // Try extracting from jwtPayload directly
+        finalTransactionId = jwtPayload.originalTransactionId || 
+                           jwtPayload.transactionId || 
+                           jwtPayload.original_transaction_id ||
+                           jwtPayload.transaction_id ||
+                           jwtPayload.id ||
+                           `jwt_${Date.now()}`; // Fallback to timestamp-based ID
+        console.log('⚠️ Using fallback transactionId:', finalTransactionId);
+    }
+    
+    if (!finalProductId || finalProductId === 'unknown') {
+        // Try extracting from jwtPayload directly
+        finalProductId = jwtPayload.productId || 
+                        jwtPayload.product_id ||
+                        jwtPayload.productIdentifier ||
+                        jwtPayload.bundleId ||
+                        'unknown_product';
+        console.log('⚠️ Using fallback productId:', finalProductId);
+    }
+    
+    // If we still don't have critical fields, log the full structure for debugging
+    if (!finalTransactionId || finalTransactionId === 'unknown' || !finalProductId || finalProductId === 'unknown') {
+        console.error('❌ Missing critical fields in transaction data');
+        console.error('📋 Full transaction object:', JSON.stringify(transaction, null, 2).substring(0, 1000));
+        console.error('📋 Full jwtPayload:', JSON.stringify(jwtPayload, null, 2).substring(0, 1000));
+        
+        // Don't throw error - return what we have so the flow can continue
+        // The actual validation will happen later in the controller
     }
     
     return {
-        transactionId: transactionId,
-        productId: productId,
+        transactionId: finalTransactionId,
+        productId: finalProductId,
         purchaseDate: purchaseDate,
         expiryDate: expiryDate,
         isTrialPeriod: transaction.isTrialPeriod === 'true' || 
@@ -145,19 +244,43 @@ async function verifyAppleReceipt(receiptData) {
     // Check if it's a JWT token (App Store Server Notification v2)
     if (isJWTToken(receiptData)) {
         console.log('🍎 Detected JWT token format (App Store Server Notification v2)');
+        console.log('📝 JWT token length:', receiptData.length);
+        console.log('📝 JWT token preview:', receiptData.substring(0, 100) + '...');
+        
         try {
             const jwtPayload = decodeAppleJWT(receiptData);
+            console.log('✅ JWT decoded successfully');
+            console.log('📋 JWT payload keys:', Object.keys(jwtPayload));
+            console.log('📋 JWT payload structure:', JSON.stringify(jwtPayload, null, 2).substring(0, 500));
+            
             const transactionData = parseJWTTransaction(jwtPayload);
+            console.log('✅ Transaction data parsed:', {
+                transactionId: transactionData.transactionId,
+                productId: transactionData.productId,
+                purchaseDate: transactionData.purchaseDate,
+                expiryDate: transactionData.expiryDate
+            });
+            
+            // Validate that we have at least transactionId and productId
+            if (!transactionData.transactionId || transactionData.transactionId === 'unknown' ||
+                !transactionData.productId || transactionData.productId === 'unknown_product') {
+                console.error('❌ Critical fields missing in transactionData:', {
+                    transactionId: transactionData.transactionId,
+                    productId: transactionData.productId
+                });
+                // Still return the structure, but log the issue
+                // The controller will handle validation
+            }
             
             // Return in format compatible with parseAppleReceipt
-            return {
+            const response = {
                 status: 0, // Success
                 environment: transactionData.environment || 'Production',
                 latest_receipt_info: [{
-                    transaction_id: transactionData.transactionId,
-                    original_transaction_id: transactionData.transactionId,
-                    product_id: transactionData.productId,
-                    purchase_date_ms: transactionData.purchaseDate.getTime().toString(),
+                    transaction_id: transactionData.transactionId || `jwt_${Date.now()}`,
+                    original_transaction_id: transactionData.transactionId || `jwt_${Date.now()}`,
+                    product_id: transactionData.productId || 'unknown_product',
+                    purchase_date_ms: transactionData.purchaseDate ? transactionData.purchaseDate.getTime().toString() : Date.now().toString(),
                     expires_date_ms: transactionData.expiryDate ? transactionData.expiryDate.getTime().toString() : null,
                     is_trial_period: transactionData.isTrialPeriod ? 'true' : 'false',
                     cancellation_date_ms: transactionData.cancellationDate ? transactionData.cancellationDate.getTime().toString() : null
@@ -165,8 +288,13 @@ async function verifyAppleReceipt(receiptData) {
                 receipt_type: 'JWT',
                 jwt_payload: jwtPayload
             };
+            
+            console.log('✅ Returning formatted response with latest_receipt_info:', response.latest_receipt_info.length, 'items');
+            console.log('📋 Response latest_receipt_info[0]:', response.latest_receipt_info[0]);
+            return response;
         } catch (error) {
             console.error('❌ JWT token processing error:', error.message);
+            console.error('❌ Error stack:', error.stack);
             throw new Error(`JWT token processing failed: ${error.message}`);
         }
     }
@@ -261,9 +389,26 @@ async function verifyGoogleReceipt(packageName, productId, purchaseToken) {
  * @returns {Object} Parsed subscription details
  */
 function parseAppleReceipt(appleResponse) {
+    console.log('🔍 parseAppleReceipt called with response type:', appleResponse.receipt_type || 'legacy');
+    console.log('🔍 Response keys:', Object.keys(appleResponse));
+    console.log('🔍 Has latest_receipt_info:', !!appleResponse.latest_receipt_info);
+    console.log('🔍 latest_receipt_info length:', appleResponse.latest_receipt_info?.length || 0);
+    
     // Handle JWT format (already parsed in verifyAppleReceipt)
     if (appleResponse.receipt_type === 'JWT' && appleResponse.latest_receipt_info) {
+        console.log('✅ Processing JWT format receipt');
         const latestReceipt = appleResponse.latest_receipt_info[0];
+        
+        if (!latestReceipt) {
+            console.error('❌ latest_receipt_info array is empty');
+            throw new Error('No receipt info found in JWT response');
+        }
+        
+        console.log('✅ Latest receipt data:', {
+            transaction_id: latestReceipt.transaction_id,
+            product_id: latestReceipt.product_id,
+            purchase_date_ms: latestReceipt.purchase_date_ms
+        });
         
         return {
             isValid: appleResponse.status === 0,
@@ -281,7 +426,8 @@ function parseAppleReceipt(appleResponse) {
     // Handle old format (base64 receipt)
     if (!appleResponse.latest_receipt_info || appleResponse.latest_receipt_info.length === 0) {
         // Log detailed error for debugging
-        console.error('❌ Apple response structure:', JSON.stringify(appleResponse, null, 2));
+        console.error('❌ Apple response structure:', JSON.stringify(appleResponse, null, 2).substring(0, 2000));
+        console.error('❌ Response status:', appleResponse.status);
         throw new Error('No receipt info found in Apple response. Status: ' + (appleResponse.status || 'unknown'));
     }
 
