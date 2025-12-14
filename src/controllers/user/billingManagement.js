@@ -11,15 +11,24 @@ const AdminLogs = require("../../models/admin_logs");
 exports.getOrCreateStripeCustomer = async function getOrCreateStripeCustomer(user) {
   try {
     // Check if user already has stripe_customer_id
-    if (user.stripe_customer_id) {
+    if (user.stripe_customer_id && typeof user.stripe_customer_id === 'string' && user.stripe_customer_id.trim()) {
       try {
-        const customer = await stripe.customers.retrieve(user.stripe_customer_id);
-        if (customer && !customer.deleted) {
-          return customer;
+        // Validate customer ID format before attempting retrieval
+        if (user.stripe_customer_id.startsWith('cus_') && user.stripe_customer_id.length > 4) {
+          const customer = await stripe.customers.retrieve(user.stripe_customer_id);
+          if (customer && !customer.deleted) {
+            return customer;
+          }
+        } else {
+          console.log("Invalid Stripe customer ID format, creating new one");
         }
       } catch (error) {
-        // Customer doesn't exist in Stripe, create new one
-        console.log("Stripe customer not found, creating new one");
+        // Customer doesn't exist in Stripe or invalid ID, create new one
+        if (error.code === 'resource_missing' || error.type === 'StripeInvalidRequestError') {
+          console.log("Stripe customer not found, creating new one");
+        } else {
+          console.error("Error retrieving Stripe customer:", error.message);
+        }
       }
     }
 
@@ -46,10 +55,19 @@ exports.getOrCreateStripeCustomer = async function getOrCreateStripeCustomer(use
 
 /**
  * Extract card details from Stripe payment method
+ * Internal function - defined before exports to ensure availability
  */
-exports.extractCardDetails = async function extractCardDetails(paymentMethodId) {
+async function extractCardDetails(paymentMethodId) {
   try {
+    if (!paymentMethodId) {
+      throw new Error("Payment method ID is required");
+    }
+
     const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+    
+    if (!paymentMethod) {
+      throw new Error("Payment method not found");
+    }
     
     const details = {
       payment_method_type: paymentMethod.type,
@@ -80,10 +98,14 @@ exports.extractCardDetails = async function extractCardDetails(paymentMethodId) 
 
     return details;
   } catch (error) {
-    console.error("Error extracting card details:", error);
-    throw error;
+    console.error("Error extracting card details for payment method:", paymentMethodId, error.message);
+    // Re-throw with more context
+    throw new Error(`Failed to extract card details: ${error.message}`);
   }
 }
+
+// Export the function
+exports.extractCardDetails = extractCardDetails;
 
 /**
  * Log admin action for billing management
@@ -182,37 +204,44 @@ exports.getBillingMethods = async (req, res) => {
     // Add any Stripe methods not in database
     for (const stripeMethod of stripePaymentMethods.data) {
       if (!savedMethodIds.includes(stripeMethod.id)) {
-        // Extract details and save to database
-        const details = await extractCardDetails(stripeMethod.id);
-        const newSavedMethod = await SavedPaymentMethod.create({
-          user_id: userId,
-          stripe_payment_method_id: stripeMethod.id,
-          stripe_customer_id: customer.id,
-          payment_method_type: details.payment_method_type,
-          card_details: details.card_details,
-          bank_details: details.bank_details,
-          billing_details: details.billing_details,
-          is_default: false,
-          is_active: true,
-          added_by: {
-            type: "user",
-            user_id: userId
-          }
-        });
+        try {
+          // Extract details and save to database
+          const details = await extractCardDetails(stripeMethod.id);
+          const newSavedMethod = await SavedPaymentMethod.create({
+            user_id: userId,
+            stripe_payment_method_id: stripeMethod.id,
+            stripe_customer_id: customer.id,
+            payment_method_type: details.payment_method_type,
+            card_details: details.card_details,
+            bank_details: details.bank_details,
+            billing_details: details.billing_details,
+            is_default: false,
+            is_active: true,
+            added_by: {
+              type: "user",
+              user_id: userId
+            }
+          });
 
-        allMethods.push({
-          _id: newSavedMethod._id,
-          stripe_payment_method_id: newSavedMethod.stripe_payment_method_id,
-          payment_method_type: newSavedMethod.payment_method_type,
-          card_details: newSavedMethod.card_details,
-          bank_details: newSavedMethod.bank_details,
-          billing_details: newSavedMethod.billing_details,
-          is_default: newSavedMethod.is_default,
-          is_active: newSavedMethod.is_active,
-          added_by: newSavedMethod.added_by,
-          createdAt: newSavedMethod.createdAt,
-          updatedAt: newSavedMethod.updatedAt
-        });
+          allMethods.push({
+            _id: newSavedMethod._id,
+            stripe_payment_method_id: newSavedMethod.stripe_payment_method_id,
+            payment_method_type: newSavedMethod.payment_method_type,
+            card_details: newSavedMethod.card_details,
+            bank_details: newSavedMethod.bank_details,
+            billing_details: newSavedMethod.billing_details,
+            is_default: newSavedMethod.is_default,
+            is_active: newSavedMethod.is_active,
+            added_by: newSavedMethod.added_by,
+            createdAt: newSavedMethod.createdAt,
+            updatedAt: newSavedMethod.updatedAt
+          });
+        } catch (error) {
+          // Log error but don't fail the entire request
+          console.error(`Error extracting card details for payment method ${stripeMethod.id}:`, error.message);
+          // Skip this payment method and continue with others
+          continue;
+        }
       }
     }
 
@@ -302,7 +331,7 @@ exports.addBillingMethod = async (req, res) => {
     }
 
     // Extract card details
-    const details = await exports.extractCardDetails(payment_method_id);
+    const details = await extractCardDetails(payment_method_id);
 
     // If setting as default, unset other defaults
     if (set_as_default) {
@@ -313,7 +342,6 @@ exports.addBillingMethod = async (req, res) => {
       
       // Update Stripe customer default
       await stripe.customers.update(customer.id, {
-        default_source: null,
         invoice_settings: {
           default_payment_method: payment_method_id
         }
@@ -415,7 +443,7 @@ exports.setDefaultBillingMethod = async (req, res) => {
     await savedMethod.save();
 
     // Update Stripe customer
-    const customer = await getOrCreateStripeCustomer(user);
+    const customer = await exports.getOrCreateStripeCustomer(user);
     await stripe.customers.update(customer.id, {
       invoice_settings: {
         default_payment_method: savedMethod.stripe_payment_method_id
@@ -551,7 +579,7 @@ exports.deleteBillingMethod = async (req, res) => {
           user.default_payment_method_id = otherMethod.stripe_payment_method_id;
           await user.save();
 
-          const customer = await getOrCreateStripeCustomer(user);
+          const customer = await exports.getOrCreateStripeCustomer(user);
           await stripe.customers.update(customer.id, {
             invoice_settings: {
               default_payment_method: otherMethod.stripe_payment_method_id

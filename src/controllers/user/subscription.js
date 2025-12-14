@@ -1332,13 +1332,20 @@ exports.cancelSubscription = async (req, res) => {
         const plandata = await plan.findOne({ plan_id: subscription.plan_id });
 
         // Check if this is a Stripe subscription (not IAP or admin-created)
-        const isStripeSubscription = subscription.source === "stripe" || 
-                                     subscription.payment_mode === "stripe" ||
-                                     (subscription.stripe_subscription_id && 
-                                      typeof subscription.stripe_subscription_id === "string" &&
-                                      subscription.stripe_subscription_id.trim() !== "" &&
-                                      subscription.stripe_subscription_id !== null &&
-                                      subscription.stripe_subscription_id !== undefined);
+        // IAP subscriptions have payment_method_type: "apple_iap" or "google_iap"
+        const isIAPSubscription = subscription.payment_method_type === "apple_iap" || 
+                                   subscription.payment_method_type === "google_iap" ||
+                                   subscription.source === "iap" || 
+                                   subscription.payment_mode === "iap";
+        
+        const isStripeSubscription = !isIAPSubscription && 
+                                     (subscription.source === "stripe" || 
+                                      subscription.payment_mode === "stripe" ||
+                                      (subscription.stripe_subscription_id && 
+                                       typeof subscription.stripe_subscription_id === "string" &&
+                                       subscription.stripe_subscription_id.trim() !== "" &&
+                                       subscription.stripe_subscription_id !== null &&
+                                       subscription.stripe_subscription_id !== undefined));
 
         if (isStripeSubscription && subscription.subscription_type === "paid") {
             try {
@@ -1521,13 +1528,20 @@ exports.cancelMultipleSubscriptions = async (req, res) => {
                 const plandata = await plan.findOne({ plan_id: subscription.plan_id });
 
                 // Check if this is a Stripe subscription (not IAP or admin-created)
-                const isStripeSubscription = subscription.source === "stripe" || 
-                                             subscription.payment_mode === "stripe" ||
-                                             (subscription.stripe_subscription_id && 
-                                              typeof subscription.stripe_subscription_id === "string" &&
-                                              subscription.stripe_subscription_id.trim() !== "" &&
-                                              subscription.stripe_subscription_id !== null &&
-                                              subscription.stripe_subscription_id !== undefined);
+                // IAP subscriptions have payment_method_type: "apple_iap" or "google_iap"
+                const isIAPSubscription = subscription.payment_method_type === "apple_iap" || 
+                                           subscription.payment_method_type === "google_iap" ||
+                                           subscription.source === "iap" || 
+                                           subscription.payment_mode === "iap";
+                
+                const isStripeSubscription = !isIAPSubscription && 
+                                             (subscription.source === "stripe" || 
+                                              subscription.payment_mode === "stripe" ||
+                                              (subscription.stripe_subscription_id && 
+                                               typeof subscription.stripe_subscription_id === "string" &&
+                                               subscription.stripe_subscription_id.trim() !== "" &&
+                                               subscription.stripe_subscription_id !== null &&
+                                               subscription.stripe_subscription_id !== undefined));
 
                 // Cancel Stripe subscription if needed
                 if (isStripeSubscription && subscription.subscription_type === "paid") {
