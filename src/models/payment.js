@@ -274,5 +274,20 @@ const PaymentSchema = new mongoose.Schema(
     }
 );
 
+// Add indexes for performance optimization
+PaymentSchema.index({ buyer_id: 1, createdAt: -1 });
+PaymentSchema.index({ supplier_id: 1, createdAt: -1 });
+PaymentSchema.index({ payment_status: 1 });
+PaymentSchema.index({ payment_purpose: 1 });
+PaymentSchema.index({ payment_feature: 1 });
+PaymentSchema.index({ user_type: 1 });
+PaymentSchema.index({ is_deleted: 1, is_permanently_deleted: 1 });
+PaymentSchema.index({ "purpose_details.enquiry_unique_id": 1 });
+PaymentSchema.index({ "purpose_details.order_unique_id": 1 });
+PaymentSchema.index({ subscription_id: 1 });
+PaymentSchema.index({ enquiry_id: 1 });
+PaymentSchema.index({ order_id: 1 });
+PaymentSchema.index({ payment_method_type: 1 });
+
 PaymentSchema.plugin(mongoosePaginate);
 module.exports = mongoose.model('payment', PaymentSchema)

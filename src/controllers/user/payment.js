@@ -18,6 +18,10 @@ const admin_received_notification = require("../../models/admin_received_notific
 const payment = require("../../models/payment");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { determinePaymentDetails, extractPaymentMethodDetails } = require('./paymentManagement');
+const SavedPaymentMethod = require('../../models/saved_payment_methods');
+const billingManagement = require('./billingManagement');
+const getOrCreateStripeCustomer = billingManagement.getOrCreateStripeCustomer;
+const extractCardDetails = billingManagement.extractCardDetails;
 
 
 exports.getPaymentListing = async (req, res) => {
@@ -1062,6 +1066,79 @@ exports.paynow = async (req, res) => {
         }
 
         await payment_data.save()
+
+        // Auto-save payment method to billing management (if card payment)
+        try {
+            if (data.payment_method_id && confirmedIntent.payment_method_types?.[0] === 'card') {
+                // Check if payment method already saved
+                const existingMethod = await SavedPaymentMethod.findOne({
+                    user_id: userId,
+                    stripe_payment_method_id: data.payment_method_id,
+                    is_deleted: false
+                });
+
+                if (!existingMethod) {
+                    // Get or create Stripe customer
+                    const customer = await getOrCreateStripeCustomer(user);
+                    
+                    // Attach payment method to customer
+                    try {
+                        await stripe.paymentMethods.attach(data.payment_method_id, {
+                            customer: customer.id
+                        });
+                    } catch (attachError) {
+                        if (attachError.code !== 'resource_already_exists') {
+                            throw attachError;
+                        }
+                    }
+
+                    // Extract card details
+                    const cardDetails = await extractCardDetails(data.payment_method_id);
+
+                    // Check if this is user's first payment method
+                    const existingMethodsCount = await SavedPaymentMethod.countDocuments({
+                        user_id: userId,
+                        is_deleted: false
+                    });
+
+                    const isFirstCard = existingMethodsCount === 0;
+
+                    // Create saved payment method
+                    const savedMethod = await SavedPaymentMethod.create({
+                        user_id: userId,
+                        stripe_payment_method_id: data.payment_method_id,
+                        stripe_customer_id: customer.id,
+                        payment_method_type: cardDetails.payment_method_type,
+                        card_details: cardDetails.card_details,
+                        bank_details: cardDetails.bank_details,
+                        billing_details: cardDetails.billing_details,
+                        is_default: isFirstCard, // Set as default if first card
+                        is_active: true,
+                        added_by: {
+                            type: "user",
+                            user_id: userId
+                        }
+                    });
+
+                    // If first card, set as default in Stripe and User
+                    if (isFirstCard) {
+                        await stripe.customers.update(customer.id, {
+                            invoice_settings: {
+                                default_payment_method: data.payment_method_id
+                            }
+                        });
+
+                        user.default_payment_method_id = data.payment_method_id;
+                        await user.save();
+                    }
+
+                    console.log("✅ Payment method auto-saved to billing management");
+                }
+            }
+        } catch (billingError) {
+            console.error("Error auto-saving payment method to billing:", billingError);
+            // Don't fail the payment if auto-save fails
+        }
 
 
         let newtracking = await tracking_order.findOne({ order_id: neworder?._id, logistics_id: enquiry_data?.selected_logistics?.quote_id?.user_id })

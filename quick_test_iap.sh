@@ -30,3 +30,7 @@ echo "   Token length: ${#1} characters"
 echo ""
 
 node test_iap_from_local.js "$1"
+
+
+
+

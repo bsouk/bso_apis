@@ -1101,8 +1101,26 @@ exports.createIndividualSubscription = async (req, res) => {
             return res.status(400).json({ message: "Plan missing Stripe price ID", code: 400 });
         }
 
+        // Check if user has a default payment method set
+        let defaultPaymentMethod = null;
+        if (user.default_payment_method_id) {
+            try {
+                const paymentMethod = await stripe.paymentMethods.retrieve(user.default_payment_method_id);
+                if (paymentMethod && paymentMethod.customer === customer.id) {
+                    defaultPaymentMethod = user.default_payment_method_id;
+                }
+            } catch (error) {
+                console.log("Default payment method not found, will use customer default");
+            }
+        }
+
+        // If no default payment method from user, check customer's invoice settings
+        if (!defaultPaymentMethod && customer.invoice_settings?.default_payment_method) {
+            defaultPaymentMethod = customer.invoice_settings.default_payment_method;
+        }
+
         // Create subscription in Stripe (incomplete)
-        const stripeSubscription = await stripe.subscriptions.create({
+        const subscriptionParams = {
             customer: customer.id,
             items: [{ price: plandata.stripe_price_id }],
             payment_behavior: "default_incomplete",
@@ -1114,7 +1132,14 @@ exports.createIndividualSubscription = async (req, res) => {
                 userId: userid.toString(),
                 planId: plandata._id.toString()
             }
-        });
+        };
+
+        // Add default payment method if available
+        if (defaultPaymentMethod) {
+            subscriptionParams.default_payment_method = defaultPaymentMethod;
+        }
+
+        const stripeSubscription = await stripe.subscriptions.create(subscriptionParams);
 
         const paymentIntent = stripeSubscription.latest_invoice.payment_intent;
         const requiresAction = ['requires_action', 'requires_confirmation'].includes(paymentIntent.status);
@@ -1306,13 +1331,29 @@ exports.cancelSubscription = async (req, res) => {
 
         const plandata = await plan.findOne({ plan_id: subscription.plan_id });
 
-        if (subscription.subscription_type === "paid" && subscription.stripe_subscription_id !== null) {
-            const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-                cancel_at_period_end: true
-            });
-            console.log("stripeSub : ", stripeSub)
-            subscription.status = 'cancelled_scheduled';
+        // Check if this is a Stripe subscription (not IAP or admin-created)
+        const isStripeSubscription = subscription.source === "stripe" || 
+                                     subscription.payment_mode === "stripe" ||
+                                     (subscription.stripe_subscription_id && 
+                                      typeof subscription.stripe_subscription_id === "string" &&
+                                      subscription.stripe_subscription_id.trim() !== "" &&
+                                      subscription.stripe_subscription_id !== null &&
+                                      subscription.stripe_subscription_id !== undefined);
+
+        if (isStripeSubscription && subscription.subscription_type === "paid") {
+            try {
+                const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+                    cancel_at_period_end: true
+                });
+                console.log("stripeSub : ", stripeSub)
+                subscription.status = 'cancelled_scheduled';
+            } catch (stripeError) {
+                console.error("Stripe cancellation error:", stripeError);
+                // If Stripe call fails, still cancel the subscription locally
+                subscription.status = 'terminated';
+            }
         } else {
+            // For IAP, admin-created, or system subscriptions, just terminate
             subscription.status = 'terminated';
         }
         subscription.isPurchased = false;
@@ -1429,9 +1470,19 @@ exports.cancelSubscription = async (req, res) => {
             }
         }
 
+        // Determine appropriate message based on subscription type
+        const cancellationMessage = subscription.status === 'cancelled_scheduled' 
+            ? 'Subscription cancellation scheduled at period end.'
+            : 'Subscription has been cancelled successfully.';
+
         return res.status(200).json({
-            message: 'Subscription cancellation scheduled at period end.',
-            code: 200
+            message: cancellationMessage,
+            code: 200,
+            data: {
+                subscription_id: subscription._id,
+                status: subscription.status,
+                subscription_type: subscription.source || subscription.payment_mode
+            }
         });
 
     } catch (error) {
@@ -1469,15 +1520,31 @@ exports.cancelMultipleSubscriptions = async (req, res) => {
                 const userdata = await User.findById(subscription.user_id);
                 const plandata = await plan.findOne({ plan_id: subscription.plan_id });
 
+                // Check if this is a Stripe subscription (not IAP or admin-created)
+                const isStripeSubscription = subscription.source === "stripe" || 
+                                             subscription.payment_mode === "stripe" ||
+                                             (subscription.stripe_subscription_id && 
+                                              typeof subscription.stripe_subscription_id === "string" &&
+                                              subscription.stripe_subscription_id.trim() !== "" &&
+                                              subscription.stripe_subscription_id !== null &&
+                                              subscription.stripe_subscription_id !== undefined);
+
                 // Cancel Stripe subscription if needed
-                if (subscription.subscription_type === "paid" && subscription.stripe_subscription_id !== null) {
-                    const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-                        cancel_at_period_end: true
-                    });
-                    console.log("stripeSub : ", stripeSub);
-                    subscription.status = 'cancelled_scheduled';
-                    // Optionally store end_at: subscription.end_at = new Date(stripeSub.current_period_end * 1000);
+                if (isStripeSubscription && subscription.subscription_type === "paid") {
+                    try {
+                        const stripeSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+                            cancel_at_period_end: true
+                        });
+                        console.log("stripeSub : ", stripeSub);
+                        subscription.status = 'cancelled_scheduled';
+                        // Optionally store end_at: subscription.end_at = new Date(stripeSub.current_period_end * 1000);
+                    } catch (stripeError) {
+                        console.error("Stripe cancellation error:", stripeError);
+                        // If Stripe call fails, still cancel the subscription locally
+                        subscription.status = 'terminated';
+                    }
                 } else {
+                    // For IAP, admin-created, or system subscriptions, just terminate
                     subscription.status = 'terminated';
                 }
 

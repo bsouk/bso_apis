@@ -168,15 +168,20 @@ exports.getPaymentManagement = async (req, res) => {
         const {
             offset = 0,
             limit = 10,
+            // New Payment Management params
             start_date,
             end_date,
-            time_filter,
             user_type,
             payment_purpose,
             payment_feature,
             payment_method,
             payment_status,
-            search
+            search,
+            // Old Payment History params (for backward compatibility)
+            from_date,
+            to_date,
+            status,
+            time_filter
         } = req.query;
 
         // Build filter - include old payments that don't have is_deleted field
@@ -204,84 +209,96 @@ exports.getPaymentManagement = async (req, res) => {
             ]
         };
 
-        // Additional filters - add directly to filter (outside $and for simple conditions)
-        // Date filter - handle time_filter or date range
-        if (time_filter) {
-            const now = new Date();
-            let start, end;
-
-            switch (time_filter) {
-                case 'today': {
-                    start = new Date(now);
-                    start.setHours(0, 0, 0, 0);
-                    end = new Date(now);
-                    end.setHours(23, 59, 59, 999);
-                    break;
-                }
-                case 'this_week': {
-                    start = new Date(now);
-                    start.setDate(now.getDate() - 6);
-                    start.setHours(0, 0, 0, 0);
-                    end = new Date(now);
-                    end.setHours(23, 59, 59, 999);
-                    break;
-                }
-                case 'this_month': {
-                    start = new Date(now.getFullYear(), now.getMonth(), 1);
-                    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                    break;
-                }
-                case 'previous_month': {
-                    const prevMonth = now.getMonth() - 1;
-                    const year = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
-                    const month = (prevMonth + 12) % 12;
-                    start = new Date(year, month, 1);
-                    end = new Date(year, month + 1, 0, 23, 59, 59, 999);
-                    break;
-                }
-                case 'this_year': {
-                    start = new Date(now.getFullYear(), 0, 1);
-                    end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-                    break;
-                }
-                default:
-                    break;
-            }
-            if (start && end) {
-                filter.$and.push({ createdAt: { $gte: start, $lte: end } });
-            }
-        } else if (start_date && end_date) {
-            const startDate = new Date(start_date);
-            const endDate = new Date(end_date);
+        // Date filter - Support both old (from_date/to_date) and new (start_date/end_date) params
+        let startDate, endDate;
+        if (start_date && end_date) {
+            startDate = new Date(start_date);
+            endDate = new Date(end_date);
             endDate.setHours(23, 59, 59, 999); // End of day
+        } else if (from_date && to_date) {
+            // Backward compatibility: Support old Payment History date params
+            startDate = new Date(from_date);
+            endDate = new Date(to_date);
+            if (isNaN(startDate) || isNaN(endDate)) {
+                return res.status(400).json({ error: "Invalid date format", code: 400 });
+            }
+            endDate.setHours(23, 59, 59, 999); // End of day
+        }
+        
+        if (startDate && endDate) {
             filter.$and.push({ createdAt: { $gte: startDate, $lte: endDate } });
         }
+        
+        // Handle time_filter (old Payment History feature)
+        if (time_filter && !startDate && !endDate) {
+            const now = new Date();
+            let filterStartDate, filterEndDate;
+            
+            switch (time_filter) {
+                case 'today':
+                    filterStartDate = new Date(now.setHours(0, 0, 0, 0));
+                    filterEndDate = new Date(now.setHours(23, 59, 59, 999));
+                    break;
+                case 'this_week':
+                    const dayOfWeek = now.getDay();
+                    filterStartDate = new Date(now.setDate(now.getDate() - dayOfWeek));
+                    filterStartDate.setHours(0, 0, 0, 0);
+                    filterEndDate = new Date();
+                    filterEndDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'this_month':
+                    filterStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    filterEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    filterEndDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'previous_month':
+                    filterStartDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                    filterEndDate = new Date(now.getFullYear(), now.getMonth(), 0);
+                    filterEndDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'this_year':
+                    filterStartDate = new Date(now.getFullYear(), 0, 1);
+                    filterEndDate = new Date(now.getFullYear(), 11, 31);
+                    filterEndDate.setHours(23, 59, 59, 999);
+                    break;
+            }
+            
+            if (filterStartDate && filterEndDate) {
+                filter.$and.push({ createdAt: { $gte: filterStartDate, $lte: filterEndDate } });
+            }
+        }
 
-        // User type filter - include payments without user_type field (old payments)
+        // User type filter - Only match payments with the specified user_type (exclude old payments without user_type when filter is applied)
         if (user_type) {
-            filter.$and.push({
-                $or: [
-                    { user_type: { $exists: false } }, // Old payments without user_type
+            filter.$and.push({ 
+                $and: [
+                    { user_type: { $exists: true } },
+                    { user_type: { $ne: null } },
+                    { user_type: { $ne: "" } },
                     { user_type: user_type }
                 ]
             });
         }
 
-        // Payment purpose filter - include payments without payment_purpose field (old payments)
+        // Payment purpose filter - Only match payments with the specified payment_purpose (exclude old payments without payment_purpose when filter is applied)
         if (payment_purpose) {
-            filter.$and.push({
-                $or: [
-                    { payment_purpose: { $exists: false } }, // Old payments without payment_purpose
+            filter.$and.push({ 
+                $and: [
+                    { payment_purpose: { $exists: true } },
+                    { payment_purpose: { $ne: null } },
+                    { payment_purpose: { $ne: "" } },
                     { payment_purpose: payment_purpose }
                 ]
             });
         }
 
-        // Payment feature filter - include payments without payment_feature field (old payments)
+        // Payment feature filter - Only match payments with the specified payment_feature (exclude old payments without payment_feature when filter is applied)
         if (payment_feature) {
-            filter.$and.push({
-                $or: [
-                    { payment_feature: { $exists: false } }, // Old payments without payment_feature
+            filter.$and.push({ 
+                $and: [
+                    { payment_feature: { $exists: true } },
+                    { payment_feature: { $ne: null } },
+                    { payment_feature: { $ne: "" } },
                     { payment_feature: payment_feature }
                 ]
             });
@@ -297,24 +314,47 @@ exports.getPaymentManagement = async (req, res) => {
             });
         }
 
-        // Payment status filter
+        // Payment status filter - Support both old (status) and new (payment_status) params
+        // Map old Payment History status values to payment_status
+        const statusMapping = {
+            'partial_paid': 'pending',  // Old status -> New status
+            'confirmed': 'completed',
+            'pending': 'pending',
+            'cancelled': 'failed'
+        };
+        
         if (payment_status) {
             filter.$and.push({ payment_status: payment_status });
-        }
-
-        // Search filter
-        if (search) {
+        } else if (status) {
+            // Backward compatibility: Support old Payment History status param
+            // Map old status to payment_status, or use directly if it matches
+            const mappedStatus = statusMapping[status] || status;
             filter.$and.push({
                 $or: [
-                    { "purpose_details.enquiry_unique_id": { $regex: search, $options: "i" } },
-                    { "purpose_details.order_unique_id": { $regex: search, $options: "i" } },
-                    { "purpose_details.subscription_id": { $regex: search, $options: "i" } },
-                    { "payment_method_details.transaction_id": { $regex: search, $options: "i" } }
+                    { payment_status: mappedStatus },
+                    { status: status }  // Also check old status field if it exists
                 ]
             });
         }
 
-        // Aggregate query
+        // Search filter - Support both new (purpose_details) and old payment fields
+        if (search) {
+            filter.$and.push({
+                $or: [
+                    // New payment fields
+                    { "purpose_details.enquiry_unique_id": { $regex: search, $options: "i" } },
+                    { "purpose_details.order_unique_id": { $regex: search, $options: "i" } },
+                    { "purpose_details.subscription_id": { $regex: search, $options: "i" } },
+                    { "payment_method_details.transaction_id": { $regex: search, $options: "i" } },
+                    // Old payment fields (backward compatibility)
+                    { "enquiry_unique_id": { $regex: search, $options: "i" } },
+                    { "stripe_payment_intent": { $regex: search, $options: "i" } },
+                    { "stripe_payment_method_id": { $regex: search, $options: "i" } }
+                ]
+            });
+        }
+
+        // Aggregate query - Same structure as Payment History for backward compatibility
         const data = await Payment.aggregate([
             { $match: filter },
             {
@@ -333,6 +373,7 @@ exports.getPaymentManagement = async (req, res) => {
             },
             {
                 $addFields: {
+                    // Add enquiry_unique_id for backward compatibility with Payment History
                     enquiry_unique_id: "$enquiry_data.enquiry_unique_id"
                 }
             },
@@ -663,8 +704,9 @@ exports.restorePaymentManagement = async (req, res) => {
 exports.getPaymentStatistics = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { start_date, end_date, time_filter, user_type } = req.query;
+        const { start_date, end_date, user_type } = req.query;
 
+        // Build filter - include old payments that don't have is_deleted field
         const filter = {
             $and: [
                 {
@@ -675,65 +717,20 @@ exports.getPaymentStatistics = async (req, res) => {
                 },
                 {
                     $or: [
-                        { is_deleted: { $exists: false } },
+                        { is_deleted: { $exists: false } }, // Include old payments without is_deleted field
                         { is_deleted: false }
                     ]
                 },
                 {
                     $or: [
-                        { is_permanently_deleted: { $exists: false } },
+                        { is_permanently_deleted: { $exists: false } }, // Include old payments without is_permanently_deleted field
                         { is_permanently_deleted: false }
                     ]
                 }
             ]
         };
 
-        // Handle time_filter or date range
-        if (time_filter) {
-            const now = new Date();
-            let start, end;
-
-            switch (time_filter) {
-                case 'today': {
-                    start = new Date(now);
-                    start.setHours(0, 0, 0, 0);
-                    end = new Date(now);
-                    end.setHours(23, 59, 59, 999);
-                    break;
-                }
-                case 'this_week': {
-                    start = new Date(now);
-                    start.setDate(now.getDate() - 6);
-                    start.setHours(0, 0, 0, 0);
-                    end = new Date(now);
-                    end.setHours(23, 59, 59, 999);
-                    break;
-                }
-                case 'this_month': {
-                    start = new Date(now.getFullYear(), now.getMonth(), 1);
-                    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-                    break;
-                }
-                case 'previous_month': {
-                    const prevMonth = now.getMonth() - 1;
-                    const year = prevMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
-                    const month = (prevMonth + 12) % 12;
-                    start = new Date(year, month, 1);
-                    end = new Date(year, month + 1, 0, 23, 59, 59, 999);
-                    break;
-                }
-                case 'this_year': {
-                    start = new Date(now.getFullYear(), 0, 1);
-                    end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-                    break;
-                }
-                default:
-                    break;
-            }
-            if (start && end) {
-                filter.createdAt = { $gte: start, $lte: end };
-            }
-        } else if (start_date && end_date) {
+        if (start_date && end_date) {
             const startDate = new Date(start_date);
             const endDate = new Date(end_date);
             endDate.setHours(23, 59, 59, 999);
@@ -747,18 +744,41 @@ exports.getPaymentStatistics = async (req, res) => {
         const stats = await Payment.aggregate([
             { $match: filter },
             {
+                $addFields: {
+                    // Map old status values to new payment_status for statistics
+                    normalized_status: {
+                        $cond: [
+                            { $ne: ["$payment_status", null] },
+                            "$payment_status", // Use payment_status if it exists
+                            {
+                                // Map old status field to new payment_status
+                                $switch: {
+                                    branches: [
+                                        { case: { $eq: ["$status", "confirmed"] }, then: "completed" },
+                                        { case: { $eq: ["$status", "pending"] }, then: "pending" },
+                                        { case: { $eq: ["$status", "partial_paid"] }, then: "pending" },
+                                        { case: { $eq: ["$status", "cancelled"] }, then: "failed" }
+                                    ],
+                                    default: "pending" // Default to pending for old payments without status
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            {
                 $group: {
                     _id: null,
                     total_payments: { $sum: 1 },
                     total_amount: { $sum: "$total_amount" },
                     completed_payments: {
-                        $sum: { $cond: [{ $eq: ["$payment_status", "completed"] }, 1, 0] }
+                        $sum: { $cond: [{ $eq: ["$normalized_status", "completed"] }, 1, 0] }
                     },
                     pending_payments: {
-                        $sum: { $cond: [{ $eq: ["$payment_status", "pending"] }, 1, 0] }
+                        $sum: { $cond: [{ $eq: ["$normalized_status", "pending"] }, 1, 0] }
                     },
                     failed_payments: {
-                        $sum: { $cond: [{ $eq: ["$payment_status", "failed"] }, 1, 0] }
+                        $sum: { $cond: [{ $eq: ["$normalized_status", "failed"] }, 1, 0] }
                     }
                 }
             }

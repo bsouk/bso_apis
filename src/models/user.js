@@ -542,6 +542,17 @@ const UserSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'admins',
       default: null
+    },
+    // Billing Management Fields
+    stripe_customer_id: {
+      type: String,
+      default: null,
+      index: true
+    },
+    default_payment_method_id: {
+      type: String,
+      default: null,
+      index: true
     }
   },
   {
