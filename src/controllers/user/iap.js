@@ -148,31 +148,17 @@ exports.verifyIAPSubscription = async (req, res) => {
         // ═══════════════════════════════════════════════════
         // STEP 3: PLAN VERIFICATION
         // ═══════════════════════════════════════════════════
-        // Handle multiple plan IDs (comma-separated) for "allinone" subscriptions
-        // If multiple plan IDs are provided, use the first one as primary
-        let primaryPlanId = plan_id;
-        let allPlanIds = [];
+        // For IAP subscriptions: ONE plan_id = ONE subscription
+        // No special handling for "all-in-one" - treat as single plan
+        // User subscribes to ONE plan, they get ONE subscription only
+        // ═══════════════════════════════════════════════════
         
-        if (plan_id && plan_id.includes(',')) {
-            // Multiple plan IDs provided (e.g., "plan-1,plan-2")
-            allPlanIds = plan_id.split(',').map(id => id.trim());
-            primaryPlanId = allPlanIds[0]; // Use first plan as primary
-            console.log('📋 Multiple plan IDs detected:', {
-                all_plans: allPlanIds,
-                primary_plan: primaryPlanId
-            });
-        } else {
-            allPlanIds = [plan_id];
-        }
-        
-        // Verify primary plan exists
-        const plandata = await plan.findOne({ plan_id: primaryPlanId });
+        // Verify plan exists (treat plan_id as single plan, no comma-separated logic)
+        const plandata = await plan.findOne({ plan_id: plan_id });
         if (!plandata) {
             return res.status(404).json({
-                message: `Plan not found: ${primaryPlanId}`,
-                code: 404,
-                requested_plan_id: plan_id,
-                primary_plan_id: primaryPlanId
+                message: `Plan not found: ${plan_id}`,
+                code: 404
             });
         }
 
@@ -184,12 +170,11 @@ exports.verifyIAPSubscription = async (req, res) => {
         }
 
         console.log('📋 Plan Details:', {
-            plan_id: primaryPlanId,
+            plan_id: plan_id,
             type: plandata.type,
             interval: plandata.interval,
             price: plandata.price,
-            name: plandata.plan_name,
-            all_plan_ids: allPlanIds.length > 1 ? allPlanIds : 'Single plan'
+            name: plandata.plan_name
         });
 
         // ═══════════════════════════════════════════════════
@@ -393,16 +378,24 @@ exports.verifyIAPSubscription = async (req, res) => {
         // ═══════════════════════════════════════════════════
         // STEP 9: CREATE SUBSCRIPTION
         // ═══════════════════════════════════════════════════
+        // ═══════════════════════════════════════════════════
+        // CREATE ONLY THE REQUESTED SUBSCRIPTION
+        // ═══════════════════════════════════════════════════
+        // For IAP: ONE plan_id = ONE subscription only
+        // No auto-creation of related subscriptions (recruiter, etc.)
+        // ═══════════════════════════════════════════════════
         const newSubscription = await Subscription.create({
             user_id: userid,
             subscription_id: await generateSubscriptionId(),
-            plan_id: primaryPlanId, // Use primary plan ID (first from comma-separated list)
+            plan_id: plan_id, // Use the exact plan_id provided
             start_at: startDate,
             end_at: endDate,
             status: 'active',
             type: plandata.type,
             subscription_type: "paid",
             payment_method_type: platform.toLowerCase() === 'ios' ? 'apple_iap' : 'google_iap',
+            source: 'iap', // Mark as IAP subscription
+            payment_mode: 'iap', // Mark payment mode as IAP
             stripe_subscription_id: null,
             stripe_customer_id: null,
             isPurchased: true
@@ -435,33 +428,13 @@ exports.verifyIAPSubscription = async (req, res) => {
         console.log('✅ Payment recorded:', paymentRecord._id);
 
         // ═══════════════════════════════════════════════════
-        // STEP 11: AUTO-CREATE RECRUITER PLAN
+        // STEP 11: IAP SUBSCRIPTIONS ARE INDEPENDENT
         // ═══════════════════════════════════════════════════
-        let recruiterSubscription = null;
-        if (['supplier', 'logistics'].includes(plandata.type)) {
-            const recruiterPlan = await plan.findOne({
-                type: 'recruiter',
-                interval: plandata.interval,
-                status: 'active'
-            });
-
-            if (recruiterPlan) {
-                recruiterSubscription = await Subscription.create({
-                    user_id: userid,
-                    subscription_id: await generateSubscriptionId(),
-                    plan_id: recruiterPlan.plan_id,
-                    start_at: startDate,
-                    end_at: endDate,
-                    status: 'active',
-                    type: 'recruiter',
-                    subscription_type: "paid",
-                    payment_method_type: 'manual',
-                    isPurchased: true
-                });
-
-                console.log('✅ Auto-created recruiter subscription:', recruiterSubscription.subscription_id);
-            }
-        }
+        // IMPORTANT: For IAP subscriptions, we create ONLY the requested subscription
+        // No auto-creation of recruiter subscriptions or other bonus subscriptions
+        // If user subscribes to ONE plan, they get ONLY that ONE subscription
+        // This ensures independence and prevents cross-cancellation issues
+        // ═══════════════════════════════════════════════════
 
         // ═══════════════════════════════════════════════════
         // STEP 12: NOTIFY ADMIN
@@ -522,11 +495,7 @@ exports.verifyIAPSubscription = async (req, res) => {
                     amount: plandata.price,
                     currency: plandata.currency || 'USD',
                     verified: !IAP_BYPASS_MODE
-                },
-                recruiter_subscription: recruiterSubscription ? {
-                    subscription_id: recruiterSubscription.subscription_id,
-                    type: 'recruiter'
-                } : null
+                }
             },
             code: 200
         });
