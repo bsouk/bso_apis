@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action Required - Complete Your Payment</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; }
+        .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 30px 20px; text-align: center; color: #333333; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+        .icon { font-size: 48px; margin-bottom: 10px; }
+        .content { padding: 40px 30px; }
+        .greeting { font-size: 18px; color: #333333; margin-bottom: 20px; }
+        .message { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px; }
+        .action-box { background-color: #e1f5fe; border-left: 4px solid #0288d1; padding: 20px; margin: 25px 0; border-radius: 4px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; }
+        .info-label { font-weight: 600; color: #333333; }
+        .info-value { color: #555555; }
+        .cta-button { display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: #333333 !important; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 5px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #777777; }
+        @media only screen and (max-width: 600px) { .content { padding: 30px 20px; } }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="icon">🔐</div>
+            <h1>Action Required - Complete Your Payment</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Hi <%= name %>,</div>
+            
+            <div class="message">
+                Your payment requires additional verification to complete. This is a security measure to protect your account.
+            </div>
+            
+            <div class="action-box">
+                <h3 style="margin: 0 0 15px 0; color: #0277bd;">Payment Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Plan:</span>
+                    <span class="info-value"><%= planName %></span>
+                </div>
+                <div class="info-row" style="border-bottom: none;">
+                    <span class="info-label">Amount:</span>
+                    <span class="info-value"><%= currency %> <%= amount %></span>
+                </div>
+            </div>
+            
+            <div class="message">
+                Please click the button below to complete the verification process. This usually takes less than a minute.
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="<%= actionLink %>" class="cta-button">Complete Payment Verification</a>
+            </div>
+            
+            <div class="message" style="font-size: 14px; background-color: #fff3e0; padding: 15px; border-radius: 4px;">
+                <strong>ℹ️ Note:</strong> This link is secure and will expire in 24 hours for your protection.
+            </div>
+            
+            <div class="message" style="font-size: 14px;">
+                Questions? Contact us at <a href="mailto:<%= supportEmail %>" style="color: #0288d1;"><%= supportEmail %></a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Blue Sky Outsourcing</strong></p>
+            <p>© <%= new Date().getFullYear() %> Blue Sky Outsourcing. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

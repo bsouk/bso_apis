@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactivate Your Subscription - Blue Sky Outsourcing</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; }
+        .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 30px 20px; text-align: center; color: #333333; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+        .icon { font-size: 48px; margin-bottom: 10px; }
+        .content { padding: 40px 30px; }
+        .greeting { font-size: 18px; color: #333333; margin-bottom: 20px; }
+        .message { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px; }
+        .day-counter { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #333333; padding: 20px; text-align: center; border-radius: 4px; margin: 25px 0; }
+        .day-counter h2 { margin: 0; font-size: 32px; }
+        .day-counter p { margin: 10px 0 0 0; font-size: 16px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0; }
+        .info-label { font-weight: 600; color: #333333; }
+        .info-value { color: #555555; }
+        .cta-button { display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #333333 !important; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 5px; }
+        .benefits-box { background-color: #fff3e0; padding: 20px; margin: 25px 0; border-radius: 4px; border-left: 4px solid #ff9800; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #777777; }
+        @media only screen and (max-width: 600px) { .content { padding: 30px 20px; } }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="icon">⏰</div>
+            <h1>We Miss You!</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Hi <%= name %>,</div>
+            
+            <div class="day-counter">
+                <h2>Day <%= dayNumber %> of 7</h2>
+                <p>Your subscription has been suspended</p>
+            </div>
+            
+            <div class="message">
+                Your <%= planName %> subscription is currently suspended due to payment issues. 
+                We're here to help you get back to enjoying all the features you love!
+            </div>
+            
+            <div style="background-color: #f8f9fa; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <div class="info-row">
+                    <span class="info-label">Outstanding Amount:</span>
+                    <span class="info-value"><strong><%= currency %> <%= amount %></strong></span>
+                </div>
+                <div class="info-row" style="border-bottom: none;">
+                    <span class="info-label">Suspended Since:</span>
+                    <span class="info-value"><%= suspensionDate %></span>
+                </div>
+            </div>
+            
+            <div class="benefits-box">
+                <strong>✨ What You're Missing:</strong>
+                <ul style="color: #555555; line-height: 1.8; margin: 10px 0 0 0;">
+                    <% benefits.forEach(function(benefit) { %>
+                        <li><%= benefit %></li>
+                    <% }); %>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="<%= reactivateLink %>" class="cta-button">Reactivate My Subscription</a>
+            </div>
+            
+            <div class="message" style="font-size: 14px; background-color: #ffebee; padding: 15px; border-radius: 4px;">
+                <strong>⚠️ Important:</strong> If payment is not received within <%= 7 - dayNumber %> more days, your subscription will be cancelled and your data may be removed.
+            </div>
+            
+            <div class="message" style="font-size: 14px;">
+                Need help? We're here! Contact us at 
+                <a href="mailto:<%= supportEmail %>" style="color: #fa709a;"><%= supportEmail %></a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Blue Sky Outsourcing</strong></p>
+            <p>© <%= new Date().getFullYear() %> Blue Sky Outsourcing. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

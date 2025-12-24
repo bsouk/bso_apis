@@ -77,6 +77,41 @@ const subscriptionSchema = new mongoose.Schema(
         is_active: {
             type: Boolean,
             default: true
+        },
+        // ========================================
+        // DUNNING MANAGEMENT FIELDS (NEW)
+        // ========================================
+        dunning_status: {
+            type: String,
+            enum: ['none', 'grace_period', 'suspended', 'cancelled'],
+            default: 'none'
+        },
+        grace_period_start: {
+            type: Date
+        },
+        grace_period_end: {
+            type: Date
+        },
+        suspension_date: {
+            type: Date
+        },
+        cancellation_date: {
+            type: Date
+        },
+        last_payment_attempt: {
+            type: Date
+        },
+        failed_payment_count: {
+            type: Number,
+            default: 0
+        },
+        auto_retry_enabled: {
+            type: Boolean,
+            default: true
+        },
+        payment_retry_log_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'payment_retry_logs'
         }
     },
     {

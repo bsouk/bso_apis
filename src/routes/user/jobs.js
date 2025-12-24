@@ -128,4 +128,11 @@ router.patch(
     controller.editJob
 )
 
+router.post(
+    '/generateJobDescription',
+    trimRequest.all,
+    requireAuth,
+    controller.generateJobDescription
+)
+
 module.exports = router

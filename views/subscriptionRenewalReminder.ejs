@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Renewal Reminder - Blue Sky Outsourcing</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; }
+        .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+        .icon { font-size: 48px; margin-bottom: 10px; }
+        .content { padding: 40px 30px; }
+        .greeting { font-size: 18px; color: #333333; margin-bottom: 20px; }
+        .message { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px; }
+        .info-box { background-color: #f8f9fa; border: 2px solid #667eea; padding: 20px; margin: 25px 0; border-radius: 4px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; }
+        .info-label { font-weight: 600; color: #333333; }
+        .info-value { color: #555555; }
+        .cta-button { display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 5px; }
+        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #777777; }
+        @media only screen and (max-width: 600px) { .content { padding: 30px 20px; } }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="icon">🔔</div>
+            <h1>Subscription Renews in <%= daysUntilRenewal %> Day<%= daysUntilRenewal > 1 ? 's' : '' %></h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Hi <%= name %>,</div>
+            
+            <div class="message">
+                This is a friendly reminder that your <%= planName %> subscription will automatically renew in <strong><%= daysUntilRenewal %> day<%= daysUntilRenewal > 1 ? 's' : '' %></strong>.
+            </div>
+            
+            <div class="info-box">
+                <h3 style="margin: 0 0 15px 0; color: #333333;">Renewal Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Plan:</span>
+                    <span class="info-value"><%= planName %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Amount:</span>
+                    <span class="info-value"><%= currency %> <%= amount %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Renewal Date:</span>
+                    <span class="info-value"><%= renewalDate %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Payment Method:</span>
+                    <span class="info-value">Card ending in <%= paymentMethod %></span>
+                </div>
+            </div>
+            
+            <div class="message">
+                No action is required! Your payment method will be charged automatically on the renewal date.
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="<%= updatePaymentLink %>" class="cta-button">Update Payment Method</a>
+            </div>
+            
+            <div class="message" style="font-size: 14px; background-color: #e8eaf6; padding: 15px; border-radius: 4px;">
+                <strong>💡 Note:</strong> If you need to cancel or modify your subscription, please do so before the renewal date.
+            </div>
+            
+            <div class="message" style="font-size: 14px;">
+                Questions? Contact us at <a href="mailto:<%= supportEmail %>" style="color: #667eea;"><%= supportEmail %></a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Blue Sky Outsourcing</strong></p>
+            <p>© <%= new Date().getFullYear() %> Blue Sky Outsourcing. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

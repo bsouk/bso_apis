@@ -17,7 +17,14 @@ const EnquiryQuotes = require("../../models/EnquiryQuotes");
 const Notification = require("../../models/notification")
 const Subscription = require("../../models/subscription")
 const moment = require("moment");
-const appurl = process.env.APP_URL
+const appurl = process.env.APP_URL;
+
+// ========================================
+// AUTOMATIC PAYMENT RETRY INTEGRATION
+// ========================================
+const PaymentRetryService = require("../../services/paymentRetryService");
+const PaymentRetryLog = require("../../models/paymentRetryLog");
+const Plan = require("../../models/plan");
 
 
 
@@ -716,6 +723,241 @@ cron.schedule("0 * * * *", async () => {
         console.error("❌ Error in startup subscription expiration check:", error);
     }
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW CRON JOBS: AUTOMATIC PAYMENT RETRY SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CRON: Process Payment Retries - Runs every 6 hours
+// Finds due payment retries and executes them automatically
+// Schedule: Day 2, 4, 6 after payment failure
+// ═══════════════════════════════════════════════════════════════════════════
+cron.schedule("0 */6 * * *", async () => {
+    try {
+        const now = new Date();
+        console.log(`\n${'='.repeat(80)}`);
+        console.log(`🔄 PAYMENT RETRY PROCESSOR - ${moment(now).format('YYYY-MM-DD HH:mm:ss')}`);
+        console.log(`${'='.repeat(80)}`);
+        
+        // Use the PaymentRetryService to process all due retries
+        const results = await PaymentRetryService.processDueRetries();
+        
+        console.log(`\n📊 Summary:`);
+        console.log(`   Total Processed: ${results.length}`);
+        console.log(`   Successful: ${results.filter(r => r.success).length}`);
+        console.log(`   Failed: ${results.filter(r => !r.success && !r.allRetriesExhausted).length}`);
+        console.log(`   Exhausted: ${results.filter(r => r.allRetriesExhausted).length}`);
+        console.log(`${'='.repeat(80)}\n`);
+        
+    } catch (error) {
+        console.error("❌ Error in payment retry processor cron:", error);
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CRON: Send Renewal Reminders - Runs daily at 9 AM
+// Sends subscription renewal reminders for subscriptions expiring in 7, 3, or 1 day
+// ═══════════════════════════════════════════════════════════════════════════
+cron.schedule("0 9 * * *", async () => {
+    try {
+        const now = new Date();
+        console.log(`\n${'='.repeat(80)}`);
+        console.log(`📧 SUBSCRIPTION RENEWAL REMINDERS - ${moment(now).format('YYYY-MM-DD HH:mm:ss')}`);
+        console.log(`${'='.repeat(80)}`);
+        
+        // Check for subscriptions expiring in 7, 3, or 1 day
+        const reminderDays = [7, 3, 1];
+        let totalEmailsSent = 0;
+        
+        for (const days of reminderDays) {
+            const targetDate = new Date(now);
+            targetDate.setDate(targetDate.getDate() + days);
+            
+            const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+            
+            console.log(`\n🔍 Checking for subscriptions expiring in ${days} day(s)...`);
+            
+            const expiringSubscriptions = await Subscription.find({
+                status: 'active',
+                end_at: { $gte: startOfDay, $lte: endOfDay },
+                source: 'stripe', // Only for Stripe subscriptions (IAP handled by stores)
+                auto_retry_enabled: { $ne: false }
+            }).populate('user_id');
+            
+            console.log(`   Found ${expiringSubscriptions.length} subscription(s)`);
+            
+            for (const subscription of expiringSubscriptions) {
+                try {
+                    const user = subscription.user_id;
+                    const plan = await Plan.findOne({ plan_id: subscription.plan_id });
+                    
+                    if (!user || !user.email) {
+                        console.log(`   ⚠️ Skipping subscription ${subscription._id} - no user email`);
+                        continue;
+                    }
+                    
+                    const emailData = {
+                        name: user.name || user.email,
+                        planName: plan?.plan_name || subscription.type,
+                        amount: plan?.price || 0,
+                        currency: plan?.currency || 'USD',
+                        renewalDate: moment(subscription.end_at).format('MMMM DD, YYYY'),
+                        daysUntilRenewal: days,
+                        paymentMethod: subscription.stripe_payment_method_id ? 
+                            '****' + subscription.stripe_payment_method_id.slice(-4) : '****',
+                        updatePaymentLink: `${process.env.APP_URL}/my-account/payment-methods`,
+                        supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                    };
+                    
+                    await emailer.sendEmail(
+                        user.email,
+                        `🔔 Your Subscription Renews in ${days} Day${days > 1 ? 's' : ''}`,
+                        'subscriptionRenewalReminder',
+                        emailData
+                    );
+                    
+                    totalEmailsSent++;
+                    console.log(`   ✅ Reminder sent to: ${user.email} (${days} days)`);
+                    
+                } catch (emailError) {
+                    console.error(`   ❌ Error sending reminder for subscription ${subscription._id}:`, emailError.message);
+                }
+            }
+        }
+        
+        console.log(`\n📊 Summary: Sent ${totalEmailsSent} renewal reminder email(s)`);
+        console.log(`${'='.repeat(80)}\n`);
+        
+    } catch (error) {
+        console.error("❌ Error in renewal reminder cron:", error);
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CRON: Handle Suspended Subscriptions - Runs daily at 10 AM
+// Sends daily reminders for suspended subscriptions (7 days)
+// Cancels subscriptions after 15 days of suspension
+// ═══════════════════════════════════════════════════════════════════════════
+cron.schedule("0 10 * * *", async () => {
+    try {
+        const now = new Date();
+        console.log(`\n${'='.repeat(80)}`);
+        console.log(`⏸️  SUSPENDED SUBSCRIPTION HANDLER - ${moment(now).format('YYYY-MM-DD HH:mm:ss')}`);
+        console.log(`${'='.repeat(80)}`);
+        
+        // Find all suspended subscriptions
+        const suspendedSubs = await Subscription.find({
+            dunning_status: 'suspended',
+            status: 'suspended',
+            suspension_date: { $exists: true, $ne: null }
+        }).populate('user_id');
+        
+        console.log(`\n📋 Found ${suspendedSubs.length} suspended subscription(s)`);
+        
+        let dailyRemindersSent = 0;
+        let subscriptionsCancelled = 0;
+        
+        for (const subscription of suspendedSubs) {
+            try {
+                const user = subscription.user_id;
+                if (!user || !user.email) {
+                    console.log(`   ⚠️ Skipping subscription ${subscription._id} - no user email`);
+                    continue;
+                }
+                
+                const daysSinceSuspension = Math.floor(
+                    (now - new Date(subscription.suspension_date)) / (1000 * 60 * 60 * 24)
+                );
+                
+                console.log(`\n   📌 Subscription ${subscription._id}:`);
+                console.log(`      User: ${user.email}`);
+                console.log(`      Days suspended: ${daysSinceSuspension}`);
+                
+                // Send daily reminders for first 7 days
+                if (daysSinceSuspension >= 1 && daysSinceSuspension <= 7) {
+                    const plan = await Plan.findOne({ plan_id: subscription.plan_id });
+                    
+                    const emailData = {
+                        name: user.name || user.email,
+                        planName: plan?.plan_name || subscription.type,
+                        amount: plan?.price || 0,
+                        currency: plan?.currency || 'USD',
+                        dayNumber: daysSinceSuspension,
+                        suspensionDate: moment(subscription.suspension_date).format('MMMM DD, YYYY'),
+                        reactivateLink: `${process.env.APP_URL}/subscription/reactivate/${subscription._id}`,
+                        benefits: [
+                            'Full access to all features',
+                            'Priority customer support',
+                            'Continuous service without interruption',
+                            'Access to latest updates and improvements'
+                        ],
+                        supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                    };
+                    
+                    await emailer.sendEmail(
+                        user.email,
+                        `⏰ Day ${daysSinceSuspension}/7 - Reactivate Your BSO Subscription`,
+                        'subscriptionDailyReminder',
+                        emailData
+                    );
+                    
+                    dailyRemindersSent++;
+                    console.log(`      ✅ Daily reminder sent (Day ${daysSinceSuspension}/7)`);
+                }
+                
+                // Cancel after 15 days
+                if (daysSinceSuspension >= 15) {
+                    console.log(`      🚫 Cancelling subscription (15 days passed)...`);
+                    
+                    await PaymentRetryService.cancelSubscription(subscription._id);
+                    
+                    // Send cancellation email
+                    const plan = await Plan.findOne({ plan_id: subscription.plan_id });
+                    
+                    const emailData = {
+                        name: user.name || user.email,
+                        planName: plan?.plan_name || subscription.type,
+                        cancellationDate: moment(now).format('MMMM DD, YYYY'),
+                        resubscribeLink: `${process.env.APP_URL}/subscription/plans`,
+                        plansLink: `${process.env.APP_URL}/subscription/plans`,
+                        feedbackLink: `${process.env.APP_URL}/feedback?reason=cancellation`
+                    };
+                    
+                    await emailer.sendEmail(
+                        user.email,
+                        'We\'re Sorry to See You Go - Subscription Cancelled',
+                        'subscriptionCancelled',
+                        emailData
+                    );
+                    
+                    subscriptionsCancelled++;
+                    console.log(`      ✅ Subscription cancelled and email sent`);
+                }
+                
+            } catch (error) {
+                console.error(`   ❌ Error processing subscription ${subscription._id}:`, error.message);
+            }
+        }
+        
+        console.log(`\n📊 Summary:`);
+        console.log(`   Daily reminders sent: ${dailyRemindersSent}`);
+        console.log(`   Subscriptions cancelled: ${subscriptionsCancelled}`);
+        console.log(`${'='.repeat(80)}\n`);
+        
+    } catch (error) {
+        console.error("❌ Error in suspended subscription handler cron:", error);
+    }
+});
+
+console.log(`\n✅ Automatic Payment Retry System Initialized`);
+console.log(`   - Payment Retry Processor: Every 6 hours`);
+console.log(`   - Renewal Reminders: Daily at 9 AM`);
+console.log(`   - Suspended Handler: Daily at 10 AM`);
+console.log(`   - Retry Schedule: Day 2, 4, 6\n`);
 
 
 exports.dashboardChartData = async (req, res) => {

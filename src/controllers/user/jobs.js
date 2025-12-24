@@ -1,6 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const utils = require("../../utils/utils");
 const jobs = require("../../models/jobs");
+const axios = require("axios");
 const User = require("../../models/user");
 const job_applications = require("../../models/job_applications");
 const saved_job = require("../../models/saved_job");
@@ -1300,5 +1301,51 @@ exports.editJob = async (req, res) => {
         })
     } catch (error) {
         utils.handleError(res, error);
+    }
+}
+
+/**
+ * Generate job description via external AI service
+ * Requires env:
+ * - AI_ENQUIRY_API_KEY
+ * - AI_ENQUIRY_API_BASE_URL (optional, falls back to default)
+ */
+exports.generateJobDescription = async (req, res) => {
+    try {
+        const aiBaseUrl = (process.env.AI_ENQUIRY_API_BASE_URL || process.env.AI_ENQUIRY_API_URL || 'https://qpyjcdhd22.eu-west-2.awsapprunner.com/api/v1').replace(/\/$/, '');
+        const aiApiKey = process.env.AI_ENQUIRY_API_KEY;
+
+        if (!aiApiKey) {
+            return utils.handleError(res, {
+                message: "AI job description service is not configured. Missing AI_ENQUIRY_API_KEY.",
+                code: 500,
+            });
+        }
+
+        const requestBody = req.body || {};
+        const targetUrl = `${aiBaseUrl}/job-description`;
+
+        const aiResponse = await axios.post(
+            targetUrl,
+            requestBody,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': aiApiKey
+                },
+                timeout: 30000,
+            }
+        );
+
+        const responseData = aiResponse?.data || {};
+
+        return res.status(200).json({
+            message: "Job description generated successfully",
+            code: 200,
+            data: responseData,
+        });
+    } catch (error) {
+        console.error("AI job description generation error:", error?.response?.data || error.message);
+        return utils.handleError(res, error);
     }
 }

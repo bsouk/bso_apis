@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed - Blue Sky Outsourcing</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 20px;
+            text-align: center;
+            color: #ffffff;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .alert-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 18px;
+            color: #333333;
+            margin-bottom: 20px;
+        }
+        .message {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555555;
+            margin-bottom: 25px;
+        }
+        .info-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 4px;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #856404;
+            font-size: 16px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #333333;
+        }
+        .info-value {
+            color: #555555;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 10px 5px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+        .secondary-button {
+            display: inline-block;
+            padding: 15px 40px;
+            background-color: #ffffff;
+            color: #667eea !important;
+            text-decoration: none;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 10px 5px;
+            text-align: center;
+        }
+        .next-steps {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 4px;
+        }
+        .next-steps h3 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+            font-size: 16px;
+        }
+        .next-steps ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .next-steps li {
+            color: #555555;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #777777;
+        }
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e0e0e0;
+            margin: 30px 0;
+        }
+        @media only screen and (max-width: 600px) {
+            .content {
+                padding: 30px 20px;
+            }
+            .cta-button, .secondary-button {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="alert-icon">⚠️</div>
+            <h1>Payment Failed</h1>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">Hi <%= name %>,</div>
+            
+            <div class="message">
+                We tried to process your subscription payment but unfortunately it didn't go through.
+            </div>
+            
+            <div class="info-box">
+                <h3>Payment Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Plan:</span>
+                    <span class="info-value"><%= planName %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Amount:</span>
+                    <span class="info-value"><%= currency %> <%= amount %></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Reason:</span>
+                    <span class="info-value"><%= failureReason %></span>
+                </div>
+            </div>
+            
+            <div class="message">
+                <strong>Don't worry!</strong> We'll automatically try again on <strong><%= nextRetryDate %></strong>. 
+                However, to ensure uninterrupted service, we recommend updating your payment method now.
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="<%= paymentLink %>" class="cta-button">Pay Now</a>
+                <a href="<%= process.env.APP_URL %>/my-account/payment-methods" class="secondary-button">Update Payment Method</a>
+            </div>
+            
+            <div class="next-steps">
+                <h3>What Happens Next?</h3>
+                <ul>
+                    <li>Your subscription remains <strong>active</strong> during the grace period (6 days)</li>
+                    <li>We'll automatically retry payment on <strong>Day 2, 4, and 6</strong></li>
+                    <li>You can pay anytime using the "Pay Now" button above</li>
+                    <li>If all retries fail, your subscription will be temporarily suspended</li>
+                </ul>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="message" style="font-size: 14px;">
+                Need help? Our support team is here for you at 
+                <a href="mailto:<%= supportEmail %>" style="color: #667eea;"><%= supportEmail %></a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Blue Sky Outsourcing</strong></p>
+            <p>© <%= new Date().getFullYear() %> Blue Sky Outsourcing. All rights reserved.</p>
+            <p>
+                <a href="<%= process.env.APP_URL %>">Visit Website</a> | 
+                <a href="<%= process.env.APP_URL %>/contact">Contact Support</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+
