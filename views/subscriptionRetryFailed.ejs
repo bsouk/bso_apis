@@ -54,7 +54,8 @@
 
                             <!-- Button -->
                             <p style="text-align: center;">
-                                <a href="<%= website_url %>/my-account"
+                                <% const payLink = typeof paymentLink !== 'undefined' && paymentLink ? paymentLink : `${website_url}/my-account/invoices`; %>
+                                <a href="<%= payLink %>"
                                     style="display: inline-block; padding: 14px 28px; background-color: #f5576c; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
                                     Update Payment Method & Pay Now
                                 </a>

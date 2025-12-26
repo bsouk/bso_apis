@@ -62,7 +62,8 @@
 
                             <!-- Button -->
                             <p style="text-align: center;">
-                                <a href="<%= website_url %>/my-account"
+                                <% const reactivateLinkUrl = typeof reactivateLink !== 'undefined' && reactivateLink ? reactivateLink : `${website_url}/my-account/invoices`; %>
+                                <a href="<%= reactivateLinkUrl %>"
                                     style="display: inline-block; padding: 14px 28px; background-color: #ff9800; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
                                     Reactivate Subscription
                                 </a>

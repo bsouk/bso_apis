@@ -50,7 +50,8 @@
 
                             <!-- Button -->
                             <p style="text-align: center;">
-                                <a href="<%= website_url %>/my-account"
+                                <% const manageLink = typeof updatePaymentLink !== 'undefined' && updatePaymentLink ? updatePaymentLink : `${website_url}/my-account/invoices`; %>
+                                <a href="<%= manageLink %>"
                                     style="display: inline-block; padding: 14px 28px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
                                     Manage My Subscription
                                 </a>

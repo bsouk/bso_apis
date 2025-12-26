@@ -166,12 +166,14 @@ exports.handleStripeWebhook = async (req, res) => {
                             const plan = await Plan.findOne({ plan_id: subscription.plan_id });
                             
                             // Get Stripe customer ID for billing portal
-                            let billingPortalUrl = urlHelper.frontendUrl('/my-account');
+                            let billingPortalUrl = urlHelper.frontendUrl('my-account/invoices');
+                            let invoicePageUrl = urlHelper.frontendUrl('my-account/invoices');
+                            
                             if (subscription.stripe_customer_id) {
                                 try {
                                     billingPortalUrl = await stripeBillingPortal.getBillingPortalUrl(
                                         subscription.stripe_customer_id,
-                                        'my-account'
+                                        'my-account/invoices'
                                     );
                                 } catch (portalError) {
                                     console.warn('⚠️ Could not create billing portal URL, using default:', portalError.message);
@@ -187,6 +189,7 @@ exports.handleStripeWebhook = async (req, res) => {
                                 nextRetryDate: moment(retryLog.retry_schedule[0].scheduled_at).format('MMMM DD, YYYY'),
                                 paymentLink: billingPortalUrl, // Use Stripe billing portal
                                 updatePaymentLink: billingPortalUrl, // Use Stripe billing portal
+                                invoicePageUrl: invoicePageUrl, // Direct link to invoice page
                                 supportEmail: process.env.SUPPORT_EMAIL || 'support@bsoservices.com'
                             };
                             
@@ -267,7 +270,7 @@ exports.handleStripeWebhook = async (req, res) => {
                         try {
                             actionLink = await stripeBillingPortal.getBillingPortalUrl(
                                 subscription.stripe_customer_id,
-                                'my-account'
+                                'my-account/invoices'
                             );
                         } catch (portalError) {
                             console.warn('⚠️ Could not create billing portal URL, using hosted invoice URL:', portalError.message);
@@ -325,12 +328,12 @@ exports.handleStripeWebhook = async (req, res) => {
                     // Send renewal reminder email
                     try {
                     // Get billing portal URL for payment method update
-                    let updatePaymentLink = urlHelper.frontendUrl('my-account');
+                    let updatePaymentLink = urlHelper.frontendUrl('my-account/invoices');
                     if (subscription.stripe_customer_id) {
                         try {
                             updatePaymentLink = await stripeBillingPortal.getBillingPortalUrl(
                                 subscription.stripe_customer_id,
-                                'my-account'
+                                'my-account/invoices'
                             );
                         } catch (portalError) {
                             console.warn('⚠️ Could not create billing portal URL:', portalError.message);

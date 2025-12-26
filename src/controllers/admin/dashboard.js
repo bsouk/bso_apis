@@ -803,12 +803,12 @@ cron.schedule("0 9 * * *", async () => {
                     }
                     
                     // Get billing portal URL for payment method update
-                    let updatePaymentLink = urlHelper.frontendUrl('my-account');
+                    let updatePaymentLink = urlHelper.frontendUrl('my-account/invoices');
                     if (subscription.stripe_customer_id) {
                         try {
                             updatePaymentLink = await stripeBillingPortal.getBillingPortalUrl(
                                 subscription.stripe_customer_id,
-                                'my-account'
+                                'my-account/invoices'
                             );
                         } catch (portalError) {
                             console.warn(`   ⚠️ Could not create billing portal URL:`, portalError.message);
@@ -897,12 +897,12 @@ cron.schedule("0 10 * * *", async () => {
                     const plan = await Plan.findOne({ plan_id: subscription.plan_id });
                     
                     // Get billing portal URL for reactivation
-                    let reactivateLink = urlHelper.frontendUrl('my-account');
+                    let reactivateLink = urlHelper.frontendUrl('my-account/invoices');
                     if (subscription.stripe_customer_id) {
                         try {
                             reactivateLink = await stripeBillingPortal.getBillingPortalUrl(
                                 subscription.stripe_customer_id,
-                                'my-account'
+                                'my-account/invoices'
                             );
                         } catch (portalError) {
                             console.warn(`   ⚠️ Could not create billing portal URL:`, portalError.message);
