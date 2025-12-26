@@ -22,6 +22,8 @@ const admin_received_notification = require("../../models/admin_received_notific
 // ========================================
 const PaymentRetryService = require("../../services/paymentRetryService");
 const PaymentRetryLog = require("../../models/paymentRetryLog");
+const stripeBillingPortal = require("../../services/stripeBillingPortalService");
+const urlHelper = require("../../utils/urlHelper");
 const moment = require('moment');
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -163,6 +165,19 @@ exports.handleStripeWebhook = async (req, res) => {
                             const user = subscription.user_id.email ? subscription.user_id : await User.findById(subscription.user_id);
                             const plan = await Plan.findOne({ plan_id: subscription.plan_id });
                             
+                            // Get Stripe customer ID for billing portal
+                            let billingPortalUrl = urlHelper.frontendUrl('/my-account');
+                            if (subscription.stripe_customer_id) {
+                                try {
+                                    billingPortalUrl = await stripeBillingPortal.getBillingPortalUrl(
+                                        subscription.stripe_customer_id,
+                                        'my-account'
+                                    );
+                                } catch (portalError) {
+                                    console.warn('⚠️ Could not create billing portal URL, using default:', portalError.message);
+                                }
+                            }
+                            
                             const emailData = {
                                 name: user.name || user.email,
                                 planName: plan?.plan_name || subscription.type,
@@ -170,16 +185,20 @@ exports.handleStripeWebhook = async (req, res) => {
                                 currency: failedInvoice.currency.toUpperCase(),
                                 failureReason: failedInvoice.last_payment_error?.message || 'Payment declined',
                                 nextRetryDate: moment(retryLog.retry_schedule[0].scheduled_at).format('MMMM DD, YYYY'),
-                                paymentLink: `${process.env.APP_URL}/subscription/pay/${subscription._id}`,
-                                supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                                paymentLink: billingPortalUrl, // Use Stripe billing portal
+                                updatePaymentLink: billingPortalUrl, // Use Stripe billing portal
+                                supportEmail: process.env.SUPPORT_EMAIL || 'support@bsoservices.com'
                             };
                             
-                            await emailer.sendEmail(
-                                user.email,
-                                '⚠️ Payment Failed - Action Required for Your Subscription',
-                                'subscriptionPaymentFailed',
-                                emailData
-                            );
+                    await emailer.sendEmail(
+                        null,
+                        {
+                            to: user.email,
+                            subject: '⚠️ Payment Failed - Action Required for Your Subscription',
+                            ...emailData
+                        },
+                        'subscriptionPaymentFailed'
+                    );
                             
                             console.log(`📧 Payment failed email sent to: ${user.email}`);
                             
@@ -240,6 +259,21 @@ exports.handleStripeWebhook = async (req, res) => {
                     const user = subscription.user_id.email ? subscription.user_id : await User.findById(subscription.user_id);
                     const plan = await Plan.findOne({ plan_id: subscription.plan_id });
                     
+                    // Use Stripe hosted invoice URL (best practice) or billing portal
+                    let actionLink = actionRequiredInvoice.hosted_invoice_url;
+                    
+                    // If billing portal is preferred, use it instead
+                    if (subscription.stripe_customer_id) {
+                        try {
+                            actionLink = await stripeBillingPortal.getBillingPortalUrl(
+                                subscription.stripe_customer_id,
+                                'my-account'
+                            );
+                        } catch (portalError) {
+                            console.warn('⚠️ Could not create billing portal URL, using hosted invoice URL:', portalError.message);
+                        }
+                    }
+                    
                     // Send email with payment action link
                     try {
                         const emailData = {
@@ -247,15 +281,18 @@ exports.handleStripeWebhook = async (req, res) => {
                             planName: plan?.plan_name || subscription.type,
                             amount: actionRequiredInvoice.amount_due / 100,
                             currency: actionRequiredInvoice.currency.toUpperCase(),
-                            actionLink: actionRequiredInvoice.hosted_invoice_url,
-                            supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                            actionLink: actionLink,
+                            supportEmail: process.env.SUPPORT_EMAIL || 'support@bsoservices.com'
                         };
                         
                         await emailer.sendEmail(
-                            user.email,
-                            '🔐 Action Required - Complete Your Payment',
-                            'subscriptionPaymentActionRequired',
-                            emailData
+                            null,
+                            {
+                                to: user.email,
+                                subject: '🔐 Action Required - Complete Your Payment',
+                                ...emailData
+                            },
+                            'subscriptionPaymentActionRequired'
                         );
                         
                         console.log(`📧 Payment action required email sent to: ${user.email}`);
@@ -287,23 +324,39 @@ exports.handleStripeWebhook = async (req, res) => {
                     
                     // Send renewal reminder email
                     try {
-                        const emailData = {
-                            name: user.name || user.email,
-                            planName: plan?.plan_name || subscription.type,
-                            amount: upcomingInvoice.amount_due / 100,
+                    // Get billing portal URL for payment method update
+                    let updatePaymentLink = urlHelper.frontendUrl('my-account');
+                    if (subscription.stripe_customer_id) {
+                        try {
+                            updatePaymentLink = await stripeBillingPortal.getBillingPortalUrl(
+                                subscription.stripe_customer_id,
+                                'my-account'
+                            );
+                        } catch (portalError) {
+                            console.warn('⚠️ Could not create billing portal URL:', portalError.message);
+                        }
+                    }
+                    
+                    const emailData = {
+                        name: user.name || user.email,
+                        planName: plan?.plan_name || subscription.type,
+                        amount: upcomingInvoice.amount_due / 100,
+                        updatePaymentLink: updatePaymentLink,
                             currency: upcomingInvoice.currency.toUpperCase(),
                             renewalDate: moment(upcomingInvoice.period_end * 1000).format('MMMM DD, YYYY'),
                             daysUntilRenewal: daysUntilRenewal,
-                            paymentMethod: '****' + (subscription.stripe_payment_method_id ? subscription.stripe_payment_method_id.slice(-4) : ''),
-                            updatePaymentLink: `${process.env.APP_URL}/my-account/payment-methods`,
-                            supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                            paymentMethod: subscription.stripe_payment_method_id ? subscription.stripe_payment_method_id.slice(-4) : '1234',
+                            supportEmail: process.env.SUPPORT_EMAIL || 'support@bsoservices.com'
                         };
                         
                         await emailer.sendEmail(
-                            user.email,
-                            `🔔 Your Subscription Renews in ${daysUntilRenewal} Days`,
-                            'subscriptionRenewalReminder',
-                            emailData
+                            null,
+                            {
+                                to: user.email,
+                                subject: `🔔 Your Subscription Renews in ${daysUntilRenewal} Days`,
+                                ...emailData
+                            },
+                            'subscriptionRenewalReminder'
                         );
                         
                         console.log(`📧 Renewal reminder email sent to: ${user.email}`);

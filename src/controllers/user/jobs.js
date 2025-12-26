@@ -1307,26 +1307,42 @@ exports.editJob = async (req, res) => {
 /**
  * Generate job description via external AI service
  * Requires env:
- * - AI_ENQUIRY_API_KEY
- * - AI_ENQUIRY_API_BASE_URL (optional, falls back to default)
+ * - CHATBOT_X_API_KEY (uses same API key as chatbot)
+ * 
+ * API Endpoint: https://uxbefmykqw.eu-west-2.awsapprunner.com/api/v1/job-description
+ * Uses the same API key as chatbot (CHATBOT_X_API_KEY from .env lines 105-106)
  */
 exports.generateJobDescription = async (req, res) => {
     try {
-        const aiBaseUrl = (process.env.AI_ENQUIRY_API_BASE_URL || process.env.AI_ENQUIRY_API_URL || 'https://qpyjcdhd22.eu-west-2.awsapprunner.com/api/v1').replace(/\/$/, '');
-        const aiApiKey = process.env.AI_ENQUIRY_API_KEY;
+        // Use the specific job description API URL
+        const jobDescriptionApiUrl = 'https://uxbefmykqw.eu-west-2.awsapprunner.com/api/v1/job-description';
+        
+        // Use the same API key as chatbot (from .env lines 105-106)
+        const aiApiKey = process.env.CHATBOT_X_API_KEY;
 
         if (!aiApiKey) {
             return utils.handleError(res, {
-                message: "AI job description service is not configured. Missing AI_ENQUIRY_API_KEY.",
+                message: "AI job description service is not configured. Missing CHATBOT_X_API_KEY.",
                 code: 500,
             });
         }
 
+        // Prepare payload from request body - ensure it matches API expectations
         const requestBody = req.body || {};
-        const targetUrl = `${aiBaseUrl}/job-description`;
+        
+        // Validate required fields
+        if (!requestBody.job_title) {
+            return utils.handleError(res, {
+                message: "Job title is required to generate job description",
+                code: 400,
+            });
+        }
+        
+        console.log('📝 Calling AI Job Description API:', jobDescriptionApiUrl);
+        console.log('📦 Payload:', JSON.stringify(requestBody, null, 2));
 
         const aiResponse = await axios.post(
-            targetUrl,
+            jobDescriptionApiUrl,
             requestBody,
             {
                 headers: {
@@ -1338,14 +1354,47 @@ exports.generateJobDescription = async (req, res) => {
         );
 
         const responseData = aiResponse?.data || {};
+        
+        // Extract job_description from response (API returns job_description field)
+        const jobDescription = responseData?.job_description || responseData?.data?.job_description || '';
+
+        if (!jobDescription) {
+            console.warn('⚠️ No job_description in API response:', responseData);
+            return utils.handleError(res, {
+                message: "AI service did not return a job description",
+                code: 500,
+            });
+        }
+
+        console.log('✅ AI Job Description generated successfully');
+        console.log('📄 Description length:', jobDescription.length, 'characters');
 
         return res.status(200).json({
-            message: "Job description generated successfully",
+            message: responseData?.message || "Job description generated successfully",
             code: 200,
-            data: responseData,
+            data: {
+                job_description: jobDescription,
+                status: responseData?.status || 'success',
+                token_usage: responseData?.token_usage || null
+            },
         });
     } catch (error) {
-        console.error("AI job description generation error:", error?.response?.data || error.message);
-        return utils.handleError(res, error);
+        console.error("❌ AI job description generation error:", error?.response?.data || error.message);
+        
+        if (error.response) {
+            console.error('Response status:', error.response.status);
+            console.error('Response data:', error.response.data);
+            
+            return res.status(error.response.status).json({
+                message: error.response.data?.message || error.response.data?.error || "Failed to generate job description",
+                code: error.response.status,
+                error: error.response.data
+            });
+        }
+        
+        return utils.handleError(res, {
+            message: error?.message || "Failed to generate job description",
+            code: 500,
+        });
     }
 }

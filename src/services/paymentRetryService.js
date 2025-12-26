@@ -4,6 +4,8 @@ const Subscription = require('../models/subscription');
 const User = require('../models/user');
 const Payment = require('../models/payment');
 const emailer = require('../utils/emailer');
+const stripeBillingPortal = require('./stripeBillingPortalService');
+const urlHelper = require('../utils/urlHelper');
 const moment = require('moment');
 
 /**
@@ -382,14 +384,17 @@ class PaymentRetryService {
                 currency: retryLog.retry_schedule[attemptNumber - 1]?.currency || 'USD',
                 attemptNumber: attemptNumber,
                 nextBillingDate: subscription.end_at ? moment(subscription.end_at).format('MMMM DD, YYYY') : 'N/A',
-                supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                supportEmail: process.env.SUPPORT_EMAIL || 'support@bsoservices.com'
             };
             
             await emailer.sendEmail(
-                user.email,
-                'Payment Successful - Your Subscription is Active!',
-                'subscriptionPaymentSuccess',
-                emailData
+                null,
+                {
+                    to: user.email,
+                    subject: '✅ Payment Successful - Your Subscription is Active!',
+                    ...emailData
+                },
+                'subscriptionPaymentSuccess'
             );
             
             // Log email sent
@@ -433,15 +438,17 @@ class PaymentRetryService {
                 maxAttempts: retryLog.max_attempts,
                 nextRetryDate: moment(nextRetry.scheduled_at).format('MMMM DD, YYYY'),
                 daysUntilSuspension: daysUntilSuspension,
-                paymentLink: `${process.env.APP_URL}/subscription/pay/${subscription._id}`,
-                supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                supportEmail: process.env.SUPPORT_EMAIL || 'support@bsoservices.com'
             };
             
             await emailer.sendEmail(
-                user.email,
-                `Payment Retry ${attemptNumber}/${retryLog.max_attempts} Failed - ${daysUntilSuspension} Days Left`,
-                'subscriptionRetryFailed',
-                emailData
+                null,
+                {
+                    to: user.email,
+                    subject: `Payment Retry Unsuccessful - Action Required`,
+                    ...emailData
+                },
+                'subscriptionRetryFailed'
             );
             
             // Log email sent
@@ -479,16 +486,18 @@ class PaymentRetryService {
                 planName: plan?.plan_name || subscription.type,
                 amount: retryLog.retry_schedule[0]?.amount || 0,
                 currency: retryLog.retry_schedule[0]?.currency || 'USD',
-                suspensionDate: moment(subscription.suspension_date).format('MMMM DD, YYYY'),
-                reactivateLink: `${process.env.APP_URL}/subscription/reactivate/${subscription._id}`,
-                supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
+                suspensionDate: moment(subscription.suspension_date || new Date()).format('MMMM DD, YYYY'),
+                supportEmail: process.env.SUPPORT_EMAIL || 'support@bsoservices.com'
             };
             
             await emailer.sendEmail(
-                user.email,
-                '🔒 Your Subscription Has Been Suspended',
-                'subscriptionSuspended',
-                emailData
+                null,
+                {
+                    to: user.email,
+                    subject: '🔒 Your Subscription Has Been Suspended',
+                    ...emailData
+                },
+                'subscriptionSuspended'
             );
             
             // Log email sent

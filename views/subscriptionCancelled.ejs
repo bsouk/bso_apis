@@ -1,99 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subscription Cancelled - Blue Sky Outsourcing</title>
-    <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; }
-        .email-container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .header { background: linear-gradient(135deg, #606c88 0%, #3f4c6b 100%); padding: 30px 20px; text-align: center; color: #ffffff; }
-        .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
-        .icon { font-size: 48px; margin-bottom: 10px; }
-        .content { padding: 40px 30px; }
-        .greeting { font-size: 18px; color: #333333; margin-bottom: 20px; }
-        .message { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px; }
-        .info-box { background-color: #f8f9fa; padding: 20px; margin: 25px 0; border-radius: 4px; border-left: 4px solid #606c88; }
-        .info-row { display: flex; justify-content: space-between; padding: 8px 0; }
-        .info-label { font-weight: 600; color: #333333; }
-        .info-value { color: #555555; }
-        .cta-button { display: inline-block; padding: 15px 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 5px; }
-        .secondary-button { display: inline-block; padding: 15px 40px; background-color: #ffffff; color: #667eea !important; text-decoration: none; border: 2px solid #667eea; border-radius: 6px; font-weight: 600; font-size: 16px; margin: 10px 5px; }
-        .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #777777; }
-        @media only screen and (max-width: 600px) { .content { padding: 30px 20px; } .cta-button, .secondary-button { display: block; margin: 10px 0; } }
-    </style>
-</head>
-<body>
-    <div class="email-container">
-        <div class="header">
-            <div class="icon">👋</div>
-            <h1>We're Sorry to See You Go</h1>
-        </div>
-        
-        <div class="content">
-            <div class="greeting">Hi <%= name %>,</div>
-            
-            <div class="message">
-                Your <%= planName %> subscription has been cancelled due to extended non-payment.
-            </div>
-            
-            <div class="info-box">
-                <h3 style="margin: 0 0 15px 0; color: #333333;">Cancellation Details</h3>
-                <div class="info-row">
-                    <span class="info-label">Plan:</span>
-                    <span class="info-value"><%= planName %></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Cancelled On:</span>
-                    <span class="info-value"><%= cancellationDate %></span>
-                </div>
-                <div class="info-row" style="border-bottom: none;">
-                    <span class="info-label">Data Retention:</span>
-                    <span class="info-value">30 days</span>
-                </div>
-            </div>
-            
-            <div class="message" style="background-color: #e3f2fd; padding: 20px; border-radius: 4px; border-left: 4px solid #2196f3;">
-                <strong>🛡️ Your Data:</strong> We'll keep your account data for 30 days. If you decide to return, all your information will be waiting for you.
-            </div>
-            
-            <div class="message">
-                <strong>You can resubscribe anytime:</strong>
-                <ul style="color: #555555; line-height: 1.8;">
-                    <li>All your previous data will be restored</li>
-                    <li>Choose any plan that fits your needs</li>
-                    <li>No setup required - pick up where you left off</li>
-                </ul>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="<%= resubscribeLink %>" class="cta-button">Resubscribe Now</a>
-                <a href="<%= plansLink %>" class="secondary-button">View All Plans</a>
-            </div>
-            
-            <div class="message" style="background-color: #fff3e0; padding: 20px; border-radius: 4px;">
-                <strong>💬 We'd Love Your Feedback</strong>
-                <p style="margin: 10px 0 0 0; color: #555555;">
-                    Could you take a moment to tell us why you left? Your feedback helps us improve our service.
-                </p>
-                <div style="text-align: center; margin-top: 15px;">
-                    <a href="<%= feedbackLink %>" style="color: #667eea; text-decoration: none; font-weight: 600;">Share Feedback →</a>
-                </div>
-            </div>
-            
-            <div class="message" style="font-size: 14px; text-align: center; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-                Thank you for being part of Blue Sky Outsourcing. We hope to see you again soon!
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p><strong>Blue Sky Outsourcing</strong></p>
-            <p>© <%= new Date().getFullYear() %> Blue Sky Outsourcing. All rights reserved.</p>
-            <p>
-                <a href="<%= process.env.APP_URL %>/contact" style="color: #667eea;">Contact Support</a>
-            </p>
-        </div>
-    </div>
-</body>
-</html>
 
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Subscription Cancelled - BSO Services</title>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7f9; padding: 30px 0;">
+        <tr>
+            <td align="center">
+                <table width="700" cellpadding="0" cellspacing="0" border="0"
+                    style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+
+                    <!-- Header with Brand Name -->
+                    <tr>
+                        <td align="center" bgcolor="#6c757d" style="padding: 25px 20px;">
+                            <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;">Blue Sky</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+                            <p><strong>Hello <%= name %>,</strong></p>
+
+                            <p>We're sorry to inform you that your subscription has been cancelled.</p>
+
+                            <!-- Cancellation Details Box -->
+                            <table width="100%" cellpadding="15" cellspacing="0"
+                                style="background-color: #f8f9fa; border-left: 4px solid #6c757d; border-radius: 4px; margin: 20px 0;">
+                                <tr>
+                                    <td style="font-size: 15px;">
+                                        <strong style="color: #495057;">Cancellation Details</strong><br /><br />
+                                        <strong>Plan:</strong> <%= planName %><br />
+                                        <strong>Cancellation Date:</strong> <%= cancellationDate %>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Data Retention Box -->
+                            <table width="100%" cellpadding="15" cellspacing="0"
+                                style="background-color: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; margin: 20px 0;">
+                                <tr>
+                                    <td style="font-size: 15px;">
+                                        <strong style="color: #1976d2;">📋 Data Retention</strong><br /><br />
+                                        Your account data will be retained for 30 days. If you wish to resubscribe within this period, your data will be restored.
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p>If you'd like to continue using Blue Sky services, you can resubscribe anytime.</p>
+
+                            <!-- Button -->
+                            <p style="text-align: center;">
+                                <a href="<%= website_url %>/subscription-plan"
+                                    style="display: inline-block; padding: 14px 28px; background-color: #055a90; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                                    View Subscription Plans
+                                </a>
+                            </p>
+
+                            <p style="margin-top: 30px;">We'd love to hear your feedback. If you have a moment, please let us know how we can improve:</p>
+                            
+                            <p style="text-align: center;">
+                                <a href="<%= website_url %>/contact-us"
+                                    style="display: inline-block; padding: 10px 20px; background-color: #ffffff; color: #055a90; text-decoration: none; border-radius: 4px; font-weight: bold; border: 2px solid #055a90;">
+                                    Share Feedback
+                                </a>
+                            </p>
+
+                            <p style="margin-top: 30px;">Thank you for being a Blue Sky customer. We hope to see you again!</p>
+
+                            <p>Best regards,<br /><strong>Blue Sky Team</strong></p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+                            &copy; <%= new Date().getFullYear() %> Blue Sky. All rights reserved.
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+</body>
+
+</html>

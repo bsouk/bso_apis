@@ -70,4 +70,11 @@ router.patch(
     controller.addReview
 )
 
+router.post(
+    '/generateProductList',
+    trimRequest.all,
+    requireAuth,
+    controller.generateProductList
+)
+
 module.exports = router

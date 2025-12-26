@@ -1236,3 +1236,67 @@ exports.bulkUpload = async (req, res) => {
   }
 };
 
+/**
+ * Generate product details via external AI service
+ * Requires env:
+ * - CHATBOT_X_API_KEY (uses same API key as chatbot)
+ * 
+ * API Endpoint: https://uxbefmykqw.eu-west-2.awsapprunner.com/api/v1/product-list
+ * Uses the same API key as chatbot (CHATBOT_X_API_KEY from .env lines 105-106)
+ */
+exports.generateProductList = async (req, res) => {
+    try {
+        // Use the specific product list API URL
+        const productListApiUrl = 'https://uxbefmykqw.eu-west-2.awsapprunner.com/api/v1/product-list';
+        
+        // Use the same API key as chatbot (from .env lines 105-106)
+        const aiApiKey = process.env.CHATBOT_X_API_KEY;
+
+        if (!aiApiKey) {
+            return utils.handleError(res, {
+                message: "AI product generation service is not configured. Missing CHATBOT_X_API_KEY.",
+                code: 500,
+            });
+        }
+
+        // Prepare payload from request body
+        const requestBody = req.body || {};
+        
+        // Validate required fields
+        if (!requestBody.text) {
+            return utils.handleError(res, {
+                message: "Product description text is required",
+                code: 400,
+            });
+        }
+        
+        console.log('📝 Calling AI Product List API:', productListApiUrl);
+        console.log('📦 Payload:', JSON.stringify(requestBody, null, 2));
+
+        const aiResponse = await axios.post(
+            productListApiUrl,
+            requestBody,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': aiApiKey
+                },
+                timeout: 30000,
+            }
+        );
+
+        const responseData = aiResponse?.data || {};
+
+        console.log('✅ AI Product List Response:', JSON.stringify(responseData, null, 2));
+
+        return res.status(200).json({
+            message: "Product details generated successfully",
+            code: 200,
+            data: responseData,
+        });
+    } catch (error) {
+        console.error("AI product generation error:", error?.response?.data || error.message);
+        return utils.handleError(res, error);
+    }
+};
+

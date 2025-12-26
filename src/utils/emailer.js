@@ -282,7 +282,9 @@ module.exports = {
       mailOptions = { ...rest, ...context };
     }
     
-    mailOptions.website_url = process.env.FRONTEND_PROD_URL;
+    // Use urlHelper to properly build URLs without double slashes
+    const urlHelper = require('./urlHelper');
+    mailOptions.website_url = urlHelper.getBaseUrl();
 
     locale = locale == null ? "" : `${locale}/`;
 

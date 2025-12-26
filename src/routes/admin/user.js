@@ -15,6 +15,10 @@ const validator = require("../../middleware/validator");
 // Test email endpoint
 router.get("/test-email", requireAuth, controller.testEmail);
 
+// Test subscription emails endpoint
+const testSubscriptionEmailsController = require("../../controllers/admin/testSubscriptionEmails");
+router.post("/test-subscription-emails", requireAuth, testSubscriptionEmailsController.testAllSubscriptionEmails);
+
 router.post(
   "/uploadMedia",
   trimRequest.all,

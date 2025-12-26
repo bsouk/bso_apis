@@ -24,6 +24,8 @@ const appurl = process.env.APP_URL;
 // ========================================
 const PaymentRetryService = require("../../services/paymentRetryService");
 const PaymentRetryLog = require("../../models/paymentRetryLog");
+const stripeBillingPortal = require("../../services/stripeBillingPortalService");
+const urlHelper = require("../../utils/urlHelper");
 const Plan = require("../../models/plan");
 
 
@@ -800,6 +802,19 @@ cron.schedule("0 9 * * *", async () => {
                         continue;
                     }
                     
+                    // Get billing portal URL for payment method update
+                    let updatePaymentLink = urlHelper.frontendUrl('my-account');
+                    if (subscription.stripe_customer_id) {
+                        try {
+                            updatePaymentLink = await stripeBillingPortal.getBillingPortalUrl(
+                                subscription.stripe_customer_id,
+                                'my-account'
+                            );
+                        } catch (portalError) {
+                            console.warn(`   ⚠️ Could not create billing portal URL:`, portalError.message);
+                        }
+                    }
+                    
                     const emailData = {
                         name: user.name || user.email,
                         planName: plan?.plan_name || subscription.type,
@@ -809,7 +824,7 @@ cron.schedule("0 9 * * *", async () => {
                         daysUntilRenewal: days,
                         paymentMethod: subscription.stripe_payment_method_id ? 
                             '****' + subscription.stripe_payment_method_id.slice(-4) : '****',
-                        updatePaymentLink: `${process.env.APP_URL}/my-account/payment-methods`,
+                        updatePaymentLink: updatePaymentLink,
                         supportEmail: process.env.SUPPORT_EMAIL || 'support@blueskyoutsourcing.com'
                     };
                     
@@ -881,6 +896,19 @@ cron.schedule("0 10 * * *", async () => {
                 if (daysSinceSuspension >= 1 && daysSinceSuspension <= 7) {
                     const plan = await Plan.findOne({ plan_id: subscription.plan_id });
                     
+                    // Get billing portal URL for reactivation
+                    let reactivateLink = urlHelper.frontendUrl('my-account');
+                    if (subscription.stripe_customer_id) {
+                        try {
+                            reactivateLink = await stripeBillingPortal.getBillingPortalUrl(
+                                subscription.stripe_customer_id,
+                                'my-account'
+                            );
+                        } catch (portalError) {
+                            console.warn(`   ⚠️ Could not create billing portal URL:`, portalError.message);
+                        }
+                    }
+                    
                     const emailData = {
                         name: user.name || user.email,
                         planName: plan?.plan_name || subscription.type,
@@ -888,7 +916,7 @@ cron.schedule("0 10 * * *", async () => {
                         currency: plan?.currency || 'USD',
                         dayNumber: daysSinceSuspension,
                         suspensionDate: moment(subscription.suspension_date).format('MMMM DD, YYYY'),
-                        reactivateLink: `${process.env.APP_URL}/subscription/reactivate/${subscription._id}`,
+                        reactivateLink: reactivateLink,
                         benefits: [
                             'Full access to all features',
                             'Priority customer support',
@@ -922,9 +950,9 @@ cron.schedule("0 10 * * *", async () => {
                         name: user.name || user.email,
                         planName: plan?.plan_name || subscription.type,
                         cancellationDate: moment(now).format('MMMM DD, YYYY'),
-                        resubscribeLink: `${process.env.APP_URL}/subscription/plans`,
-                        plansLink: `${process.env.APP_URL}/subscription/plans`,
-                        feedbackLink: `${process.env.APP_URL}/feedback?reason=cancellation`
+                        resubscribeLink: urlHelper.frontendUrl('subscription-plan'),
+                        plansLink: urlHelper.frontendUrl('subscription-plan'),
+                        feedbackLink: urlHelper.frontendUrl('contact-us') // Using contact-us instead of feedback
                     };
                     
                     await emailer.sendEmail(
