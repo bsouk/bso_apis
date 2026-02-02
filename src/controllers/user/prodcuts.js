@@ -1299,4 +1299,3 @@ exports.generateProductList = async (req, res) => {
         return utils.handleError(res, error);
     }
 };
-

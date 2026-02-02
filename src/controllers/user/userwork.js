@@ -3089,7 +3089,9 @@ exports.createEnquiry = async (req, res) => {
             }
         }
 
-        data.is_approved = "approved"
+        // Frontend-created enquiries: default to approved (is_approved and status)
+        data.is_approved = "approved";
+        data.status = "approved";
         // Use provided enquiry_number or generate unique one
         let enquiryId = data.enquiry_number && data.enquiry_number.trim() !== '' 
             ? data.enquiry_number.trim() 
@@ -7377,18 +7379,27 @@ exports.addFCMDevice = async (req, res) => {
         const { device_id, device_type, token } = req.body;
         const user_id = req.user._id;
 
+        // Check if token already exists for this user, update or create
+        const existingDevice = await fcm_devices.findOne({ user_id: user_id, token: token });
+        if (existingDevice) {
+            return res.json({
+                message: "FCM Token already registered",
+                code: 200,
+            });
+        }
+
         const data = {
             user_id: user_id,
             device_id: device_id,
             device_type: device_type,
             token: token,
-            user_type: "admin"
+            user_type: "user"
         };
         const item = new fcm_devices(data);
         await item.save();
 
         res.json({
-            message: "Admin Token added successfully",
+            message: "FCM Token added successfully",
             code: 200,
         });
     } catch (error) {
@@ -7402,21 +7413,10 @@ exports.deleteFCMDevice = async (req, res) => {
         const { token } = req.body;
         const user_id = req.user._id;
 
-        const fcmToken = await fcm_devices.findOne({
-            user_id: user_id,
-            token: token,
-        });
-
-        if (!fcmToken)
-            return utils.handleError(res, {
-                message: "Token not found",
-                code: 404,
-            });
-
-        await fcm_devices.deleteOne({ user_id: user_id, token: token });
+        await fcm_devices.deleteMany({ user_id: user_id, token: token });
 
         res.json({
-            message: "Admin Token deleted successfully",
+            message: "FCM Token deleted successfully",
             code: 200,
         });
     } catch (error) {
@@ -8082,12 +8082,121 @@ exports.getNotificationList = async (req, res) => {
     try {
         const user_id = req.user._id;
         const { offset = 0, limit = 10 } = req.query;
-        const notifications = await Notification.find({ receiver_id: new mongoose.Types.ObjectId(user_id) }).populate('receiver_id').sort({ createdAt: -1 }).skip(offset).limit(limit);
+        const notifications = await Notification.find({ receiver_id: new mongoose.Types.ObjectId(user_id) })
+            .populate('receiver_id')
+            .sort({ createdAt: -1 })
+            .skip(parseInt(offset))
+            .limit(parseInt(limit))
+            .lean();
+        
         const totalCount = await Notification.countDocuments({ receiver_id: new mongoose.Types.ObjectId(user_id) });
-        return res.status(200).json({ message: "Notification list fetched successfully", data: notifications, totalCount, code: 200 })
+        const unreadCount = await Notification.countDocuments({ 
+            receiver_id: new mongoose.Types.ObjectId(user_id),
+            is_read: { $ne: true },
+            is_seen: { $ne: true }
+        });
+        
+        return res.status(200).json({ 
+            message: "Notification list fetched successfully", 
+            notifications: notifications, 
+            totalCount, 
+            unreadCount,
+            code: 200 
+        });
     } catch (error) {
-        console.log(error)
-        utils.handleError(res, error)
+        console.log(error);
+        utils.handleError(res, error);
+    }
+};
+
+// Mark single notification as read
+exports.markNotificationRead = async (req, res) => {
+    try {
+        const user_id = req.user._id;
+        const { id } = req.params;
+        
+        const notification = await Notification.findOneAndUpdate(
+            { _id: id, receiver_id: user_id },
+            { is_read: true, is_seen: true },
+            { new: true }
+        );
+        
+        if (!notification) {
+            return res.status(404).json({ message: "Notification not found", code: 404 });
+        }
+        
+        return res.status(200).json({ 
+            message: "Notification marked as read", 
+            notification,
+            code: 200 
+        });
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
+    }
+};
+
+// Mark all notifications as read
+exports.markAllNotificationsRead = async (req, res) => {
+    try {
+        const user_id = req.user._id;
+        
+        const result = await Notification.updateMany(
+            { receiver_id: user_id },
+            { is_read: true, is_seen: true }
+        );
+        
+        return res.status(200).json({ 
+            message: "All notifications marked as read", 
+            updatedCount: result.modifiedCount,
+            code: 200 
+        });
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
+    }
+};
+
+// Delete single notification
+exports.deleteNotification = async (req, res) => {
+    try {
+        const user_id = req.user._id;
+        const { id } = req.params;
+        
+        const notification = await Notification.findOneAndDelete({ 
+            _id: id, 
+            receiver_id: user_id 
+        });
+        
+        if (!notification) {
+            return res.status(404).json({ message: "Notification not found", code: 404 });
+        }
+        
+        return res.status(200).json({ 
+            message: "Notification deleted successfully", 
+            code: 200 
+        });
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
+    }
+};
+
+// Delete all notifications
+exports.deleteAllNotifications = async (req, res) => {
+    try {
+        const user_id = req.user._id;
+        
+        const result = await Notification.deleteMany({ receiver_id: user_id });
+        
+        return res.status(200).json({ 
+            message: "All notifications deleted successfully", 
+            deletedCount: result.deletedCount,
+            code: 200 
+        });
+    } catch (error) {
+        console.log(error);
+        utils.handleError(res, error);
     }
 }
 

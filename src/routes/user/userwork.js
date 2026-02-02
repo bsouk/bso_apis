@@ -619,6 +619,34 @@ router.get(
     controller.getNotificationList
 )
 
+router.patch(
+    "/markNotificationRead/:id",
+    requireAuth,
+    trimRequest.all,
+    controller.markNotificationRead
+)
+
+router.patch(
+    "/markAllNotificationsRead",
+    requireAuth,
+    trimRequest.all,
+    controller.markAllNotificationsRead
+)
+
+router.delete(
+    "/deleteNotification/:id",
+    requireAuth,
+    trimRequest.all,
+    controller.deleteNotification
+)
+
+router.delete(
+    "/deleteAllNotifications",
+    requireAuth,
+    trimRequest.all,
+    controller.deleteAllNotifications
+)
+
 // AI-powered enquiry generation from text prompt
 router.post(
     "/generateAiManualEnquiry",

@@ -4573,6 +4573,15 @@ exports.addFCMDevice = async (req, res) => {
     const { device_id, device_type, token } = req.body;
     const user_id = req.user._id;
 
+    // Check if token already exists for this admin, update or create
+    const existingDevice = await fcm_devices.findOne({ user_id: user_id, token: token });
+    if (existingDevice) {
+      return res.json({
+        message: "Admin FCM Token already registered",
+        code: 200,
+      });
+    }
+
     const data = {
       user_id: user_id,
       device_id: device_id,
@@ -4584,7 +4593,7 @@ exports.addFCMDevice = async (req, res) => {
     await item.save();
 
     res.json({
-      message: "Admin Token added successfully",
+      message: "Admin FCM Token added successfully",
       code: 200,
     });
   } catch (error) {
