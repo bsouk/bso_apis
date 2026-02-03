@@ -3124,6 +3124,22 @@ exports.createEnquiry = async (req, res) => {
         } catch (err) {
             console.error('[addQuery] Admin notification error:', err);
         }
+
+        // Frontend bell: create user notification for the buyer so it shows in the notification dropdown
+        try {
+            const buyerNotification = new Notification({
+                receiver_id: id,
+                title: 'Enquiry submitted',
+                description: `Your enquiry has been submitted successfully. Ref: ${enquiryIdDisplay}`,
+                type: 'new_enquiry',
+                related_to: newquery._id,
+                related_to_type: 'enquiry',
+            });
+            await buyerNotification.save();
+        } catch (err) {
+            console.error('[addQuery] Buyer notification error:', err);
+        }
+
         const suppliers = await User.find({
             user_type: { $in: ["supplier"] },
             _id: { $ne: id },
@@ -8098,27 +8114,34 @@ exports.generateResumePDF = async (req, res) => {
 exports.getNotificationList = async (req, res) => {
     try {
         const user_id = req.user._id;
-        const { offset = 0, limit = 10 } = req.query;
-        const notifications = await Notification.find({ receiver_id: new mongoose.Types.ObjectId(user_id) })
-            .populate('receiver_id')
-            .sort({ createdAt: -1 })
-            .skip(parseInt(offset))
-            .limit(parseInt(limit))
-            .lean();
-        
-        const totalCount = await Notification.countDocuments({ receiver_id: new mongoose.Types.ObjectId(user_id) });
-        const unreadCount = await Notification.countDocuments({ 
-            receiver_id: new mongoose.Types.ObjectId(user_id),
+        const offset = parseInt(req.query.offset) || 0;
+        const limit = parseInt(req.query.limit) || 10;
+        const unreadOnly = req.query.unread_only === 'true' || req.query.unread_only === true;
+
+        const baseFilter = { receiver_id: new mongoose.Types.ObjectId(user_id) };
+        const unreadFilter = {
+            ...baseFilter,
             is_read: { $ne: true },
             is_seen: { $ne: true }
-        });
-        
-        return res.status(200).json({ 
-            message: "Notification list fetched successfully", 
-            notifications: notifications, 
-            totalCount, 
+        };
+        const listFilter = unreadOnly ? unreadFilter : baseFilter;
+
+        const notifications = await Notification.find(listFilter)
+            .populate('receiver_id')
+            .sort({ createdAt: -1 })
+            .skip(offset)
+            .limit(limit)
+            .lean();
+
+        const totalCount = await Notification.countDocuments(baseFilter);
+        const unreadCount = await Notification.countDocuments(unreadFilter);
+
+        return res.status(200).json({
+            message: "Notification list fetched successfully",
+            notifications: notifications || [],
+            totalCount,
             unreadCount,
-            code: 200 
+            code: 200
         });
     } catch (error) {
         console.log(error);
