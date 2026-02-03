@@ -187,26 +187,31 @@ exports.getReceivedNotificationList = async (req, res) => {
         const admin_id = req.user._id;
         const offset = parseInt(req.query.offset) || 0;
         const limit = parseInt(req.query.limit) || 10;
+        const unreadOnly = req.query.unread_only === 'true' || req.query.unread_only === true;
+
+        const baseFilter = { receiver_id: admin_id };
+        const unreadFilter = {
+            ...baseFilter,
+            is_read: { $ne: true },
+            is_seen: { $ne: true }
+        };
+        const listFilter = unreadOnly ? unreadFilter : baseFilter;
 
         const notifications = await admin_received_notification
-            .find({ receiver_id: admin_id })
+            .find(listFilter)
             .sort({ createdAt: -1 })
             .skip(offset)
             .limit(limit)
             .lean();
 
         const totalCount = await admin_received_notification.countDocuments({ receiver_id: admin_id });
-        const unreadCount = await admin_received_notification.countDocuments({ 
-            receiver_id: admin_id, 
-            is_read: { $ne: true },
-            is_seen: { $ne: true }
-        });
+        const unreadCount = await admin_received_notification.countDocuments(unreadFilter);
 
-        return res.status(200).json({ 
-            notifications: notifications || [], 
-            totalCount: totalCount || 0, 
-            unreadCount: unreadCount || 0, 
-            code: 200 
+        return res.status(200).json({
+            notifications: notifications || [],
+            totalCount: totalCount || 0,
+            unreadCount: unreadCount || 0,
+            code: 200
         });
     } catch (error) {
         console.error('Error in getReceivedNotificationList:', error);
@@ -319,6 +324,35 @@ exports.getAllUsers = async (req, res) => {
     }
 }
 
+
+exports.markNotificationRead = async (req, res) => {
+    try {
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ message: "Unauthorized", code: 401 });
+        }
+        const admin_id = req.user._id;
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ message: "Notification id is required", code: 400 });
+        }
+        const result = await admin_received_notification.findOneAndUpdate(
+            { _id: id, receiver_id: admin_id },
+            { is_read: true, is_seen: true },
+            { new: true }
+        );
+        if (!result) {
+            return res.status(404).json({ message: "Notification not found", code: 404 });
+        }
+        return res.status(200).json({
+            message: "Notification marked as read",
+            notification: result,
+            code: 200
+        });
+    } catch (error) {
+        console.error('Error in markNotificationRead:', error);
+        utils.handleError(res, error);
+    }
+};
 
 exports.ReadAllNotification = async (req, res) => {
     try {

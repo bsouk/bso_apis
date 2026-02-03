@@ -39,6 +39,13 @@ router.get(
 )
 
 router.patch(
+    "/markNotificationRead/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.markNotificationRead
+)
+
+router.patch(
     "/ReadAllNotification",
     trimRequest.all,
     requireAuth,

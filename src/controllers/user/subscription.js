@@ -923,8 +923,7 @@ exports.createSubscription = async (req, res) => {
                 })
                 const adminNotificationData = {
                     title: notificationMessage.title,
-                    body: notificationMessage.description,
-                    // description: notificationMessage.description,
+                    description: notificationMessage.description,
                     type: "new_subscription",
                     receiver_id: admins._id,
                     related_to: userid,
@@ -1026,7 +1025,7 @@ exports.createIndividualSubscription = async (req, res) => {
 
         await new admin_received_notification({
             title: message.title,
-            body: message.description,
+            description: message.description,
             type: "new_subscription",
             receiver_id: admin._id,
             related_to: user._id,
@@ -1288,8 +1287,7 @@ exports.createFreeSubscription = async (req, res) => {
                 })
                 const adminNotificationData = {
                     title: notificationMessage.title,
-                    body: notificationMessage.description,
-                    // description: notificationMessage.description,
+                    description: notificationMessage.description,
                     type: "new_subscription",
                     receiver_id: admins._id,
                     related_to: userid,
@@ -1467,8 +1465,7 @@ exports.cancelSubscription = async (req, res) => {
                 })
                 const adminNotificationData = {
                     title: notificationMessage.title,
-                    body: notificationMessage.description,
-                    // description: notificationMessage.description,
+                    description: notificationMessage.description,
                     type: "canceled_subscription",
                     receiver_id: admins._id,
                     related_to: subscription.user_id,
@@ -1652,7 +1649,7 @@ exports.cancelMultipleSubscriptions = async (req, res) => {
 
                         const adminNotificationData = {
                             title: notificationMessage.title,
-                            body: notificationMessage.description,
+                            description: notificationMessage.description,
                             type: "canceled_subscription",
                             receiver_id: admins._id,
                             related_to: subscription.user_id,

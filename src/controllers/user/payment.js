@@ -1862,8 +1862,7 @@ exports.uploadReceipt = async (req, res) => {
                 })
                 const adminNotificationData = {
                     title: notificationMessage.title,
-                    body: notificationMessage.description,
-                    // description: notificationMessage.description,
+                    description: notificationMessage.description,
                     type: "payment_receipt_uploaded",
                     receiver_id: admins?._id,
                     related_to: neworder?._id,

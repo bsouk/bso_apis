@@ -21,6 +21,7 @@ const Address = require("../../models/address");
 const quantity_units = require("../../models/quantity_units");
 const { createLog, logSuccess, logFailure } = require("../../utils/logger");
 const { getCleanFrontendUrl, getEnquiryReviewUrl } = require("../../utils/urlHelper");
+const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
 
 exports.getquery = async (req, res) => {
     try {
@@ -2367,6 +2368,23 @@ exports.createManualEnquiry = async (req, res) => {
         } catch (notificationError) {
             console.error("❌ Failed to send push notification:", notificationError.message);
             // Don't fail the request if notification fails
+        }
+
+        // ═══════════════════════════════════════════════════
+        // STEP 7b: NOTIFY ALL SUPER_ADMINS (DB + FCM; works in dev) – await so notification is saved before response
+        // ═══════════════════════════════════════════════════
+        const enquiryIdDisplay = newEnquiry.enquiry_unique_id || newEnquiry._id?.toString() || 'N/A';
+        try {
+            const { saved, fcmSent } = await notifyAllSuperAdmins({
+                title: `New Enquiry (Manual) – ${enquiryIdDisplay}`,
+                description: `Admin created an enquiry for buyer. Enquiry ID: ${enquiryIdDisplay}`,
+                type: 'new_enquiry',
+                related_to: newEnquiry._id,
+                related_to_type: 'enquiry',
+            });
+            if (saved > 0 || fcmSent > 0) console.log(`[createManualEnquiry] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
+        } catch (err) {
+            console.error('[createManualEnquiry] Admin notification error:', err);
         }
 
         // ═══════════════════════════════════════════════════

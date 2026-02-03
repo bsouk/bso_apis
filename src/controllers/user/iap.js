@@ -456,7 +456,7 @@ exports.verifyIAPSubscription = async (req, res) => {
 
                     await admin_received_notification.create({
                         title: notificationMessage.title,
-                        body: notificationMessage.description,
+                        description: notificationMessage.description,
                         type: "iap_subscription",
                         receiver_id: admins._id,
                         related_to: userid,

@@ -21,6 +21,7 @@ const Notification = require("../../models/notification");
 const fcm_devices = require("../../models/fcm_devices");
 const emailer = require("../../utils/emailer");
 const { createLog, logSuccess, logFailure } = require("../../utils/logger");
+const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
 
 
 async function genQuoteId() {
@@ -3328,10 +3329,11 @@ exports.createSupplierQuote = async (req, res) => {
         }
 
         // Send notification to buyer - wrapped in try-catch to prevent crashes
+        const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         try {
             const notificationMessage = {
-                title: 'New Quote Submitted',
-                description: `${supplier.full_name} has submitted a new quote. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                title: `New Supplier Quote – Enquiry ${enquiryIdDisplay}`,
+                description: `${supplier.full_name} has submitted a new quote. Enquiry ID: ${enquiryIdDisplay}`,
                 quote: quote._id
             };
 
@@ -3419,6 +3421,20 @@ exports.createSupplierQuote = async (req, res) => {
         } catch (notifError) {
             console.error('Error in supplier notification flow:', notifError);
             // Continue with the rest of the function even if notifications fail
+        }
+
+        // Admin notification: new supplier quote – await so latest shows in bell
+        try {
+            const { saved, fcmSent } = await notifyAllSuperAdmins({
+                title: `New Supplier Quote – ${enquiryIdDisplay}`,
+                description: `Admin created supplier quote (${supplier.full_name}). Enquiry ID: ${enquiryIdDisplay}`,
+                type: 'supplier_quote',
+                related_to: buyerenquiry._id,
+                related_to_type: 'enquiry',
+            });
+            if (saved > 0 || fcmSent > 0) console.log('[admin createSupplierQuote] Admin notification: saved=%s, fcmSent=%s', saved, fcmSent);
+        } catch (err) {
+            console.error('[admin createSupplierQuote] Admin notification error:', err);
         }
 
         // Send email notifications to buyer
@@ -3967,12 +3983,13 @@ exports.createLogisticsQuote = async (req, res) => {
         }
 
         // Send notifications to buyer - wrapped in try-catch to prevent crashes
+        const enquiryIdDisplayLog = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         try {
             const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
             if (buyerfcm && buyerfcm.length > 0) {
                 const notificationMessage = {
-                    title: 'New Logistics Quote Submitted',
-                    description: `${logistics.full_name} has submitted a logistics quote. Enquiry ID: ${buyerenquiry?.enquiry_unique_id}`,
+                    title: `New Logistics Quote – Enquiry ${enquiryIdDisplayLog}`,
+                    description: `${logistics.full_name} has submitted a logistics quote. Enquiry ID: ${enquiryIdDisplayLog}`,
                     quote: quote._id
                 };
                 
@@ -4011,6 +4028,20 @@ exports.createLogisticsQuote = async (req, res) => {
         } catch (notifError) {
             console.error('Error in logistics notification flow:', notifError);
             // Continue with the rest of the function even if notifications fail
+        }
+
+        // Admin notification: new logistics quote – await so latest shows in bell
+        try {
+            const { saved, fcmSent } = await notifyAllSuperAdmins({
+                title: `New Logistics Quote – ${enquiryIdDisplayLog}`,
+                description: `Admin created logistics quote (${logistics.full_name}). Enquiry ID: ${enquiryIdDisplayLog}`,
+                type: 'logistics_quote',
+                related_to: buyerenquiry._id,
+                related_to_type: 'enquiry',
+            });
+            if (saved > 0 || fcmSent > 0) console.log('[admin createLogisticsQuote] Admin notification: saved=%s, fcmSent=%s', saved, fcmSent);
+        } catch (err) {
+            console.error('[admin createLogisticsQuote] Admin notification error:', err);
         }
 
         // Send email notifications to buyer

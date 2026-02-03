@@ -45,6 +45,7 @@ const payment = require("../../models/payment");
 const industry_sub_type = require("../../models/industry_sub_type");
 const fcm_devices = require("../../models/fcm_devices");
 const admin_received_notification = require("../../models/admin_received_notification");
+const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
 const Order = require("../../models/order");
 const tracking_order = require("../../models/tracking_order");
 const Notification = require("../../models/notification")
@@ -3107,38 +3108,21 @@ exports.createEnquiry = async (req, res) => {
         console.log("newquery : ", newquery)
 
 
-        // admin notification
-        const admins = await Admin.findOne({ role: 'super_admin' });
-        console.log("admins : ", admins)
-        if (admins) {
-            const notificationMessage = {
-                title: 'New Enquiry created',
-                description: `${req.user.full_name} has created a new enquiry . Enquiry ID : ${newquery.enquiry_unique_id}`,
-                enquiry_id: newquery._id
-            };
-
-            const adminFcmDevices = await fcm_devices.find({ user_id: admins._id });
-            console.log("adminFcmDevices : ", adminFcmDevices)
-
-            if (adminFcmDevices && adminFcmDevices.length > 0) {
-                adminFcmDevices.forEach(async i => {
-                    const token = i.token
-                    console.log("token : ", token)
-                    await utils.sendNotification(token, notificationMessage);
-                })
-                const adminNotificationData = {
-                    title: notificationMessage.title,
-                    body: notificationMessage.description,
-                    // description: notificationMessage.description,
-                    type: "new_enquiry",
-                    receiver_id: admins._id,
-                    related_to: newquery._id,
-                    related_to_type: "enquiry",
-                };
-                const newAdminNotification = new admin_received_notification(adminNotificationData);
-                console.log("newAdminNotification : ", newAdminNotification)
-                await newAdminNotification.save();
-            }
+        // Admin notification: always save to DB (works in dev without FCM); notify all super_admins – await so latest shows in bell
+        const enquiryIdDisplay = newquery.enquiry_unique_id || newquery._id?.toString() || 'N/A';
+        const adminNotifTitle = `New Enquiry – ${enquiryIdDisplay}`;
+        const adminNotifDesc = `${req.user.full_name} created a new enquiry. Enquiry ID: ${enquiryIdDisplay}`;
+        try {
+            const { saved, fcmSent } = await notifyAllSuperAdmins({
+                title: adminNotifTitle,
+                description: adminNotifDesc,
+                type: 'new_enquiry',
+                related_to: newquery._id,
+                related_to_type: 'enquiry',
+            });
+            if (saved > 0 || fcmSent > 0) console.log(`[addQuery] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
+        } catch (err) {
+            console.error('[addQuery] Admin notification error:', err);
         }
         const suppliers = await User.find({
             user_type: { $in: ["supplier"] },
@@ -5352,10 +5336,11 @@ exports.addenquiryquotes = async (req, res) => {
             console.log("enquiry : ", enquiry);
         }
 
-        //send notification
+        //send notification to buyer
+        const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         const notificationMessage = {
-            title: 'New Quote submit by supplier',
-            description: `${req.user.full_name} has created a new quote . Enquiry ID : ${buyerenquiry?.enquiry_unique_id}`,
+            title: `New Supplier Quote – Enquiry ${enquiryIdDisplay}`,
+            description: `${req.user.full_name} has submitted a new supplier quote. Enquiry ID: ${enquiryIdDisplay}`,
             quote: enquiry._id
         };
 
@@ -5370,16 +5355,29 @@ exports.addenquiryquotes = async (req, res) => {
             })
             const NotificationData = {
                 title: notificationMessage.title,
-                // body: notificationMessage.description,
                 description: notificationMessage.description,
                 type: "supplier_quote_added",
                 receiver_id: buyerenquiry.user_id,
-                related_to: buyerenquiry.user_id,
-                related_to_type: "user",
+                related_to: buyerenquiry._id,
+                related_to_type: "enquiry",
             };
             const newNotification = new Notification(NotificationData);
             console.log("newNotification : ", newNotification)
             await newNotification.save();
+        }
+
+        // Admin notification: new supplier quote – await so latest shows in bell
+        try {
+            const { saved, fcmSent } = await notifyAllSuperAdmins({
+                title: `New Supplier Quote – ${enquiryIdDisplay}`,
+                description: `${req.user.full_name} submitted a supplier quote. Enquiry ID: ${enquiryIdDisplay}`,
+                type: 'supplier_quote',
+                related_to: buyerenquiry._id,
+                related_to_type: 'enquiry',
+            });
+            if (saved > 0 || fcmSent > 0) console.log(`[addSupplierQuote] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
+        } catch (err) {
+            console.error('[addSupplierQuote] Admin notification error:', err);
         }
 
         return res.status(200).json({
@@ -5936,8 +5934,7 @@ exports.selectSupplierQuote = async (req, res) => {
                                     })
                                     const adminNotificationData = {
                                         title: notificationMessage.title,
-                                        body: notificationMessage.description,
-                                        // description: notificationMessage.description,
+                                        description: notificationMessage.description,
                                         type: "stock_alert",
                                         receiver_id: admins._id,
                                         related_to: product?._id,
@@ -6245,10 +6242,11 @@ exports.submitLogisticsQuotes = async (req, res) => {
 
 
 
-        //send notification
+        //send notification to buyer
+        const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         const notificationMessage = {
-            title: 'New Quote submit by logistics',
-            description: `${req.user.full_name} has created a new quote . Enquiry ID : ${buyerenquiry?.enquiry_unique_id}`,
+            title: `New Logistics Quote – Enquiry ${enquiryIdDisplay}`,
+            description: `${req.user.full_name} has submitted a new logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
             quote: enquiry._id
         };
 
@@ -6263,18 +6261,30 @@ exports.submitLogisticsQuotes = async (req, res) => {
             })
             const NotificationData = {
                 title: notificationMessage.title,
-                // body: notificationMessage.description,
                 description: notificationMessage.description,
                 type: "logistics_quote_added",
                 receiver_id: buyerenquiry.user_id,
-                related_to: buyerenquiry.user_id,
-                related_to_type: "user",
+                related_to: buyerenquiry._id,
+                related_to_type: "enquiry",
             };
             const newNotification = new Notification(NotificationData);
             console.log("newNotification : ", newNotification)
             await newNotification.save();
         }
 
+        // Admin notification: new logistics quote – await so latest shows in bell
+        try {
+            const { saved, fcmSent } = await notifyAllSuperAdmins({
+                title: `New Logistics Quote – ${enquiryIdDisplay}`,
+                description: `${req.user.full_name} submitted a logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
+                type: 'logistics_quote',
+                related_to: buyerenquiry._id,
+                related_to_type: 'enquiry',
+            });
+            if (saved > 0 || fcmSent > 0) console.log(`[addLogisticsQuote] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
+        } catch (err) {
+            console.error('[addLogisticsQuote] Admin notification error:', err);
+        }
 
         return res.status(200).json({
             message: "Logistics Quotation Submit Successfully",
@@ -7907,7 +7917,7 @@ exports.selectLogisticsChoice = async (req, res) => {
 
                         const logNotification = new admin_received_notification({
                             title: notificationMessage.title,
-                            body: notificationMessage.description,
+                            description: notificationMessage.description,
                             type: "bso_enquiry_update",
                             receiver_id: logisticsUser._id,
                             related_to: data.enquiry_id,
