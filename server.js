@@ -106,34 +106,34 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 7012;
-app.listen(PORT, async () => {
-  console.log("****************************");
-  console.log(
-    `*    Starting ${process.env.ENV === "local" ? "HTTP" : "HTTPS"} Server`
-  );
-  console.log(`*    Port: ${PORT}`);
-  console.log(`*    NODE_ENV: ${process.env.NODE_ENV}`);
-  console.log(`*    Database: MongoDB`);
-  console.log(`*    DB Connection: OK\n****************************\n`);
-  
-  // Generate missing user IDs after MongoDB connection is established
+
+// Connect to MongoDB first, then start server and run startup tasks
+async function startServer() {
   try {
-    console.log('🔄 Running startup tasks...');
-    await generateMissingUserIds();
-    console.log('✅ Startup tasks completed successfully');
+    await initMongo();
+    console.log("****************************");
+    console.log(
+      `*    Starting ${process.env.ENV === "local" ? "HTTP" : "HTTPS"} Server`
+    );
+    console.log(`*    Port: ${PORT}`);
+    console.log(`*    NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`*    Database: MongoDB`);
+    console.log(`*    DB Connection: OK\n****************************\n`);
+
+    app.listen(PORT, async () => {
+      // Run startup tasks only after server is listening (DB is already connected)
+      try {
+        console.log('🔄 Running startup tasks...');
+        await generateMissingUserIds();
+        console.log('✅ Startup tasks completed successfully');
+      } catch (error) {
+        console.error('❌ Error during startup tasks:', error.message);
+      }
+    });
   } catch (error) {
-    console.error('❌ Error during startup tasks:', error.message);
+    console.error('❌ Failed to connect to MongoDB. Server not started:', error.message);
+    process.exit(1);
   }
-});
+}
 
-// All-in-One plan seeding disabled - plans already exist
-// Uncomment the following block if you need to seed/update All-in-One plans
-// mongoose.connection.once('connected', async () => {
-//   try {
-//     await seedAllInOnePlans({ useExistingConnection: true, logger: console });
-//   } catch (error) {
-//     console.error('❌ Failed to seed All-in-One plans:', error.message || error);
-//   }
-// });
-
-initMongo();
+startServer();

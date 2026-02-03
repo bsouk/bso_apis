@@ -2085,13 +2085,15 @@ exports.createManualEnquiry = async (req, res) => {
         // ═══════════════════════════════════════════════════
         // STEP 1: VALIDATE BUYER EXISTS
         // ═══════════════════════════════════════════════════
-        const buyer = await User.findById(user_id);
+        const buyer = await User.findById(user_id).lean();
         if (!buyer) {
             return res.status(404).json({
                 message: "Buyer not found",
                 code: 404
             });
         }
+
+        console.log("📧 createManualEnquiry – buyer _id:", buyer._id, "| email:", buyer.email || "(none)", "| full_name:", buyer.full_name || buyer.first_name);
 
         // Check if user is a valid buyer:
         // - Has 'buyer' in user_type array, OR
@@ -2304,23 +2306,31 @@ exports.createManualEnquiry = async (req, res) => {
         // ═══════════════════════════════════════════════════
         // STEP 6: SEND EMAIL TO BUYER
         // ═══════════════════════════════════════════════════
-        try {
-            const buyerEmailOptions = {
-                to: buyer.email,
-                subject: `Enquiry Created Successfully - Ref: ${newEnquiry.enquiry_unique_id}`,
-                app_name: process.env.APP_NAME || 'Blue Sky',
-                name: buyer.full_name || buyer.first_name,
-                app_url: getCleanFrontendUrl(),
-                storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
-                enquiry: newEnquiry,
-                view_link: getEnquiryReviewUrl(newEnquiry._id)
-            };
-            
-            await emailer.sendEmail(null, buyerEmailOptions, "AdminCreatedEnquiry");
-            console.log("✅ Email sent to buyer:", buyer.email);
-        } catch (emailError) {
-            console.error("❌ Failed to send email to buyer:", emailError.message);
-            // Don't fail the request if email fails
+        const buyerEmail = buyer.email || (buyer.company_data && buyer.company_data.email) || null;
+        console.log("📧 Admin manual enquiry – buyer email for notification:", buyerEmail || "(none)");
+
+        if (buyerEmail) {
+            try {
+                const enquiryPlain = (newEnquiry && typeof newEnquiry.toObject === 'function') ? newEnquiry.toObject() : (typeof newEnquiry === 'object' ? JSON.parse(JSON.stringify(newEnquiry)) : {});
+                const buyerEmailOptions = {
+                    to: buyerEmail,
+                    subject: `Enquiry Created Successfully - Ref: ${newEnquiry.enquiry_unique_id}`,
+                    app_name: process.env.APP_NAME || 'Blue Sky',
+                    name: buyer.full_name || buyer.first_name || 'Buyer',
+                    app_url: getCleanFrontendUrl(),
+                    storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
+                    enquiry: enquiryPlain,
+                    view_link: getEnquiryReviewUrl(newEnquiry._id)
+                };
+
+                await emailer.sendEmail(null, buyerEmailOptions, "AdminCreatedEnquiry");
+                console.log("✅ Email sent to buyer:", buyerEmail);
+            } catch (emailError) {
+                console.error("❌ Failed to send email to buyer:", buyerEmail, emailError?.message || emailError);
+                // Don't fail the request if email fails
+            }
+        } else {
+            console.warn("⚠️ Buyer has no email (user_id:", user_id, "). AdminCreatedEnquiry email skipped.");
         }
 
         // ═══════════════════════════════════════════════════

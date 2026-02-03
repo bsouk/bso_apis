@@ -3178,18 +3178,25 @@ exports.createEnquiry = async (req, res) => {
             }
         }
 
-        // Send confirmation email to buyer
-        const buyerAppUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
-        const mailOptions = {
-            to: req.user?.email,
-            subject: `Enquiry Submitted Successfully – Ref: ${newquery.enquiry_unique_id}`,
-            app_name: process.env.APP_NAME || 'BSO Services',
-            name: req.user?.full_name,
-            app_url: buyerAppUrl,
-            storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
-            enquiry: newquery,
-        };
-        emailer.sendEmail(null, mailOptions, "EnquirySubmission");
+        // Send confirmation email to buyer (don't fail enquiry creation if email fails)
+        try {
+            const buyerAppUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
+            const enquiryPlain = (newquery && typeof newquery.toObject === 'function') ? newquery.toObject() : (typeof newquery === 'object' ? JSON.parse(JSON.stringify(newquery)) : {});
+            const mailOptions = {
+                to: req.user?.email,
+                subject: `Enquiry Submitted Successfully – Ref: ${newquery.enquiry_unique_id}`,
+                app_name: process.env.APP_NAME || 'BSO Services',
+                name: req.user?.full_name || 'Buyer',
+                app_url: buyerAppUrl,
+                storage_url: process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/',
+                enquiry: enquiryPlain,
+            };
+            await emailer.sendEmail(null, mailOptions, "EnquirySubmission");
+            console.log("✅ Enquiry confirmation email sent to buyer:", req.user?.email);
+        } catch (emailError) {
+            console.error("❌ Failed to send enquiry confirmation email to buyer:", emailError?.message || emailError);
+            // Don't fail the request - enquiry was already created
+        }
 
         return res.status(200).json({
             message: "Enquiry created successfully",

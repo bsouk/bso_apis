@@ -51,8 +51,46 @@ function frontendUrl(route = '') {
   return buildUrl(getBaseUrl(), route);
 }
 
+/**
+ * Alias for getBaseUrl – frontend base URL for emails/links
+ * @returns {string}
+ */
+function getCleanFrontendUrl() {
+  return getBaseUrl();
+}
+
+/**
+ * Frontend URL to view enquiry (enquiry review page)
+ * @param {string|Object} enquiryId - Enquiry _id
+ * @returns {string}
+ */
+function getEnquiryReviewUrl(enquiryId) {
+  const id = enquiryId && typeof enquiryId === 'object' ? enquiryId.toString() : String(enquiryId || '');
+  return buildUrl(getBaseUrl(), `enquiry-review-page/${id}`);
+}
+
+/**
+ * Frontend URL to quotation management page
+ * @returns {string}
+ */
+function getQuotationManagementUrl() {
+  return buildUrl(getBaseUrl(), 'quotation-management');
+}
+
+/**
+ * Frontend URL to logistics quotation management page
+ * @returns {string}
+ */
+function getLogisticsQuotationManagementUrl() {
+  return buildUrl(getBaseUrl(), 'quotation-management-logistics');
+}
+
 module.exports = {
   buildUrl,
   getBaseUrl,
-  frontendUrl
+  frontendUrl,
+  getCleanFrontendUrl,
+  getEnquiryReviewUrl,
+  getQuotationManagementUrl,
+  getLogisticsQuotationManagementUrl
 };

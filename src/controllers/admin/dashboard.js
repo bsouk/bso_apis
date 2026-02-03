@@ -697,34 +697,39 @@ cron.schedule("0 * * * *", async () => {
     }
 });
 
-// Also run subscription expiration check on server startup
-(async () => {
-    try {
-        const now = new Date();
-        console.log(`🚀 Running startup subscription expiration check...`);
-        
-        const result = await Subscription.updateMany(
-            {
-                status: 'active',
-                end_at: { $exists: true, $ne: null, $lt: now }
-            },
-            {
-                $set: { 
-                    status: 'expired',
-                    is_active: false
+// Run subscription expiration check on server startup only after MongoDB is connected
+function runStartupSubscriptionExpirationCheck() {
+    (async () => {
+        try {
+            const now = new Date();
+            console.log(`🚀 Running startup subscription expiration check...`);
+            const result = await Subscription.updateMany(
+                {
+                    status: 'active',
+                    end_at: { $exists: true, $ne: null, $lt: now }
+                },
+                {
+                    $set: {
+                        status: 'expired',
+                        is_active: false
+                    }
                 }
+            );
+            if (result.modifiedCount > 0) {
+                console.log(`✅ Startup: Auto-expired ${result.modifiedCount} subscription(s)`);
+            } else {
+                console.log(`✅ Startup: No expired subscriptions found`);
             }
-        );
-        
-        if (result.modifiedCount > 0) {
-            console.log(`✅ Startup: Auto-expired ${result.modifiedCount} subscription(s)`);
-        } else {
-            console.log(`✅ Startup: No expired subscriptions found`);
+        } catch (error) {
+            console.error("❌ Error in startup subscription expiration check:", error);
         }
-    } catch (error) {
-        console.error("❌ Error in startup subscription expiration check:", error);
-    }
-})();
+    })();
+}
+if (mongoose.connection.readyState === 1) {
+    runStartupSubscriptionExpirationCheck();
+} else {
+    mongoose.connection.once('connected', runStartupSubscriptionExpirationCheck);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════════
