@@ -144,6 +144,13 @@ router.delete(
   controller.deleteSelectedResource
 );
 
+router.delete(
+  "/deleteResource/:id",
+  trimRequest.all,
+  requireAuth,
+  controller.deleteResource
+);
+
 // addSupplier
 router.post(
   "/addSupplier",

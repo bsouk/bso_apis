@@ -5927,9 +5927,6 @@ exports.getTrashedResourceList = async (req, res) => {
     }
 
     const resources = await User.find(query)
-      .populate('address.city')
-      .populate('address.state')
-      .populate('address.country')
       .populate('trashed_by', 'full_name email')
       .sort({ trashed_at: -1 })
       .limit(parseInt(limit))
