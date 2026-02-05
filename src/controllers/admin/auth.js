@@ -1,10 +1,22 @@
 const Admin = require("../../models/admin");
-const utils = require("../../utils/utils")
-const ResetPassword = require("../../models/reset_password")
+const utils = require("../../utils/utils");
+const ResetPassword = require("../../models/reset_password");
 const uuid = require('uuid');
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
+
+// Admin email links: production → PRODUCTION_ADMIN_URL, local → LOCAL_ADMIN_URL
+// Optional: USE_LOCAL_ADMIN_FOR_EMAILS=true forces LOCAL_ADMIN_URL (e.g. when NODE_ENV=production but testing locally)
+function getAdminBaseUrlForEmails(useProductionFromRequest) {
+  if (process.env.USE_LOCAL_ADMIN_FOR_EMAILS === 'true' || process.env.USE_LOCAL_ADMIN_FOR_EMAILS === '1') {
+    return process.env.LOCAL_ADMIN_URL || '';
+  }
+  if (useProductionFromRequest !== undefined) {
+    return useProductionFromRequest === false ? (process.env.LOCAL_ADMIN_URL || '') : (process.env.PRODUCTION_ADMIN_URL || '');
+  }
+  return process.env.NODE_ENV === 'production' ? (process.env.PRODUCTION_ADMIN_URL || '') : (process.env.LOCAL_ADMIN_URL || '');
+}
 
 
 const generateToken = (_id, remember_me) => {
@@ -91,13 +103,14 @@ exports.forgotPassword = async (req, res) => {
 
     //Save the resetInstance to the database
     await resetInstance.save();
+    const baseUrl = getAdminBaseUrlForEmails(production);
     const mailOptions = {
       to: user.email,
       subject: "Password Reset Request",
       name: user.full_name,
       email: user.email,
-      reset_link: production === false ? `${process.env.LOCAL_ADMIN_URL}reset-password/${token}` : `${process.env.PRODUCTION_ADMIN_URL}reset-password/${token}`
-    }
+      reset_link: `${baseUrl}reset-password/${token}`,
+    };
 
     emailer.sendEmail(null, mailOptions, "forgotPasswordWithLink");
 
@@ -139,6 +152,22 @@ exports.resetPassword = async (req, res) => {
     reset.used = true;
     reset.time = undefined;
     await reset.save();
+
+    // Send "password changed successfully" email (respects USE_LOCAL_ADMIN_FOR_EMAILS)
+    const baseUrl = getAdminBaseUrlForEmails();
+    const login_url = `${baseUrl}sign-in`;
+    try {
+      const mailOptions = {
+        to: user.email,
+        subject: 'Password Changed Successfully',
+        name: user.full_name || user.first_name || user.email,
+        email: user.email,
+        login_url,
+      };
+      await emailer.sendEmail(null, mailOptions, 'adminPasswordChangedSuccess');
+    } catch (emailErr) {
+      console.error('Password changed success email failed:', emailErr);
+    }
 
     res.json({ message: 'Your password has been successfully reset', code: 200 });
   } catch (err) {
