@@ -1,4 +1,5 @@
 const { default: mongoose } = require("mongoose");
+const axios = require("axios");
 const Product = require("../../models/product");
 const utils = require("../../utils/utils");
 
@@ -82,9 +83,9 @@ exports.addProduct = async (req, res) => {
             console.log("isExistedSkuData : ", isExistedSku)
 
             if (isExistedSku) {
-                return utils.handleError(res, {
-                    message: "Sku Id is already existed",
-                    code: 404,
+                return res.status(400).json({
+                    code: 400,
+                    message: "This SKU already exists. Please use a different SKU.",
                 });
             }
 
@@ -107,9 +108,9 @@ exports.addProduct = async (req, res) => {
                 console.log("isExistedSkuData : ", isExistedSkuData)
 
                 if (isExistedSkuData) {
-                    return utils.handleError(res, {
-                        message: "Sku Id is already existed",
-                        code: 404,
+                    return res.status(400).json({
+                        code: 400,
+                        message: "This SKU already exists. Please use a different SKU.",
                     });
                 }
 
@@ -855,11 +856,69 @@ exports.changeInventoryQuantity = async (req, res) => {
     }
 }
 
-// exports.getProductVariantData = async (req, res) => {
-//     try {
-//         const {product_id, variant_id} = req.query
-//         const data = await Product.aggregate
-//     } catch (error) {
-//         utils.handleError(res, error);
-//     }
-// }
+/**
+ * Generate product description via same AI service as frontend (Product Generation).
+ * Uses CHATBOT_API_URL + CHATBOT_X_API_KEY (same as frontend product-list / chatbot).
+ * POST body: { productData: object } - product fields to generate description from.
+ */
+exports.generateProductDescription = async (req, res) => {
+  try {
+    const chatbotApiUrl = process.env.CHATBOT_API_URL || "https://uxbefmykqw.eu-west-2.awsapprunner.com/api/v1/chat";
+    const aiApiKey = process.env.CHATBOT_X_API_KEY;
+
+    if (!aiApiKey) {
+      return res.status(500).json({
+        code: 500,
+        message: "AI description service is not configured. Missing CHATBOT_X_API_KEY in .env (same key as frontend Product Generation).",
+      });
+    }
+
+    const productData = req.body?.productData ?? req.body;
+    const promptText = (req.body?.promptText ?? req.body?.text ?? "").trim();
+
+    if (!productData || typeof productData !== "object") {
+      return utils.handleError(res, { message: "Product data is required", code: 400 });
+    }
+
+    let question;
+    if (promptText) {
+      question = `You are a professional product supplier. The user has provided this input to guide the description: "${promptText}". Also use this product data if helpful: ${JSON.stringify(productData)}. Generate a short customer-friendly product description based on the user's input and product data. Output only the description text, no labels or extra text.`;
+    } else {
+      question = `You are a professional product supplier. Based on the following product data, generate a short customer-friendly product description. Output only the description text, no labels or extra text. Product data: ${JSON.stringify(productData)}`;
+    }
+
+    const aiResponse = await axios.post(
+      chatbotApiUrl,
+      { question },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": aiApiKey,
+        },
+        timeout: 30000,
+      }
+    );
+
+    const description = (aiResponse?.data?.answer || aiResponse?.data?.message || "").trim();
+    if (!description) {
+      return res.status(502).json({
+        code: 502,
+        message: "AI service did not return a description.",
+      });
+    }
+
+    return res.status(200).json({
+      code: 200,
+      message: "Product description generated successfully",
+      data: { description },
+    });
+  } catch (error) {
+    const status = error?.response?.status;
+    const message = error?.response?.data?.error || error?.response?.data?.message || error?.message || "Failed to generate description";
+    // Do not return 401 - frontend treats 401 as session expired and logs user out.
+    return res.status(502).json({
+      code: 502,
+      message: String(message),
+    });
+  }
+};

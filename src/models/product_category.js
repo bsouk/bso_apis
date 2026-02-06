@@ -20,6 +20,10 @@ const categoryTypeSchema = new mongoose.Schema(
         },
         rejected_reason: {
             type: String
+        },
+        version: {
+            type: Number,
+            default: 1
         }
     },
     {

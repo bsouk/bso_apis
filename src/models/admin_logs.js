@@ -47,6 +47,7 @@ const adminLogsSchema = new mongoose.Schema(
         "enquiry",
         "product",
         "category",
+        "sub_category",
         "brand",
         "user",
         "customer",

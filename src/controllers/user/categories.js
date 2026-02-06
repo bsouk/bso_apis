@@ -11,11 +11,12 @@ const ProductSubSubCategory = require("../../models/product_sub_sub_category");
 const business_category = require("../../models/business_category")
 
 
+// For product forms: only return approved categories/sub-categories
 exports.getCategoryList = async (req, res) => {
     try {
         const { search, offset = 0, limit = 10, sub_id, sub_sub_id } = req.query;
 
-        const filter = {};
+        const filter = { is_admin_approved: 'approved' };
 
         if (search) {
             filter.name = { $regex: search, $options: "i" };
@@ -28,31 +29,27 @@ exports.getCategoryList = async (req, res) => {
             });
         }
 
-        let catergories = []
-        let count = 0
+        let catergories = [];
+        let count = 0;
         if (sub_id) {
-            filter.product_category_type_id = new mongoose.Types.ObjectId(sub_id)
+            filter.product_category_type_id = new mongoose.Types.ObjectId(sub_id);
             catergories = await ProductSubCategory.find(filter)
                 .sort({ createdAt: -1 })
                 .skip(offset)
                 .limit(limit);
-
             count = await ProductSubCategory.countDocuments(filter);
         } else if (sub_sub_id) {
-            filter.product_sub_category_type_id = new mongoose.Types.ObjectId(sub_sub_id)
+            filter.product_sub_category_type_id = new mongoose.Types.ObjectId(sub_sub_id);
             catergories = await ProductSubSubCategory.find(filter)
                 .sort({ createdAt: -1 })
                 .skip(offset)
                 .limit(limit);
-
             count = await ProductSubSubCategory.countDocuments(filter);
-        }
-        else {
+        } else {
             catergories = await ProductCategory.find(filter)
                 .sort({ createdAt: -1 })
                 .skip(offset)
                 .limit(limit);
-
             count = await ProductCategory.countDocuments(filter);
         }
 

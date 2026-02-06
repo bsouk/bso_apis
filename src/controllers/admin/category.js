@@ -1,14 +1,23 @@
 const User = require("../../models/user");
 const Address = require("../../models/address");
-
 const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require('generate-password');
+const { createLog } = require("../../utils/logger");
 
 const ProductCategory = require("../../models/product_category");
 const ProductSubCategory = require("../../models/product_sub_category");
 const ProductSubSubCategory = require("../../models/product_sub_sub_category");
+const Product = require("../../models/product");
+
+const getAdminLogContext = (req) => ({
+  admin_id: req.user?._id,
+  admin_name: req.user?.full_name || req.user?.email,
+  admin_email: req.user?.email,
+  admin_role: req.user?.role || 'sub_admin',
+  req,
+});
 
 
 exports.addProductCategory = async (req, res) => {
@@ -32,21 +41,43 @@ exports.addProductCategory = async (req, res) => {
     const category = new ProductCategory({ icon, name: trimmedName });
     await category.save();
 
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'create',
+      status: 'success',
+      related_id: category._id,
+      related_collection: 'product_categories',
+      metadata: { category_name: trimmedName },
+    });
+
     res.json({ message: "Category added successfully", code: 200 });
 
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'create',
+      status: 'failed',
+      error_message: error.message,
+      metadata: { name: req.body?.name },
+    }).catch(() => {});
     utils.handleError(res, error);
   }
 };
 
 exports.productCategories = async (req, res) => {
   try {
-    const { search, offset = 0, limit = Number.MAX_SAFE_INTEGER } = req.query;
+    const { search, offset = 0, limit = Number.MAX_SAFE_INTEGER, status } = req.query;
 
     const filter = {};
 
     if (search) {
       filter.name = { $regex: search, $options: "i" };
+    }
+
+    if (status && ['pending', 'approved', 'rejected'].includes(String(status).toLowerCase())) {
+      filter.is_admin_approved = String(status).toLowerCase();
     }
 
     const catergories = await ProductCategory.find(filter)
@@ -73,8 +104,9 @@ exports.getProductCategory = async (req, res) => {
       });
     }
 
-
-    res.json({ data: catergory, code: 200 });
+    const data = catergory.toObject ? catergory.toObject() : catergory;
+    data.version = data.version ?? 1;
+    res.json({ data, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
@@ -84,9 +116,10 @@ exports.editProductCategory = async (req, res) => {
   try {
     const id = req.params.id;
     const newName = (req.body.name || '').trim();
+    const requestVersion = req.body.version != null ? Number(req.body.version) : 1;
 
-    const isCategoryExists = await ProductCategory.findById(id);
-    if (!isCategoryExists) {
+    const doc = await ProductCategory.findById(id);
+    if (!doc) {
       return utils.handleError(res, {
         message: "Category not found",
         code: 404,
@@ -106,11 +139,51 @@ exports.editProductCategory = async (req, res) => {
       }
     }
 
-    const result = await ProductCategory.findByIdAndUpdate({ _id: id }, { ...req.body, name: newName || req.body.name });
-    console.log("result is ", result);
+    const currentVersion = doc.version ?? 1;
+    if (currentVersion !== requestVersion) {
+      return res.status(409).json({
+        code: 409,
+        message: "This category was modified by another user. Please refresh and try again.",
+      });
+    }
+
+    const updatePayload = { ...req.body, name: newName || req.body.name };
+    delete updatePayload.version;
+    const versionFilter = requestVersion === 1
+      ? { $or: [{ version: 1 }, { version: { $exists: false } }] }
+      : { version: requestVersion };
+    const result = await ProductCategory.findOneAndUpdate(
+      { _id: id, ...versionFilter },
+      { $set: updatePayload, $inc: { version: 1 } },
+      { new: true }
+    );
+    if (!result) {
+      return res.status(409).json({
+        code: 409,
+        message: "This category was modified by another user. Please refresh and try again.",
+      });
+    }
+
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'update',
+      status: 'success',
+      related_id: id,
+      related_collection: 'product_categories',
+      metadata: { category_name: newName || doc?.name },
+    });
 
     res.json({ message: "Category edited successfully", code: 200 });
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'update',
+      status: 'failed',
+      related_id: id,
+      error_message: error.message,
+    }).catch(() => {});
     utils.handleError(res, error);
   }
 };
@@ -120,19 +193,45 @@ exports.deleteProductCategory = async (req, res) => {
     const id = req.params.id;
 
     const isCategoryExists = await ProductCategory.findById(id);
-    if (!isCategoryExists)
+    if (!isCategoryExists) {
       return utils.handleError(res, {
         message: "Category not found",
         code: 404,
       });
+    }
 
-    const subCategories = await ProductSubCategory.deleteMany({ product_category_type_id: id })
-    const subSubCategories = await ProductSubSubCategory.deleteMany({ product_category_type_id: id })
+    const productsUsingCategory = await Product.countDocuments({ category_id: id });
+    if (productsUsingCategory > 0) {
+      return res.status(400).json({
+        code: 400,
+        message: "This category is already in use and cannot be deleted.",
+      });
+    }
 
+    const subCategories = await ProductSubCategory.deleteMany({ product_category_type_id: id });
+    const subSubCategories = await ProductSubSubCategory.deleteMany({ product_category_type_id: id });
     await ProductCategory.findByIdAndDelete(id);
+
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'delete',
+      status: 'success',
+      related_id: id,
+      related_collection: 'product_categories',
+      metadata: { category_name: isCategoryExists.name },
+    });
 
     res.json({ message: "Category deleted successfully", code: 200 });
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'delete',
+      status: 'failed',
+      related_id: req.params?.id,
+      error_message: error.message,
+    }).catch(() => {});
     utils.handleError(res, error);
   }
 };
@@ -158,13 +257,29 @@ exports.deleteSelectedCategory = async (req, res) => {
       });
 
     const result = await ProductCategory.deleteMany({ _id: { $in: ids } });
-    console.log("result", result)
+    console.log("result", result);
+
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'bulk_delete',
+      status: 'success',
+      related_collection: 'product_categories',
+      metadata: { count: ids.length, category_ids: ids },
+    });
 
     return res.json({ message: "Selected Category have been deleted", code: 200 });
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: 'bulk_delete',
+      status: 'failed',
+      error_message: error.message,
+    }).catch(() => {});
     utils.handleError(res, error);
   }
-}
+};
 
 //sub category
 
@@ -202,8 +317,27 @@ exports.addProductSubCategory = async (req, res) => {
 
     const newSubCategory = new ProductSubCategory({ name: trimmedName, icon, product_category_type_id });
     await newSubCategory.save();
+
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'create',
+      status: 'success',
+      related_id: newSubCategory._id,
+      related_collection: 'product_sub_category_types',
+      metadata: { sub_category_name: trimmedName, category_id: product_category_type_id },
+    });
+
     return res.json({ message: "Sub-category added successfully", code: 200 });
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'create',
+      status: 'failed',
+      error_message: error.message,
+      metadata: { name: req.body?.name },
+    }).catch(() => {});
     utils.handleError(res, error);
   }
 };
@@ -267,8 +401,26 @@ exports.editSubCategory = async (req, res) => {
     );
     console.log("result is ", result);
 
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'update',
+      status: 'success',
+      related_id: id,
+      related_collection: 'product_sub_category_types',
+      metadata: { sub_category_name: newName || existing.name },
+    });
+
     res.json({ message: "Sub-category edited successfully", code: 200 });
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'update',
+      status: 'failed',
+      related_id: req.params?.id,
+      error_message: error.message,
+    }).catch(() => {});
     utils.handleError(res, error);
   }
 };
@@ -284,6 +436,14 @@ exports.deleteSubCategory = async (req, res) => {
         code: 404,
       });
 
+    const productsUsingSubCategory = await Product.countDocuments({ sub_category_id: id });
+    if (productsUsingSubCategory > 0) {
+      return res.status(400).json({
+        code: 400,
+        message: "This sub-category is already in use and cannot be deleted.",
+      });
+    }
+
     //count parent category child and if chile is single then update parent isnext false
     const parentCount = await ProductSubCategory.find({ product_category_type_id: isCategoryExists.product_category_type_id })
     console.log('length : ', parentCount.length)
@@ -293,16 +453,33 @@ exports.deleteSubCategory = async (req, res) => {
       await mainCategory.save()
     }
 
-    //now find its sub-category and delete all
-    const allChildCategories = await ProductSubSubCategory.find({ product_sub_category_type_id: id })
+    const allChildCategories = await ProductSubSubCategory.find({ product_sub_category_type_id: id });
     if (allChildCategories.length !== 0) {
-      const result = await ProductSubSubCategory.deleteMany({ _id: { $in: allChildCategories } })
-      console.log("result : ", result)
+      const childIds = allChildCategories.map((c) => c._id);
+      await ProductSubSubCategory.deleteMany({ _id: { $in: childIds } });
     }
     await ProductSubCategory.findByIdAndDelete(id);
 
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'delete',
+      status: 'success',
+      related_id: id,
+      related_collection: 'product_sub_category_types',
+      metadata: { sub_category_name: isCategoryExists.name },
+    });
+
     res.json({ message: "Sub Category deleted successfully", code: 200 });
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'delete',
+      status: 'failed',
+      related_id: req.params?.id,
+      error_message: error.message,
+    }).catch(() => {});
     utils.handleError(res, error);
   }
 };
@@ -363,13 +540,29 @@ exports.deleteSelectedSubCategory = async (req, res) => {
     }
 
     const result = await ProductSubCategory.deleteMany({ _id: { $in: ids } });
-    console.log("result", result)
+    console.log("result", result);
+
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'bulk_delete',
+      status: 'success',
+      related_collection: 'product_sub_category_types',
+      metadata: { count: ids.length },
+    });
 
     return res.json({ message: "Selected Sub Category have been deleted", code: 200 });
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'sub_category',
+      action: 'bulk_delete',
+      status: 'failed',
+      error_message: error.message,
+    }).catch(() => {});
     utils.handleError(res, error);
   }
-}
+};
 
 //sub sub category
 
@@ -535,12 +728,12 @@ exports.deleteSelectedSubSubCategory = async (req, res) => {
   }
 }
 
-//get category as per parent category
+// Get category list (for product dropdowns) – only approved categories/sub-categories
 exports.getCategoryList = async (req, res) => {
   try {
     const { search, offset = 0, limit = 10, sub_id, sub_sub_id } = req.query;
 
-    const filter = {};
+    const filter = { is_admin_approved: 'approved' };
 
     if (search) {
       filter.name = { $regex: search, $options: "i" };
@@ -553,31 +746,35 @@ exports.getCategoryList = async (req, res) => {
       });
     }
 
-    let catergories = []
-    let count = 0
+    let catergories = [];
+    let count = 0;
     if (sub_id) {
-      filter.product_category_type_id = new mongoose.Types.ObjectId(sub_id)
+      const parentCategory = await ProductCategory.findById(sub_id);
+      if (!parentCategory || parentCategory.is_admin_approved !== 'approved') {
+        return res.json({ data: [], count: 0, code: 200 });
+      }
+      filter.product_category_type_id = new mongoose.Types.ObjectId(sub_id);
       catergories = await ProductSubCategory.find(filter)
         .sort({ createdAt: -1 })
         .skip(offset)
         .limit(limit);
-
       count = await ProductSubCategory.countDocuments(filter);
     } else if (sub_sub_id) {
-      filter.product_sub_category_type_id = new mongoose.Types.ObjectId(sub_sub_id)
+      const parentSubCategory = await ProductSubCategory.findById(sub_sub_id);
+      if (!parentSubCategory || parentSubCategory.is_admin_approved !== 'approved') {
+        return res.json({ data: [], count: 0, code: 200 });
+      }
+      filter.product_sub_category_type_id = new mongoose.Types.ObjectId(sub_sub_id);
       catergories = await ProductSubSubCategory.find(filter)
         .sort({ createdAt: -1 })
         .skip(offset)
         .limit(limit);
-
       count = await ProductSubSubCategory.countDocuments(filter);
-    }
-    else {
+    } else {
       catergories = await ProductCategory.find(filter)
         .sort({ createdAt: -1 })
         .skip(offset)
         .limit(limit);
-
       count = await ProductCategory.countDocuments(filter);
     }
 
@@ -604,18 +801,39 @@ exports.approveRejectCategory = async (req, res) => {
     if (req.body.status === "rejected" && !req.body.reason) {
       return utils.handleError(res, {
         message: "Rejection reason is required",
-        code: 404,
+        code: 400,
+      });
+    }
+    if (req.body.status === "rejected" && req.body.reason && String(req.body.reason).length > 255) {
+      return utils.handleError(res, {
+        message: "Rejection reason must be at most 255 characters",
+        code: 400,
       });
     }
 
     if (req.body.reason && req.body.status === "rejected") {
-      categoryData.is_admin_approved = req.body.status
-      categoryData.rejected_reason = req.body.reason
-      await categoryData.save()
+      categoryData.is_admin_approved = req.body.status;
+      categoryData.rejected_reason = req.body.reason;
+      await categoryData.save();
     } else {
-      categoryData.is_admin_approved = req.body.status
-      await categoryData.save()
+      categoryData.is_admin_approved = req.body.status;
+      await categoryData.save();
     }
+
+    const actionType = req.body.status === "approved" ? "approve" : "reject";
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: actionType,
+      status: 'success',
+      related_id: categoryId,
+      related_collection: 'product_categories',
+      metadata: {
+        category_name: categoryData.name,
+        status: req.body.status,
+        ...(req.body.reason && { rejected_reason: req.body.reason }),
+      },
+    });
 
     res.json({
       message: "Category status changed Successfully",
@@ -623,6 +841,14 @@ exports.approveRejectCategory = async (req, res) => {
     });
 
   } catch (error) {
+    await createLog({
+      ...getAdminLogContext(req),
+      feature: 'category',
+      action: req.body?.status === "approved" ? "approve" : "reject",
+      status: 'failed',
+      related_id: req.body?.id,
+      error_message: error.message,
+    }).catch(() => {});
     utils.handleError(res, error);
   }
-}
+};

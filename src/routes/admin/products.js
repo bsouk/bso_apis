@@ -94,4 +94,11 @@ router.patch(
     controller.addThresholdValue
 )
 
+router.post(
+    '/generateProductDescription',
+    trimRequest.all,
+    requireAuth,
+    controller.generateProductDescription
+)
+
 module.exports = router
