@@ -3171,34 +3171,51 @@ exports.supplierListForm = async (req, res) => {
   }
 }
 
-//share credentials
+// Share credentials: email the user their login email and password
 exports.shareUserCrendentials = async (req, res) => {
   try {
     const user_id = req.body.id;
-    console.log("user_id", user_id)
+    if (!user_id) {
+      return utils.handleError(res, { message: "User id is required", code: 400 });
+    }
+    let objectId;
+    try {
+      objectId = new mongoose.Types.ObjectId(user_id);
+    } catch (e) {
+      return utils.handleError(res, { message: "Invalid user id", code: 400 });
+    }
 
-    const user = await User.findOne({ _id: new mongoose.Types.ObjectId(user_id) }, "+decoded_password");
-    if (!user) return utils.handleError(res, { message: "user not found", code: 404 });
+    const user = await User.findOne({ _id: objectId }).select("+decoded_password").lean();
+    if (!user) {
+      return utils.handleError(res, { message: "User not found", code: 404 });
+    }
 
-    const password = user.decoded_password;
-    console.log("password : ", password)
+    // Include password in email; if not stored (e.g. social login), tell them to use Forgot Password
+    const password = user.decoded_password != null && String(user.decoded_password).trim() !== ""
+      ? user.decoded_password
+      : "(Not stored – use Forgot Password to set your password)";
 
     const mailOptions = {
       to: user.email,
       subject: "Your Account Credentials",
-      name: user.full_name,
+      name: user.full_name || user.email,
       email: user.email,
-      password: password,
-      app_name: process.env.APP_NAME
-    }
+      password,
+      app_name: process.env.APP_NAME || "Blue Sky",
+    };
 
-    emailer.sendEmail(null, mailOptions, "shareCredential");
+    await emailer.sendEmail(null, mailOptions, "shareCredential");
 
-    res.json({ message: "Credential has been shared successfully", code: 200 })
+    return res.json({ message: "Credential has been shared successfully", code: 200 });
   } catch (error) {
-    utils.handleError(res, error)
+    if (error.response) return utils.handleError(res, error);
+    console.error("Share credentials error:", error);
+    return utils.handleError(res, {
+      message: error.message || "Failed to send credentials email",
+      code: 500,
+    });
   }
-}
+};
 
 exports.getQuantitiesUnits = async (req, res) => {
   try {

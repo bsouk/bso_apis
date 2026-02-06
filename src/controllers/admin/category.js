@@ -14,15 +14,22 @@ const ProductSubSubCategory = require("../../models/product_sub_sub_category");
 exports.addProductCategory = async (req, res) => {
   try {
     const { icon, name } = req.body;
+    const trimmedName = (name || '').trim();
+    if (!trimmedName) {
+      return utils.handleError(res, { message: "Category name is required", code: 400 });
+    }
 
-    const isCategoryExists = await ProductCategory.findOne({ name: name });
-    if (isCategoryExists)
+    const isCategoryExists = await ProductCategory.findOne({
+      name: { $regex: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    });
+    if (isCategoryExists) {
       return utils.handleError(res, {
-        message: "This category already exist",
+        message: "Category already exists",
         code: 400,
       });
+    }
 
-    const category = new ProductCategory({ icon, name });
+    const category = new ProductCategory({ icon, name: trimmedName });
     await category.save();
 
     res.json({ message: "Category added successfully", code: 200 });
@@ -76,16 +83,31 @@ exports.getProductCategory = async (req, res) => {
 exports.editProductCategory = async (req, res) => {
   try {
     const id = req.params.id;
+    const newName = (req.body.name || '').trim();
 
     const isCategoryExists = await ProductCategory.findById(id);
-    if (!isCategoryExists)
+    if (!isCategoryExists) {
       return utils.handleError(res, {
         message: "Category not found",
         code: 404,
       });
+    }
 
-    const result = await ProductCategory.findByIdAndUpdate({ _id: id }, req.body);
-    console.log("result is ", result)
+    if (newName) {
+      const duplicate = await ProductCategory.findOne({
+        _id: { $ne: id },
+        name: { $regex: new RegExp(`^${newName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      });
+      if (duplicate) {
+        return utils.handleError(res, {
+          message: "Category already exists",
+          code: 400,
+        });
+      }
+    }
+
+    const result = await ProductCategory.findByIdAndUpdate({ _id: id }, { ...req.body, name: newName || req.body.name });
+    console.log("result is ", result);
 
     res.json({ message: "Category edited successfully", code: 200 });
   } catch (error) {
@@ -148,13 +170,14 @@ exports.deleteSelectedCategory = async (req, res) => {
 
 exports.addProductSubCategory = async (req, res) => {
   try {
-    const { name, icon, product_category_type_id } = req.body
+    const { name, icon, product_category_type_id } = req.body;
+    const trimmedName = (name || '').trim();
 
-    if (!name || !icon || !product_category_type_id) return res.json({ "message": "Send valid data", "code": 500 })
+    if (!trimmedName || !icon || !product_category_type_id) {
+      return utils.handleError(res, { message: "Send valid data", code: 400 });
+    }
 
-    //mark main category have further sub category
-    const mainCategory = await ProductCategory.findById({ _id: product_category_type_id })
-
+    const mainCategory = await ProductCategory.findById(product_category_type_id);
     if (!mainCategory) {
       return utils.handleError(res, {
         message: "Main category not found",
@@ -162,21 +185,28 @@ exports.addProductSubCategory = async (req, res) => {
       });
     }
 
-    mainCategory.isNext = true
-    await mainCategory.save()
+    mainCategory.isNext = true;
+    await mainCategory.save();
 
-    const isSubCategoryExist = await ProductSubCategory.findOne({ name, product_category_type_id });
+    const nameRegex = new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const isSubCategoryExist = await ProductSubCategory.findOne({
+      name: { $regex: nameRegex },
+      product_category_type_id,
+    });
+    if (isSubCategoryExist) {
+      return utils.handleError(res, {
+        message: "Sub-category already exists",
+        code: 400,
+      });
+    }
 
-    if (isSubCategoryExist) return res.json({ "message": "Subcategory already exist for this category", "code": 500 });
-
-    const newSubCategory = new ProductSubCategory({ name, icon, product_category_type_id });
+    const newSubCategory = new ProductSubCategory({ name: trimmedName, icon, product_category_type_id });
     await newSubCategory.save();
-    return res.json({ "message": "Subcategory added successfully", "code": 500 })
-
+    return res.json({ message: "Sub-category added successfully", code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
-}
+};
 
 
 exports.getSubCategory = async (req, res) => {
@@ -206,18 +236,38 @@ exports.getSubCategory = async (req, res) => {
 exports.editSubCategory = async (req, res) => {
   try {
     const id = req.params.id;
+    const newName = (req.body.name || '').trim();
 
-    const isCategoryExists = await ProductSubCategory.findById(id);
-    if (!isCategoryExists)
+    const existing = await ProductSubCategory.findById(id);
+    if (!existing) {
       return utils.handleError(res, {
-        message: "Sub Category not found",
+        message: "Sub-category not found",
         code: 404,
       });
+    }
 
-    const result = await ProductSubCategory.findByIdAndUpdate({ _id: id }, req.body);
-    console.log("result is ", result)
+    if (newName) {
+      const nameRegex = new RegExp(`^${newName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      const duplicate = await ProductSubCategory.findOne({
+        _id: { $ne: id },
+        product_category_type_id: existing.product_category_type_id,
+        name: { $regex: nameRegex },
+      });
+      if (duplicate) {
+        return utils.handleError(res, {
+          message: "Sub-category already exists",
+          code: 400,
+        });
+      }
+    }
 
-    res.json({ message: "Sub Category edited successfully", code: 200 });
+    const result = await ProductSubCategory.findByIdAndUpdate(
+      { _id: id },
+      { ...req.body, name: newName || req.body.name }
+    );
+    console.log("result is ", result);
+
+    res.json({ message: "Sub-category edited successfully", code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
