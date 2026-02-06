@@ -9,7 +9,7 @@ const Brand = require("../../models/brand");
 exports.getBrand = async (req, res) => {
     try {
         const { limit = 10, offset = 0, search } = req.query;
-        const condition = {};
+        const condition = { is_admin_approved: 'approved' };
 
         if (search) {
             condition["$or"] = [

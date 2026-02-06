@@ -670,6 +670,29 @@ exports.editProduct = async (req, res) => {
               code: 404 
             });
           }
+
+          const newSku = String(newV.sku_id).trim();
+          const existingSku = String(updatedVariants[idx].sku_id || '').trim();
+          if (newSku !== existingSku) {
+            const skuExistsElsewhere = await Product.findOne({
+              _id: { $ne: productId },
+              'variant.sku_id': newSku,
+              is_deleted: { $ne: true }
+            });
+            if (skuExistsElsewhere) {
+              return utils.handleError(res, {
+                message: "This SKU already exists. Please use a different SKU.",
+                code: 400
+              });
+            }
+            const sameProductOtherVariant = updatedVariants.some((v, i) => i !== idx && v?.sku_id && String(v.sku_id).trim() === newSku);
+            if (sameProductOtherVariant) {
+              return utils.handleError(res, {
+                message: "This SKU already exists. Please use a different SKU.",
+                code: 400
+              });
+            }
+          }
           
           hasValidVariant = true;
           

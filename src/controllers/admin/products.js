@@ -444,6 +444,30 @@ exports.editProduct = async (req, res) => {
                 );
 
                 if (existingVariantIndex !== -1) {
+                    const existingSku = product.variant[existingVariantIndex].sku_id;
+                    const newSku = newVariant.sku_id;
+                    if (newSku && String(newSku).trim() !== String(existingSku).trim()) {
+                        const isExistedSku = await Product.findOne({
+                            "variant.sku_id": newSku,
+                            _id: { $ne: productId },
+                            is_deleted: { $ne: true },
+                        });
+                        if (isExistedSku) {
+                            return res.status(400).json({
+                                code: 400,
+                                message: "This SKU already exists. Please use a different SKU.",
+                            });
+                        }
+                        const sameProductOther = product.variant.some(
+                            (v, i) => i !== existingVariantIndex && v.sku_id && String(v.sku_id).trim() === String(newSku).trim()
+                        );
+                        if (sameProductOther) {
+                            return res.status(400).json({
+                                code: 400,
+                                message: "This SKU already exists. Please use a different SKU.",
+                            });
+                        }
+                    }
                     Object.assign(product.variant[existingVariantIndex], newVariant);
                 } else {
                     return utils.handleError(res, {
