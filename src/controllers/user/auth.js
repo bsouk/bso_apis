@@ -500,6 +500,10 @@ exports.forgetPassword = async (req, res) => {
   try {
     const reqdata = req.body;
     console.log("reqdata : ", reqdata);
+    const hasEmail = reqdata.email && String(reqdata.email).trim();
+    const hasPhone = reqdata.phone_number && String(reqdata.phone_number).trim();
+    if (!hasEmail && !hasPhone)
+      return utils.handleError(res, { message: "Please provide email or phone number", code: 400 });
     if (reqdata.email) {
       const emailStr = String(reqdata.email || "").trim();
       const atIdx = emailStr.indexOf('@');
@@ -545,27 +549,32 @@ exports.forgetPassword = async (req, res) => {
       await saveOTP.save();
     }
 
-    const mailOptions = {
-      to: user.email,
-      subject: "Reset Password OTP",
-      app_url: process.env.APP_URL,
-      storage_url: process.env.STORAGE_BASE_URL,
-      otp: otp,
-      name: user.full_name,
-    };
-    emailer.sendEmail(null, mailOptions, "forgotPassword");
+    const smsMessage = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`;
+    const responsePayload = { code: 200, message: "OTP sent successfully" };
 
-    const fullPhoneNumber = `${user.phone_number_code.trim()}${user.phone_number.trim()}`;
-    console.log("fullPhoneNumber : ", fullPhoneNumber);
-    const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
-    console.log("result : ", result);
+    // Send OTP only via the channel the user requested (email or phone) to avoid sending SMS to invalid/stale numbers when they chose email
+    if (reqdata.email) {
+      const mailOptions = {
+        to: user.email,
+        subject: "Reset Password OTP",
+        app_url: process.env.APP_URL,
+        storage_url: process.env.STORAGE_BASE_URL,
+        otp: otp,
+        name: user.full_name,
+      };
+      emailer.sendEmail(null, mailOptions, "forgotPassword");
+      responsePayload.email = `${user.email.slice(0, 2)}****@${user.email.split('@').pop()}`;
+    } else if (reqdata.phone_number && user.phone_number_code && user.phone_number) {
+      const fullPhoneNumber = `${String(user.phone_number_code || '').trim()}${String(user.phone_number || '').trim()}`;
+      if (fullPhoneNumber && !/X|undefined|null/i.test(fullPhoneNumber)) {
+        await utils.sendSMS(fullPhoneNumber, smsMessage);
+        responsePayload.phone_number = `${fullPhoneNumber.toString().slice(0, 4)}****${fullPhoneNumber.toString().slice(-4)}`;
+      } else {
+        return utils.handleError(res, { message: "Valid phone number not found for this account", code: 400 });
+      }
+    }
 
-    res.json({
-      code: 200,
-      message: "OTP sent successfully",
-      email: `${user.email.slice(0, 2)}****@${user.email.split('@').pop()}`,
-      phone_number: `${fullPhoneNumber.toString().slice(0, 4)}****${fullPhoneNumber.toString().slice(8)}`
-    });
+    res.json(responsePayload);
 
   } catch (error) {
     utils.handleError(res, error);
@@ -622,13 +631,11 @@ exports.resetPassword = async (req, res) => {
         code: 400,
       });
     let reqdata = req.body;
-    let filter = { otp: otp };
-    if (reqdata.email) filter.email = reqdata.email;
-    if (reqdata.phone_number) filter.phone_number = reqdata.phone_number;
-    const user = await User.findOne(filter);
-    const checkpass = await User.findOne(filter).select("password");
+    const otpFilter = { otp };
+    if (reqdata.email) otpFilter.email = reqdata.email;
+    if (reqdata.phone_number) otpFilter.phone_number = reqdata.phone_number;
 
-    const otpData = await OTP.findOne(filter);
+    const otpData = await OTP.findOne(otpFilter);
     if (!otpData)
       return utils.handleError(res, {
         message: "The OTP you entered is incorrect. Please try again",
@@ -639,6 +646,15 @@ exports.resetPassword = async (req, res) => {
         message: "The OTP you entered has not verified",
         code: 400,
       });
+
+    const userFilter = {};
+    if (reqdata.email) userFilter.email = reqdata.email;
+    if (reqdata.phone_number) userFilter.phone_number = reqdata.phone_number;
+    const user = await User.findOne(userFilter);
+    if (!user)
+      return utils.handleError(res, { message: "User not found", code: 400 });
+    const checkpass = await User.findOne(userFilter).select("password");
+
     const isPasswordMatch = await utils.checkPassword(password, checkpass);
     if (isPasswordMatch)
       return utils.handleError(res, {
