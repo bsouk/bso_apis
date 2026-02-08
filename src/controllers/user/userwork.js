@@ -3803,7 +3803,10 @@ exports.getAllEnquiry = async (req, res) => {
             filter.status = status;
         }
         if (search) {
-            filter.enquiry_unique_id = { $regex: search, $options: "i" };
+            filter.$or = [
+                { enquiry_unique_id: { $regex: search, $options: "i" } },
+                { user_full_name: { $regex: search, $options: "i" } }
+            ];
         }
         if (priority) {
             filter.priority = "high"
@@ -3995,6 +3998,26 @@ exports.getAllEnquiry = async (req, res) => {
                         total_logistics_quotes: { $size: "$logistics_quotes" }
                     }
                 },
+                ...(search ? [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user_data"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            user_full_name: {
+                                $ifNull: [
+                                    { $arrayElemAt: ["$user_data.full_name", 0] },
+                                    ""
+                                ]
+                            }
+                        }
+                    }
+                ] : []),
                 {
                     $match: {
                         ...filter,
@@ -4231,6 +4254,26 @@ exports.getAllEnquiry = async (req, res) => {
                         total_logistics_quotes: { $size: "$logistics_quotes" }
                     }
                 },
+                ...(search ? [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "user_id",
+                            foreignField: "_id",
+                            as: "user_data"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            user_full_name: {
+                                $ifNull: [
+                                    { $arrayElemAt: ["$user_data.full_name", 0] },
+                                    ""
+                                ]
+                            }
+                        }
+                    }
+                ] : []),
                 {
                     $match: {
                         ...filter,

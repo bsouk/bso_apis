@@ -72,6 +72,15 @@ exports.sendOtpForSignup = async (req, res) => {
         message: "Invalid sign up by value",
         code: 400,
       });
+    if (signup_by === "email") {
+      const emailStr = String(email || "").trim();
+      const atIdx = emailStr.indexOf("@");
+      if (atIdx !== -1) {
+        const localPart = emailStr.slice(0, atIdx);
+        if (localPart.length < 2) return utils.handleError(res, { message: "Email must have at least 2 characters before @", code: 400 });
+        if (localPart.length > 30) return utils.handleError(res, { message: "Email must have at most 30 characters before @", code: 400 });
+      }
+    }
     const otp = utils.generateOTP();
 
     if (signup_by == "email") {
@@ -108,6 +117,19 @@ exports.sendOtpForSignup = async (req, res) => {
       
       res.json({ code: 200, message: "OTP sent successfully" });
     } else {
+      // Validate country is allowed for phone signup (if list is configured)
+      const code = String(phone_number_code || '').replace(/\s/g, '').replace(/^\+?/, '') || '';
+      const allowedCodesEnv = (process.env.PHONE_ALLOWED_COUNTRY_CODES || '').trim();
+      if (allowedCodesEnv) {
+        const allowedCodes = allowedCodesEnv.split(',').map((c) => String(c).trim()).filter(Boolean);
+        if (allowedCodes.length && code && !allowedCodes.includes(code)) {
+          return utils.handleError(res, {
+            message: 'This country is not allowed to use phone.',
+            code: 400,
+          });
+        }
+      }
+
       const otpData = await EmailOrPhoneVerifiedStatus.findOne({
         phone_number: phone_number,
       });
@@ -125,11 +147,25 @@ exports.sendOtpForSignup = async (req, res) => {
         await saveOTP.save();
       }
 
-      const fullPhoneNumber = `${phone_number_code}${phone_number}`;
+      const num = String(phone_number || '').replace(/\s/g, '');
+      const fullPhoneNumber = (code && num) ? `+${code}${num}` : `${phone_number_code || ''}${phone_number}`.replace(/\s/g, '');
 
-      const result = await utils.sendSMS(fullPhoneNumber, message = `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`)
-      console.log("result : ", result);
-      res.json({ code: 200, message: "OTP sent successfully", otp: otp });
+      try {
+        const toE164 = fullPhoneNumber.startsWith('+') ? fullPhoneNumber : `+${fullPhoneNumber}`;
+        const result = await utils.sendSMS(toE164, `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`);
+        console.log("result : ", result);
+        res.json({ code: 200, message: "OTP sent successfully", otp: otp });
+      } catch (smsError) {
+        console.error("SMS send failed:", smsError?.message || smsError);
+        const msg = (smsError?.message || String(smsError)).toLowerCase();
+        const isInvalidNumber = msg.includes('invalid') || msg.includes("'to'") || msg.includes('phone');
+        return utils.handleError(res, {
+          message: isInvalidNumber
+            ? 'Invalid phone number. Please check the number and country code (e.g. +44 UK, +91 India).'
+            : 'Unable to send OTP to this number. Please try again or use email signup.',
+          code: isInvalidNumber ? 400 : 502,
+        });
+      }
     }
   } catch (error) {
     utils.handleError(res, error);
@@ -270,6 +306,13 @@ exports.signup = async (req, res) => {
       });
 
     if (data.signup_by == "email") {
+      const emailStr = String(data.email || "").trim();
+      const atIdx = emailStr.indexOf('@');
+      if (atIdx !== -1) {
+        const localPart = emailStr.slice(0, atIdx);
+        if (localPart.length < 2) return utils.handleError(res, { message: "Email must have at least 2 characters before @", code: 400 });
+        if (localPart.length > 30) return utils.handleError(res, { message: "Email must have at most 30 characters before @", code: 400 });
+      }
       const doesEmailExists = await emailer.emailExists(data.email);
       if (doesEmailExists)
         return utils.handleError(res, {
@@ -310,6 +353,13 @@ exports.signup = async (req, res) => {
           code: 400,
         });
     }
+
+    const passwordStr = String(data.password || "");
+    if (passwordStr.length > 20)
+      return utils.handleError(res, {
+        message: "Password must be at most 20 characters",
+        code: 400,
+      });
 
     // Set buyer_type to 'direct-buyer' by default for buyers registering from frontend
     if (data.user_type === 'buyer' && !data.buyer_type) {
@@ -450,11 +500,20 @@ exports.forgetPassword = async (req, res) => {
   try {
     const reqdata = req.body;
     console.log("reqdata : ", reqdata);
+    if (reqdata.email) {
+      const emailStr = String(reqdata.email || "").trim();
+      const atIdx = emailStr.indexOf('@');
+      if (atIdx !== -1) {
+        const localPart = emailStr.slice(0, atIdx);
+        if (localPart.length < 2) return utils.handleError(res, { message: "Email must have at least 2 characters before @", code: 400 });
+        if (localPart.length > 30) return utils.handleError(res, { message: "Email must have at most 30 characters before @", code: 400 });
+      }
+    }
     const otp = utils.generateOTP();
 
-    let filter = {}
-    if (reqdata.email) filter.email = reqdata.email
-    if (reqdata.phone_number) filter.phone_number = reqdata.phone_number
+    let filter = {};
+    if (reqdata.email) filter.email = reqdata.email;
+    if (reqdata.phone_number) filter.phone_number = reqdata.phone_number;
 
     const user = await User.findOne(filter);
     if (!user)
@@ -556,12 +615,16 @@ exports.verifyOTP = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { email = '', phone_number = '', otp, password } = req.body;
-    let reqdata = req.body
-    let filter = {
-      otp: otp
-    }
-    if (reqdata.email) filter.email = reqdata.email
-    if (reqdata.phone_number) filter.phone_number = reqdata.phone_number
+    const passwordStr = String(password || "");
+    if (passwordStr.length > 20)
+      return utils.handleError(res, {
+        message: "Password must be at most 20 characters",
+        code: 400,
+      });
+    let reqdata = req.body;
+    let filter = { otp: otp };
+    if (reqdata.email) filter.email = reqdata.email;
+    if (reqdata.phone_number) filter.phone_number = reqdata.phone_number;
     const user = await User.findOne(filter);
     const checkpass = await User.findOne(filter).select("password");
 
