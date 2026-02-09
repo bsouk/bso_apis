@@ -77,16 +77,20 @@ exports.addProduct = async (req, res) => {
                     code: 404,
                 });
             }
-            const isExistedSku = await Product.findOne({
-                "variant.sku_id": req.body?.sku_data?.sku_id,
-            });
-            console.log("isExistedSkuData : ", isExistedSku)
-
-            if (isExistedSku) {
-                return res.status(400).json({
-                    code: 400,
-                    message: "This SKU already exists. Please use a different SKU.",
+            // Uniqueness checks only for part number (SKU can be reused)
+            const newPartNo = req.body?.sku_data?.part_no;
+            if (newPartNo) {
+                const isExistedPart = await Product.findOne({
+                    "variant.part_no": newPartNo,
                 });
+                console.log("isExistedPartNoData : ", isExistedPart);
+
+                if (isExistedPart) {
+                    return res.status(400).json({
+                        code: 400,
+                        message: "This part number already exists. Please use a different part number.",
+                    });
+                }
             }
 
             const newData = {
@@ -101,20 +105,24 @@ exports.addProduct = async (req, res) => {
         } else {
             let newVariant = []
             if (data.sku_data) {
-                // const isExistedSkuData = await Product.find({ sku_id: { $elemMatch: data?.sku_data?.sku_id } })
-                const isExistedSkuData = await Product.findOne({
-                    "variant.sku_id": data?.sku_data?.sku_id,
-                });
-                console.log("isExistedSkuData : ", isExistedSkuData)
+                const newPartNo = data?.sku_data?.part_no;
 
-                if (isExistedSkuData) {
-                    return res.status(400).json({
-                        code: 400,
-                        message: "This SKU already exists. Please use a different SKU.",
+                // Uniqueness for part number across all variants
+                if (newPartNo) {
+                    const isExistedPart = await Product.findOne({
+                        "variant.part_no": newPartNo,
                     });
+                    console.log("isExistedPartNoData : ", isExistedPart);
+
+                    if (isExistedPart) {
+                        return res.status(400).json({
+                            code: 400,
+                            message: "This part number already exists. Please use a different part number.",
+                        });
+                    }
                 }
 
-                newVariant.push(data.sku_data)
+                newVariant.push(data.sku_data);
             }
 
             const productData = {
@@ -310,15 +318,21 @@ exports.getProductList = async (req, res) => {
             is_deleted: { $ne: true }
         };
 
-        // Support searching by BOTH product name and product ID
+        // Support searching by product name, product ID and part number (variant.part_no)
         if (search) {
             const orConditions = [
                 { name: { $regex: search, $options: "i" } },
+                { "variant.part_no": { $regex: search, $options: "i" } },
             ];
 
             // If the search term looks like a valid ObjectId, also match on _id
             if (mongoose.Types.ObjectId.isValid(search)) {
                 orConditions.push({ _id: new mongoose.Types.ObjectId(search) });
+            }
+
+            // Also support numeric part numbers stored as numbers, not strings
+            if (!Number.isNaN(Number(search))) {
+                orConditions.push({ "variant.part_no": Number(search) });
             }
 
             filter.$or = orConditions;
@@ -449,42 +463,74 @@ exports.editProduct = async (req, res) => {
         }
         if (req.body.variant) {
             for (const newVariant of req.body.variant) {
-                const existingVariantIndex = product.variant.findIndex(
-                    (v) => v.sku_id === newVariant.sku_id
-                );
+                // Find by SKU when provided, otherwise match by part number.
+                let existingVariantIndex = -1;
+                if (newVariant.sku_id) {
+                    existingVariantIndex = product.variant.findIndex(
+                        (v) => v.sku_id === newVariant.sku_id
+                    );
+                } else if (newVariant.part_no) {
+                    existingVariantIndex = product.variant.findIndex(
+                        (v) => v.part_no === newVariant.part_no
+                    );
+                }
 
-                if (existingVariantIndex !== -1) {
-                    const existingSku = product.variant[existingVariantIndex].sku_id;
-                    const newSku = newVariant.sku_id;
-                    if (newSku && String(newSku).trim() !== String(existingSku).trim()) {
-                        const isExistedSku = await Product.findOne({
-                            "variant.sku_id": newSku,
-                            _id: { $ne: productId },
-                            is_deleted: { $ne: true },
-                        });
-                        if (isExistedSku) {
-                            return res.status(400).json({
-                                code: 400,
-                                message: "This SKU already exists. Please use a different SKU.",
-                            });
-                        }
-                        const sameProductOther = product.variant.some(
-                            (v, i) => i !== existingVariantIndex && v.sku_id && String(v.sku_id).trim() === String(newSku).trim()
-                        );
-                        if (sameProductOther) {
-                            return res.status(400).json({
-                                code: 400,
-                                message: "This SKU already exists. Please use a different SKU.",
-                            });
-                        }
-                    }
-                    Object.assign(product.variant[existingVariantIndex], newVariant);
-                } else {
+                if (existingVariantIndex === -1) {
                     return utils.handleError(res, {
-                        message: `Variant with sku_id ${newVariant.sku_id} not found`,
+                        message: `Variant not found for update`,
                         code: 404,
                     });
                 }
+
+                const existingVariant = product.variant[existingVariantIndex];
+                const existingSku = existingVariant.sku_id;
+                const newSku = newVariant.sku_id;
+
+                // SKU uniqueness check (only when SKU is being changed to a new non-empty value)
+                if (newSku && String(newSku).trim() !== String(existingSku || '').trim()) {
+                    const isExistedSku = await Product.findOne({
+                        "variant.sku_id": newSku,
+                        _id: { $ne: productId },
+                        is_deleted: { $ne: true },
+                    });
+                    if (isExistedSku) {
+                        return res.status(400).json({
+                            code: 400,
+                            message: "This SKU already exists. Please use a different SKU.",
+                        });
+                    }
+                    const sameProductOther = product.variant.some(
+                        (v, i) => i !== existingVariantIndex && v.sku_id && String(v.sku_id).trim() === String(newSku).trim()
+                    );
+                    if (sameProductOther) {
+                        return res.status(400).json({
+                            code: 400,
+                            message: "This SKU already exists. Please use a different SKU.",
+                        });
+                    }
+                }
+
+                // Part number uniqueness (if provided)
+                if (newVariant.part_no) {
+                    const newPartNo = newVariant.part_no;
+                    const existingPartNo = existingVariant.part_no;
+
+                    if (String(newPartNo).trim() !== String(existingPartNo || '').trim()) {
+                        const isExistedPart = await Product.findOne({
+                            "variant.part_no": newPartNo,
+                            _id: { $ne: productId },
+                            is_deleted: { $ne: true },
+                        });
+                        if (isExistedPart) {
+                            return res.status(400).json({
+                                code: 400,
+                                message: "This part number already exists. Please use a different part number.",
+                            });
+                        }
+                    }
+                }
+
+                Object.assign(product.variant[existingVariantIndex], newVariant);
             }
             data_to_edit.variant = product.variant;
         }
@@ -734,13 +780,19 @@ exports.getInventoryList = async (req, res) => {
         if (search) {
             const orConditions = [
                 { name: { $regex: search, $options: 'i' } },
-                // Allow searching by SKU as well (useful for ops)
+                // Allow searching by SKU and Part Number as well (useful for ops)
                 { 'variant.sku_id': { $regex: search, $options: 'i' } },
+                { 'variant.part_no': { $regex: search, $options: 'i' } },
             ];
 
             // If the search term looks like a valid ObjectId, also match on product _id
             if (mongoose.Types.ObjectId.isValid(search)) {
                 orConditions.push({ _id: new mongoose.Types.ObjectId(search) });
+            }
+
+            // Also support numeric part numbers stored as numbers
+            if (!Number.isNaN(Number(search))) {
+                orConditions.push({ 'variant.part_no': Number(search) });
             }
 
             variantMatch['$or'] = orConditions;
