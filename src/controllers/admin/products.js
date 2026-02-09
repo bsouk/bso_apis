@@ -310,8 +310,18 @@ exports.getProductList = async (req, res) => {
             is_deleted: { $ne: true }
         };
 
+        // Support searching by BOTH product name and product ID
         if (search) {
-            filter.name = { $regex: search, $options: "i" };
+            const orConditions = [
+                { name: { $regex: search, $options: "i" } },
+            ];
+
+            // If the search term looks like a valid ObjectId, also match on _id
+            if (mongoose.Types.ObjectId.isValid(search)) {
+                orConditions.push({ _id: new mongoose.Types.ObjectId(search) });
+            }
+
+            filter.$or = orConditions;
         }
 
         if (supplier_id) {
@@ -722,10 +732,18 @@ exports.getInventoryList = async (req, res) => {
         };
 
         if (search) {
-            variantMatch['$or'] = [
+            const orConditions = [
                 { name: { $regex: search, $options: 'i' } },
-                { 'variant.inventory_quantity': { $regex: search, $options: 'i' } }
+                // Allow searching by SKU as well (useful for ops)
+                { 'variant.sku_id': { $regex: search, $options: 'i' } },
             ];
+
+            // If the search term looks like a valid ObjectId, also match on product _id
+            if (mongoose.Types.ObjectId.isValid(search)) {
+                orConditions.push({ _id: new mongoose.Types.ObjectId(search) });
+            }
+
+            variantMatch['$or'] = orConditions;
         }
 
         if (low_stock) {
