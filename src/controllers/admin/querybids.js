@@ -25,7 +25,7 @@ const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
 
 exports.getquery = async (req, res) => {
     try {
-        const { search, offset = 0, limit = 10 } = req.query;
+        const { search, userSearch, offset = 0, limit = 10 } = req.query;
 
         const filter = {
             is_deleted: { $ne: true }
@@ -33,6 +33,24 @@ exports.getquery = async (req, res) => {
 
         if (search) {
             filter.query_unique_id = { $regex: search, $options: "i" };
+        }
+
+        // Optional: filter by user (search by user email, name, phone, or id)
+        if (userSearch && typeof userSearch === 'string' && userSearch.trim()) {
+            const term = userSearch.trim();
+            const isObjectId = mongoose.Types.ObjectId.isValid(term) && /^[a-fA-F0-9]{24}$/.test(term);
+            const userConditions = [
+                { email: { $regex: term, $options: 'i' } },
+                { full_name: { $regex: term, $options: 'i' } },
+                { first_name: { $regex: term, $options: 'i' } },
+                { last_name: { $regex: term, $options: 'i' } },
+                { phone_number: { $regex: term, $options: 'i' } },
+                { unique_user_id: { $regex: term, $options: 'i' } }
+            ];
+            if (isObjectId) userConditions.push({ _id: new mongoose.Types.ObjectId(term) });
+            const users = await User.find({ $or: userConditions }).select('_id').lean();
+            const userIds = users.map((u) => u._id);
+            filter.createdByUser = userIds.length ? { $in: userIds } : { $in: [] };
         }
 
         const productlist = await Query.aggregate([
@@ -1528,7 +1546,7 @@ exports.acceptRejectAssignedSupplier = async (req, res) => {
 
 exports.getAllEnquiry = async (req, res) => {
     try {
-        const { status, search, offset = 0, limit = 10, brand, countries, plan_step, start_date, end_date } = req.query;
+        const { status, search, userSearch, offset = 0, limit = 10, brand, countries, plan_step, start_date, end_date } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
         const filter = {};
         let brandfilter = {}
@@ -1549,6 +1567,24 @@ exports.getAllEnquiry = async (req, res) => {
         }
         if (search) {
             filter.enquiry_unique_id = { $regex: search, $options: "i" };
+        }
+
+        // Filter by buyer/user: search by email, name, phone, or id (works alongside enquiry ID search)
+        if (userSearch && typeof userSearch === 'string' && userSearch.trim()) {
+            const term = userSearch.trim();
+            const isObjectId = mongoose.Types.ObjectId.isValid(term) && /^[a-fA-F0-9]{24}$/.test(term);
+            const userConditions = [
+                { email: { $regex: term, $options: 'i' } },
+                { full_name: { $regex: term, $options: 'i' } },
+                { first_name: { $regex: term, $options: 'i' } },
+                { last_name: { $regex: term, $options: 'i' } },
+                { phone_number: { $regex: term, $options: 'i' } },
+                { unique_user_id: { $regex: term, $options: 'i' } }
+            ];
+            if (isObjectId) userConditions.push({ _id: new mongoose.Types.ObjectId(term) });
+            const users = await User.find({ $or: userConditions }).select('_id').lean();
+            const userIds = users.map((u) => u._id);
+            filter.user_id = userIds.length ? { $in: userIds } : { $in: [] };
         }
 
         if (countries) {
