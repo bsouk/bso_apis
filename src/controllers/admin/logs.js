@@ -220,23 +220,14 @@ exports.getLogById = async (req, res) => {
 /**
  * DELETE /admin/deleteLog/:id
  * Soft delete a single log
- * Only super admin can delete logs
+ * Allowed: super_admin or sub_admin with Logs Delete (enforced by route middleware)
  */
 exports.deleteLog = async (req, res) => {
   try {
     const { id } = req.params;
-    const admin_role = req.user.role;
     const admin_id = req.user._id;
 
     console.log(`🗑️ Deleting log ${id} by ${req.user.email}`);
-
-    // Check super admin permission
-    if (admin_role !== 'super_admin') {
-      return res.status(403).json({
-        message: 'Access denied. Only super admin can delete logs.',
-        code: 403
-      });
-    }
 
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -280,23 +271,14 @@ exports.deleteLog = async (req, res) => {
 /**
  * DELETE /admin/bulkDeleteLogs
  * Bulk soft delete multiple logs
- * Only super admin can delete logs
+ * Allowed: super_admin or sub_admin with Logs Delete (enforced by route middleware)
  */
 exports.bulkDeleteLogs = async (req, res) => {
   try {
     const { ids } = req.body;
-    const admin_role = req.user.role;
     const admin_id = req.user._id;
 
     console.log(`🗑️ Bulk deleting ${ids?.length} logs by ${req.user.email}`);
-
-    // Check super admin permission
-    if (admin_role !== 'super_admin') {
-      return res.status(403).json({
-        message: 'Access denied. Only super admin can delete logs.',
-        code: 403
-      });
-    }
 
     // Validate input
     if (!ids || !Array.isArray(ids) || ids.length === 0) {

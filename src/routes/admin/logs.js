@@ -9,15 +9,26 @@ const requireAuth = passport.authenticate('jwt', {
   session: false,
 });
 
-// Middleware to check if user is super admin
-const checkSuperAdmin = (req, res, next) => {
-  if (req.user.role !== 'super_admin') {
-    return res.status(403).json({
-      message: 'Access denied. Super admin access required.',
-      code: 403
-    });
-  }
-  next();
+// Middleware: allow super_admin or sub_admin with Logs View permission
+const requireLogsView = (req, res, next) => {
+  if (req.user.role === 'super_admin') return next();
+  const logsPerms = req.user.permissions?.[0]?.['Logs'];
+  if (req.user.role === 'sub_admin' && Array.isArray(logsPerms) && logsPerms.includes('View')) return next();
+  return res.status(403).json({
+    message: 'Access denied. Logs view permission required.',
+    code: 403
+  });
+};
+
+// Middleware: allow super_admin or sub_admin with Logs Delete permission
+const requireLogsDelete = (req, res, next) => {
+  if (req.user.role === 'super_admin') return next();
+  const logsPerms = req.user.permissions?.[0]?.['Logs'];
+  if (req.user.role === 'sub_admin' && Array.isArray(logsPerms) && logsPerms.includes('Delete')) return next();
+  return res.status(403).json({
+    message: 'Access denied. Logs delete permission required.',
+    code: 403
+  });
 };
 
 /**
@@ -25,9 +36,9 @@ const checkSuperAdmin = (req, res, next) => {
  * ADMIN LOGS ROUTES
  * ═══════════════════════════════════════════════════════════
  * 
- * All routes require:
- * 1. Admin authentication (validateAdmin)
- * 2. Super admin role (checkSuperAdmin)
+ * All routes require admin authentication (requireAuth).
+ * GET routes: super_admin or sub_admin with Logs View.
+ * DELETE routes: super_admin or sub_admin with Logs Delete.
  * 
  * @version 1.0.0
  * @created November 5, 2025
@@ -47,7 +58,7 @@ router.get(
   '/getLogs',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsView,
   controller.getLogs
 );
 
@@ -61,7 +72,7 @@ router.get(
   '/getLogById/:id',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsView,
   controller.getLogById
 );
 
@@ -74,7 +85,7 @@ router.get(
   '/getLogStats',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsView,
   controller.getLogStats
 );
 
@@ -87,7 +98,7 @@ router.get(
   '/getLogFilters',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsView,
   controller.getLogFilters
 );
 
@@ -101,7 +112,7 @@ router.get(
   '/getAdminActivitySummary/:adminId',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsView,
   controller.getAdminActivitySummary
 );
 
@@ -115,7 +126,7 @@ router.get(
   '/exportLogs',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsView,
   controller.exportLogs
 );
 
@@ -129,7 +140,7 @@ router.get(
   '/getRecentLogs',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsView,
   controller.getRecentLogs
 );
 
@@ -147,7 +158,7 @@ router.delete(
   '/deleteLog/:id',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsDelete,
   controller.deleteLog
 );
 
@@ -161,7 +172,7 @@ router.delete(
   '/bulkDeleteLogs',
   trimRequest.all,
   requireAuth,
-  checkSuperAdmin,
+  requireLogsDelete,
   controller.bulkDeleteLogs
 );
 

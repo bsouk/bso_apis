@@ -2,6 +2,9 @@ const { default: mongoose } = require("mongoose");
 const axios = require("axios");
 const Product = require("../../models/product");
 const utils = require("../../utils/utils");
+const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
+const { createLog } = require("../../utils/logger");
+const admin_received_notification = require("../../models/admin_received_notification");
 
 // exports.addProduct = async (req, res) => {
 //     try {
@@ -101,6 +104,24 @@ exports.addProduct = async (req, res) => {
             productData?.variant?.push(newData);
             await productData.save();
 
+            try {
+                await createLog({
+                    admin_id: adminId,
+                    admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                    admin_email: req.user.email,
+                    admin_role: req.user.role,
+                    feature: 'product',
+                    action: 'create',
+                    related_id: productData._id,
+                    related_collection: 'products',
+                    status: 'success',
+                    details: { product_name: productData.name, added_variant: true, part_no: newData.part_no },
+                    req,
+                });
+            } catch (logErr) {
+                console.error('[addProduct variant] Log error:', logErr);
+            }
+
             return res.json({ message: "Product sku added successfully", code: 200 });
         } else {
             let newVariant = []
@@ -145,10 +166,85 @@ exports.addProduct = async (req, res) => {
 
             console.log("final product data is", productData)
             const product = await Product.create(productData);
+
+            const productDisplay = product.name || product._id?.toString() || 'N/A';
+            const notifTitle = `New Product – ${productDisplay}`;
+            const notifDesc = `Admin added a new product. Product: ${productDisplay}`;
+            const notifPayload = {
+                title: notifTitle,
+                description: notifDesc,
+                type: 'new_product',
+                related_to: product._id,
+                related_to_type: 'product',
+            };
+
+            // Notify all super_admins (admin panel notifications, like manual enquiry)
+            try {
+                const { saved, fcmSent } = await notifyAllSuperAdmins(notifPayload);
+                if (saved > 0 || fcmSent > 0) console.log(`[addProduct] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
+            } catch (err) {
+                console.error('[addProduct] Admin notification error:', err);
+            }
+
+            // Always notify the current admin (who added the product) so they see it in the notifications panel
+            try {
+                const receiverId = adminId && mongoose.Types.ObjectId.isValid(adminId)
+                    ? (adminId instanceof mongoose.Types.ObjectId ? adminId : new mongoose.Types.ObjectId(adminId))
+                    : null;
+                if (receiverId) {
+                    await admin_received_notification.create({
+                        title: notifTitle,
+                        description: notifDesc,
+                        type: 'new_product',
+                        related_to: product._id,
+                        related_to_type: 'product',
+                        receiver_id: receiverId,
+                    });
+                }
+            } catch (err) {
+                console.error('[addProduct] Current admin notification error:', err);
+            }
+
+            // Log success (admin logs system)
+            try {
+                await createLog({
+                    admin_id: adminId,
+                    admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                    admin_email: req.user.email,
+                    admin_role: req.user.role,
+                    feature: 'product',
+                    action: 'create',
+                    related_id: product._id,
+                    related_collection: 'products',
+                    status: 'success',
+                    details: { product_name: product.name, supplier_id: user_id || adminId },
+                    req,
+                });
+            } catch (logErr) {
+                console.error('[addProduct] Log error:', logErr);
+            }
+
             return res.json({ message: "Product added successfully", data: product, code: 200 });
         }
 
     } catch (error) {
+        // Log failure on create
+        try {
+            await createLog({
+                admin_id: req.user?._id,
+                admin_name: req.user?.full_name || `${req.user?.first_name || ''} ${req.user?.last_name || ''}`.trim() || req.user?.email,
+                admin_email: req.user?.email,
+                admin_role: req.user?.role,
+                feature: 'product',
+                action: 'create',
+                status: 'failed',
+                error_message: error?.message,
+                error_stack: error?.stack,
+                req,
+            });
+        } catch (logErr) {
+            console.error('[addProduct] Log error:', logErr);
+        }
         utils.handleError(res, error);
     }
 };
@@ -189,6 +285,24 @@ exports.deleteProduct = async (req, res) => {
                 { $set: { 'variant.$.is_sku_deleted': true } }
             );
 
+            try {
+                await createLog({
+                    admin_id: req.user._id,
+                    admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                    admin_email: req.user.email,
+                    admin_role: req.user.role,
+                    feature: 'inventory',
+                    action: 'delete',
+                    related_id: product_id,
+                    related_collection: 'products',
+                    status: 'success',
+                    details: { product_name: product.name, variant_id, message: 'Variant/inventory item soft-deleted' },
+                    req,
+                });
+            } catch (logErr) {
+                console.error('[deleteProduct variant] Log error:', logErr);
+            }
+
             return res.json({ message: "Inventory item deleted successfully", code: 200 });
         }
 
@@ -201,6 +315,24 @@ exports.deleteProduct = async (req, res) => {
         }
 
         await Product.findByIdAndUpdate(product_id, { is_deleted: true });
+
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'product',
+                action: 'delete',
+                related_id: product_id,
+                related_collection: 'products',
+                status: 'success',
+                details: { product_name: product.name },
+                req,
+            });
+        } catch (logErr) {
+            console.error('[deleteProduct] Log error:', logErr);
+        }
 
         res.json({ message: "Product deleted successfully", code: 200 });
     } catch (error) {
@@ -226,6 +358,24 @@ exports.deleteSelectedProducts = async (req, res) => {
             });
 
         await Product.updateMany({ _id: product_ids }, { is_deleted: true });
+
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'product',
+                action: 'delete',
+                related_id: null,
+                related_collection: 'products',
+                status: 'success',
+                details: { bulk_delete: true, product_ids, count: product_ids.length },
+                req,
+            });
+        } catch (logErr) {
+            console.error('[deleteSelectedProducts] Log error:', logErr);
+        }
 
         res.json({ message: "Selected products have been deleted", code: 200 });
     } catch (error) {
@@ -538,6 +688,24 @@ exports.editProduct = async (req, res) => {
         await Product.findByIdAndUpdate(productId, data_to_edit, { new: true });
 
         const updatedproduct = await Product.findById(productId);
+
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'product',
+                action: 'update',
+                related_id: productId,
+                related_collection: 'products',
+                status: 'success',
+                details: { product_name: updatedproduct?.name },
+                req,
+            });
+        } catch (logErr) {
+            console.error('[editProduct] Log error:', logErr);
+        }
 
         res.json({
             data: updatedproduct,
@@ -909,6 +1077,24 @@ exports.addThresholdValue = async (req, res) => {
             }, { new: true }
         )
 
+        try {
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'inventory',
+                action: 'update',
+                related_id: product_id,
+                related_collection: 'products',
+                status: 'success',
+                details: { product_name: product_data?.name, variant_id, threshold_value: value, remind_on_low_stock: reminder },
+                req,
+            });
+        } catch (logErr) {
+            console.error('[addThresholdValue] Log error:', logErr);
+        }
+
         return res.status(200).json({
             message: "Threshold value added successfully",
             data,
@@ -939,6 +1125,25 @@ exports.changeInventoryQuantity = async (req, res) => {
                 }
             }, { new: true }
         )
+
+        try {
+            const variantInfo = data?.variant?.find(v => v._id?.toString() === variant_id);
+            await createLog({
+                admin_id: req.user._id,
+                admin_name: req.user.full_name || `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim() || req.user.email,
+                admin_email: req.user.email,
+                admin_role: req.user.role,
+                feature: 'inventory',
+                action: 'update',
+                related_id: product_id,
+                related_collection: 'products',
+                status: 'success',
+                details: { product_name: product_data?.name, variant_id, new_quantity: stock, part_no: variantInfo?.part_no },
+                req,
+            });
+        } catch (logErr) {
+            console.error('[changeInventoryQuantity] Log error:', logErr);
+        }
 
         return res.status(200).json({
             message: "Inventory Quantity changed successfully",
