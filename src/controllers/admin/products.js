@@ -65,14 +65,23 @@ exports.addProduct = async (req, res) => {
         const adminId = req.user._id
         console.log('admin id : ', adminId)
         const user_id = req.body.supplier_id;
-        const { id } = req.body
-        console.log("id is ", id)
+        const { id } = req.body;
+        console.log("id is ", id);
         const data = req.body;
-        console.log("req.body is ", data)
+        console.log("req.body is ", data);
+
+        // Helper: find canonical part number for a product (first non-deleted, non-empty variant.part_no)
+        const getCanonicalPartNo = (productDoc) => {
+            if (!productDoc || !Array.isArray(productDoc.variant)) return null;
+            const activeVariants = productDoc.variant.filter(
+                (v) => v && v.is_sku_deleted !== true && v.part_no
+            );
+            return activeVariants.length > 0 ? activeVariants[0].part_no : null;
+        };
 
         if (id) {
-            const productData = await Product.findOne({ _id: id })
-            console.log("product data is ", productData)
+            const productData = await Product.findOne({ _id: id });
+            console.log("product data is ", productData);
 
             if (!productData) {
                 return utils.handleError(res, {
@@ -80,27 +89,81 @@ exports.addProduct = async (req, res) => {
                     code: 404,
                 });
             }
-            // Uniqueness checks only for part number (SKU can be reused)
-            const newPartNo = req.body?.sku_data?.part_no;
-            if (newPartNo) {
-                const isExistedPart = await Product.findOne({
-                    "variant.part_no": newPartNo,
-                });
-                console.log("isExistedPartNoData : ", isExistedPart);
 
-                if (isExistedPart) {
+            const incomingSkuData = req.body?.sku_data || {};
+            const incomingPartNo = incomingSkuData.part_no;
+            const canonicalPartNo = getCanonicalPartNo(productData);
+
+            // Enforce SKU uniqueness per product (ignore globally deleted variants)
+            if (incomingSkuData.sku_id) {
+                const newSku = String(incomingSkuData.sku_id).trim();
+                const skuExistsInProduct = productData.variant.some(
+                    (v) =>
+                        v &&
+                        v.is_sku_deleted !== true &&
+                        v.sku_id &&
+                        String(v.sku_id).trim() === newSku
+                );
+                if (skuExistsInProduct) {
                     return res.status(400).json({
                         code: 400,
-                        message: "This part number already exists. Please use a different part number.",
+                        message: "This SKU already exists for this product. Please use a different SKU.",
                     });
                 }
             }
 
-            const newData = {
-                ...req.body.sku_data
+            // Part number rules for existing product:
+            // - If product already has a canonical part number, all new inventory must use the SAME part number.
+            // - If no canonical exists yet, first incoming part number becomes canonical (still unique globally).
+            let finalPartNo = incomingPartNo;
+
+            if (canonicalPartNo) {
+                // Product already has a part number; enforce that incoming matches it.
+                if (
+                    incomingPartNo &&
+                    String(incomingPartNo).trim() !== String(canonicalPartNo).trim()
+                ) {
+                    return res.status(400).json({
+                        code: 400,
+                        message:
+                            "Part number must match the existing product part number for additional inventory.",
+                    });
+                }
+                finalPartNo = canonicalPartNo;
+            } else {
+                // No canonical part number yet for this product – allow setting it now but ensure global uniqueness.
+                if (!incomingPartNo || String(incomingPartNo).trim() === "") {
+                    return res.status(400).json({
+                        code: 400,
+                        message: "Part number is required when adding the first inventory for this product.",
+                    });
+                }
+
+                const newPartNo = String(incomingPartNo).trim();
+                const isExistedPart = await Product.findOne({
+                    _id: { $ne: id },
+                    "variant.part_no": newPartNo,
+                    is_deleted: { $ne: true },
+                });
+                console.log("isExistedPartNoData (existing product) : ", isExistedPart);
+
+                if (isExistedPart) {
+                    return res.status(400).json({
+                        code: 400,
+                        message:
+                            "This part number already exists for another product. Please use a different part number.",
+                    });
+                }
+
+                finalPartNo = newPartNo;
             }
 
-            console.log("new data is ", newData)
+            const newData = {
+                ...incomingSkuData,
+                part_no: finalPartNo,
+            };
+
+            console.log("new data is ", newData);
             productData?.variant?.push(newData);
             await productData.save();
 
@@ -124,7 +187,7 @@ exports.addProduct = async (req, res) => {
 
             return res.json({ message: "Product sku added successfully", code: 200 });
         } else {
-            let newVariant = []
+            let newVariant = [];
             if (data.sku_data) {
                 const newPartNo = data?.sku_data?.part_no;
 
@@ -132,13 +195,14 @@ exports.addProduct = async (req, res) => {
                 if (newPartNo) {
                     const isExistedPart = await Product.findOne({
                         "variant.part_no": newPartNo,
+                        is_deleted: { $ne: true },
                     });
                     console.log("isExistedPartNoData : ", isExistedPart);
 
                     if (isExistedPart) {
                         return res.status(400).json({
                             code: 400,
-                            message: "This part number already exists. Please use a different part number.",
+                            message: "This part number already exists for another product. Please use a different part number.",
                         });
                     }
                 }
@@ -613,15 +677,25 @@ exports.editProduct = async (req, res) => {
         }
         if (req.body.variant) {
             for (const newVariant of req.body.variant) {
-                // Find by SKU when provided, otherwise match by part number.
+                // Prefer to locate variant by stable identifier (part_no), then fall back to SKU.
+                // This allows changing SKU for an existing inventory line as long as part_no is unchanged.
                 let existingVariantIndex = -1;
-                if (newVariant.sku_id) {
+
+                if (newVariant.part_no) {
                     existingVariantIndex = product.variant.findIndex(
-                        (v) => v.sku_id === newVariant.sku_id
+                        (v) =>
+                            v &&
+                            v.is_sku_deleted !== true &&
+                            String(v.part_no || '').trim() === String(newVariant.part_no).trim()
                     );
-                } else if (newVariant.part_no) {
+                }
+
+                if (existingVariantIndex === -1 && newVariant.sku_id) {
                     existingVariantIndex = product.variant.findIndex(
-                        (v) => v.part_no === newVariant.part_no
+                        (v) =>
+                            v &&
+                            v.is_sku_deleted !== true &&
+                            String(v.sku_id || '').trim() === String(newVariant.sku_id).trim()
                     );
                 }
 
