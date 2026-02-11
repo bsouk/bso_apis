@@ -1565,8 +1565,18 @@ exports.getAllEnquiry = async (req, res) => {
         if (status) {
             filter.status = status;
         }
-        if (search) {
-            filter.enquiry_unique_id = { $regex: search, $options: "i" };
+
+        // Primary search for Query Management.
+        // Business requirement: search should be based on Enquiry Number,
+        // not only the internal Query/Enquiry ID.
+        // We still support searching by the old `enquiry_unique_id` for backwards compatibility,
+        // but the UI and API both treat `search` as "Enquiry Number".
+        if (search && typeof search === 'string' && search.trim()) {
+            const term = search.trim();
+            filter.$or = [
+                { enquiry_number: { $regex: term, $options: "i" } },
+                { enquiry_unique_id: { $regex: term, $options: "i" } },
+            ];
         }
 
         // Filter by buyer/user: search by email, name, phone, or id (works alongside enquiry ID search)
