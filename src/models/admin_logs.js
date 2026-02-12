@@ -66,6 +66,8 @@ const adminLogsSchema = new mongoose.Schema(
         "notification",
         "quote_management",
         "quotation",
+        "sub_admin_management",
+        "auth",
         // Extensible - can add more features
       ],
       index: true

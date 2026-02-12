@@ -1,11 +1,12 @@
 const Admin = require("../../models/admin");
-const utils = require("../../utils/utils")
-const ResetPassword = require("../../models/reset_password")
-const uuid = require('uuid');
+const utils = require("../../utils/utils");
+const ResetPassword = require("../../models/reset_password");
+const uuid = require("uuid");
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
 const generatePassword = require("generate-password");
+const { logSuccess, logFailure } = require("../../utils/logger");
 
 function createNewPassword() {
     const password = generatePassword.generate({
@@ -116,12 +117,53 @@ exports.addSubAdmin = async (req, res) => {
             // Don't fail the entire operation if email fails
             // The sub-admin was already created successfully
         }
+
+        // Audit log: sub-admin created
+        try {
+            await logSuccess(
+                req.user,
+                "sub_admin_management",
+                "create",
+                {
+                    related_id: newsubadmin._id,
+                    related_collection: "admins",
+                    details: {
+                        subadmin_id: newsubadmin._id,
+                        subadmin_email: newsubadmin.email,
+                        subadmin_name: `${newsubadmin.first_name || ""} ${newsubadmin.last_name || ""}`.trim(),
+                        phone_number: newsubadmin.phone_number,
+                        permissions: newsubadmin.permissions,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin create:", logError?.message);
+        }
+
         res.json({
             message: "Subadmin added successfully",
             response: newsubadmin,
             code: 200,
         });
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "sub_admin_management",
+                "create",
+                error,
+                {
+                    metadata: {
+                        email: req.body?.email,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin create error:", logError?.message);
+        }
+
         utils.handleError(res, error);
     }
 };
@@ -169,6 +211,17 @@ exports.editSubAdmin = async (req, res) => {
                 });
         }
 
+        // Capture previous state for audit
+        const previousData = {
+            first_name: subadmin.first_name,
+            last_name: subadmin.last_name,
+            full_name: subadmin.full_name,
+            email: subadmin.email,
+            phone_number: subadmin.phone_number,
+            profile_image: subadmin.profile_image,
+            permissions: subadmin.permissions,
+        };
+
         // Update fields
         subadmin.first_name = data.first_name || subadmin.first_name;
         subadmin.last_name = data.last_name || subadmin.last_name;
@@ -190,8 +243,57 @@ exports.editSubAdmin = async (req, res) => {
         
         // Note: No email is sent on edit as per requirement (confidential)
 
+        // Audit log: sub-admin updated (including permissions change)
+        try {
+            const hasPermissionChanged = JSON.stringify(previousData.permissions) !== JSON.stringify(subadmin.permissions);
+            await logSuccess(
+                req.user,
+                "sub_admin_management",
+                "update",
+                {
+                    related_id: subadmin._id,
+                    related_collection: "admins",
+                    details: {
+                        subadmin_id: subadmin._id,
+                        subadmin_email: subadmin.email,
+                        previous: previousData,
+                        current: {
+                            first_name: subadmin.first_name,
+                            last_name: subadmin.last_name,
+                            full_name: subadmin.full_name,
+                            email: subadmin.email,
+                            phone_number: subadmin.phone_number,
+                            profile_image: subadmin.profile_image,
+                            permissions: subadmin.permissions,
+                        },
+                        permissions_changed: hasPermissionChanged,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin update:", logError?.message);
+        }
+
         res.json({ message: "Subadmin edit successfully", code: 200 });
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "sub_admin_management",
+                "update",
+                error,
+                {
+                    metadata: {
+                        subadmin_id: req.params?.id,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin update error:", logError?.message);
+        }
+
         utils.handleError(res, error);
     }
 };
@@ -208,8 +310,46 @@ exports.deleteSubadmin = async (req, res) => {
             });
 
         await Admin.deleteOne({ _id: id });
+
+        // Log admin activity for audit trail
+        await logSuccess(
+            req.user,
+            "sub_admin_management",
+            "delete",
+            {
+                related_id: subadmin._id,
+                related_collection: "admins",
+                details: {
+                    deleted_admin_id: subadmin._id,
+                    deleted_admin_email: subadmin.email,
+                    deleted_admin_name: `${subadmin.first_name || ""} ${subadmin.last_name || ""}`.trim(),
+                    deleted_admin_role: subadmin.role,
+                },
+            },
+            req
+        );
+
         res.json({ message: "Subadmin has been deleted successfully", code: 200 });
     } catch (error) {
+        // Make sure failure to log does not break delete flow
+        try {
+            await logFailure(
+                req.user,
+                "sub_admin_management",
+                "delete",
+                error,
+                {
+                    metadata: {
+                        subadmin_id: req.params?.id,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            // Intentionally ignore logging errors
+            console.error("Failed to log subadmin delete error:", logError?.message);
+        }
+
         utils.handleError(res, error);
     }
 };
@@ -272,8 +412,44 @@ exports.activeSelectedSubadmin = async (req, res) => {
 
         await Admin.updateMany({ _id: user_ids }, { status: "active" });
 
+        // Audit log: sub-admins activated
+        try {
+            await logSuccess(
+                req.user,
+                "sub_admin_management",
+                "update",
+                {
+                    details: {
+                        action: "activate",
+                        affected_ids: user_ids,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin activate:", logError?.message);
+        }
+
         res.json({ message: "Selected Subadmin are active", code: 200 })
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "sub_admin_management",
+                "update",
+                error,
+                {
+                    metadata: {
+                        action: "activate",
+                        user_ids: req.body?.user_ids || [],
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin activate error:", logError?.message);
+        }
+
         utils.handleError(res, error)
     }
 }
@@ -289,8 +465,44 @@ exports.inactiveSelectedSubadmin = async (req, res) => {
 
         await Admin.updateMany({ _id: user_ids }, { status: "inactive" });
 
+        // Audit log: sub-admins deactivated
+        try {
+            await logSuccess(
+                req.user,
+                "sub_admin_management",
+                "update",
+                {
+                    details: {
+                        action: "deactivate",
+                        affected_ids: user_ids,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin deactivate:", logError?.message);
+        }
+
         res.json({ message: "Selected Subadmin are inactive", code: 200 })
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "sub_admin_management",
+                "update",
+                error,
+                {
+                    metadata: {
+                        action: "deactivate",
+                        user_ids: req.body?.user_ids || [],
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log subadmin deactivate error:", logError?.message);
+        }
+
         utils.handleError(res, error)
     }
 }
@@ -300,14 +512,53 @@ exports.deleteSelectedSubadmin = async (req, res) => {
         const { user_ids = [] } = req.body;
 
         if (user_ids.length == 0) return utils.handleError(res, { message: "Please select at least one Subadmin", code: 400 });
-        const isAllDeleted = await Admin.find({ _id: user_ids });
+        const subadmins = await Admin.find({ _id: user_ids });
 
-        if (!isAllDeleted || isAllDeleted.length <= 0) return utils.handleError(res, { message: "All selected Subadmin are already deleted", code: 400 });
+        if (!subadmins || subadmins.length <= 0) return utils.handleError(res, { message: "All selected Subadmin are already deleted", code: 400 });
 
         await Admin.deleteMany({ _id: user_ids });
 
+        // Log bulk delete activity
+        try {
+            await logSuccess(
+                req.user,
+                "sub_admin_management",
+                "bulk_delete",
+                {
+                    details: {
+                        deleted_count: subadmins.length,
+                        deleted_ids: subadmins.map((s) => s._id),
+                        deleted_emails: subadmins.map((s) => s.email),
+                    },
+                    metadata: {
+                        requested_ids: user_ids,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log bulk subadmin delete:", logError?.message);
+        }
+
         res.json({ message: "Selected Subadmin have been deleted", code: 200 })
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "sub_admin_management",
+                "bulk_delete",
+                error,
+                {
+                    metadata: {
+                        user_ids: req.body?.user_ids || [],
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log bulk subadmin delete error:", logError?.message);
+        }
+
         utils.handleError(res, error)
     }
 }
@@ -333,8 +584,46 @@ exports.shareCrendentials = async (req, res) => {
 
         emailer.sendEmail(null, mailOptions, "shareCredential");
 
+        // Audit log: credentials shared
+        try {
+            await logSuccess(
+                req.user,
+                "sub_admin_management",
+                "send",
+                {
+                    related_id: user._id,
+                    related_collection: "admins",
+                    details: {
+                        subadmin_id: user._id,
+                        subadmin_email: user.email,
+                        subadmin_name: user.full_name,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log share credentials:", logError?.message);
+        }
+
         res.json({ message: "Credential has been shared successfully", code: 200 })
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "sub_admin_management",
+                "send",
+                error,
+                {
+                    metadata: {
+                        subadmin_id: req.body?.id,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log share credentials error:", logError?.message);
+        }
+
         utils.handleError(res, error)
     }
 }

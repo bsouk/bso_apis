@@ -1,10 +1,11 @@
 const Admin = require("../../models/admin");
 const utils = require("../../utils/utils");
 const ResetPassword = require("../../models/reset_password");
-const uuid = require('uuid');
+const uuid = require("uuid");
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
+const { logSuccess, logFailure } = require("../../utils/logger");
 
 // Admin email links: production → PRODUCTION_ADMIN_URL, local → LOCAL_ADMIN_URL
 // Optional: USE_LOCAL_ADMIN_FOR_EMAILS=true forces LOCAL_ADMIN_URL (e.g. when NODE_ENV=production but testing locally)
@@ -67,6 +68,23 @@ exports.login = async (req, res) => {
     const isPasswordMatch = await utils.checkPassword(password, user)
     console.log("isPasswordMatch", isPasswordMatch)
     if (!isPasswordMatch) {
+      // Optional: log failed login attempt for existing admin
+      try {
+        await logFailure(
+          user,
+          "auth",
+          "login",
+          new Error("Invalid password"),
+          {
+            metadata: {
+              email_attempted: email,
+            },
+          }
+        );
+      } catch (logError) {
+        console.error("Failed to log failed admin login:", logError?.message);
+      }
+
       return utils.handleError(res, { message: "Invalid login credentials. Please try again", code: 400 })
     }
 
@@ -74,6 +92,25 @@ exports.login = async (req, res) => {
     delete userObj.password;
 
     const token = generateToken(user._id, remember_me);
+
+    // Audit log: successful admin login (includes sub-admins)
+    try {
+      await logSuccess(
+        user,
+        "auth",
+        "login",
+        {
+          details: {
+            email: user.email,
+            role: user.role,
+            remember_me: !!remember_me,
+          },
+        }
+      );
+    } catch (logError) {
+      console.error("Failed to log admin login:", logError?.message);
+    }
+
     res.json({ code: 200, data: { user: userObj, token } })
   } catch (error) {
     utils.handleError(res, error)

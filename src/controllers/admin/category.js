@@ -256,6 +256,15 @@ exports.deleteSelectedCategory = async (req, res) => {
         code: 400,
       });
 
+    // Block bulk delete when any category is in use by products
+    const inUseCount = await Product.countDocuments({ category_id: { $in: ids } });
+    if (inUseCount > 0) {
+      return res.status(400).json({
+        code: 400,
+        message: "One or more selected categories are linked with products and cannot be deleted.",
+      });
+    }
+
     const result = await ProductCategory.deleteMany({ _id: { $in: ids } });
     console.log("result", result);
 

@@ -504,9 +504,11 @@ exports.getAllSubscription = async (req, res) => {
         const { offset = 0, limit = 10, search } = req.query
         let filter = {}
         if (search) {
+            const regex = new RegExp(search, 'i');
             filter['$or'] = [
-                { 'user.company_data.name': { $regex: search, $options: 'i' } },
-                { 'plan.plan_name': { $regex: search, $options: 'i' } }
+                { 'user.company_data.name': { $regex: regex } },   // Company name
+                { 'user.full_name': { $regex: regex } },           // User full name
+                { 'plan.plan_name': { $regex: regex } },           // Plan name
             ]
         }
         const data = await subscription.aggregate(

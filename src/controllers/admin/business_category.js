@@ -2,6 +2,7 @@ const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const mongoose = require("mongoose");
 const generatePassword = require('generate-password');
+const { logSuccess, logFailure } = require("../../utils/logger");
 
 const business_category = require("../../models/business_category");
 
@@ -22,12 +23,48 @@ exports.addBusinessCategory = async (req, res) => {
         await data.save()
         console.log("data is ", data)
 
+        // Log creation
+        try {
+            await logSuccess(
+                req.user,
+                "business_category",
+                "create",
+                {
+                    related_id: data._id,
+                    related_collection: "business_categories",
+                    details: {
+                        business_category_id: data._id,
+                        name: data.name,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category create:", logError?.message);
+        }
+
         return res.status(200).json({
             message: "Business category added successfully",
             data: data,
             code: 200
         })
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "business_category",
+                "create",
+                error,
+                {
+                    metadata: {
+                        name: req.body?.name,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category create error:", logError?.message);
+        }
         utils.handleError(res, error);
     }
 }
@@ -87,8 +124,47 @@ exports.editBusinessCategory = async (req, res) => {
         if (isBusinessCategoryNameExists) return utils.handleError(res, { message: "The business category name already exists. Please enter a different name", code: 400 });
 
         await business_category.findByIdAndUpdate(id, { $set: { name } })
+
+        // Log update
+        try {
+            await logSuccess(
+                req.user,
+                "business_category",
+                "update",
+                {
+                    related_id: isExists._id,
+                    related_collection: "business_categories",
+                    details: {
+                        business_category_id: isExists._id,
+                        previous_name: isExists.name,
+                        new_name: name,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category update:", logError?.message);
+        }
+
         res.json({ message: "Business category edited successfully", code: 200 });
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "business_category",
+                "update",
+                error,
+                {
+                    metadata: {
+                        id: req.params?.id,
+                        name: req.body?.name,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category update error:", logError?.message);
+        }
         utils.handleError(res, error);
     }
 }
@@ -100,9 +176,57 @@ exports.deleteBusinessCategory = async (req, res) => {
         const isExists = await business_category.findById(id);
         if (!isExists) return utils.handleError(res, { message: "Business category not found", code: 404 });
 
+        // Check if business category is used in any user's company_data
+        const usersUsingCategory = await require("../../models/user").countDocuments({
+            "company_data.business_category": { $regex: new RegExp(`\\b${id}\\b`) }
+        });
+        if (usersUsingCategory > 0) {
+            return res.status(400).json({
+                code: 400,
+                message: "This business category is linked with existing users / suppliers and cannot be deleted.",
+            });
+        }
+
         await business_category.findByIdAndDelete(id);
+
+        // Log delete
+        try {
+            await logSuccess(
+                req.user,
+                "business_category",
+                "delete",
+                {
+                    related_id: isExists._id,
+                    related_collection: "business_categories",
+                    details: {
+                        business_category_id: isExists._id,
+                        name: isExists.name,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category delete:", logError?.message);
+        }
+
         res.json({ message: "Business category deleted successfully", code: 200 })
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "business_category",
+                "delete",
+                error,
+                {
+                    metadata: {
+                        id: req.params?.id,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category delete error:", logError?.message);
+        }
         utils.handleError(res, error);
     }
 }
@@ -148,8 +272,42 @@ exports.deleteselectedBusinessCategory = async (req, res) => {
         const result = await business_category.deleteMany({ _id: { $in: ids } });
         console.log("result", result)
 
+        // Log bulk delete (best effort)
+        try {
+            await logSuccess(
+                req.user,
+                "business_category",
+                "bulk_delete",
+                {
+                    details: {
+                        requested_ids: ids,
+                        deleted_count: result.deletedCount || 0,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log bulk business category delete:", logError?.message);
+        }
+
         return res.json({ message: "Selected Business category have been deleted", code: 200 });
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "business_category",
+                "bulk_delete",
+                error,
+                {
+                    metadata: {
+                        ids: req.body?.ids || [],
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log bulk business category delete error:", logError?.message);
+        }
         utils.handleError(res, error);
     }
 }
