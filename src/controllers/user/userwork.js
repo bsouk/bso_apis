@@ -49,6 +49,7 @@ const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
 const Order = require("../../models/order");
 const tracking_order = require("../../models/tracking_order");
 const Notification = require("../../models/notification")
+const { emitNotificationToUser } = require("../../config/socket");
 const OTP = require("../../models/otp")
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const puppeteer = require('puppeteer');
@@ -302,18 +303,14 @@ exports.editProfile = async (req, res) => {
         }
 
         if (data.switch_to) {
-            let types = user.user_type
-            if (types.includes(data.switch_to.trim()) && user.profile_completed === true) {
-                return utils.handleError(res, {
-                    message: `You are already ${data.switch_to} user`,
-                    code: 400,
-                });
+            let types = user.user_type || [];
+            const switchTo = data.switch_to.trim();
+            // If already this type (e.g. supplier), allow profile update; only reject if trying to "switch" when profile is complete
+            if (!types.includes(switchTo)) {
+                types.push(switchTo);
             }
-            if (!types.includes(data.switch_to.trim())) {
-                types.push(data.switch_to.trim())
-            }
-            data.user_type = types
-            data.current_user_type = data.switch_to
+            data.user_type = types;
+            data.current_user_type = data.switch_to;
         };
 
         console.log("data : ", data)
@@ -3136,6 +3133,7 @@ exports.createEnquiry = async (req, res) => {
                 related_to_type: 'enquiry',
             });
             await buyerNotification.save();
+            emitNotificationToUser(id);
         } catch (err) {
             console.error('[addQuery] Buyer notification error:', err);
         }
@@ -5197,26 +5195,31 @@ exports.deleteTeamMember = async (req, res) => {
         };
 
         const fcm = await fcm_devices.find({ user_id: userdata?._id });
-        console.log("fcm : ", fcm)
 
-        if (fcm && fcm.length > 0) {
-            fcm.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
+        // Always save to DB so it shows in-app; send FCM if tokens exist
+        try {
             const NotificationData = {
                 title: notificationMessage.title,
-                // body: notificationMessage.description,
                 description: notificationMessage.description,
                 type: "account_deleted",
                 receiver_id: userdata?._id,
                 related_to: userdata?._id,
                 related_to_type: "user",
             };
-            const newNotification = new Notification(NotificationData);
-            console.log("newNotification : ", newNotification)
-            await newNotification.save();
+            await new Notification(NotificationData).save();
+            emitNotificationToUser(userdata?._id);
+        } catch (dbError) {
+            console.error('Error saving account_deleted notification:', dbError);
+        }
+
+        if (fcm && fcm.length > 0) {
+            await Promise.all(fcm.map(async (i) => {
+                try {
+                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                } catch (e) {
+                    console.error('Error sending FCM (account_deleted):', e);
+                }
+            }));
         }
 
 
@@ -5395,7 +5398,7 @@ exports.addenquiryquotes = async (req, res) => {
             console.log("enquiry : ", enquiry);
         }
 
-        //send notification to buyer
+        // Send notification to buyer – always save to DB so it shows in frontend bell; send FCM if buyer has tokens
         const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         const notificationMessage = {
             title: `New Supplier Quote – Enquiry ${enquiryIdDisplay}`,
@@ -5403,15 +5406,7 @@ exports.addenquiryquotes = async (req, res) => {
             quote: enquiry._id
         };
 
-        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
-        console.log("buyerfcm : ", buyerfcm)
-
-        if (buyerfcm && buyerfcm.length > 0) {
-            buyerfcm.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
+        try {
             const NotificationData = {
                 title: notificationMessage.title,
                 description: notificationMessage.description,
@@ -5421,8 +5416,19 @@ exports.addenquiryquotes = async (req, res) => {
                 related_to_type: "enquiry",
             };
             const newNotification = new Notification(NotificationData);
-            console.log("newNotification : ", newNotification)
             await newNotification.save();
+            emitNotificationToUser(buyerenquiry.user_id);
+        } catch (dbError) {
+            console.error('[addSupplierQuote] Error saving buyer notification:', dbError);
+        }
+
+        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+        if (buyerfcm && buyerfcm.length > 0) {
+            await Promise.all(buyerfcm.map(async (i) => {
+                try {
+                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                } catch (e) { console.error('Error sending FCM to buyer:', e); }
+            }));
         }
 
         // Admin notification: new supplier quote – await so latest shows in bell
@@ -5628,26 +5634,31 @@ exports.SuspendTeamMember = async (req, res) => {
         };
 
         const fcm = await fcm_devices.find({ user_id: SuspendedMember?._id });
-        console.log("fcm : ", fcm)
 
-        if (fcm && fcm.length > 0) {
-            fcm.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
+        // Always save to DB so it shows in-app; send FCM if tokens exist
+        try {
             const NotificationData = {
                 title: notificationMessage.title,
-                // body: notificationMessage.description,
                 description: notificationMessage.description,
                 type: "account_suspended",
                 receiver_id: SuspendedMember?._id,
                 related_to: SuspendedMember?._id,
                 related_to_type: "user",
             };
-            const newNotification = new Notification(NotificationData);
-            console.log("newNotification : ", newNotification)
-            await newNotification.save();
+            await new Notification(NotificationData).save();
+            emitNotificationToUser(SuspendedMember?._id);
+        } catch (dbError) {
+            console.error('Error saving account_suspended notification:', dbError);
+        }
+
+        if (fcm && fcm.length > 0) {
+            await Promise.all(fcm.map(async (i) => {
+                try {
+                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                } catch (e) {
+                    console.error('Error sending FCM (account_suspended):', e);
+                }
+            }));
         }
 
         return res.status(200).json({
@@ -5714,26 +5725,31 @@ exports.ActivateTeamMember = async (req, res) => {
         };
 
         const fcm = await fcm_devices.find({ user_id: SuspendedMember?._id });
-        console.log("fcm : ", fcm)
 
-        if (fcm && fcm.length > 0) {
-            fcm.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
+        // Always save to DB so it shows in-app; send FCM if tokens exist
+        try {
             const NotificationData = {
                 title: notificationMessage.title,
-                // body: notificationMessage.description,
                 description: notificationMessage.description,
                 type: "account_activated",
                 receiver_id: SuspendedMember?._id,
                 related_to: SuspendedMember?._id,
                 related_to_type: "user",
             };
-            const newNotification = new Notification(NotificationData);
-            console.log("newNotification : ", newNotification)
-            await newNotification.save();
+            await new Notification(NotificationData).save();
+            emitNotificationToUser(SuspendedMember?._id);
+        } catch (dbError) {
+            console.error('Error saving account_activated notification:', dbError);
+        }
+
+        if (fcm && fcm.length > 0) {
+            await Promise.all(fcm.map(async (i) => {
+                try {
+                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                } catch (e) {
+                    console.error('Error sending FCM (account_activated):', e);
+                }
+            }));
         }
 
         return res.status(200).json({
@@ -6083,6 +6099,7 @@ exports.selectSupplierQuote = async (req, res) => {
             const newNotification = new Notification(NotificationData);
             // console.log("newNotification : ", newNotification)
             await newNotification.save();
+            emitNotificationToUser(quotedata?.user_id?._id || quotedata?.user_id);
         }
 
 
@@ -6099,24 +6116,30 @@ exports.selectSupplierQuote = async (req, res) => {
                         description: `An advance payment is pending. Enquiry ID : ${enquiry?.enquiry_unique_id}`,
                         enquiry: enquiry?._id
                     };
-                    if (fcm && fcm.length > 0) {
-                        fcm.forEach(async i => {
-                            const token = i.token
-                            console.log("token : ", token)
-                            await utils.sendNotification(token, notificationMessage);
-                        })
+                    // Always save to DB so it shows in-app; send FCM if tokens exist
+                    try {
                         const NotificationData = {
                             title: notificationMessage.title,
-                            // body: notificationMessage.description,
                             description: notificationMessage.description,
                             type: "payment_pending",
                             receiver_id: quotedata?.user_id?._id || quotedata?.user_id,
                             related_to: quotedata?.user_id?._id || quotedata?.user_id,
                             related_to_type: "user",
                         };
-                        const newNotification = new Notification(NotificationData);
-                        // console.log("newNotification : ", newNotification)
-                        await newNotification.save();
+                        await new Notification(NotificationData).save();
+                        emitNotificationToUser(quotedata?.user_id?._id || quotedata?.user_id);
+                    } catch (dbError) {
+                        console.error('Error saving payment_pending notification:', dbError);
+                    }
+
+                    if (fcm && fcm.length > 0) {
+                        await Promise.all(fcm.map(async (i) => {
+                            try {
+                                if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                            } catch (e) {
+                                console.error('Error sending FCM (payment_pending):', e);
+                            }
+                        }));
                     }
 
                     let payamt = advancepay?.value_type === "percentage"
@@ -6301,7 +6324,7 @@ exports.submitLogisticsQuotes = async (req, res) => {
 
 
 
-        //send notification to buyer
+        // Send notification to buyer – always save to DB so it shows in frontend bell; send FCM if buyer has tokens
         const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         const notificationMessage = {
             title: `New Logistics Quote – Enquiry ${enquiryIdDisplay}`,
@@ -6309,15 +6332,7 @@ exports.submitLogisticsQuotes = async (req, res) => {
             quote: enquiry._id
         };
 
-        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
-        console.log("buyerfcm : ", buyerfcm)
-
-        if (buyerfcm && buyerfcm.length > 0) {
-            buyerfcm.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
+        try {
             const NotificationData = {
                 title: notificationMessage.title,
                 description: notificationMessage.description,
@@ -6327,8 +6342,19 @@ exports.submitLogisticsQuotes = async (req, res) => {
                 related_to_type: "enquiry",
             };
             const newNotification = new Notification(NotificationData);
-            console.log("newNotification : ", newNotification)
             await newNotification.save();
+            emitNotificationToUser(buyerenquiry.user_id);
+        } catch (dbError) {
+            console.error('[addLogisticsQuote] Error saving buyer notification:', dbError);
+        }
+
+        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+        if (buyerfcm && buyerfcm.length > 0) {
+            await Promise.all(buyerfcm.map(async (i) => {
+                try {
+                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                } catch (e) { console.error('Error sending FCM to buyer:', e); }
+            }));
         }
 
         // Admin notification: new logistics quote – await so latest shows in bell
@@ -6556,6 +6582,7 @@ exports.selectLogisticsQuote = async (req, res) => {
             const newNotification = new Notification(NotificationData);
             console.log("newNotification : ", newNotification)
             await newNotification.save();
+            emitNotificationToUser(quotedata?.user_id?._id || quotedata?.user_id);
         }
 
         return res.status(200).json({
@@ -7160,24 +7187,30 @@ exports.verifyOtpForBuyer = async (req, res) => {
                             description: `On Delivery payment is pending. Reminder to pay earlier. Enquiry ID : ${enquiry_data?.enquiry_unique_id}`,
                             enquiry: enquiry_data?._id
                         };
-                        if (fcm && fcm.length > 0) {
-                            fcm.forEach(async i => {
-                                const token = i.token
-                                console.log("token : ", token)
-                                await utils.sendNotification(token, notificationMessage);
-                            })
+                        // Always save to DB so it shows in-app; send FCM if tokens exist
+                        try {
                             const NotificationData = {
                                 title: notificationMessage.title,
-                                // body: notificationMessage.description,
                                 description: notificationMessage.description,
                                 type: "payment_pending",
                                 receiver_id: enquiry_data?.user_id?._id,
-                                related_to: enquiry_data?.user_id?._id,
-                                related_to_type: "user",
+                                related_to: enquiry_data?._id,
+                                related_to_type: "enquiry",
                             };
-                            const newNotification = new Notification(NotificationData);
-                            // console.log("newNotification : ", newNotification)
-                            await newNotification.save();
+                            await new Notification(NotificationData).save();
+                            emitNotificationToUser(enquiry_data?.user_id?._id);
+                        } catch (dbError) {
+                            console.error('Error saving on-delivery payment_pending notification:', dbError);
+                        }
+
+                        if (fcm && fcm.length > 0) {
+                            await Promise.all(fcm.map(async (i) => {
+                                try {
+                                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                                } catch (e) {
+                                    console.error('Error sending FCM (on-delivery payment_pending):', e);
+                                }
+                            }));
                         }
 
                         let payamt = i?.value_type === "percentage"
@@ -7213,24 +7246,30 @@ exports.verifyOtpForBuyer = async (req, res) => {
             description: `Your order has been delivered successfully. Order ID : ${orderdata?.order_unique_id}`,
             order: orderdata?._id
         };
-        if (fcm && fcm.length > 0) {
-            fcm.forEach(async i => {
-                const token = i.token
-                console.log("token : ", token)
-                await utils.sendNotification(token, notificationMessage);
-            })
+        // Always save to DB so it shows in-app; send FCM if tokens exist
+        try {
             const NotificationData = {
                 title: notificationMessage.title,
-                // body: notificationMessage.description,
                 description: notificationMessage.description,
                 type: "order_delivered",
                 receiver_id: enquiry_data?.user_id?._id,
-                related_to: enquiry_data?.user_id?._id,
-                related_to_type: "user",
+                related_to: enquiry_data?._id,
+                related_to_type: "enquiry",
             };
-            const newNotification = new Notification(NotificationData);
-            // console.log("newNotification : ", newNotification)
-            await newNotification.save();
+            await new Notification(NotificationData).save();
+            emitNotificationToUser(enquiry_data?.user_id?._id);
+        } catch (dbError) {
+            console.error('Error saving order_delivered notification:', dbError);
+        }
+
+        if (fcm && fcm.length > 0) {
+            await Promise.all(fcm.map(async (i) => {
+                try {
+                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                } catch (e) {
+                    console.error('Error sending FCM (order_delivered):', e);
+                }
+            }));
         }
 
         const mailOptions = {
@@ -7588,24 +7627,30 @@ exports.addSuppliercollectiondata = async (req, res) => {
             const fcm = await fcm_devices.find({ user_id: quotedata?.enquiry_id?.user_id });
             console.log("fcm : ", fcm)
 
-            if (fcm && fcm.length > 0) {
-                fcm.forEach(async i => {
-                    const token = i.token
-                    console.log("token : ", token)
-                    await utils.sendNotification(token, notificationMessage);
-                })
+            // Always save to DB so it shows in-app; send FCM if tokens exist
+            try {
                 const NotificationData = {
                     title: notificationMessage.title,
-                    // body: notificationMessage.description,
                     description: notificationMessage.description,
                     type: "order_ready_for_pickup",
                     receiver_id: quotedata?.enquiry_id?.user_id,
-                    related_to: quotedata?.enquiry_id?.user_id,
-                    related_to_type: "user",
+                    related_to: quotedata?.enquiry_id?._id,
+                    related_to_type: "enquiry",
                 };
-                const newNotification = new Notification(NotificationData);
-                console.log("newNotification : ", newNotification)
-                await newNotification.save();
+                await new Notification(NotificationData).save();
+                emitNotificationToUser(quotedata?.enquiry_id?.user_id);
+            } catch (dbError) {
+                console.error('Error saving order_ready_for_pickup notification (buyer):', dbError);
+            }
+
+            if (fcm && fcm.length > 0) {
+                await Promise.all(fcm.map(async (i) => {
+                    try {
+                        if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                    } catch (e) {
+                        console.error('Error sending FCM (order_ready_for_pickup buyer):', e);
+                    }
+                }));
             }
         } else {
             let full_address = `${quotedata?.pickup_address?.address?.address_line_1}, ${quotedata?.pickup_address?.address_line2} , ${quotedata?.pickup_address?.city?.name}, ${quotedata?.pickup_address?.state?.name}, ${quotedata?.pickup_address?.country?.name}, ${quotedata?.pickup_address?.pin_code}`
@@ -7645,24 +7690,31 @@ exports.addSuppliercollectiondata = async (req, res) => {
             const fcm = await fcm_devices.find({ user_id: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?._id });
             console.log("fcm : ", fcm)
 
-            if (fcm && fcm.length > 0) {
-                fcm.forEach(async i => {
-                    const token = i.token
-                    console.log("token : ", token)
-                    await utils.sendNotification(token, notificationMessage);
-                })
+            // Always save to DB so it shows in-app; send FCM if tokens exist
+            const logisticsUserId = quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?._id;
+            try {
                 const NotificationData = {
                     title: notificationMessage.title,
-                    // body: notificationMessage.description,
                     description: notificationMessage.description,
                     type: "order_ready_for_pickup",
-                    receiver_id: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?._id,
-                    related_to: quotedata?.enquiry_id?.selected_logistics?.quote_id?.user_id?._id,
-                    related_to_type: "user",
+                    receiver_id: logisticsUserId,
+                    related_to: quotedata?.enquiry_id?._id,
+                    related_to_type: "enquiry",
                 };
-                const newNotification = new Notification(NotificationData);
-                console.log("newNotification : ", newNotification)
-                await newNotification.save();
+                await new Notification(NotificationData).save();
+                emitNotificationToUser(logisticsUserId);
+            } catch (dbError) {
+                console.error('Error saving order_ready_for_pickup notification (logistics):', dbError);
+            }
+
+            if (fcm && fcm.length > 0) {
+                await Promise.all(fcm.map(async (i) => {
+                    try {
+                        if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                    } catch (e) {
+                        console.error('Error sending FCM (order_ready_for_pickup logistics):', e);
+                    }
+                }));
             }
         }
 

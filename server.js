@@ -1,4 +1,5 @@
 require("dotenv").config();
+const http = require("http");
 const express = require("express");
 const helmet = require("helmet");
 const compression = require("compression");
@@ -8,10 +9,23 @@ const passport = require("passport");
 var fileUpload = require("express-fileupload");
 const initMongo = require("./src/config/mongo");
 const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds");
+const { initSocket } = require("./src/config/socket");
 const app = express();
-const { handleStripeWebhook } = require("./src/controllers/user/webhook")
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const { handleStripeWebhook } = require("./src/controllers/user/webhook");
 const mongoose = require("mongoose");
 // const seedAllInOnePlans = require("./scripts/seedAllInOnePlans"); // Disabled - plans already seeded
+
+const io = new Server(server, {
+  cors: {
+    origin: process.env.ENV === "local" || process.env.NODE_ENV === "development"
+      ? true
+      : (process.env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean) || ["http://localhost:3000", "https://bsoservices.com"],
+    credentials: true,
+  },
+});
+initSocket(io);
 
 app.post(
   "/user/webhook",
@@ -120,7 +134,7 @@ async function startServer() {
     console.log(`*    Database: MongoDB`);
     console.log(`*    DB Connection: OK\n****************************\n`);
 
-    app.listen(PORT, async () => {
+    server.listen(PORT, async () => {
       // Run startup tasks only after server is listening (DB is already connected)
       try {
         console.log('🔄 Running startup tasks...');

@@ -18,13 +18,16 @@ const { createNewPassword } = require('./passwordGenerator');
 async function createUserWithRole(data, role, res) {
   try {
     console.log(`Creating user with role: ${role}`);
-    
-    // Step 1: Validate required fields
-    if (!data.email || !data.full_name) {
-      return res.status(400).json({
-        message: "Email and full name are required",
-        code: 400
-      });
+
+    // Step 1: Allow optional email/full_name - use placeholders if missing (all fields optional for admin add supplier)
+    let usedPlaceholders = false;
+    if (!data.email || String(data.email).trim() === '') {
+      data.email = `supplier-${Date.now()}-${Math.random().toString(36).slice(2, 9)}@placeholder.local`;
+      usedPlaceholders = true;
+    }
+    if (!data.full_name || String(data.full_name).trim() === '') {
+      data.full_name = data.full_name || 'Supplier';
+      usedPlaceholders = true;
     }
 
     // Step 2: Check if email already exists
@@ -59,7 +62,7 @@ async function createUserWithRole(data, role, res) {
     const password = data.password || createNewPassword();
     console.log(`🔐 Using ${data.password ? 'provided' : 'generated'} password for user creation`);
 
-    // Step 6: Create base user data
+    // Step 6: Create base user data (profile_completed false if placeholders were used)
     const baseUserData = {
       ...data,
       unique_user_id: uniqueUserId,
@@ -67,7 +70,7 @@ async function createUserWithRole(data, role, res) {
       decoded_password: password,
       user_type: [role],
       current_user_type: role,
-      profile_completed: true,
+      profile_completed: usedPlaceholders ? false : true,
       is_user_approved_by_admin: true,
       status: data.status || 'active',
     };

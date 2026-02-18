@@ -6,6 +6,7 @@ const utils = require("../../utils/utils");
 const emailer = require("../../utils/emailer");
 const User = require("../../models/user");
 const { default: mongoose } = require("mongoose");
+const { emitNotificationToUser } = require("../../config/socket");
 
 const sendUsernotificationhelper = async (user_id, notificationbody, dbnotificationbody) => {
     try {
@@ -20,35 +21,30 @@ const sendUsernotificationhelper = async (user_id, notificationbody, dbnotificat
         console.log("userFcmDevices : ", userFcmDevices)
         const notificationMessage = notificationbody
         
+        // Send push via FCM if tokens exist
         if (userFcmDevices && userFcmDevices.length > 0) {
-            // Use Promise.all to properly handle async operations
             await Promise.all(
                 userFcmDevices.map(async (i) => {
                     try {
                         const token = i.token;
-                        console.log("token : ", token);
                         if (token) {
                             await utils.sendNotification(token, notificationMessage);
                         }
                     } catch (notifError) {
                         console.error('Error sending FCM notification in helper:', notifError);
-                        // Continue with other notifications even if one fails
                     }
                 })
             );
+        }
 
-            // Save notification to database
-            try {
-                const userNotificationData = dbnotificationbody;
-                const newuserNotification = new Notification(userNotificationData);
-                console.log("newuserNotification : ", newuserNotification);
-                await newuserNotification.save();
-            } catch (dbError) {
-                console.error('Error saving notification to database in helper:', dbError);
-                // Continue even if database save fails
-            }
-        } else {
-            console.log(`No active FCM tokens found for user`);
+        // Always save notification to database so it appears in-app (even without FCM)
+        try {
+            const userNotificationData = dbnotificationbody;
+            const newuserNotification = new Notification(userNotificationData);
+            await newuserNotification.save();
+            emitNotificationToUser(user_id);
+        } catch (dbError) {
+            console.error('Error saving notification to database in helper:', dbError);
         }
         
         return true;

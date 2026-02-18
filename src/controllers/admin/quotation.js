@@ -22,6 +22,7 @@ const fcm_devices = require("../../models/fcm_devices");
 const emailer = require("../../utils/emailer");
 const { createLog, logSuccess, logFailure } = require("../../utils/logger");
 const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
+const { emitNotificationToUser } = require("../../config/socket");
 
 
 async function genQuoteId() {
@@ -3328,7 +3329,7 @@ exports.createSupplierQuote = async (req, res) => {
             });
         }
 
-        // Send notification to buyer - wrapped in try-catch to prevent crashes
+        // Send notification to buyer - always save to DB so it shows in frontend bell; send FCM if buyer has tokens
         const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         try {
             const notificationMessage = {
@@ -3337,9 +3338,25 @@ exports.createSupplierQuote = async (req, res) => {
                 quote: quote._id
             };
 
+            // Always save notification to database so buyer sees it in frontend (even without FCM)
+            try {
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type: "supplier_quote_added",
+                    receiver_id: buyerenquiry.user_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const newNotification = new Notification(NotificationData);
+                    await newNotification.save();
+                    emitNotificationToUser(buyerenquiry.user_id);
+                } catch (dbError) {
+                    console.error('Error saving buyer notification to database:', dbError);
+                }
+
             const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
             if (buyerfcm && buyerfcm.length > 0) {
-                // Use Promise.all to properly handle async forEach
                 await Promise.all(
                     buyerfcm.map(async (i) => {
                         try {
@@ -3349,31 +3366,12 @@ exports.createSupplierQuote = async (req, res) => {
                             }
                         } catch (notifError) {
                             console.error('Error sending FCM notification to buyer:', notifError);
-                            // Continue with other notifications even if one fails
                         }
                     })
                 );
-
-                // Save notification to database
-                try {
-                    const NotificationData = {
-                        title: notificationMessage.title,
-                        description: notificationMessage.description,
-                        type: "supplier_quote_added",
-                        receiver_id: buyerenquiry.user_id,
-                        related_to: quote._id,
-                        related_to_type: "quote",
-                    };
-                    const newNotification = new Notification(NotificationData);
-                    await newNotification.save();
-                } catch (dbError) {
-                    console.error('Error saving buyer notification to database:', dbError);
-                    // Continue even if database save fails
-                }
             }
         } catch (notifError) {
             console.error('Error in buyer notification flow:', notifError);
-            // Continue with the rest of the function even if notifications fail
         }
 
         // Send notification to supplier - wrapped in try-catch to prevent crashes
@@ -3385,8 +3383,26 @@ exports.createSupplierQuote = async (req, res) => {
             };
 
             const supplierfcm = await fcm_devices.find({ user_id: supplier_id });
+
+            // Always save notification to database so supplier sees it in-app (even without FCM)
+            try {
+                const SupplierNotificationData = {
+                    title: supplierNotificationMessage.title,
+                    description: supplierNotificationMessage.description,
+                    type: "admin_action",
+                    receiver_id: supplier_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const supplierNotification = new Notification(SupplierNotificationData);
+                await supplierNotification.save();
+                emitNotificationToUser(supplier_id);
+            } catch (dbError) {
+                console.error('Error saving supplier notification to database:', dbError);
+            }
+
+            // Send push via FCM if tokens exist
             if (supplierfcm && supplierfcm.length > 0) {
-                // Use Promise.all to properly handle async forEach
                 await Promise.all(
                     supplierfcm.map(async (i) => {
                         try {
@@ -3396,27 +3412,9 @@ exports.createSupplierQuote = async (req, res) => {
                             }
                         } catch (notifError) {
                             console.error('Error sending FCM notification to supplier:', notifError);
-                            // Continue with other notifications even if one fails
                         }
                     })
                 );
-
-                // Save notification to database
-                try {
-                    const SupplierNotificationData = {
-                        title: supplierNotificationMessage.title,
-                        description: supplierNotificationMessage.description,
-                        type: "admin_quote_created",
-                        receiver_id: supplier_id,
-                        related_to: quote._id,
-                        related_to_type: "quote",
-                    };
-                    const supplierNotification = new Notification(SupplierNotificationData);
-                    await supplierNotification.save();
-                } catch (dbError) {
-                    console.error('Error saving supplier notification to database:', dbError);
-                    // Continue even if database save fails
-                }
             }
         } catch (notifError) {
             console.error('Error in supplier notification flow:', notifError);
@@ -3982,18 +3980,34 @@ exports.createLogisticsQuote = async (req, res) => {
             });
         }
 
-        // Send notifications to buyer - wrapped in try-catch to prevent crashes
+        // Send notifications to buyer - always save to DB so it shows in frontend bell; send FCM if buyer has tokens
         const enquiryIdDisplayLog = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
         try {
+            const notificationMessage = {
+                title: `New Logistics Quote – Enquiry ${enquiryIdDisplayLog}`,
+                description: `${logistics.full_name} has submitted a logistics quote. Enquiry ID: ${enquiryIdDisplayLog}`,
+                quote: quote._id
+            };
+
+            // Always save notification to database so buyer sees it in frontend (even without FCM)
+            try {
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type: "logistics_quote_added",
+                    receiver_id: buyerenquiry.user_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const newNotification = new Notification(NotificationData);
+                await newNotification.save();
+                emitNotificationToUser(buyerenquiry.user_id);
+            } catch (dbError) {
+                console.error('Error saving logistics notification to database:', dbError);
+            }
+
             const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
             if (buyerfcm && buyerfcm.length > 0) {
-                const notificationMessage = {
-                    title: `New Logistics Quote – Enquiry ${enquiryIdDisplayLog}`,
-                    description: `${logistics.full_name} has submitted a logistics quote. Enquiry ID: ${enquiryIdDisplayLog}`,
-                    quote: quote._id
-                };
-                
-                // Use Promise.all to properly handle async operations
                 await Promise.all(
                     buyerfcm.map(async (i) => {
                         try {
@@ -4003,31 +4017,12 @@ exports.createLogisticsQuote = async (req, res) => {
                             }
                         } catch (notifError) {
                             console.error('Error sending FCM notification to buyer:', notifError);
-                            // Continue with other notifications even if one fails
                         }
                     })
                 );
-
-                // Save notification to database
-                try {
-                    const NotificationData = {
-                        title: notificationMessage.title,
-                        description: notificationMessage.description,
-                        type: "logistics_quote_added",
-                        receiver_id: buyerenquiry.user_id,
-                        related_to: quote._id,
-                        related_to_type: "quote",
-                    };
-                    const newNotification = new Notification(NotificationData);
-                    await newNotification.save();
-                } catch (dbError) {
-                    console.error('Error saving logistics notification to database:', dbError);
-                    // Continue even if database save fails
-                }
             }
         } catch (notifError) {
             console.error('Error in logistics notification flow:', notifError);
-            // Continue with the rest of the function even if notifications fail
         }
 
         // Admin notification: new logistics quote – await so latest shows in bell
@@ -4086,6 +4081,47 @@ exports.createLogisticsQuote = async (req, res) => {
             }
         } catch (emailError) {
             console.error('Error sending email to logistics:', emailError);
+        }
+
+        // In-app + real-time notification to logistics provider (same time as email)
+        try {
+            const logisticsNotificationMessage = {
+                title: 'Your Logistics Quote Has Been Submitted',
+                description: `Your logistics quote has been submitted for Enquiry ID: ${buyerenquiry?.enquiry_unique_id || enquiryIdDisplayLog}`,
+                quote: quote._id,
+            };
+
+            // Always save to DB so it shows in-app (even without FCM)
+            try {
+                const logisticsNotificationData = {
+                    title: logisticsNotificationMessage.title,
+                    description: logisticsNotificationMessage.description,
+                    type: "admin_action",
+                    receiver_id: logistics_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                await new Notification(logisticsNotificationData).save();
+                emitNotificationToUser(logistics_id);
+            } catch (dbError) {
+                console.error('Error saving logistics provider notification to database:', dbError);
+            }
+
+            // Send push via FCM if tokens exist
+            const logisticsFcm = await fcm_devices.find({ user_id: logistics_id });
+            if (logisticsFcm && logisticsFcm.length > 0) {
+                await Promise.all(
+                    logisticsFcm.map(async (i) => {
+                        try {
+                            if (i.token) await utils.sendNotification(i.token, logisticsNotificationMessage);
+                        } catch (notifError) {
+                            console.error('Error sending FCM notification to logistics provider:', notifError);
+                        }
+                    })
+                );
+            }
+        } catch (notifError) {
+            console.error('Error in logistics provider notification flow:', notifError);
         }
 
         // Create log entry for admin action
