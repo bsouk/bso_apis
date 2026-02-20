@@ -46,6 +46,7 @@ const industry_sub_type = require("../../models/industry_sub_type");
 const fcm_devices = require("../../models/fcm_devices");
 const admin_received_notification = require("../../models/admin_received_notification");
 const { notifyAllSuperAdmins } = require("../../utils/notifyAdmins");
+const { generateEnquiryId } = require("../../utils/enquiryIdGenerator");
 const Order = require("../../models/order");
 const tracking_order = require("../../models/tracking_order");
 const Notification = require("../../models/notification")
@@ -3090,13 +3091,16 @@ exports.createEnquiry = async (req, res) => {
         // Frontend-created enquiries: default to approved (is_approved and status)
         data.is_approved = "approved";
         data.status = "approved";
-        // Use provided enquiry_number or generate unique one
-        let enquiryId = data.enquiry_number && data.enquiry_number.trim() !== '' 
+        // Use provided enquiry_number or generate unique one (for enquiry_unique_id)
+        let enquiryUniqueId = data.enquiry_number && data.enquiry_number.trim() !== '' 
             ? data.enquiry_number.trim() 
             : await EnquiryId();
+        // Always generate system enquiry_id (bso-enq-xxxxx) for search and conditional display
+        const systemEnquiryId = await generateEnquiryId(Enquiry);
         let newdata = {
             ...data,
-            enquiry_unique_id: enquiryId,
+            enquiry_unique_id: enquiryUniqueId,
+            enquiry_id: systemEnquiryId,
             user_id: id,
             buyer_plan_step: subscription[0]?.plan?.plan_step ?? null
         }
@@ -3249,7 +3253,14 @@ exports.getMyEnquiry = async (req, res) => {
             filter.status = status;
         }
         if (search) {
-            filter.query_unique_id = { $regex: search, $options: "i" };
+            const term = (typeof search === 'string' && search.trim()) ? search.trim() : '';
+            if (term) {
+                filter.$or = [
+                    { enquiry_number: { $regex: term, $options: "i" } },
+                    { enquiry_unique_id: { $regex: term, $options: "i" } },
+                    { enquiry_id: { $regex: term, $options: "i" } },
+                ];
+            }
         }
 
         if (countries) {
@@ -3743,6 +3754,7 @@ exports.getMyEnquiry = async (req, res) => {
                         user_id: { $first: "$user_id" },
                         is_approved: { $first: "$is_approved" },
                         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        enquiry_id: { $first: "$enquiry_id" },
                         status: { $first: "$status" },
                         expiry_date: { $first: "$expiry_date" },
                         priority: { $first: "$priority" },
@@ -4035,6 +4047,7 @@ exports.getAllEnquiry = async (req, res) => {
                         _id: "$_id",
                         user_id: { $first: "$user_id" },
                         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        enquiry_id: { $first: "$enquiry_id" },
                         status: { $first: "$status" },
                         expiry_date: { $first: "$expiry_date" },
                         priority: { $first: "$priority" },
@@ -4291,6 +4304,7 @@ exports.getAllEnquiry = async (req, res) => {
                         _id: "$_id",
                         user_id: { $first: "$user_id" },
                         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        enquiry_id: { $first: "$enquiry_id" },
                         status: { $first: "$status" },
                         expiry_date: { $first: "$expiry_date" },
                         priority: { $first: "$priority" },
@@ -4549,6 +4563,7 @@ exports.homepageenquiry = async (req, res) => {
                         _id: "$_id",
                         user_id: { $first: "$user_id" },
                         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        enquiry_id: { $first: "$enquiry_id" },
                         status: { $first: "$status" },
                         expiry_date: { $first: "$expiry_date" },
                         priority: { $first: "$priority" },

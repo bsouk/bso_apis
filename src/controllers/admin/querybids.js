@@ -1576,6 +1576,7 @@ exports.getAllEnquiry = async (req, res) => {
             filter.$or = [
                 { enquiry_number: { $regex: term, $options: "i" } },
                 { enquiry_unique_id: { $regex: term, $options: "i" } },
+                { enquiry_id: { $regex: term, $options: "i" } },
             ];
         }
 
@@ -1771,6 +1772,7 @@ exports.getAllEnquiry = async (req, res) => {
                         _id: "$_id",
                         user: { $first: "$user" },
                         enquiry_unique_id: { $first: "$enquiry_unique_id" },
+                        enquiry_id: { $first: "$enquiry_id" },
                         status: { $first: "$status" },
                         expiry_date: { $first: "$expiry_date" },
                         priority: { $first: "$priority" },
@@ -2279,9 +2281,14 @@ exports.createManualEnquiry = async (req, res) => {
         const enquiryNumber = enquiryData.enquiry_number && enquiryData.enquiry_number.trim() !== '' 
             ? enquiryData.enquiry_number.trim() 
             : enquiryUniqueId; // Default to unique_id if not provided
+
+        // System enquiry_id (bso-enq-xxxxx) for search and conditional display
+        const { generateEnquiryId } = require("../../utils/enquiryIdGenerator");
+        const systemEnquiryId = await generateEnquiryId(Enquiry);
         
         console.log("✅ Generated enquiry_unique_id:", enquiryUniqueId);
         console.log("✅ Enquiry number:", enquiryNumber);
+        console.log("✅ Enquiry ID (bso-enq):", systemEnquiryId);
 
         // ═══════════════════════════════════════════════════
         // STEP 5: CREATE ENQUIRY
@@ -2307,6 +2314,7 @@ exports.createManualEnquiry = async (req, res) => {
         const newEnquiryData = {
             ...enquiryData,
             enquiry_unique_id: enquiryUniqueId,
+            enquiry_id: systemEnquiryId,
             enquiry_number: enquiryNumber,
             user_id: user_id,
             buyer_plan_step: buyerSubscription[0]?.plan?.plan_step || null,

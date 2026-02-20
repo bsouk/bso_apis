@@ -88,6 +88,11 @@ const EnquirySchema = new mongoose.Schema({
     enquiry_unique_id: {
         type: String,
     },
+    /** System-generated unique ID (e.g. bso-enq-a1b2c) for display/search when hiding enquiry number */
+    enquiry_id: {
+        type: String,
+        sparse: true,
+    },
     enquiry_number: {
         type: String,
     },

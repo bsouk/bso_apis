@@ -9,6 +9,7 @@ const passport = require("passport");
 var fileUpload = require("express-fileupload");
 const initMongo = require("./src/config/mongo");
 const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds");
+const { generateMissingEnquiryIds } = require("./src/utils/generateMissingEnquiryIds");
 const { initSocket } = require("./src/config/socket");
 const app = express();
 const server = http.createServer(app);
@@ -139,6 +140,7 @@ async function startServer() {
       try {
         console.log('🔄 Running startup tasks...');
         await generateMissingUserIds();
+        await generateMissingEnquiryIds();
         console.log('✅ Startup tasks completed successfully');
       } catch (error) {
         console.error('❌ Error during startup tasks:', error.message);
