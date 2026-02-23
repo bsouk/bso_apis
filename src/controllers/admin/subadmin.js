@@ -93,9 +93,9 @@ exports.addSubAdmin = async (req, res) => {
                 email: newsubadmin.email,
                 account_type: "sub admin",
                 password: password,
-                website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
-                adminLink: 'https://dashboard.bsoservices.com/',
-                login_url: 'https://dashboard.bsoservices.com/',
+                website_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL,
+                adminLink: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL,
+                login_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL,
             };
 
             console.log(`📧 Mail options prepared:`, {

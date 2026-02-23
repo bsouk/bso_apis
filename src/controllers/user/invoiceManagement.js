@@ -239,7 +239,7 @@ exports.payInvoice = async (req, res) => {
     }
 
     // Create billing portal session for payment
-    const returnUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL || 'http://localhost:3000';
+    const returnUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL;
     const cleanReturnUrl = returnUrl.replace(/\/+$/, '');
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
@@ -340,7 +340,7 @@ exports.reactivateSubscription = async (req, res) => {
     }
 
     // Create billing portal session for reactivation
-    const returnUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL || 'http://localhost:3000';
+    const returnUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL;
     const cleanReturnUrl = returnUrl.replace(/\/+$/, '');
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,

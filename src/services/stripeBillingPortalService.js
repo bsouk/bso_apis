@@ -26,7 +26,7 @@ async function createBillingPortalSession(customerId, returnUrl) {
     }
 
     // Get base URL from environment
-    const baseUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL || 'http://localhost:3000';
+    const baseUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL;
     const cleanBaseUrl = baseUrl.replace(/\/+$/, ''); // Remove trailing slashes
     const cleanReturnUrl = returnUrl ? returnUrl.replace(/^\/+/, '') : 'my-account';
     const fullReturnUrl = `${cleanBaseUrl}/${cleanReturnUrl}`;

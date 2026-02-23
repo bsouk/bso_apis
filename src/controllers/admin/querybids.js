@@ -2700,7 +2700,7 @@ exports.sendEnquiryToSuppliers = async (req, res) => {
             });
         }
 
-        const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
+        const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.APP_URL || '';
         const storageUrl = process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/';
 
         // Send notifications to each supplier
@@ -2904,7 +2904,7 @@ exports.sendEnquiryToLogistics = async (req, res) => {
             });
         }
 
-        const frontendUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
+        const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.APP_URL || '';
         const storageUrl = process.env.STORAGE_BASE_URL || 'https://bso-content.s3.eu-west-2.amazonaws.com/public/';
 
         // Send notifications to each logistics provider

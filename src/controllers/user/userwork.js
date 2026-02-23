@@ -3182,7 +3182,7 @@ exports.createEnquiry = async (req, res) => {
 
         // Send confirmation email to buyer (don't fail enquiry creation if email fails)
         try {
-            const buyerAppUrl = process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/';
+            const buyerAppUrl = process.env.FRONTEND_PROD_URL || process.env.APP_URL || '';
             const enquiryPlain = (newquery && typeof newquery.toObject === 'function') ? newquery.toObject() : (typeof newquery === 'object' ? JSON.parse(JSON.stringify(newquery)) : {});
             const mailOptions = {
                 to: req.user?.email,

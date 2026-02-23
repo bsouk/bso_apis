@@ -5047,7 +5047,7 @@ exports.sendFinalQuoteToBuyer = async (req, res) => {
         });
 
         // Send email to buyer
-        const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || 'https://bsoservices.com/';
+        const frontendUrl = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || process.env.APP_URL || '';
         // Remove trailing slash if exists to avoid double slashes
         const cleanFrontendUrl = frontendUrl.endsWith('/') ? frontendUrl.slice(0, -1) : frontendUrl;
 
@@ -5336,7 +5336,7 @@ exports.updateEnquiryStatus = async (req, res) => {
 };
 
 async function sendStatusEmails(enquiry, prevStatus, newStatus, opts = {}) {
-    const frontendUrl = (process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/').replace(/\/$/, '');
+    const frontendUrl = (process.env.FRONTEND_PROD_URL || process.env.APP_URL || '').replace(/\/$/, '');
     const buyerEmail = enquiry.user_id?.email;
     const buyerName = enquiry.user_id?.full_name || 'Customer';
     const supplierEmail = enquiry.selected_supplier?.quote_id?.user_id?.email;

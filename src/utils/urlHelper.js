@@ -37,7 +37,7 @@ function buildUrl(baseUrl, path = '') {
  * @returns {string} Clean base URL
  */
 function getBaseUrl() {
-  const appUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL || 'http://localhost:3000';
+  const appUrl = process.env.APP_URL || process.env.FRONTEND_PROD_URL;
   return appUrl.replace(/\/+$/, ''); // Remove trailing slashes
 }
 

@@ -131,9 +131,9 @@ async function createUserWithRole(data, role, res) {
       name: user.full_name,
       account_type: role,
       password_source: data.password ? 'provided' : 'generated',
-      login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
-      adminLink: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
-      website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+      login_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL,
+      adminLink: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL,
+      website_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL,
     };
 
     try {

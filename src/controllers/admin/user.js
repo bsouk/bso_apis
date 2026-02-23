@@ -104,7 +104,7 @@ exports.testEmail = async (req, res) => {
       app_name: process.env.APP_NAME || 'BSO Services',
       email: "support@bsoservices.com",
       name: "Test User",
-      login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com/sign-in',
+      login_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
     };
 
     console.log("📧 Sending test email...");
@@ -116,7 +116,7 @@ exports.testEmail = async (req, res) => {
       app_name: "BSO Services",
       email: "support@bsoservices.com",
       name: "Test User",
-      login_url: "https://bsoservices.com/sign-in",
+      login_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
     };
 
     await emailer.sendEmail(null, testMailOptions, "passwordUpdated");
@@ -546,8 +546,8 @@ exports.addCustomer = async (req, res) => {
               name: user.full_name || `${user.first_name} ${user.last_name}`,
               subscription_type: buyerType === 'direct-buyer' ? 'Direct Buyer' : 'Indirect Buyer',
               subscription_id: subscription.subscription_id,
-              login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
-              website_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+              login_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
+              website_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
             };
             
             console.log(`📧 Sending subscription email to ${user.email}...`);
@@ -578,8 +578,8 @@ exports.addCustomer = async (req, res) => {
         name: user.full_name,
         account_type: "customer",
         user_id: uniqueUserId,
-        website_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
-        login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+        website_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
+        login_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
       };
       
       console.log(`📧 Sending welcome email to ${user.email} using main emailer...`);
@@ -862,8 +862,8 @@ exports.editCustomer = async (req, res) => {
               name: updatedUser.full_name || `${updatedUser.first_name} ${updatedUser.last_name}`,
               subscription_type: newBuyerType === 'direct-buyer' ? 'Direct Buyer' : 'Indirect Buyer',
               subscription_id: subscription.subscription_id,
-              login_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
-              website_url: process.env.FRONTEND_PROD_URL || 'https://bsoservices.com',
+              login_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
+              website_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL || '',
             };
             
             console.log(`📧 Sending subscription email to ${updatedUser.email}...`);
@@ -892,8 +892,8 @@ exports.editCustomer = async (req, res) => {
           email: user.email,
           password: newPassword,
           name: user.full_name || `${user.first_name} ${user.last_name}`,
-          login_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
-          website_url: process.env.FRONTEND_PROD_URL || 'http://localhost:3039',
+          login_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL,
+          website_url: process.env.FRONTEND_PROD_URL || process.env.APP_URL,
         };
         
         console.log(`📧 Sending password update email to ${user.email} using main emailer...`);
@@ -1369,8 +1369,8 @@ exports.editResource = async (req, res) => {
             password: newPassword,
             name: userAfterUpdate.full_name || `${userAfterUpdate.first_name || ''} ${userAfterUpdate.last_name || ''}`.trim(),
             account_type: userAfterUpdate.current_user_type || 'recruiter',
-            login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
-            website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+            login_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL || '',
+            website_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL || '',
           };
           
           console.log(`📧 Sending password update email to recruiter ${userAfterUpdate.email} with login URL: ${mailOptions.login_url}...`);
@@ -2018,8 +2018,8 @@ exports.editSupplier = async (req, res) => {
           password: newPassword,
           name: userAfterUpdate.full_name || userAfterUpdate.supplier_name,
           account_type: "supplier",
-          login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
-          website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+          login_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL || '',
+          website_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL || '',
         };
         
         console.log(`📧 Sending password update email to supplier ${userAfterUpdate.email} with login URL: ${mailOptions.login_url}...`);
@@ -2482,8 +2482,8 @@ exports.editLogisticsUser = async (req, res) => {
             password: newPassword,
             name: userAfterUpdate.full_name,
             account_type: "logistics",
-            login_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
-            website_url: process.env.FRONTEND_URL || process.env.FRONTEND_PROD_URL || 'https://dashboard.bsoservices.com/',
+            login_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL || '',
+            website_url: process.env.PRODUCTION_ADMIN_URL || process.env.LOCAL_ADMIN_URL || '',
           };
           
           console.log(`📧 Sending password update email to logistics user ${userAfterUpdate.email} with login URL: ${mailOptions.login_url}...`);
