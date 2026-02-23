@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>New Contact Form Submission - Blue Sky</title>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #f4f7f9; font-family: Arial, sans-serif; color: #222021;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 30px 0; background-color: #f4f7f9;">
+    <tr>
+      <td align="center">
+        <table width="700" cellpadding="0" cellspacing="0" border="0"
+          style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" bgcolor="#055a90" style="padding: 25px 20px;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px; font-family: Arial, sans-serif;">Blue Sky</h1>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 30px 40px; font-size: 16px; line-height: 1.7;">
+              <p style="font-size: 18px; font-weight: bold; color: #055a90; margin-bottom: 20px;">
+                New Contact Form Submission
+              </p>
+
+              <p>A new message has been submitted from the Contact Us page.</p>
+
+              <table width="100%" cellpadding="15" cellspacing="0"
+                style="background-color: #eef6fb; border-left: 4px solid #055a90; border-radius: 4px; margin: 20px 0;">
+                <tr>
+                  <td style="font-size: 15px;">
+                    <p><strong>From:</strong> <%= full_name %></p>
+                    <p><strong>Email:</strong> <%= email %></p>
+                    <p><strong>Phone:</strong> <%= phone_number || '—' %></p>
+                    <p><strong>Subject:</strong> <%= message_subject %></p>
+                    <p><strong>Submitted on:</strong> <%= submitted_at %></p>
+                    <p style="margin-top: 15px;"><strong>Message:</strong></p>
+                    <p><%= message %></p>
+                  </td>
+                </tr>
+              </table>
+
+              <p>Please reply to the user from your admin panel or directly to <strong><%= email %></strong>.</p>
+
+              <p style="margin-top: 30px;">Best regards,<br /><strong>Blue Sky System</strong></p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" bgcolor="#055a90" style="color: #ffffff; padding: 20px; font-size: 14px;">
+              &copy; <%= new Date().getFullYear() %> Blue Sky Organisation. All rights reserved.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

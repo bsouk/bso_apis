@@ -1,9 +1,10 @@
 const FAQ = require("../../models/faq");
 const CMS = require("../../models/cms");
-const SupportDetail = require("../../models/support_details")
+const SupportDetail = require("../../models/support_details");
 const ContactUs = require('../../models/contact_us');
-const Walkthrough = require("../../models/walkthrough")
+const Walkthrough = require("../../models/walkthrough");
 const client_testimonials = require("../../models/client_testimonials");
+const emailer = require("../../utils/emailer");
 
 const utils = require("../../utils/utils");
 
@@ -53,26 +54,62 @@ exports.getContactUsDetails = async (req, res) => {
 
 exports.contactUs = async (req, res) => {
   try {
-    const { email, full_name, message,phone_number,subject } = req.body;
-    // const user_id = req.user._id
+    const { email, full_name, message, phone_number, subject } = req.body;
 
     const data = {
-      // user_id,
       email,
       full_name,
       message,
       phone_number,
       subject
-    }
+    };
 
     const contactUs = await ContactUs(data);
     await contactUs.save();
 
-    res.json({ message: "Thank you for reaching out to us. We have received your message and will get back to you soon", code: 200 })
+    const submittedAt = contactUs.createdAt
+      ? new Date(contactUs.createdAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+      : new Date().toLocaleString();
+
+    // Send confirmation email to the user
+    try {
+      await emailer.sendEmail(null, {
+        to: email,
+        subject: `We received your message – ${subject || 'Contact enquiry'}`,
+        full_name: full_name || 'Customer',
+        message_subject: subject || '',
+        message: message || '',
+        submitted_at: submittedAt,
+      }, 'ContactFormConfirmationToUser');
+    } catch (emailErr) {
+      console.error('Contact form: failed to send confirmation email to user:', emailErr?.message || emailErr);
+    }
+
+    // Send notification email to admin (support email from settings or env)
+    try {
+      const supportData = await SupportDetail.findOne({}).lean();
+      const adminEmail = supportData?.email || process.env.SUPPORT_EMAIL || process.env.EMAIL;
+      if (adminEmail) {
+        await emailer.sendEmail(null, {
+          to: adminEmail,
+          subject: `[Contact Us] New message from ${full_name || email} – ${subject || 'No subject'}`,
+          full_name: full_name || '—',
+          email: email || '—',
+          phone_number: phone_number || '—',
+          message_subject: subject || '—',
+          message: message || '—',
+          submitted_at: submittedAt,
+        }, 'ContactFormSubmissionToAdmin');
+      }
+    } catch (emailErr) {
+      console.error('Contact form: failed to send notification email to admin:', emailErr?.message || emailErr);
+    }
+
+    res.json({ message: "Thank you for reaching out to us. We have received your message and will get back to you soon", code: 200 });
   } catch (error) {
     utils.handleError(res, error);
   }
-}
+};
 
 exports.contactUsList = async (req, res) => {
   try {
