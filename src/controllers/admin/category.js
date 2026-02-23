@@ -297,7 +297,7 @@ exports.addProductSubCategory = async (req, res) => {
     const { name, icon, product_category_type_id } = req.body;
     const trimmedName = (name || '').trim();
 
-    if (!trimmedName || !icon || !product_category_type_id) {
+    if (!trimmedName || !product_category_type_id) {
       return utils.handleError(res, { message: "Send valid data", code: 400 });
     }
 
@@ -324,7 +324,12 @@ exports.addProductSubCategory = async (req, res) => {
       });
     }
 
-    const newSubCategory = new ProductSubCategory({ name: trimmedName, icon, product_category_type_id });
+    const newSubCategory = new ProductSubCategory({
+      name: trimmedName,
+      icon: icon || undefined,
+      product_category_type_id,
+      is_admin_approved: 'approved', // Auto-approve when admin creates
+    });
     await newSubCategory.save();
 
     await createLog({
@@ -759,9 +764,10 @@ exports.getCategoryList = async (req, res) => {
     let count = 0;
     if (sub_id) {
       const parentCategory = await ProductCategory.findById(sub_id);
-      if (!parentCategory || parentCategory.is_admin_approved !== 'approved') {
+      if (!parentCategory) {
         return res.json({ data: [], count: 0, code: 200 });
       }
+      // Admin: show sub-categories regardless of parent approval (admin manages them)
       filter.product_category_type_id = new mongoose.Types.ObjectId(sub_id);
       catergories = await ProductSubCategory.find(filter)
         .sort({ createdAt: -1 })
@@ -787,6 +793,7 @@ exports.getCategoryList = async (req, res) => {
       count = await ProductCategory.countDocuments(filter);
     }
 
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json({ data: catergories, count, code: 200 });
   } catch (error) {
     utils.handleError(res, error);
