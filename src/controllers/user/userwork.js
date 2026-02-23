@@ -3095,7 +3095,7 @@ exports.createEnquiry = async (req, res) => {
         let enquiryUniqueId = data.enquiry_number && data.enquiry_number.trim() !== '' 
             ? data.enquiry_number.trim() 
             : await EnquiryId();
-        // Always generate system enquiry_id (bso-enq-xxxxx) for search and conditional display
+        // Always generate system enquiry_id (Enq-1234567890) for search and conditional display
         const systemEnquiryId = await generateEnquiryId(Enquiry);
         let newdata = {
             ...data,

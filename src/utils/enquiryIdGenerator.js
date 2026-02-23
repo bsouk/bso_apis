@@ -1,18 +1,17 @@
 /**
- * Generate unique enquiry ID in format: bso-enq-xxxxx (alphanumeric suffix)
+ * Generate unique enquiry ID in format: Enq-1234567890 (Enq- + 10 digits)
  */
-
-const crypto = require('crypto');
 
 /**
- * Generate a short alphanumeric suffix (5 chars)
+ * Generate a 10-digit numeric suffix (leading zeros allowed)
  */
 function generateEnquirySuffix() {
-  return crypto.randomBytes(4).toString('hex').slice(0, 5); // 5 hex chars
+  const n = Math.floor(Math.random() * 1e10);
+  return n.toString().padStart(10, '0');
 }
 
 /**
- * Generate unique enquiry ID: bso-enq-xxxxx
+ * Generate unique enquiry ID: Enq-<10 digits>
  * @param {object} EnquiryModel - Mongoose Enquiry model (required for uniqueness check)
  * @returns {Promise<string>}
  */
@@ -22,7 +21,7 @@ async function generateEnquiryId(EnquiryModel) {
 
   while (attempts < maxAttempts) {
     const suffix = generateEnquirySuffix();
-    const enquiryId = `bso-enq-${suffix}`;
+    const enquiryId = `Enq-${suffix}`;
 
     const existing = await EnquiryModel.findOne({
       $or: [
@@ -36,8 +35,9 @@ async function generateEnquiryId(EnquiryModel) {
     attempts++;
   }
 
-  // Fallback: timestamp-based to guarantee uniqueness
-  return `bso-enq-${Date.now().toString(36).slice(-5)}`;
+  // Fallback: timestamp-based to guarantee uniqueness (last 10 digits of ms)
+  const fallback = (Date.now() % 1e10).toString().padStart(10, '0');
+  return `Enq-${fallback}`;
 }
 
 module.exports = {

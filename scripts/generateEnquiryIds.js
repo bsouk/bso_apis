@@ -1,5 +1,5 @@
 /**
- * Standalone script to generate missing enquiry_id (bso-enq-xxxxx) for existing enquiries.
+ * Standalone script to generate missing enquiry_id (Enq-<10 digits>) for existing enquiries.
  * Run manually if needed: node scripts/generateEnquiryIds.js
  * Also runs automatically on server startup (deploy).
  */
@@ -22,8 +22,8 @@ const connectDB = async () => {
 };
 
 const main = async () => {
-  console.log("🚀 Enquiry ID (bso-enq-*) Generation Script");
-  console.log("===========================================");
+  console.log("🚀 Enquiry ID (Enq-1234567890) Generation Script");
+  console.log("===============================================");
 
   try {
     await connectDB();
@@ -31,7 +31,7 @@ const main = async () => {
     console.log("\n📊 Current state:");
     await validateAllEnquiryIds();
 
-    console.log("\n🔄 Assigning enquiry_id to enquiries without BSO format...");
+    console.log("\n🔄 Assigning enquiry_id to enquiries without Enq- format...");
     const result = await generateMissingEnquiryIds();
 
     console.log("\n📊 Final state:");
@@ -39,7 +39,7 @@ const main = async () => {
 
     console.log("\n✅ Script completed successfully!");
     console.log(`   Updated: ${result.updated} / ${result.total} enquiries`);
-    console.log("===========================================");
+    console.log("===============================================");
   } catch (error) {
     console.error("❌ Script failed:", error.message);
     console.error(error.stack);

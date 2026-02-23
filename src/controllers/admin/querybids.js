@@ -2282,13 +2282,13 @@ exports.createManualEnquiry = async (req, res) => {
             ? enquiryData.enquiry_number.trim() 
             : enquiryUniqueId; // Default to unique_id if not provided
 
-        // System enquiry_id (bso-enq-xxxxx) for search and conditional display
+        // System enquiry_id (Enq-1234567890) for search and conditional display
         const { generateEnquiryId } = require("../../utils/enquiryIdGenerator");
         const systemEnquiryId = await generateEnquiryId(Enquiry);
         
         console.log("✅ Generated enquiry_unique_id:", enquiryUniqueId);
         console.log("✅ Enquiry number:", enquiryNumber);
-        console.log("✅ Enquiry ID (bso-enq):", systemEnquiryId);
+        console.log("✅ Enquiry ID (Enq-):", systemEnquiryId);
 
         // ═══════════════════════════════════════════════════
         // STEP 5: CREATE ENQUIRY
