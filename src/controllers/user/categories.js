@@ -88,22 +88,17 @@ exports.addBusinessCategory = async (req, res) => {
 
 exports.getBusinessCategories = async (req, res) => {
     try {
-        const data = await business_category.find()
-        const count = await business_category.countDocuments()
-        console.log("Business categories : ", data)
-        if (!data || data.length === 0) {
-            return utils.handleError(res, {
-                message: "Business categories not found",
-                code: 404,
-            });
-        }
+        // Frontend: only return approved business categories
+        const filter = { is_admin_approved: 'approved' };
+        const data = await business_category.find(filter).sort({ name: 1 });
+        const count = data.length;
 
         return res.status(200).json({
             message: "Business categories fetched successfully",
             data,
             count,
             code: 200
-        })
+        });
     } catch (error) {
         utils.handleError(res, error);
     }

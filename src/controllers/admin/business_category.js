@@ -6,11 +6,27 @@ const { logSuccess, logFailure } = require("../../utils/logger");
 
 const business_category = require("../../models/business_category");
 
+const CATEGORY_NAME_MAX = 30;
+const CATEGORY_NAME_REGEX = /^[a-zA-Z\s]+$/;
+
+function validateCategoryName(name) {
+    if (!name || typeof name !== 'string') return { valid: false, message: 'Business category name is required.' };
+    const trimmed = name.trim();
+    if (!trimmed) return { valid: false, message: 'Business category name is required.' };
+    if (trimmed.length > CATEGORY_NAME_MAX) return { valid: false, message: 'Business category name must be at most 30 characters.' };
+    if (!CATEGORY_NAME_REGEX.test(trimmed)) return { valid: false, message: 'Only letters and spaces allowed (no digits or special characters).' };
+    return { valid: true, value: trimmed };
+}
+
 exports.addBusinessCategory = async (req, res) => {
     try {
-        console.log("req.body is ", req.body)
+        const validation = validateCategoryName(req.body?.name);
+        if (!validation.valid) {
+            return res.status(400).json({ message: validation.message, code: 400 });
+        }
+        const name = validation.value;
 
-        const isExisted = await business_category.findOne({ name: req.body.name })
+        const isExisted = await business_category.findOne({ name })
 
         if (isExisted) {
             return utils.handleError(res, {
@@ -19,7 +35,7 @@ exports.addBusinessCategory = async (req, res) => {
             });
         }
 
-        const data = new business_category(req.body);
+        const data = new business_category({ ...req.body, name });
         await data.save()
         console.log("data is ", data)
 
@@ -115,8 +131,13 @@ exports.getBusinessCategory = async (req, res) => {
 
 exports.editBusinessCategory = async (req, res) => {
     try {
-        const { name } = req.body;
         const id = req.params.id;
+        const validation = validateCategoryName(req.body?.name);
+        if (!validation.valid) {
+            return res.status(400).json({ message: validation.message, code: 400 });
+        }
+        const name = validation.value;
+
         const isExists = await business_category.findById(id);
         if (!isExists) return utils.handleError(res, { message: "Business category not found" });
 
@@ -318,6 +339,8 @@ exports.approveRejectBusinessCategory = async (req, res) => {
         const business_category_id = req.body.id
 
         const business_category_data = await business_category.findById(business_category_id);
+        const previousStatus = business_category_data?.is_admin_approved;
+        const previousReason = business_category_data?.rejected_reason;
 
         if (!business_category_data)
             return utils.handleError(res, {
@@ -341,12 +364,54 @@ exports.approveRejectBusinessCategory = async (req, res) => {
             await business_category_data.save()
         }
 
+        // Log status change
+        try {
+            await logSuccess(
+                req.user,
+                "business_category",
+                "status_change",
+                {
+                    related_id: business_category_data._id,
+                    related_collection: "business_categories",
+                    details: {
+                        business_category_id: business_category_data._id,
+                        previous_status: previousStatus,
+                        new_status: business_category_data.is_admin_approved,
+                        previous_rejected_reason: previousReason || null,
+                        new_rejected_reason: business_category_data.rejected_reason || null,
+                        reason_payload: req.body.reason || null,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category status change:", logError?.message);
+        }
+
         res.json({
             message: "Business category status changed Successfully",
             code: 200
         });
 
     } catch (error) {
+        try {
+            await logFailure(
+                req.user,
+                "business_category",
+                "status_change",
+                error,
+                {
+                    metadata: {
+                        id: req.body?.id,
+                        status: req.body?.status,
+                        reason: req.body?.reason,
+                    },
+                },
+                req
+            );
+        } catch (logError) {
+            console.error("Failed to log business category status change error:", logError?.message);
+        }
         utils.handleError(res, error);
     }
 }

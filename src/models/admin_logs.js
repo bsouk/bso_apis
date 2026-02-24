@@ -48,6 +48,7 @@ const adminLogsSchema = new mongoose.Schema(
         "product",
         "category",
         "sub_category",
+        "business_category",
         "brand",
         "user",
         "customer",
@@ -88,6 +89,7 @@ const adminLogsSchema = new mongoose.Schema(
         "export",
         "bulk_delete",
         "restore",
+        "status_change",
         // Extensible
       ],
       index: true

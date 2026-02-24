@@ -19,14 +19,25 @@ const getAdminLogContext = (req) => ({
   req,
 });
 
+const CATEGORY_NAME_MAX = 30;
+const CATEGORY_NAME_REGEX = /^[a-zA-Z\s]+$/;
+function validateCategoryName(name) {
+  if (!name || typeof name !== 'string') return { valid: false, message: 'Category name is required.' };
+  const trimmed = name.trim();
+  if (!trimmed) return { valid: false, message: 'Category name is required.' };
+  if (trimmed.length > CATEGORY_NAME_MAX) return { valid: false, message: 'Category name must be at most 30 characters.' };
+  if (!CATEGORY_NAME_REGEX.test(trimmed)) return { valid: false, message: 'Only letters and spaces allowed (no digits or special characters).' };
+  return { valid: true, value: trimmed };
+}
 
 exports.addProductCategory = async (req, res) => {
   try {
     const { icon, name } = req.body;
-    const trimmedName = (name || '').trim();
-    if (!trimmedName) {
-      return utils.handleError(res, { message: "Category name is required", code: 400 });
+    const validation = validateCategoryName(name);
+    if (!validation.valid) {
+      return res.status(400).json({ message: validation.message, code: 400 });
     }
+    const trimmedName = validation.value;
 
     const isCategoryExists = await ProductCategory.findOne({
       name: { $regex: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
@@ -115,8 +126,12 @@ exports.getProductCategory = async (req, res) => {
 exports.editProductCategory = async (req, res) => {
   try {
     const id = req.params.id;
-    const newName = (req.body.name || '').trim();
     const requestVersion = req.body.version != null ? Number(req.body.version) : 1;
+    const validation = validateCategoryName(req.body?.name);
+    if (!validation.valid) {
+      return res.status(400).json({ message: validation.message, code: 400 });
+    }
+    const newName = validation.value;
 
     const doc = await ProductCategory.findById(id);
     if (!doc) {
