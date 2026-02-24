@@ -484,12 +484,22 @@ exports.deletePlan = async (req, res) => {
         });
     }
 
-    await stripe.products.update(plandata.stripe_product_id, {
-        active: false
-    });
+    const isLocalEnv =
+        process.env.ENV === "local" ||
+        process.env.NODE_ENV === "development" ||
+        process.env.NODE_ENV === "test";
 
-    if (plandata.stripe_product_id) {
+    if (plandata.stripe_product_id && !isLocalEnv) {
+        await stripe.products.update(plandata.stripe_product_id, {
+            active: false
+        });
+
         await stripe.products.del(plandata.stripe_product_id);
+    } else if (plandata.stripe_product_id && isLocalEnv) {
+        console.log(
+            "Skipping Stripe product deactivation/deletion for plan in local/dev env:",
+            plandata.stripe_product_id
+        );
     }
 
     const result = await plan.deleteOne({ _id: id });
