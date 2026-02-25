@@ -54,7 +54,10 @@ const corsOptions = {
           'https://bsoservices.com',
           'https://www.bsoservices.com',
           'https://admin.bsoservices.com',
-          'https://api.bsoservices.com'
+          'https://api.bsoservices.com',
+          'https://bsoservices.ai',
+          'https://www.bsoservices.ai',
+          'https://dashboard.bsoservices.ai'
         ];
     
     // Allow all origins for local testing (can be restricted in production)
