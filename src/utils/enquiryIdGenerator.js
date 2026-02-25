@@ -1,17 +1,17 @@
 /**
- * Generate unique enquiry ID in format: Enq-1234567890 (Enq- + 10 digits)
+ * Generate unique enquiry ID in format: Enq-12345 (Enq- + 5 digits)
  */
 
 /**
- * Generate a 10-digit numeric suffix (leading zeros allowed)
+ * Generate a 5-digit numeric suffix (leading zeros allowed)
  */
 function generateEnquirySuffix() {
-  const n = Math.floor(Math.random() * 1e10);
-  return n.toString().padStart(10, '0');
+  const n = Math.floor(Math.random() * 1e5);
+  return n.toString().padStart(5, '0');
 }
 
 /**
- * Generate unique enquiry ID: Enq-<10 digits>
+ * Generate unique enquiry ID: Enq-<5 digits>
  * @param {object} EnquiryModel - Mongoose Enquiry model (required for uniqueness check)
  * @returns {Promise<string>}
  */
@@ -35,8 +35,8 @@ async function generateEnquiryId(EnquiryModel) {
     attempts++;
   }
 
-  // Fallback: timestamp-based to guarantee uniqueness (last 10 digits of ms)
-  const fallback = (Date.now() % 1e10).toString().padStart(10, '0');
+  // Fallback: timestamp-based to guarantee uniqueness (last 5 digits of ms)
+  const fallback = (Date.now() % 1e5).toString().padStart(5, '0');
   return `Enq-${fallback}`;
 }
 

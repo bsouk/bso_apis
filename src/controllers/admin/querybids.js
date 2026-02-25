@@ -2282,7 +2282,7 @@ exports.createManualEnquiry = async (req, res) => {
             ? enquiryData.enquiry_number.trim() 
             : enquiryUniqueId; // Default to unique_id if not provided
 
-        // System enquiry_id (Enq-1234567890) for search and conditional display
+        // System enquiry_id (Enq-12345) for search and conditional display
         const { generateEnquiryId } = require("../../utils/enquiryIdGenerator");
         const systemEnquiryId = await generateEnquiryId(Enquiry);
         
