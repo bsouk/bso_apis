@@ -100,6 +100,27 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Explicit preflight: ensure OPTIONS always gets CORS headers (avoids proxy/cache issues)
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    const origin = req.get('Origin');
+    if (origin) {
+      const allowed = getAllowedOrigins();
+      const norm = normalizeOrigin(origin);
+      if (allowed.includes('*') || allowed.some((o) => normalizeOrigin(o) === norm)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+        res.setHeader('Access-Control-Max-Age', '86400');
+      }
+    }
+    return res.status(204).end();
+  }
+  next();
+});
+
 app.use(compression());
 // Increase body parser limit to handle large JWT tokens (Apple IAP tokens can be 5000+ characters)
 app.use(express.json({ limit: '10mb' }));
