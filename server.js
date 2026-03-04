@@ -24,19 +24,13 @@ function normalizeOrigin(o) {
   return o.trim().replace(/\/+$/, '');
 }
 
-// Allowed origins only from env: PRODUCTION_ADMIN_URL, PRODUCTION_FRONTEND_URL; optional LOCAL_* and ALLOWED_ORIGINS
+// Allowed origins only from these four env vars (no other list / ALLOWED_ORIGINS)
+// Production: PRODUCTION_ADMIN_URL, PRODUCTION_FRONTEND_URL
+// Local: LOCAL_ADMIN_URL, LOCAL_FRONTEND_URL (comment out in production)
 function getAllowedOrigins() {
   const origins = [];
   if (process.env.PRODUCTION_ADMIN_URL) origins.push(process.env.PRODUCTION_ADMIN_URL);
   if (process.env.PRODUCTION_FRONTEND_URL) origins.push(process.env.PRODUCTION_FRONTEND_URL);
-  if (process.env.LOCAL_ADMIN_URL) origins.push(process.env.LOCAL_ADMIN_URL);
-  if (process.env.LOCAL_FRONTEND_URL) origins.push(process.env.LOCAL_FRONTEND_URL);
-  if (process.env.ALLOWED_ORIGINS) {
-    process.env.ALLOWED_ORIGINS.split(',').forEach((o) => {
-      const n = normalizeOrigin(o);
-      if (n) origins.push(n);
-    });
-  }
   return [...new Set(origins.map(normalizeOrigin))];
 }
 
