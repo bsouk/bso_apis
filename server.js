@@ -51,6 +51,22 @@ app.post(
   handleStripeWebhook
 );
 
+// Force CORS: run first so preflight (OPTIONS) and all responses get headers (fixes CORS when proxy/load balancer is in front)
+app.use((req, res, next) => {
+  const origin = req.get('Origin');
+  if (ALLOW_ALL_ORIGINS && origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
 // Middleware: allow cross-origin requests from dashboard/frontend (Helmet defaults can block API calls)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
