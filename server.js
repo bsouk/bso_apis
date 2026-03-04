@@ -24,7 +24,10 @@ function normalizeOrigin(o) {
   return o.trim().replace(/\/+$/, '');
 }
 
-// Production CORS: frontend (http + https), admin (https only) — hardcoded
+// Set to true to allow any origin (bypass CORS). Set to false and use PRODUCTION_ALLOWED_ORIGINS in production.
+const ALLOW_ALL_ORIGINS = true;
+
+// Production CORS: frontend (http + https), admin (https only) — used when ALLOW_ALL_ORIGINS is false
 const PRODUCTION_ALLOWED_ORIGINS = [
   'http://bsoservices.ai',
   'https://bsoservices.ai',
@@ -35,7 +38,7 @@ const isLocalOrDev = process.env.ENV === 'local' || process.env.NODE_ENV === 'de
 
 const io = new Server(server, {
   cors: {
-    origin: isLocalOrDev ? true : PRODUCTION_ALLOWED_ORIGINS,
+    origin: ALLOW_ALL_ORIGINS || isLocalOrDev ? true : PRODUCTION_ALLOWED_ORIGINS,
     credentials: true,
   },
 });
@@ -56,21 +59,13 @@ app.use(helmet({
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // Allow any origin when ALLOW_ALL_ORIGINS is true; otherwise use allowed list
+    if (ALLOW_ALL_ORIGINS || isLocalOrDev) return callback(null, true);
     if (!origin) return callback(null, true);
 
     const normalizedRequestOrigin = normalizeOrigin(origin);
-
-    if (isLocalOrDev) {
-      return callback(null, true);
-    }
-
     const isAllowed = PRODUCTION_ALLOWED_ORIGINS.some((allowed) => normalizeOrigin(allowed) === normalizedRequestOrigin);
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    callback(isAllowed ? null : new Error('Not allowed by CORS'), isAllowed);
   },
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
@@ -111,7 +106,7 @@ app.use(require("./src/routes/admin"));
 function setCorsHeadersIfAllowed(req, res) {
   const origin = req.get && req.get('Origin');
   if (!origin) return;
-  const allowed = isLocalOrDev || PRODUCTION_ALLOWED_ORIGINS.some((o) => normalizeOrigin(o) === normalizeOrigin(origin));
+  const allowed = ALLOW_ALL_ORIGINS || isLocalOrDev || PRODUCTION_ALLOWED_ORIGINS.some((o) => normalizeOrigin(o) === normalizeOrigin(origin));
   if (allowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
