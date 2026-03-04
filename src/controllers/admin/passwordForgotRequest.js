@@ -336,16 +336,18 @@ exports.deletePasswordForgotRequestsByDateRange = async (req, res) => {
     }
 
     const from = new Date(fromDate);
-    const to = new Date(toDate);
+    let to = new Date(toDate);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
       return utils.handleError(res, { message: 'Invalid fromDate or toDate', code: 400 });
     }
     if (from > to) {
       return utils.handleError(res, { message: 'fromDate must be before or equal to toDate', code: 400 });
     }
+    // Include full end day in UTC (23:59:59.999) so the selected "To" date includes all requests that day
+    const toEndOfDay = new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate(), 23, 59, 59, 999));
 
     const result = await AdminPasswordResetRequest.deleteMany({
-      createdAt: { $gte: from, $lte: to },
+      createdAt: { $gte: from, $lte: toEndOfDay },
     });
     return res.json({
       code: 200,
