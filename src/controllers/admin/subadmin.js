@@ -358,17 +358,55 @@ exports.deleteSubadmin = async (req, res) => {
 
 exports.getSubadmin = async (req, res) => {
     try {
-        const { limit = 10, offset = 0 } = req.query;
+        const { limit = 10, offset = 0, search } = req.query;
+        const rawSearch = Array.isArray(search) ? search[0] : search;
+        const searchTerm = typeof rawSearch === 'string' ? rawSearch.trim() : '';
 
-        // Count the number of sub_admins
-        const count = await Admin.aggregate([
-            { $match: { role: "sub_admin" } },
+        const baseMatch = { role: "sub_admin" };
+
+        const searchMatch = {};
+        if (searchTerm) {
+            const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escaped, 'i');
+            searchMatch.$or = [
+                { first_name: regex },
+                { last_name: regex },
+                { full_name: regex },
+                { email: regex },
+                {
+                    $expr: {
+                        $gt: [
+                            { $indexOfCP: [{ $ifNull: [{ $toString: '$phone_number' }, ''] }, { $literal: searchTerm }] },
+                            -1
+                        ]
+                    }
+                },
+                {
+                    $expr: {
+                        $gt: [
+                            {
+                                $indexOfCP: [
+                                    { $toLower: { $ifNull: [{ $concat: [{ $ifNull: ['$first_name', ''] }, ' ', { $ifNull: ['$last_name', ''] }] }, ''] }},
+                                    { $literal: searchTerm.toLowerCase() }
+                                ]
+                            },
+                            -1
+                        ]
+                    }
+                }
+            ];
+        }
+
+        const matchStage = searchTerm ? { $and: [baseMatch, searchMatch] } : baseMatch;
+
+        const countPipeline = [
+            { $match: matchStage },
             { $group: { _id: null, count: { $sum: 1 } } }
-        ]);
+        ];
+        const count = await Admin.aggregate(countPipeline);
 
-        // Fetch the paginated list of sub_admins
         const Subadminlist = await Admin.aggregate([
-            { $match: { role: "sub_admin" } },
+            { $match: matchStage },
             { $sort: { createdAt: -1 } },
             { $skip: +offset },
             { $limit: +limit }
