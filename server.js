@@ -41,24 +41,27 @@ function normalizeOrigin(o) {
   return o.trim().replace(/\/+$/, '');
 }
 
-// Build allowed origins list (normalized) for CORS and error responses
+// Base list: always allow these (dashboard, admin, frontends). Env ALLOWED_ORIGINS adds to this.
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3039',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://bsoservices.com',
+  'https://www.bsoservices.com',
+  'https://admin.bsoservices.com',
+  'https://api.bsoservices.com',
+  'https://bsoservices.ai',
+  'https://www.bsoservices.ai',
+  'https://dashboard.bsoservices.ai',
+];
+
 function getAllowedOrigins() {
-  const list = process.env.ALLOWED_ORIGINS
+  const fromEnv = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',').map((o) => normalizeOrigin(o)).filter(Boolean)
-    : [
-        'http://localhost:3000',
-        'http://localhost:3039',
-        'http://localhost:5173',
-        'http://localhost:5174',
-        'https://bsoservices.com',
-        'https://www.bsoservices.com',
-        'https://admin.bsoservices.com',
-        'https://api.bsoservices.com',
-        'https://bsoservices.ai',
-        'https://www.bsoservices.ai',
-        'https://dashboard.bsoservices.ai',
-      ];
-  return list;
+    : [];
+  const combined = [...DEFAULT_ALLOWED_ORIGINS.map(normalizeOrigin), ...fromEnv];
+  return [...new Set(combined)];
 }
 
 // Middleware: allow cross-origin requests from dashboard/frontend (Helmet defaults can block API calls)
