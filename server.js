@@ -18,9 +18,24 @@ const { handleStripeWebhook } = require("./src/controllers/user/webhook");
 const mongoose = require("mongoose");
 // const seedAllInOnePlans = require("./scripts/seedAllInOnePlans"); // Disabled - plans already seeded
 
+// Normalize origin for comparison (trim, remove trailing slash)
+function normalizeOrigin(o) {
+  if (!o || typeof o !== 'string') return '';
+  return o.trim().replace(/\/+$/, '');
+}
+
+// CORS allowed origins: only from env ALLOWED_ORIGINS (comma-separated). No static list in code.
+function getAllowedOrigins() {
+  const raw = process.env.ALLOWED_ORIGINS || '';
+  const origins = raw.split(',').map((o) => normalizeOrigin(o)).filter(Boolean);
+  return [...new Set(origins)];
+}
+
+const isLocalOrDev = process.env.ENV === 'local' || process.env.NODE_ENV === 'development';
+
 const io = new Server(server, {
   cors: {
-    origin: true,
+    origin: isLocalOrDev ? true : getAllowedOrigins(),
     credentials: true,
   },
 });
@@ -33,33 +48,30 @@ app.post(
   handleStripeWebhook
 );
 
-// Force CORS: allow ALL origins, no strict list — every request gets CORS headers
-app.use((req, res, next) => {
-  const origin = req.get('Origin');
-  res.setHeader('Access-Control-Allow-Origin', origin || '*');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  next();
-});
-
 // Middleware: allow cross-origin requests from dashboard/frontend (Helmet defaults can block API calls)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   crossOriginEmbedderPolicy: false,
 }));
 
-// No origin check — allow every origin
-app.use(cors({
-  origin: true,
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (isLocalOrDev) return callback(null, true);
+    if (!origin) return callback(null, true);
+    const allowed = getAllowedOrigins();
+    const normalized = normalizeOrigin(origin);
+    const isAllowed = allowed.some((o) => normalizeOrigin(o) === normalized);
+    callback(isAllowed ? null : new Error('Not allowed by CORS'), isAllowed);
+  },
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
   allowedHeaders: "Content-Type, Authorization, X-Requested-With, Accept, Origin",
-}));
+  exposedHeaders: "Content-Length, Content-Type",
+};
+
+app.use(cors(corsOptions));
 app.use(compression());
 // Increase body parser limit to handle large JWT tokens (Apple IAP tokens can be 5000+ characters)
 app.use(express.json({ limit: '10mb' }));
@@ -83,22 +95,20 @@ app.get("/", (req, res) => {
   return res.send("Welcome to bso");
 });
 
-// Test from local: GET /cors-test — confirms production API is up and sending CORS (e.g. curl -I -H "Origin: https://dashboard.bsoservices.ai" https://api.bsoservices.com/cors-test)
-app.get("/cors-test", (req, res) => {
-  res.json({ ok: true, message: "CORS bypass active", timestamp: new Date().toISOString() });
-});
-
 app.use(require("./src/routes/user"));
 app.use(require("./src/routes/admin"));
 
-// Attach CORS headers to response so preflight/errors still get Allow-Origin (avoids PreflightMissingAllowOriginHeader)
+// Attach CORS headers to error responses when origin is allowed
 function setCorsHeadersIfAllowed(req, res) {
   const origin = req.get && req.get('Origin');
   if (!origin) return;
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  const allowed = isLocalOrDev || getAllowedOrigins().some((o) => normalizeOrigin(o) === normalizeOrigin(origin));
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  }
 }
 
 app.use((req, res, next) => {
