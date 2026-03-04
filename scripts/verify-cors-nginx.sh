@@ -7,8 +7,10 @@
 # If it was working 1 week ago, a proxy config change or missing CORS in proxy is likely.
 #
 # Usage (run on the API server):
-#   ./scripts/verify-cors-nginx.sh
-#   ./scripts/verify-cors-nginx.sh https://api.bsoservices.com
+#   bash scripts/verify-cors-nginx.sh
+#   bash scripts/verify-cors-nginx.sh https://api.bsoservices.com
+#
+# If chmod +x fails (e.g. deployed file permissions), use "bash scripts/..." — no execute bit needed.
 #
 # Default: DIRECT_URL=http://localhost:7012, PUBLIC_URL=first argument or same as DIRECT.
 
