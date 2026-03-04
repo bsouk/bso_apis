@@ -51,11 +51,11 @@ app.post(
   handleStripeWebhook
 );
 
-// Force CORS: run first so preflight (OPTIONS) and all responses get headers (fixes CORS when proxy/load balancer is in front)
+// Force CORS: run first — bypass everything, allow any origin so API can be called from anywhere
 app.use((req, res, next) => {
-  const origin = req.get('Origin');
-  if (ALLOW_ALL_ORIGINS && origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (ALLOW_ALL_ORIGINS) {
+    const origin = req.get('Origin');
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
@@ -113,6 +113,11 @@ app.use(
 // Routes
 app.get("/", (req, res) => {
   return res.send("Welcome to bso");
+});
+
+// Test from local: GET /cors-test — confirms production API is up and sending CORS (e.g. curl -I -H "Origin: https://dashboard.bsoservices.ai" https://api.bsoservices.com/cors-test)
+app.get("/cors-test", (req, res) => {
+  res.json({ ok: true, message: "CORS bypass active", timestamp: new Date().toISOString() });
 });
 
 app.use(require("./src/routes/user"));
