@@ -61,8 +61,11 @@ function getAllowedOrigins() {
   return list;
 }
 
-// Middleware
-app.use(helmet());
+// Middleware: allow cross-origin requests from dashboard/frontend (Helmet defaults can block API calls)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
+}));
 
 const corsOptions = {
   origin: function (origin, callback) {
