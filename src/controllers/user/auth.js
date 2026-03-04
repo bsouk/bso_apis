@@ -4,6 +4,7 @@ const UserAccess = require("../../models/userAccess");
 const ResetPassword = require("../../models/reset_password");
 const OTP = require("../../models/otp");
 const EmailOrPhoneVerifiedStatus = require("../../models/email_or_phone_verified_status");
+const { parsePhoneNumberFromString, isValidPhoneNumber } = require("libphonenumber-js");
 
 const emailer = require("../../utils/emailer");
 const jwt = require("jsonwebtoken");
@@ -149,10 +150,26 @@ exports.sendOtpForSignup = async (req, res) => {
 
       const num = String(phone_number || '').replace(/\s/g, '');
       const fullPhoneNumber = (code && num) ? `+${code}${num}` : `${phone_number_code || ''}${phone_number}`.replace(/\s/g, '');
+      const toE164 = fullPhoneNumber.startsWith('+') ? fullPhoneNumber : `+${fullPhoneNumber}`;
+
+      // Validate format before sending SMS so we can show a clear error for invalid numbers
+      if (!toE164 || toE164 === '+') {
+        return utils.handleError(res, {
+          message: 'Please enter a valid phone number with country code (e.g. +44 UK, +91 India).',
+          code: 400,
+        });
+      }
+      const parsed = parsePhoneNumberFromString(toE164);
+      if (!parsed || !isValidPhoneNumber(toE164)) {
+        return utils.handleError(res, {
+          message: 'This number is not a valid phone number for the selected country. Please check the number and country code (e.g. +44 UK, +91 India).',
+          code: 400,
+        });
+      }
+      const e164ForSms = parsed.format('E.164');
 
       try {
-        const toE164 = fullPhoneNumber.startsWith('+') ? fullPhoneNumber : `+${fullPhoneNumber}`;
-        const result = await utils.sendSMS(toE164, `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`);
+        const result = await utils.sendSMS(e164ForSms, `✨ Welcome to ${process.env.APP_NAME} ✨\n\nYour OTP: ${otp}\n⏳ Expires in 5 mins.\n\n🚀 Thank you for choosing us!`);
         console.log("result : ", result);
         res.json({ code: 200, message: "OTP sent successfully", otp: otp });
       } catch (smsError) {
@@ -161,7 +178,7 @@ exports.sendOtpForSignup = async (req, res) => {
         const isInvalidNumber = msg.includes('invalid') || msg.includes("'to'") || msg.includes('phone');
         return utils.handleError(res, {
           message: isInvalidNumber
-            ? 'Invalid phone number. Please check the number and country code (e.g. +44 UK, +91 India).'
+            ? 'We couldn\'t send an OTP to this number. It may be invalid or not support SMS. Try signing up with email, or check the number and country code (e.g. +44 UK, +91 India).'
             : 'Unable to send OTP to this number. Please try again or use email signup.',
           code: isInvalidNumber ? 400 : 502,
         });
