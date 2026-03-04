@@ -24,21 +24,17 @@ function normalizeOrigin(o) {
   return o.trim().replace(/\/+$/, '');
 }
 
-// Allowed origins only from these four env vars (no other list / ALLOWED_ORIGINS)
-// Production: PRODUCTION_ADMIN_URL, PRODUCTION_FRONTEND_URL
-// Local: LOCAL_ADMIN_URL, LOCAL_FRONTEND_URL (comment out in production)
-function getAllowedOrigins() {
-  const origins = [];
-  if (process.env.PRODUCTION_ADMIN_URL) origins.push(process.env.PRODUCTION_ADMIN_URL);
-  if (process.env.PRODUCTION_FRONTEND_URL) origins.push(process.env.PRODUCTION_FRONTEND_URL);
-  return [...new Set(origins.map(normalizeOrigin))];
-}
+// Production CORS: only these two origins (hardcoded, not from env)
+const PRODUCTION_ALLOWED_ORIGINS = [
+  'https://bsoservices.ai',
+  'https://dashboard.bsoservices.ai',
+].map(normalizeOrigin);
+
+const isLocalOrDev = process.env.ENV === 'local' || process.env.NODE_ENV === 'development';
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.ENV === "local" || process.env.NODE_ENV === "development"
-      ? true
-      : getAllowedOrigins(),
+    origin: isLocalOrDev ? true : PRODUCTION_ALLOWED_ORIGINS,
     credentials: true,
   },
 });
@@ -61,16 +57,13 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    const allowedOrigins = getAllowedOrigins();
     const normalizedRequestOrigin = normalizeOrigin(origin);
 
-    if (process.env.ENV === 'local' || process.env.NODE_ENV === 'development') {
+    if (isLocalOrDev) {
       return callback(null, true);
     }
 
-    const isAllowed =
-      allowedOrigins.includes('*') ||
-      allowedOrigins.some((allowed) => normalizeOrigin(allowed) === normalizedRequestOrigin);
+    const isAllowed = PRODUCTION_ALLOWED_ORIGINS.some((allowed) => normalizeOrigin(allowed) === normalizedRequestOrigin);
 
     if (isAllowed) {
       callback(null, true);
@@ -117,9 +110,8 @@ app.use(require("./src/routes/admin"));
 function setCorsHeadersIfAllowed(req, res) {
   const origin = req.get && req.get('Origin');
   if (!origin) return;
-  const allowed = getAllowedOrigins();
-  const normalized = normalizeOrigin(origin);
-  if (allowed.includes('*') || allowed.some((o) => normalizeOrigin(o) === normalized)) {
+  const allowed = isLocalOrDev || PRODUCTION_ALLOWED_ORIGINS.some((o) => normalizeOrigin(o) === normalizeOrigin(origin));
+  if (allowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
