@@ -24,8 +24,9 @@ function normalizeOrigin(o) {
   return o.trim().replace(/\/+$/, '');
 }
 
-// Production CORS: only these two origins (hardcoded, not from env)
+// Production CORS: frontend (http + https), admin (https only) — hardcoded
 const PRODUCTION_ALLOWED_ORIGINS = [
+  'http://bsoservices.ai',
   'https://bsoservices.ai',
   'https://dashboard.bsoservices.ai',
 ].map(normalizeOrigin);
