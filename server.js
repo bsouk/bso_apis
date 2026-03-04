@@ -18,11 +18,33 @@ const { handleStripeWebhook } = require("./src/controllers/user/webhook");
 const mongoose = require("mongoose");
 // const seedAllInOnePlans = require("./scripts/seedAllInOnePlans"); // Disabled - plans already seeded
 
+// Normalize origin for comparison (trim, remove trailing slash)
+function normalizeOrigin(o) {
+  if (!o || typeof o !== 'string') return '';
+  return o.trim().replace(/\/+$/, '');
+}
+
+// Allowed origins only from env: PRODUCTION_ADMIN_URL, PRODUCTION_FRONTEND_URL; optional LOCAL_* and ALLOWED_ORIGINS
+function getAllowedOrigins() {
+  const origins = [];
+  if (process.env.PRODUCTION_ADMIN_URL) origins.push(process.env.PRODUCTION_ADMIN_URL);
+  if (process.env.PRODUCTION_FRONTEND_URL) origins.push(process.env.PRODUCTION_FRONTEND_URL);
+  if (process.env.LOCAL_ADMIN_URL) origins.push(process.env.LOCAL_ADMIN_URL);
+  if (process.env.LOCAL_FRONTEND_URL) origins.push(process.env.LOCAL_FRONTEND_URL);
+  if (process.env.ALLOWED_ORIGINS) {
+    process.env.ALLOWED_ORIGINS.split(',').forEach((o) => {
+      const n = normalizeOrigin(o);
+      if (n) origins.push(n);
+    });
+  }
+  return [...new Set(origins.map(normalizeOrigin))];
+}
+
 const io = new Server(server, {
   cors: {
     origin: process.env.ENV === "local" || process.env.NODE_ENV === "development"
       ? true
-      : (process.env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean) || ["http://localhost:3000", "https://bsoservices.com"],
+      : getAllowedOrigins(),
     credentials: true,
   },
 });
@@ -34,35 +56,6 @@ app.post(
   // trimRequest.all,
   handleStripeWebhook
 );
-
-// Normalize origin for comparison (trim, remove trailing slash)
-function normalizeOrigin(o) {
-  if (!o || typeof o !== 'string') return '';
-  return o.trim().replace(/\/+$/, '');
-}
-
-// Base list: always allow these (dashboard, admin, frontends). Env ALLOWED_ORIGINS adds to this.
-const DEFAULT_ALLOWED_ORIGINS = [
-  'http://localhost:3000',
-  'http://localhost:3039',
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'https://bsoservices.com',
-  'https://www.bsoservices.com',
-  'https://admin.bsoservices.com',
-  'https://api.bsoservices.com',
-  'https://bsoservices.ai',
-  'https://www.bsoservices.ai',
-  'https://dashboard.bsoservices.ai',
-];
-
-function getAllowedOrigins() {
-  const fromEnv = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => normalizeOrigin(o)).filter(Boolean)
-    : [];
-  const combined = [...DEFAULT_ALLOWED_ORIGINS.map(normalizeOrigin), ...fromEnv];
-  return [...new Set(combined)];
-}
 
 // Middleware: allow cross-origin requests from dashboard/frontend (Helmet defaults can block API calls)
 app.use(helmet({
@@ -98,26 +91,6 @@ const corsOptions = {
   allowedHeaders: "Content-Type, Authorization, X-Requested-With, Accept, Origin",
   exposedHeaders: "Content-Length, Content-Type",
 };
-
-// Explicit preflight first: OPTIONS gets CORS headers before any other middleware (avoids proxy/cache issues)
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    const origin = req.get('Origin');
-    if (origin) {
-      const allowed = getAllowedOrigins();
-      const norm = normalizeOrigin(origin);
-      if (allowed.includes('*') || allowed.some((o) => normalizeOrigin(o) === norm)) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-        res.setHeader('Access-Control-Max-Age', '86400');
-      }
-    }
-    return res.status(204).end();
-  }
-  next();
-});
 
 app.use(cors(corsOptions));
 app.use(compression());
