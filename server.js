@@ -10,6 +10,7 @@ var fileUpload = require("express-fileupload");
 const initMongo = require("./src/config/mongo");
 const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds");
 const { generateMissingEnquiryIds } = require("./src/utils/generateMissingEnquiryIds");
+const { autoApprovePendingEnquiries } = require("./src/utils/autoApprovePendingEnquiries");
 const { initSocket } = require("./src/config/socket");
 const app = express();
 const server = http.createServer(app);
@@ -150,6 +151,12 @@ async function startServer() {
         console.log('🔄 Running startup tasks...');
         await generateMissingUserIds();
         await generateMissingEnquiryIds();
+        // Run every startup, same style as enquiry id generation.
+        console.log("🔄 Auto-approving pending enquiries...");
+        const approvalResult = await autoApprovePendingEnquiries();
+        console.log(
+          `✅ Pending enquiry auto-approval done (status_updated=${approvalResult.statusUpdated}, approval_flag_updated=${approvalResult.approvalFlagUpdated})`
+        );
         console.log('✅ Startup tasks completed successfully');
       } catch (error) {
         console.error('❌ Error during startup tasks:', error.message);

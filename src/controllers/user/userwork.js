@@ -3796,11 +3796,14 @@ exports.getMyEnquiry = async (req, res) => {
 }
 exports.getAllEnquiry = async (req, res) => {
     try {
-        const { status, search, offset = 0, limit = 10, brand, countries, priority, hide_quote, logisticsview } = req.query;
+        const { status, search, offset = 0, limit = 10, brand, countries, priority, hide_quote, logisticsview, include_unapproved } = req.query;
         console.log('offset : ', offset, " limit : ", limit)
-        const filter = {
-            is_approved: "approved"
-        };
+        const filter = {};
+        // Default marketplace behavior keeps approved-only.
+        // For "All Enquiries" views, caller can pass include_unapproved=true.
+        if (!(include_unapproved === true || include_unapproved === "true")) {
+            filter.is_approved = "approved";
+        }
         let brandfilter = {}
         let countryFilter = {};
 
