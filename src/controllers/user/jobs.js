@@ -1304,6 +1304,69 @@ exports.editJob = async (req, res) => {
     }
 }
 
+exports.deleteMyJob = async (req, res) => {
+    try {
+        const companyId = req.user._id
+        const { id } = req.params
+        const jobdata = await jobs.findOne({ _id: new mongoose.Types.ObjectId(id), company_id: new mongoose.Types.ObjectId(companyId) })
+        if (!jobdata) {
+            return utils.handleError(res, {
+                message: "Job not found or you do not have permission to delete it",
+                code: 404,
+            })
+        }
+        await jobs.deleteOne({ _id: id })
+        await job_applications.deleteMany({ job_id: new mongoose.Types.ObjectId(id) })
+        await saved_job.deleteMany({ job_id: new mongoose.Types.ObjectId(id) })
+        return res.status(200).json({
+            message: "Job deleted successfully",
+            code: 200,
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+exports.withdrawJobApplication = async (req, res) => {
+    try {
+        const userId = req.user._id
+        const { id } = req.params
+        const application = await job_applications.findOne({
+            _id: new mongoose.Types.ObjectId(id),
+            canditate_id: new mongoose.Types.ObjectId(userId),
+        })
+        if (!application) {
+            return utils.handleError(res, {
+                message: "Application not found",
+                code: 404,
+            })
+        }
+        if (application.application_status === 'accepted') {
+            return utils.handleError(res, {
+                message: "Cannot withdraw an accepted application",
+                code: 400,
+            })
+        }
+        if (application.application_status === 'withdrawn') {
+            return res.status(200).json({
+                message: "Application already withdrawn",
+                code: 200,
+            })
+        }
+        await job_applications.findOneAndUpdate(
+            { _id: id },
+            { $set: { application_status: 'withdrawn' } },
+            { new: true }
+        )
+        return res.status(200).json({
+            message: "Application withdrawn successfully",
+            code: 200,
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
 /**
  * Generate job description via external AI service
  * Requires env:

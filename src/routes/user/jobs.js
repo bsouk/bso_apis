@@ -128,6 +128,20 @@ router.patch(
     controller.editJob
 )
 
+router.delete(
+    '/deleteMyJob/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.deleteMyJob
+)
+
+router.patch(
+    '/withdrawJobApplication/:id',
+    trimRequest.all,
+    requireAuth,
+    controller.withdrawJobApplication
+)
+
 router.post(
     '/generateJobDescription',
     trimRequest.all,

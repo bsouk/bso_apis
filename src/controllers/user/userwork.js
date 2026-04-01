@@ -2628,6 +2628,7 @@ exports.deleteQuery = async (req, res) => {
 exports.deleteEnquiry = async (req, res) => {
     try {
         const { id } = req.params
+        const userId = req.user._id
         const queryData = await Enquiry.findById({ _id: id })
 
         if (!queryData) {
@@ -2636,9 +2637,22 @@ exports.deleteEnquiry = async (req, res) => {
                 code: 400,
             });
         }
+        if (queryData.user_id.toString() !== userId.toString()) {
+            return utils.handleError(res, {
+                message: "You can only delete your own enquiries",
+                code: 403,
+            });
+        }
+        const quoteCount = await EnquiryQuotes.countDocuments({ enquiry_id: id })
+        const logisticsQuoteCount = await logistics_quotes.countDocuments({ enquiry_id: id })
+        if (quoteCount > 0 || logisticsQuoteCount > 0) {
+            return utils.handleError(res, {
+                message: "Cannot delete an enquiry that already has supplier or logistics quotes",
+                code: 400,
+            });
+        }
 
-        const result = await Enquiry.deleteOne({ _id: id })
-        console.log(result)
+        await Enquiry.deleteOne({ _id: id })
 
         return res.status(200).json({
             message: "Query deleted successfully",
@@ -2649,6 +2663,366 @@ exports.deleteEnquiry = async (req, res) => {
         utils.handleError(res, error);
     }
 }
+
+/** Buyer updates own enquiry — only when no quotes exist yet (same rule as delete). */
+exports.editEnquiry = async (req, res) => {
+    try {
+        const { id } = req.params
+        const userId = req.user._id
+        const enquiry = await Enquiry.findById(id)
+        if (!enquiry) {
+            return utils.handleError(res, { message: "Enquiry not found", code: 404 })
+        }
+        if (enquiry.user_id.toString() !== userId.toString()) {
+            return utils.handleError(res, { message: "You can only edit your own enquiries", code: 403 })
+        }
+        const quoteCount = await EnquiryQuotes.countDocuments({ enquiry_id: id })
+        const logisticsQuoteCount = await logistics_quotes.countDocuments({ enquiry_id: id })
+        if (quoteCount > 0 || logisticsQuoteCount > 0) {
+            return utils.handleError(res, {
+                message: "Cannot edit an enquiry that already has supplier or logistics quotes",
+                code: 400,
+            });
+        }
+
+        const data = req.body
+        if (data.enquiry_items && Array.isArray(data.enquiry_items)) {
+            for (let item of data.enquiry_items) {
+                if (item.quantity && item.quantity.unit) {
+                    const unitValue = item.quantity.unit
+                    if (typeof unitValue === 'string' && !mongoose.Types.ObjectId.isValid(unitValue)) {
+                        let existingUnit = await quantity_units.findOne({ unit: unitValue })
+                        if (!existingUnit) {
+                            existingUnit = await quantity_units.create({ unit: unitValue })
+                        }
+                        item.quantity.unit = existingUnit._id
+                    }
+                }
+            }
+        }
+
+        if (data.enquiry_number && String(data.enquiry_number).trim() !== '') {
+            const trimmed = String(data.enquiry_number).trim()
+            const conflict = await Enquiry.findOne({
+                _id: { $ne: id },
+                $or: [{ enquiry_unique_id: trimmed }, { enquiry_number: trimmed }],
+            })
+            if (conflict) {
+                return utils.handleError(res, {
+                    message: `Enquiry number "${trimmed}" already exists`,
+                    code: 400,
+                })
+            }
+        }
+
+        const update = {
+            enquiry_items: data.enquiry_items,
+            documents: data.documents,
+            shipping_address: data.shipping_address,
+            address: data.address,
+            expiry_date: data.expiry_date,
+            priority: data.priority,
+        }
+        if (data.enquiry_number && String(data.enquiry_number).trim() !== '') {
+            const trimmed = String(data.enquiry_number).trim()
+            update.enquiry_unique_id = trimmed
+            update.enquiry_number = trimmed
+        }
+        ;["currency", "additional_notes", "quotation_end_date", "delivery_time", "documents_description"].forEach((k) => {
+            if (data[k] !== undefined) update[k] = data[k]
+        })
+        Object.keys(update).forEach((k) => update[k] === undefined && delete update[k])
+
+        const updated = await Enquiry.findByIdAndUpdate(id, { $set: update }, { new: true })
+        return res.status(200).json({
+            message: "Enquiry updated successfully",
+            data: updated,
+            code: 200,
+        })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+/** Supplier / logistics: delete own unpublished quote (not buyer-selected). */
+exports.deleteMyQuote = async (req, res) => {
+    try {
+        const { id } = req.params
+        const userId = req.user._id
+
+        let quote = await EnquiryQuotes.findOne({ _id: id, user_id: userId })
+        if (quote) {
+            if (quote.is_selected) {
+                return utils.handleError(res, {
+                    message: "Cannot delete a quote that has been accepted",
+                    code: 400,
+                })
+            }
+            await EnquiryQuotes.deleteOne({ _id: id })
+            return res.status(200).json({ message: "Quote deleted successfully", code: 200 })
+        }
+
+        const lq = await logistics_quotes.findOne({ _id: id, user_id: userId })
+        if (lq) {
+            if (lq.is_selected) {
+                return utils.handleError(res, {
+                    message: "Cannot delete a quote that has been accepted",
+                    code: 400,
+                })
+            }
+            await logistics_quotes.deleteOne({ _id: id })
+            return res.status(200).json({ message: "Quote deleted successfully", code: 200 })
+        }
+
+        return utils.handleError(res, { message: "Quote not found", code: 404 })
+    } catch (error) {
+        utils.handleError(res, error);
+    }
+}
+
+/**
+ * Supplier / logistics: edit own quote (same field scope as admin edit modal, without status/admin flags).
+ */
+exports.editMyQuote = async (req, res) => {
+    try {
+        const userId = req.user._id
+        const {
+            quote_id,
+            enquiry_items,
+            shipping_fee,
+            notes,
+            custom_charges_one,
+            custom_charges_two,
+            discount,
+            delivery_time,
+            currency,
+            quotation_end_date,
+            additional_notes,
+            grand_total: bodyGrandTotal,
+        } = req.body
+
+        if (!quote_id || !mongoose.Types.ObjectId.isValid(quote_id)) {
+            return utils.handleError(res, {
+                message: "Valid quote_id is required",
+                code: 400,
+            })
+        }
+
+        const enquiryReviewLinkBase = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || ''
+
+        const notifyBuyerAfterQuoteEdit = async (buyerenquiry, enquiryDoc, quoteTypeLabel) => {
+            const enquiryIdDisplay =
+                buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || "N/A"
+            try {
+                const buyerData = await User.findById(buyerenquiry.user_id)
+                if (buyerData?.email) {
+                    const mailOptions = {
+                        to: buyerData.email,
+                        subject: `Quote Updated for Your Enquiry - ${enquiryIdDisplay}`,
+                        app_name: process.env.APP_NAME || "BSO Services",
+                        name: buyerData.full_name || "Buyer",
+                        quote_unique_id: enquiryDoc.quote_unique_id,
+                        enquiry_id: enquiryIdDisplay,
+                        provider_name: req.user.full_name,
+                        quote_type: quoteTypeLabel,
+                        view_link: `${enquiryReviewLinkBase}enquiry-review-page/${buyerenquiry._id}`,
+                    }
+                    await emailer.sendEmail(null, mailOptions, "QuoteUpdatedBuyer")
+                }
+            } catch (emailErr) {
+                console.error("[editMyQuote] Quote update email error:", emailErr)
+            }
+
+            const notificationMessage = {
+                title:
+                    quoteTypeLabel === "logistics"
+                        ? `Logistics Quote Updated – Enquiry ${enquiryIdDisplay}`
+                        : `Supplier Quote Updated – Enquiry ${enquiryIdDisplay}`,
+                description: `${req.user.full_name} has updated their ${quoteTypeLabel} quote. Enquiry ID: ${enquiryIdDisplay}`,
+                quote: enquiryDoc._id,
+            }
+            try {
+                await new Notification({
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type:
+                        quoteTypeLabel === "logistics"
+                            ? "logistics_quote_updated"
+                            : "supplier_quote_updated",
+                    receiver_id: buyerenquiry.user_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                }).save()
+                emitNotificationToUser(buyerenquiry.user_id)
+            } catch (dbError) {
+                console.error("[editMyQuote] buyer notification error:", dbError)
+            }
+
+            const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id })
+            if (buyerfcm && buyerfcm.length > 0) {
+                await Promise.all(
+                    buyerfcm.map(async (i) => {
+                        try {
+                            if (i.token) await utils.sendNotification(i.token, notificationMessage)
+                        } catch (e) {
+                            console.error("[editMyQuote] FCM error:", e)
+                        }
+                    })
+                )
+            }
+
+            try {
+                await notifyAllSuperAdmins({
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type:
+                        quoteTypeLabel === "logistics"
+                            ? "logistics_quote_updated"
+                            : "supplier_quote_updated",
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                })
+            } catch (err) {
+                console.error("[editMyQuote] admin notification error:", err)
+            }
+        }
+
+        let quote = await EnquiryQuotes.findOne({
+            _id: new mongoose.Types.ObjectId(quote_id),
+            user_id: userId,
+        })
+
+        if (quote) {
+            if (quote.is_selected) {
+                return utils.handleError(res, {
+                    message: "Cannot edit an accepted quote",
+                    code: 400,
+                })
+            }
+
+            const updateData = {}
+
+            if (delivery_time !== undefined) updateData.delivery_time = delivery_time
+            if (currency !== undefined) updateData.currency = currency
+            if (quotation_end_date !== undefined) updateData.quotation_end_date = quotation_end_date
+            if (additional_notes !== undefined) updateData.additional_notes = additional_notes
+            if (custom_charges_one !== undefined) updateData.custom_charges_one = custom_charges_one
+            if (custom_charges_two !== undefined) updateData.custom_charges_two = custom_charges_two
+            if (discount !== undefined) updateData.discount = discount
+
+            if (enquiry_items && Array.isArray(enquiry_items)) {
+                const updatedItems = quote.enquiry_items.map((item) => {
+                    const updatedItem = enquiry_items.find(
+                        (ei) => ei._id && ei._id.toString() === item._id.toString()
+                    )
+                    if (updatedItem) {
+                        return {
+                            ...item.toObject(),
+                            unit_price: parseFloat(updatedItem.unit_price) || item.unit_price,
+                            available_quantity:
+                                parseFloat(updatedItem.available_quantity) || item.available_quantity,
+                        }
+                    }
+                    return item
+                })
+                updateData.enquiry_items = updatedItems
+            }
+
+            const itemsForCalc = updateData.enquiry_items || quote.enquiry_items || []
+            let subtotal = 0
+            itemsForCalc.forEach((item) => {
+                const itemObj = item.toObject ? item.toObject() : item
+                subtotal +=
+                    (parseFloat(itemObj.unit_price) || 0) *
+                    (parseFloat(itemObj.available_quantity) || 0)
+            })
+
+            const chargeOne = updateData.custom_charges_one ?? quote.custom_charges_one
+            const chargeTwo = updateData.custom_charges_two ?? quote.custom_charges_two
+            const discountData = updateData.discount ?? quote.discount
+
+            let grandTotal = subtotal
+            if (chargeOne && chargeOne.value) {
+                grandTotal += parseFloat(chargeOne.value)
+            }
+            if (chargeTwo && chargeTwo.value) {
+                if (chargeTwo.charge_type === "percentage") {
+                    grandTotal += (subtotal * parseFloat(chargeTwo.value)) / 100
+                } else {
+                    grandTotal += parseFloat(chargeTwo.value)
+                }
+            }
+            if (discountData && discountData.value) {
+                if (discountData.charge_type === "percentage") {
+                    grandTotal -= (subtotal * parseFloat(discountData.value)) / 100
+                } else {
+                    grandTotal -= parseFloat(discountData.value)
+                }
+            }
+
+            updateData.grand_total =
+                bodyGrandTotal && parseFloat(bodyGrandTotal) > 0
+                    ? parseFloat(bodyGrandTotal)
+                    : grandTotal
+
+            const updated = await EnquiryQuotes.findOneAndUpdate(
+                { _id: new mongoose.Types.ObjectId(quote_id), user_id: userId },
+                { $set: updateData },
+                { new: true }
+            )
+
+            const buyerenquiry = await Enquiry.findById(quote.enquiry_id)
+            if (buyerenquiry) {
+                await notifyBuyerAfterQuoteEdit(buyerenquiry, updated, "supplier")
+            }
+
+            return res.status(200).json({
+                message: "Quote updated successfully",
+                data: updated,
+                code: 200,
+            })
+        }
+
+        const lq = await logistics_quotes.findOne({
+            _id: new mongoose.Types.ObjectId(quote_id),
+            user_id: userId,
+        })
+        if (lq) {
+            if (lq.is_selected) {
+                return utils.handleError(res, {
+                    message: "Cannot edit an accepted quote",
+                    code: 400,
+                })
+            }
+
+            const updateData = {}
+            if (shipping_fee !== undefined) updateData.shipping_fee = parseFloat(shipping_fee)
+            if (notes !== undefined) updateData.notes = notes
+
+            const updated = await logistics_quotes.findOneAndUpdate(
+                { _id: new mongoose.Types.ObjectId(quote_id), user_id: userId },
+                { $set: updateData },
+                { new: true }
+            )
+
+            const buyerenquiry = await Enquiry.findById(lq.enquiry_id)
+            if (buyerenquiry) {
+                await notifyBuyerAfterQuoteEdit(buyerenquiry, updated, "logistics")
+            }
+
+            return res.status(200).json({
+                message: "Quote updated successfully",
+                data: updated,
+                code: 200,
+            })
+        }
+
+        return utils.handleError(res, { message: "Quote not found", code: 404 })
+    } catch (error) {
+        utils.handleError(res, error)
+    }
+}
+
 exports.addSupplierQuote = async (req, res) => {
     try {
         const { query_id, _id, supplier_quote } = req.body
@@ -5396,6 +5770,7 @@ exports.addenquiryquotes = async (req, res) => {
         // const buyersubscription = await Subscription.findOne({ user_id: enquirydata.user_id, status: "active", type: "" });
         const enquiryData = await EnquiryQuotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) }).populate('enquiry_id');
         console.log("enquiryData : ", enquiryData);
+        const isUpdate = Boolean(enquiryData);
         let enquiry = {}
         if (enquiryData) {
             enquiry = await EnquiryQuotes.findOneAndUpdate(
@@ -5416,51 +5791,118 @@ exports.addenquiryquotes = async (req, res) => {
             console.log("enquiry : ", enquiry);
         }
 
-        // Send notification to buyer – always save to DB so it shows in frontend bell; send FCM if buyer has tokens
         const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
-        const notificationMessage = {
-            title: `New Supplier Quote – Enquiry ${enquiryIdDisplay}`,
-            description: `${req.user.full_name} has submitted a new supplier quote. Enquiry ID: ${enquiryIdDisplay}`,
-            quote: enquiry._id
-        };
+        const enquiryReviewLinkBase = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || '';
 
-        try {
-            const NotificationData = {
-                title: notificationMessage.title,
-                description: notificationMessage.description,
-                type: "supplier_quote_added",
-                receiver_id: buyerenquiry.user_id,
-                related_to: buyerenquiry._id,
-                related_to_type: "enquiry",
+        if (isUpdate) {
+            try {
+                const buyerData = await User.findById(buyerenquiry.user_id);
+                if (buyerData?.email) {
+                    const mailOptions = {
+                        to: buyerData.email,
+                        subject: `Quote Updated for Your Enquiry - ${enquiryIdDisplay}`,
+                        app_name: process.env.APP_NAME || 'BSO Services',
+                        name: buyerData.full_name || 'Buyer',
+                        quote_unique_id: enquiry.quote_unique_id,
+                        enquiry_id: enquiryIdDisplay,
+                        provider_name: req.user.full_name,
+                        quote_type: 'supplier',
+                        view_link: `${enquiryReviewLinkBase}enquiry-review-page/${buyerenquiry._id}`
+                    };
+                    await emailer.sendEmail(null, mailOptions, "QuoteUpdatedBuyer");
+                }
+            } catch (emailErr) {
+                console.error('[addSupplierQuote] Quote update email error:', emailErr);
+            }
+
+            const notificationMessage = {
+                title: `Supplier Quote Updated – Enquiry ${enquiryIdDisplay}`,
+                description: `${req.user.full_name} has updated their quote. Enquiry ID: ${enquiryIdDisplay}`,
+                quote: enquiry._id
             };
-            const newNotification = new Notification(NotificationData);
-            await newNotification.save();
-            emitNotificationToUser(buyerenquiry.user_id);
-        } catch (dbError) {
-            console.error('[addSupplierQuote] Error saving buyer notification:', dbError);
-        }
 
-        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
-        if (buyerfcm && buyerfcm.length > 0) {
-            await Promise.all(buyerfcm.map(async (i) => {
-                try {
-                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
-                } catch (e) { console.error('Error sending FCM to buyer:', e); }
-            }));
-        }
+            try {
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type: "supplier_quote_updated",
+                    receiver_id: buyerenquiry.user_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const newNotification = new Notification(NotificationData);
+                await newNotification.save();
+                emitNotificationToUser(buyerenquiry.user_id);
+            } catch (dbError) {
+                console.error('[addSupplierQuote] Error saving buyer notification (update):', dbError);
+            }
 
-        // Admin notification: new supplier quote – await so latest shows in bell
-        try {
-            const { saved, fcmSent } = await notifyAllSuperAdmins({
-                title: `New Supplier Quote – ${enquiryIdDisplay}`,
-                description: `${req.user.full_name} submitted a supplier quote. Enquiry ID: ${enquiryIdDisplay}`,
-                type: 'supplier_quote',
-                related_to: buyerenquiry._id,
-                related_to_type: 'enquiry',
-            });
-            if (saved > 0 || fcmSent > 0) console.log(`[addSupplierQuote] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
-        } catch (err) {
-            console.error('[addSupplierQuote] Admin notification error:', err);
+            const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+            if (buyerfcm && buyerfcm.length > 0) {
+                await Promise.all(buyerfcm.map(async (i) => {
+                    try {
+                        if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                    } catch (e) { console.error('Error sending FCM to buyer:', e); }
+                }));
+            }
+
+            try {
+                const { saved, fcmSent } = await notifyAllSuperAdmins({
+                    title: `Supplier Quote Updated – ${enquiryIdDisplay}`,
+                    description: `${req.user.full_name} updated a supplier quote. Enquiry ID: ${enquiryIdDisplay}`,
+                    type: 'supplier_quote_updated',
+                    related_to: buyerenquiry._id,
+                    related_to_type: 'enquiry',
+                });
+                if (saved > 0 || fcmSent > 0) console.log(`[addSupplierQuote] Admin notification (update): saved=${saved}, fcmSent=${fcmSent}`);
+            } catch (err) {
+                console.error('[addSupplierQuote] Admin notification error (update):', err);
+            }
+        } else {
+            // Send notification to buyer – new quote; send FCM if buyer has tokens
+            const notificationMessage = {
+                title: `New Supplier Quote – Enquiry ${enquiryIdDisplay}`,
+                description: `${req.user.full_name} has submitted a new supplier quote. Enquiry ID: ${enquiryIdDisplay}`,
+                quote: enquiry._id
+            };
+
+            try {
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type: "supplier_quote_added",
+                    receiver_id: buyerenquiry.user_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const newNotification = new Notification(NotificationData);
+                await newNotification.save();
+                emitNotificationToUser(buyerenquiry.user_id);
+            } catch (dbError) {
+                console.error('[addSupplierQuote] Error saving buyer notification:', dbError);
+            }
+
+            const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+            if (buyerfcm && buyerfcm.length > 0) {
+                await Promise.all(buyerfcm.map(async (i) => {
+                    try {
+                        if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                    } catch (e) { console.error('Error sending FCM to buyer:', e); }
+                }));
+            }
+
+            try {
+                const { saved, fcmSent } = await notifyAllSuperAdmins({
+                    title: `New Supplier Quote – ${enquiryIdDisplay}`,
+                    description: `${req.user.full_name} submitted a supplier quote. Enquiry ID: ${enquiryIdDisplay}`,
+                    type: 'supplier_quote',
+                    related_to: buyerenquiry._id,
+                    related_to_type: 'enquiry',
+                });
+                if (saved > 0 || fcmSent > 0) console.log(`[addSupplierQuote] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
+            } catch (err) {
+                console.error('[addSupplierQuote] Admin notification error:', err);
+            }
         }
 
         return res.status(200).json({
@@ -6320,6 +6762,7 @@ exports.submitLogisticsQuotes = async (req, res) => {
 
         const enquiryData = await logistics_quotes.findOne({ enquiry_id: new mongoose.Types.ObjectId(data.enquiry_id), user_id: new mongoose.Types.ObjectId(userId) });
         console.log("enquiryData : ", enquiryData);
+        const isUpdate = Boolean(enquiryData);
         let enquiry = {}
         if (enquiryData) {
             enquiry = await logistics_quotes.findOneAndUpdate(
@@ -6340,53 +6783,117 @@ exports.submitLogisticsQuotes = async (req, res) => {
             console.log("enquiry : ", enquiry);
         }
 
-
-
-        // Send notification to buyer – always save to DB so it shows in frontend bell; send FCM if buyer has tokens
         const enquiryIdDisplay = buyerenquiry?.enquiry_unique_id || buyerenquiry?._id?.toString() || 'N/A';
-        const notificationMessage = {
-            title: `New Logistics Quote – Enquiry ${enquiryIdDisplay}`,
-            description: `${req.user.full_name} has submitted a new logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
-            quote: enquiry._id
-        };
+        const enquiryReviewLinkBase = process.env.FRONTEND_PROD_URL || process.env.FRONTEND_URL || '';
 
-        try {
-            const NotificationData = {
-                title: notificationMessage.title,
-                description: notificationMessage.description,
-                type: "logistics_quote_added",
-                receiver_id: buyerenquiry.user_id,
-                related_to: buyerenquiry._id,
-                related_to_type: "enquiry",
+        if (isUpdate) {
+            try {
+                const buyerData = await User.findById(buyerenquiry.user_id);
+                if (buyerData?.email) {
+                    const mailOptions = {
+                        to: buyerData.email,
+                        subject: `Quote Updated for Your Enquiry - ${enquiryIdDisplay}`,
+                        app_name: process.env.APP_NAME || 'BSO Services',
+                        name: buyerData.full_name || 'Buyer',
+                        quote_unique_id: enquiry.quote_unique_id,
+                        enquiry_id: enquiryIdDisplay,
+                        provider_name: req.user.full_name,
+                        quote_type: 'logistics',
+                        view_link: `${enquiryReviewLinkBase}enquiry-review-page/${buyerenquiry._id}`
+                    };
+                    await emailer.sendEmail(null, mailOptions, "QuoteUpdatedBuyer");
+                }
+            } catch (emailErr) {
+                console.error('[addLogisticsQuote] Quote update email error:', emailErr);
+            }
+
+            const notificationMessage = {
+                title: `Logistics Quote Updated – Enquiry ${enquiryIdDisplay}`,
+                description: `${req.user.full_name} has updated their logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
+                quote: enquiry._id
             };
-            const newNotification = new Notification(NotificationData);
-            await newNotification.save();
-            emitNotificationToUser(buyerenquiry.user_id);
-        } catch (dbError) {
-            console.error('[addLogisticsQuote] Error saving buyer notification:', dbError);
-        }
 
-        const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
-        if (buyerfcm && buyerfcm.length > 0) {
-            await Promise.all(buyerfcm.map(async (i) => {
-                try {
-                    if (i.token) await utils.sendNotification(i.token, notificationMessage);
-                } catch (e) { console.error('Error sending FCM to buyer:', e); }
-            }));
-        }
+            try {
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type: "logistics_quote_updated",
+                    receiver_id: buyerenquiry.user_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const newNotification = new Notification(NotificationData);
+                await newNotification.save();
+                emitNotificationToUser(buyerenquiry.user_id);
+            } catch (dbError) {
+                console.error('[addLogisticsQuote] Error saving buyer notification (update):', dbError);
+            }
 
-        // Admin notification: new logistics quote – await so latest shows in bell
-        try {
-            const { saved, fcmSent } = await notifyAllSuperAdmins({
-                title: `New Logistics Quote – ${enquiryIdDisplay}`,
-                description: `${req.user.full_name} submitted a logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
-                type: 'logistics_quote',
-                related_to: buyerenquiry._id,
-                related_to_type: 'enquiry',
-            });
-            if (saved > 0 || fcmSent > 0) console.log(`[addLogisticsQuote] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
-        } catch (err) {
-            console.error('[addLogisticsQuote] Admin notification error:', err);
+            const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+            if (buyerfcm && buyerfcm.length > 0) {
+                await Promise.all(buyerfcm.map(async (i) => {
+                    try {
+                        if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                    } catch (e) { console.error('Error sending FCM to buyer:', e); }
+                }));
+            }
+
+            try {
+                const { saved, fcmSent } = await notifyAllSuperAdmins({
+                    title: `Logistics Quote Updated – ${enquiryIdDisplay}`,
+                    description: `${req.user.full_name} updated a logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
+                    type: 'logistics_quote_updated',
+                    related_to: buyerenquiry._id,
+                    related_to_type: 'enquiry',
+                });
+                if (saved > 0 || fcmSent > 0) console.log(`[addLogisticsQuote] Admin notification (update): saved=${saved}, fcmSent=${fcmSent}`);
+            } catch (err) {
+                console.error('[addLogisticsQuote] Admin notification error (update):', err);
+            }
+        } else {
+            const notificationMessage = {
+                title: `New Logistics Quote – Enquiry ${enquiryIdDisplay}`,
+                description: `${req.user.full_name} has submitted a new logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
+                quote: enquiry._id
+            };
+
+            try {
+                const NotificationData = {
+                    title: notificationMessage.title,
+                    description: notificationMessage.description,
+                    type: "logistics_quote_added",
+                    receiver_id: buyerenquiry.user_id,
+                    related_to: buyerenquiry._id,
+                    related_to_type: "enquiry",
+                };
+                const newNotification = new Notification(NotificationData);
+                await newNotification.save();
+                emitNotificationToUser(buyerenquiry.user_id);
+            } catch (dbError) {
+                console.error('[addLogisticsQuote] Error saving buyer notification:', dbError);
+            }
+
+            const buyerfcm = await fcm_devices.find({ user_id: buyerenquiry.user_id });
+            if (buyerfcm && buyerfcm.length > 0) {
+                await Promise.all(buyerfcm.map(async (i) => {
+                    try {
+                        if (i.token) await utils.sendNotification(i.token, notificationMessage);
+                    } catch (e) { console.error('Error sending FCM to buyer:', e); }
+                }));
+            }
+
+            try {
+                const { saved, fcmSent } = await notifyAllSuperAdmins({
+                    title: `New Logistics Quote – ${enquiryIdDisplay}`,
+                    description: `${req.user.full_name} submitted a logistics quote. Enquiry ID: ${enquiryIdDisplay}`,
+                    type: 'logistics_quote',
+                    related_to: buyerenquiry._id,
+                    related_to_type: 'enquiry',
+                });
+                if (saved > 0 || fcmSent > 0) console.log(`[addLogisticsQuote] Admin notification: saved=${saved}, fcmSent=${fcmSent}`);
+            } catch (err) {
+                console.error('[addLogisticsQuote] Admin notification error:', err);
+            }
         }
 
         return res.status(200).json({

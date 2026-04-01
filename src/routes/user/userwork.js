@@ -201,6 +201,24 @@ router.delete(
     requireAuth,
     controller.deleteEnquiry
 );
+router.patch(
+    "/editEnquiry/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.editEnquiry
+);
+router.delete(
+    "/deleteMyQuote/:id",
+    trimRequest.all,
+    requireAuth,
+    controller.deleteMyQuote
+);
+router.patch(
+    "/editMyQuote",
+    trimRequest.all,
+    requireAuth,
+    controller.editMyQuote
+);
 //add supplier quote
 router.post(
     '/addSupplierQuote',
