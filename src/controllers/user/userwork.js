@@ -8877,9 +8877,16 @@ exports.generateAiManualEnquiry = async (req, res) => {
             });
         }
 
-        // AI API configuration from environment variables
-        const AI_API_URL = process.env.AI_ENQUIRY_API_URL || 'https://qpyjcdhd22.eu-west-2.awsapprunner.com/api/v1/enquiry';
-        const AI_API_KEY = process.env.AI_ENQUIRY_API_KEY;
+        const AI_API_URL = (process.env.AI_ENQUIRY_API_URL || '').trim();
+        const AI_API_KEY = (process.env.AI_ENQUIRY_API_KEY || '').trim();
+
+        if (!AI_API_URL) {
+            console.error("AI_ENQUIRY_API_URL is not configured");
+            return res.status(500).json({
+                message: "AI service is not configured properly",
+                code: 500
+            });
+        }
 
         if (!AI_API_KEY) {
             console.error("AI_ENQUIRY_API_KEY is not configured");
