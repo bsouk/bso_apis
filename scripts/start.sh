@@ -14,6 +14,6 @@ echo "Starting APIs (PM2 app name: bso_apis)"
 if pm2 describe bso_apis >/dev/null 2>&1; then
   pm2 restart bso_apis --update-env
 else
-  pm2 start server.js --name bso_apis
+  pm2 start ecosystem.config.js --only bso_apis --env production
 fi
 pm2 save

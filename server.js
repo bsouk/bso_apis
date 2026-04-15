@@ -12,6 +12,7 @@ const { generateMissingUserIds } = require("./src/utils/generateMissingUserIds")
 const { generateMissingEnquiryIds } = require("./src/utils/generateMissingEnquiryIds");
 const { autoApprovePendingEnquiries } = require("./src/utils/autoApprovePendingEnquiries");
 const { initSocket } = require("./src/config/socket");
+const { apiShield, validateApiShieldConfig } = require("./src/middleware/apiShield");
 const app = express();
 const server = http.createServer(app);
 const { Server } = require("socket.io");
@@ -58,17 +59,18 @@ app.use(helmet({
 const corsOptions = {
   origin: function (origin, callback) {
     if (isLocalOrDev) return callback(null, true);
-    if (!origin) return callback(null, true);
+    if (!origin) return callback(new Error("Origin header required"));
     const allowed = getAllowedOrigins();
     const normalized = normalizeOrigin(origin);
     const isAllowed = allowed.some((o) => normalizeOrigin(o) === normalized);
-    callback(isAllowed ? null : new Error('Not allowed by CORS'), isAllowed);
+    if (isAllowed) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
   preflightContinue: false,
   optionsSuccessStatus: 204,
-  allowedHeaders: "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+  allowedHeaders: "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-KEY, x-api-key",
   exposedHeaders: "Content-Length, Content-Type",
 };
 
@@ -95,6 +97,10 @@ app.use(
 app.get("/", (req, res) => {
   return res.send("Welcome to bso");
 });
+
+// Global protection for frontend/admin API surface
+app.use("/user", apiShield);
+app.use("/admin", apiShield);
 
 app.use(require("./src/routes/user"));
 app.use(require("./src/routes/admin"));
@@ -145,6 +151,12 @@ async function startServer() {
     console.log(`*    Database: MongoDB`);
     console.log(`*    DB Connection: OK\n****************************\n`);
 
+    const shieldConfigValidation = validateApiShieldConfig();
+    if (!shieldConfigValidation.ok) {
+      console.error(`❌ Security configuration error: ${shieldConfigValidation.reason}`);
+      process.exit(1);
+    }
+
     server.listen(PORT, async () => {
       // Run startup tasks only after server is listening (DB is already connected)
       try {
@@ -169,3 +181,13 @@ async function startServer() {
 }
 
 startServer();
+
+process.on("uncaughtException", (error) => {
+  console.error("❌ Uncaught Exception:", error);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("❌ Unhandled Rejection:", reason);
+  process.exit(1);
+});
