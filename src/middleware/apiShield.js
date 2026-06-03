@@ -43,6 +43,21 @@ function isAllowedOrigin(origin) {
   return allowedOrigins.some((item) => item === origin);
 }
 
+/** So browsers can read 401/403 JSON when origin is allowed (avoids fake "CORS" errors). */
+function applyCorsHeadersIfAllowed(req, res) {
+  const origin = req.get("Origin");
+  if (!origin) return;
+  const normalized = normalizeOrigin(origin);
+  if (!isAllowedOrigin(normalized)) return;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-KEY, x-api-key"
+  );
+  res.setHeader("Vary", "Origin");
+}
+
 function validateApiShieldConfig() {
   const keys = getConfiguredApiKeys();
   const strictOriginEnabled = isStrictOriginCheckEnabled();
@@ -77,6 +92,13 @@ function apiShield(req, res, next) {
   if (strictOriginEnabled) {
     const requestOrigin = getRequestOrigin(req);
     if (!requestOrigin || !isAllowedOrigin(requestOrigin)) {
+      applyCorsHeadersIfAllowed(req, res);
+      console.warn(
+        "[apiShield] Blocked origin:",
+        requestOrigin || "(none)",
+        "| allowed:",
+        getAllowedOrigins().join(", ") || "(empty)"
+      );
       return res.status(403).json({
         error: "Origin is not allowed",
       });
@@ -85,6 +107,7 @@ function apiShield(req, res, next) {
 
   const apiKey = req.get("x-api-key");
   if (!apiKey) {
+    applyCorsHeadersIfAllowed(req, res);
     return res.status(401).json({
       error: "Missing API key",
     });
@@ -92,6 +115,7 @@ function apiShield(req, res, next) {
 
   const allowedKeys = getConfiguredApiKeys();
   if (!allowedKeys.includes(apiKey.trim())) {
+    applyCorsHeadersIfAllowed(req, res);
     return res.status(401).json({
       error: "Invalid API key",
     });
