@@ -59,7 +59,7 @@ app.use(helmet({
 const corsOptions = {
   origin: function (origin, callback) {
     if (isLocalOrDev) return callback(null, true);
-    if (!origin) return callback(new Error("Origin header required"));
+    if (!origin) return callback(null, true); // non-browser clients (mobile apps, server-to-server)
     const allowed = getAllowedOrigins();
     const normalized = normalizeOrigin(origin);
     const isAllowed = allowed.some((o) => normalizeOrigin(o) === normalized);
@@ -98,8 +98,18 @@ app.get("/", (req, res) => {
   return res.send("Welcome to bso");
 });
 
+// Public auth routes that don't require an API key
+const PUBLIC_USER_PATHS = [
+  '/login', '/signup', '/forgetPassword', '/resetPassword',
+  '/verifyOTP', '/sendOtpForSignup', '/verifyOtpForSignup',
+  '/checkEmailExist', '/checkPhoneNumberExist',
+];
+
 // Global protection for frontend/admin API surface
-app.use("/user", apiShield);
+app.use("/user", (req, res, next) => {
+  if (PUBLIC_USER_PATHS.includes(req.path)) return next();
+  return apiShield(req, res, next);
+});
 app.use("/admin", apiShield);
 
 app.use(require("./src/routes/user"));
