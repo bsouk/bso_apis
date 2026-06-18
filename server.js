@@ -117,6 +117,9 @@ const PUBLIC_USER_PREFIXES = [
 app.use("/user", (req, res, next) => {
   if (PUBLIC_USER_PATHS.includes(req.path)) return next();
   if (PUBLIC_USER_PREFIXES.some((prefix) => req.path.startsWith(prefix))) return next();
+  // Requests carrying a Bearer JWT are FE clients — passport will validate the token downstream
+  const auth = req.get("Authorization") || "";
+  if (auth.toLowerCase().startsWith("bearer ")) return next();
   return apiShield(req, res, next);
 });
 app.use("/admin", apiShield);
