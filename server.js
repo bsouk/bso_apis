@@ -105,9 +105,18 @@ const PUBLIC_USER_PATHS = [
   '/checkEmailExist', '/checkPhoneNumberExist',
 ];
 
+// Path prefixes for public content routes (SEO, meta scripts, CMS, etc.)
+const PUBLIC_USER_PREFIXES = [
+  '/getSeoBySlug/',
+  '/getAllActiveSeoPages',
+  '/getAllActiveMetaScripts',
+  '/getMetaScriptsByPosition/',
+];
+
 // Global protection for frontend/admin API surface
 app.use("/user", (req, res, next) => {
   if (PUBLIC_USER_PATHS.includes(req.path)) return next();
+  if (PUBLIC_USER_PREFIXES.some((prefix) => req.path.startsWith(prefix))) return next();
   return apiShield(req, res, next);
 });
 app.use("/admin", apiShield);
